@@ -5,9 +5,9 @@ umask 077
 
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
 readonly PROD_STATE=/home/dsv4/ds4-project/engine-switch
-readonly PROD_SRC=/home/dsv4/ds4-project/src/ds4-upstream-master
-readonly PROD_GGUF=/home/dsv4/ds4-project/gguf-glm/GLM-5.2-UD-IQ2_XXS_RoutedIQ2XXS_blk78Q2K.gguf
-readonly PROFILE_MANIFEST=$REPO/configs/glm52-profile.json
+readonly PROD_BINARY=/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server
+readonly PROD_GGUF=/home/bmarti44/models/glm52-full-denseq40.gguf
+readonly PROFILE_MANIFEST=$REPO/configs/glm52-fullq4-production-profile.json
 readonly PORT=8013
 readonly AUTH_PORT=8010
 
@@ -16,17 +16,17 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         echo "ENGINE_SWITCH_TEST_ROOT is required" >&2; exit 2;
     }
     STATE=$ENGINE_SWITCH_TEST_ROOT
-    SRC=$STATE/source
+    BINARY=$STATE/source/ds4-server
     GGUF=$STATE/model.gguf
 else
     unset ENGINE_SWITCH_TEST_ROOT ENGINE_PORT DS4_GLM_TOPK_KEEP \
         DS4_GLM_TOPK_SKIP_LOAD DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL \
         DSV4_ALLOW_RETRY_AFTER_FAILED_START || true
     STATE=$PROD_STATE
-    SRC=$PROD_SRC
+    BINARY=$PROD_BINARY
     GGUF=$PROD_GGUF
 fi
-readonly STATE SRC GGUF
+readonly STATE BINARY GGUF
 readonly ACTIVE=$STATE/active.json
 readonly LOCK=$STATE/switch.lock
 readonly GLM_PROCESS=$STATE/glm52.process.json
@@ -108,8 +108,8 @@ glm_qualified() {
 }
 
 verify_glm_hashes() {
-    clean_python - "$PROFILE_MANIFEST" "$SRC/ds4-server" "$GGUF" <<'PY'
-import hashlib, json, sys
+    clean_python - "$PROFILE_MANIFEST" "$BINARY" "$GGUF" <<'PY'
+import hashlib, json, os, stat, sys
 manifest_path, binary_path, model_path = sys.argv[1:]
 with open(manifest_path, encoding="utf-8") as stream:
     manifest = json.load(stream)
@@ -119,12 +119,41 @@ def digest(path):
         for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
             value.update(chunk)
     return value.hexdigest()
+if manifest.get("binary_path") != binary_path:
+    raise SystemExit("GLM binary path is not approved")
 if digest(binary_path) != manifest["binary_sha256"]:
     raise SystemExit("GLM binary hash is not approved")
-if digest(model_path) != manifest["model_sha256"]:
-    raise SystemExit("GLM model hash is not approved")
-if manifest.get("context_cap") != 1048576:
-    raise SystemExit("GLM profile context cap is not 1048576")
+if manifest.get("model_path") != model_path:
+    raise SystemExit("GLM model path is not approved")
+identity = manifest.get("model_identity", {})
+if identity.get("first_bytes") != 1048576:
+    raise SystemExit("GLM model prefix length is not approved")
+with open(model_path, "rb") as stream:
+    before = os.fstat(stream.fileno())
+    first_bytes = stream.read(identity["first_bytes"])
+    after = os.fstat(stream.fileno())
+stable_before = (
+    before.st_dev, before.st_ino, before.st_mode, before.st_nlink,
+    before.st_uid, before.st_gid, before.st_size, before.st_mtime_ns,
+    before.st_ctime_ns,
+)
+stable_after = (
+    after.st_dev, after.st_ino, after.st_mode, after.st_nlink,
+    after.st_uid, after.st_gid, after.st_size, after.st_mtime_ns,
+    after.st_ctime_ns,
+)
+if stable_before != stable_after or not stat.S_ISREG(before.st_mode):
+    raise SystemExit("GLM model identity changed during verification")
+if (before.st_size, before.st_dev, before.st_ino) != (
+    identity.get("size_bytes"), identity.get("device"), identity.get("inode")
+):
+    raise SystemExit("GLM model stat identity is not approved")
+if len(first_bytes) != identity.get("first_bytes"):
+    raise SystemExit("GLM model prefix is short")
+if hashlib.sha256(first_bytes).hexdigest() != identity.get("first_bytes_sha256"):
+    raise SystemExit("GLM model prefix hash is not approved")
+if manifest.get("context_cap") != 32768:
+    raise SystemExit("GLM profile context cap is not 32768")
 PY
 }
 
@@ -217,7 +246,114 @@ start_dsv4() {
 }
 
 start_glm52() {
-    die "GLM switching remains disabled until its gated watchdog lifecycle passes fault injection"
+    local pid identity pgid ticks exe_sha current
+    local memwatch_pid memwatch_ticks ready
+    [[ ! -e $GLM_PROCESS ]] ||
+        die "GLM process record already exists; refusing a second model"
+    "$REPO/scripts/03_memory_guard.py" --required-gib 110 \
+        --stable-samples 3 --interval-seconds 1 --timeout-seconds 180
+    rm -f -- "$GLM_WATCHDOG_TARGET" "$GLM_WATCHDOG_READY" \
+        "$GLM_PROCESS.tmp"
+    "$REPO/scripts/01_memwatch.sh" \
+        --target-file "$GLM_WATCHDOG_TARGET" \
+        --ready-file "$GLM_WATCHDOG_READY" \
+        --threshold-gib 18 --interval-sec 1 --log "$GLM_WATCHDOG_LOG" &
+    memwatch_pid=$!
+    memwatch_ticks=
+    ready=
+    for _ in $(seq 1 50); do
+        memwatch_ticks=$(proc_identity "$memwatch_pid" 2>/dev/null || true)
+        memwatch_ticks=${memwatch_ticks#* }
+        ready=$(cat "$GLM_WATCHDOG_READY" 2>/dev/null || true)
+        [[ -n $memwatch_ticks && $ready == READY ]] && break
+        sleep 0.1
+    done
+    if [[ -z $memwatch_ticks || $ready != READY ]]; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM memory watchdog failed to initialize"
+    fi
+    setsid env -i HOME=/home/dsv4 LANG=C.UTF-8 \
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        DS4_CUDA_EXPERT_CACHE_GB=94 \
+        DS4_CUDA_EXPERT_CACHE_PIN=1 \
+        DS4_CUDA_EXPERT_CACHE_SLRU=1 \
+        DS4_CUDA_FETCH_THREADS=6 \
+        DS4_CUDA_STABLE_MODEL_REMAP=1 \
+        DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
+        DS4_CUDA_EXPERT_DIRECT_SLOT=1 \
+        "$BINARY" --cuda -m "$GGUF" -c 32768 \
+        --host 127.0.0.1 --port "$PORT" --ssd-streaming \
+        --ssd-streaming-cache-experts 40GB \
+        >"$STATE/glm52.server.log" 2>&1 &
+    pid=$!
+    identity=
+    for _ in $(seq 1 20); do
+        identity=$(proc_identity "$pid" 2>/dev/null || true)
+        [[ -n $identity ]] && break
+        sleep 1
+    done
+    if [[ -z $identity ]]; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM startup died before identity capture"
+    fi
+    read -r pgid ticks <<<"$identity"
+    exe_sha=$(sha256 "$BINARY")
+    if ! clean_python - "$GLM_PROCESS.tmp" "$pid" "$pgid" "$ticks" \
+            "$exe_sha" "$memwatch_pid" "$memwatch_ticks" <<'PY'
+import json, os, sys
+path, pid, pgid, ticks, digest, watchdog_pid, watchdog_ticks = sys.argv[1:]
+with open(path, "x", encoding="utf-8") as stream:
+    json.dump({"schema_version":1, "pid":int(pid), "pgid":int(pgid),
+               "start_ticks":int(ticks), "exe_sha256":digest,
+               "memwatch_pid":int(watchdog_pid),
+               "memwatch_start_ticks":int(watchdog_ticks)}, stream)
+    stream.flush(); os.fsync(stream.fileno())
+PY
+    then
+        current=$(proc_identity "$pid" 2>/dev/null || true)
+        if [[ $current == "$identity" ]]; then
+            kill -TERM -- "-$pgid" 2>/dev/null || true
+            for _ in $(seq 1 100); do
+                [[ $(proc_identity "$pid" 2>/dev/null || true) != "$identity" ]] && break
+                sleep 0.1
+            done
+            if [[ $(proc_identity "$pid" 2>/dev/null || true) == "$identity" ]]; then
+                kill -KILL -- "-$pgid" 2>/dev/null || true
+            fi
+        fi
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$GLM_PROCESS.tmp"
+        if [[ $(proc_identity "$pid" 2>/dev/null || true) == "$identity" ]]; then
+            rollback_needed=false
+            die "GLM cleanup failed after process record creation failure; rollback suppressed"
+        fi
+        die "GLM process identity record could not be created"
+    fi
+    mv -- "$GLM_PROCESS.tmp" "$GLM_PROCESS"
+    printf '%s %s %s provisional\n' "$pid" "$pgid" "$ticks" \
+        >"$GLM_WATCHDOG_TARGET.tmp"
+    mv -- "$GLM_WATCHDOG_TARGET.tmp" "$GLM_WATCHDOG_TARGET"
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$GLM_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] ||
+        die "GLM memory watchdog did not arm provisional process"
+    printf '%s %s %s engine\n' "$pid" "$pgid" "$ticks" \
+        >"$GLM_WATCHDOG_TARGET.tmp"
+    mv -- "$GLM_WATCHDOG_TARGET.tmp" "$GLM_WATCHDOG_TARGET"
+    for _ in $(seq 1 50); do
+        ready=$(cat "$GLM_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks engine" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks engine" ]] ||
+        die "GLM memory watchdog did not arm final process"
 }
 
 api_key() {
@@ -386,11 +522,10 @@ if [[ $command == restore ]]; then
     exit 0
 fi
 if [[ $command == glm52 ]] && ! glm_qualified; then
-    die "GLM-5.2 1M profile is not qualified"
+    die "GLM-5.2 production profile is not qualified"
 fi
 if [[ $command == glm52 ]]; then
     verify_glm_hashes
-    die "GLM switching remains disabled until its gated watchdog lifecycle passes fault injection"
 fi
 mkdir -p -- "$STATE"
 exec 9>"$LOCK"

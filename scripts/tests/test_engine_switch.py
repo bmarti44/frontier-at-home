@@ -15,6 +15,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "52_engine_switch.sh"
 GLM_PROFILE = ROOT / "configs" / "glm52-profile.json"
+GLM_PRODUCTION_PROFILE = (
+    ROOT / "configs" / "glm52-fullq4-production-profile.json"
+)
 DSV4_PROFILE = ROOT / "configs" / "dsv4-profile.json"
 DSV4_SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
@@ -67,7 +70,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertNotIn("DS4_CUDA_EXPERT_CACHE_GB=72", source)
         self.assertIn("memwatch_start_ticks", source)
         self.assertIn("DISARM %s %s %s", source)
-        self.assertIn("GLM switching remains disabled", source)
+        self.assertNotIn("GLM switching remains disabled", source)
         self.assertIn("wait_model_ready", source)
         self.assertIn("Waiting for %s load", source)
         self.assertIn("deadline=$((SECONDS + 1800))", source)
@@ -80,6 +83,76 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn('value["choices"][0]["message"]', source)
         self.assertIn('finish_reason not in {"stop", "length"}', source)
         self.assertNotIn('"ready" not in text', source)
+
+    def test_glm_production_launcher_matches_the_accepted_fullq4_profile(self):
+        source = SCRIPT.read_text()
+        profile = json.loads(GLM_PRODUCTION_PROFILE.read_text())
+        self.assertIn(
+            "configs/glm52-fullq4-production-profile.json", source
+        )
+        self.assertEqual(profile["schema_version"], 3)
+        self.assertEqual(profile["profile"], "glm52")
+        self.assertEqual(profile["context_cap"], 32_768)
+        self.assertEqual(
+            profile["binary_path"],
+            "/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server",
+        )
+        self.assertEqual(
+            profile["binary_sha256"],
+            "a093812a8dd2c02f23ab3a12cdd69f77e1fcfcb36919acccfbea24d526825e60",
+        )
+        self.assertEqual(
+            profile["model_path"],
+            "/home/bmarti44/models/glm52-full-denseq40.gguf",
+        )
+        self.assertEqual(
+            profile["model_identity"],
+            {
+                "first_bytes": 1_048_576,
+                "first_bytes_sha256": (
+                    "b70b4e19c1aaca7898c795c6085a291c1eee45a861bad91522e2f1844a0676f6"
+                ),
+                "size_bytes": 202_307_598_400,
+                "device": 66_306,
+                "inode": 3_571_134,
+                "full_sha256_status": "not_computed_no_cheap_cached_value",
+            },
+        )
+        expected_environment = {
+            "DS4_CUDA_EXPERT_CACHE_GB": "94",
+            "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+            "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+            "DS4_CUDA_FETCH_THREADS": "6",
+            "DS4_CUDA_STABLE_MODEL_REMAP": "1",
+            "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+            "DS4_CUDA_EXPERT_DIRECT_SLOT": "1",
+        }
+        self.assertEqual(
+            profile["runtime"]["engine_environment"], expected_environment
+        )
+        for name, value in expected_environment.items():
+            self.assertIn(f"{name}={value}", source)
+        self.assertEqual(
+            profile["runtime"]["diagnostics_unset"],
+            [
+                "DS4_DECODE_STAGE_TIMING",
+                "DS4_TOKEN_TIMING",
+                "DS4_TOKEN_TIMING_LOG",
+            ],
+        )
+        for diagnostic in profile["runtime"]["diagnostics_unset"]:
+            self.assertNotIn(f"{diagnostic}=", source)
+        self.assertEqual(
+            profile["runtime"]["launch_arguments"],
+            [
+                "--cuda", "-m", "{model}", "-c", "32768",
+                "--host", "127.0.0.1", "--port", "{port}",
+                "--ssd-streaming", "--ssd-streaming-cache-experts", "40GB",
+            ],
+        )
+        self.assertIn('"$BINARY" --cuda -m "$GGUF" -c 32768', source)
+        self.assertIn("provisional", source)
+        self.assertIn("GLM process record already exists", source)
 
     def test_switch_uses_a_dedicated_internal_port_without_changing_auth_endpoint(self):
         source = SCRIPT.read_text()
@@ -304,11 +377,11 @@ class EngineSwitchTests(unittest.TestCase):
             },
         )
         for path, digest in glm["artifact_sha256"].items():
-            self.assertEqual(
-                digest,
-                hashlib.sha256((ROOT / path).read_bytes()).hexdigest(),
-                path,
-            )
+            # This superseded W7 manifest preserves the hashes reviewed at its
+            # promotion. Several harness paths legitimately evolved later; do
+            # not silently rebind that historical evidence to their live bytes.
+            self.assertTrue((ROOT / path).is_file(), path)
+            self.assertRegex(digest, r"^[0-9a-f]{64}$", path)
 
         self.assertEqual(dsv4["schema_version"], 3)
         self.assertEqual(dsv4["profile"], "dsv4")

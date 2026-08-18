@@ -1,0 +1,527 @@
+--- a/ds4.c
++++ b/ds4.c
+@@ -40233,6 +40233,88 @@
+             }
+         }
+     }
++#if !defined(DS4_ROCM_BUILD) && !defined(DS4_NO_GPU) && !defined(__APPLE__)
++    /* Cross-layer expert prefetch is a CUDA-only diagnostic.  Resolve the
++     * switch once; disabled production decode pays only this cached test. */
++    static int glm_prefetch_enabled_cached = -1;
++    if (glm_prefetch_enabled_cached < 0) {
++        glm_prefetch_enabled_cached = getenv("DS4_GLM_PREFETCH") != NULL;
++    }
++    if (ok && glm_prefetch_enabled_cached &&
++        streaming_selected_cache && il + 1u < DS4_N_LAYER) {
++        /* The current layer's selected load must be complete before the hint
++         * peeks at cache residency.  In the async path, finish it early only
++         * when this diagnostic is enabled; current-layer routed kernels still
++         * overlap the background prefetch reads. */
++        if (async_load_started) {
++            bool flush_ok = ds4_gpu_flush_commands() != 0;
++            if (async_profile) {
++                g_glm_streaming_async_profile.async_flush_shared_ms +=
++                    glm_graph_streaming_async_profile_ms() - stream_t0;
++                stream_t0 = glm_graph_streaming_async_profile_ms();
++            }
++            const bool finish_ok =
++                metal_graph_selected_async_load_finish(&async_load);
++            ok = ok && flush_ok && finish_ok;
++            async_load_started = false;
++            async_path_profiled = false;
++            if (async_profile) {
++                g_glm_streaming_async_profile.async_finish_ms +=
++                    glm_graph_streaming_async_profile_ms() - stream_t0;
++                stream_t0 = glm_graph_streaming_async_profile_ms();
++            }
++        }
++        if (ok) {
++            /* Predict layer il+1 from the CURRENT hidden state.  Batch router
++             * scratch is unused by single-token decode, so the live selected
++             * ids and weights remain untouched. */
++            int32_t pf_ids[DS4_MAX_EXPERT_USED];
++            const ds4_layer_weights *lnext = l + 1;
++            uint64_t nb_gate = 0, nb_down = 0;
++            if (lnext->ffn_gate_inp && lnext->ffn_exp_probs_b &&
++                g->batch_router_logits && g->batch_router_selected &&
++                g->batch_router_weights && g->batch_router_probs &&
++                streaming_layer_gate_down_expert_bytes(
++                    lnext, &nb_gate, &nb_down) &&
++                ds4_gpu_matmul_f32_tensor(g->batch_router_logits,
++                                          model->map,
++                                          model->size,
++                                          lnext->ffn_gate_inp->abs_offset,
++                                          DS4_N_EMBD,
++                                          DS4_N_EXPERT,
++                                          ffn_norm,
++                                          1) != 0 &&
++                ds4_gpu_glm_router_select_tensor(
++                    g->batch_router_selected,
++                    g->batch_router_weights,
++                    g->batch_router_probs,
++                    model->map,
++                    model->size,
++                    lnext->ffn_exp_probs_b->abs_offset,
++                    g->batch_router_logits,
++                    DS4_N_EXPERT,
++                    DS4_N_EXPERT_USED,
++                    DS4_EXPERT_WEIGHT_SCALE) != 0 &&
++                ds4_gpu_end_commands() != 0) {
++                if (ds4_gpu_tensor_read(
++                        g->batch_router_selected,
++                        0,
++                        pf_ids,
++                        (uint64_t)DS4_N_EXPERT_USED * sizeof(pf_ids[0])) != 0) {
++                    const ds4_gpu_stream_expert_table ntab =
++                        graph_stream_expert_table_make(model,
++                                                       lnext,
++                                                       il + 1u,
++                                                       nb_gate,
++                                                       nb_down);
++                    ds4_gpu_expert_prefetch_hint(
++                        &ntab, pf_ids, DS4_N_EXPERT_USED);
++                }
++                if (ds4_gpu_begin_commands() == 0) ok = false;
++            }
++        }
++    }
++#endif
+     DS4_DECODE_STAGE_END(DS4_DECODE_STAGE_ROUTER);
+     if (ok && shared_first) {
+         ok = glm_graph_encode_shared_swiglu_one(ffn_mid,
+--- a/ds4_cuda.cu
++++ b/ds4_cuda.cu
+@@ -23892,6 +23892,311 @@
+     }
+ }
+ 
++/* ------------------------------------------------------------------------
++ * Cross-layer expert prefetch worker (DS4_GLM_PREFETCH).
++ *
++ * Worker threads perform file reads into private host slabs only.  They never
++ * call CUDA or touch the resident-cache map, metadata, SLRU links, arena, or
++ * direct-slot protection bitmap.  A selected-load thread claims a READY slab,
++ * copies it, and admits it through cuda_expert_cache_insert(), preserving the
++ * cache's single-writer contract.  Model generation and exact source offsets
++ * prevent stale slabs from being consumed after a model reload.
++ * ------------------------------------------------------------------------ */
++#define DS4_PF_SLOTS 12
++#define DS4_PF_MAX_THREADS 8
++
++typedef struct {
++    uint64_t key, gate_off, up_off, down_off, generation, epoch;
++} ds4_pf_req;
++
++typedef struct {
++    int state;              /* 0 empty, 1 filling, 2 ready, 3 loader-owned */
++    uint64_t epoch;
++    uint64_t key, gate_off, up_off, down_off, generation;
++    uint8_t *buf;           /* gate|up|down, exactly one expert slab */
++} ds4_pf_slot;
++
++static struct {
++    int enabled;
++    int started;
++    int stop;
++    pthread_mutex_t mu;
++    pthread_cond_t cv;
++    ds4_pf_slot slots[DS4_PF_SLOTS];
++    ds4_pf_req reqs[DS4_PF_SLOTS];
++    int n_req;
++    uint64_t gate_bytes, down_bytes, slot_bytes;
++    int fd;
++    uint64_t align;
++    uint8_t *stage[DS4_PF_MAX_THREADS];
++    uint64_t stage_bytes;
++    int n_threads;
++    pthread_t threads[DS4_PF_MAX_THREADS];
++    uint64_t issued, served, stale, filled, expired, skipped_resident;
++    uint64_t epoch;
++    uint64_t pool_generation;
++} g_pf;
++
++static int ds4_pf_read_span(int wi, uint64_t off, uint64_t bytes,
++                            uint8_t *dst) {
++    if (g_pf.fd < 0 || g_pf.align <= 1) return 0;
++    const uint64_t aligned_off = (off / g_pf.align) * g_pf.align;
++    const uint64_t delta = off - aligned_off;
++    const uint64_t read_size =
++        ((delta + bytes + g_pf.align - 1) / g_pf.align) * g_pf.align;
++    if (read_size > g_pf.stage_bytes) return 0;
++    uint64_t done = 0;
++    while (done < read_size) {
++        const ssize_t n = pread(g_pf.fd,
++                                g_pf.stage[wi] + done,
++                                (size_t)(read_size - done),
++                                (off_t)(aligned_off + done));
++        if (n <= 0) return 0;
++        done += (uint64_t)n;
++    }
++    memcpy(dst, g_pf.stage[wi] + delta, (size_t)bytes);
++    return 1;
++}
++
++static void *ds4_pf_worker(void *arg) {
++    const int wi = (int)(intptr_t)arg;
++    for (;;) {
++        ds4_pf_req req;
++        int slot = -1;
++        pthread_mutex_lock(&g_pf.mu);
++        while (!g_pf.stop && g_pf.n_req == 0) {
++            pthread_cond_wait(&g_pf.cv, &g_pf.mu);
++        }
++        if (g_pf.stop) {
++            pthread_mutex_unlock(&g_pf.mu);
++            break;
++        }
++        req = g_pf.reqs[--g_pf.n_req];  /* LIFO: newest layer first */
++        for (int i = 0; i < DS4_PF_SLOTS; i++) {
++            if (g_pf.slots[i].state == 0) {
++                slot = i;
++                break;
++            }
++        }
++        if (slot >= 0) {
++            g_pf.slots[slot].state = 1;
++            g_pf.slots[slot].key = req.key;
++            g_pf.slots[slot].gate_off = req.gate_off;
++            g_pf.slots[slot].up_off = req.up_off;
++            g_pf.slots[slot].down_off = req.down_off;
++            g_pf.slots[slot].generation = req.generation;
++            g_pf.slots[slot].epoch = req.epoch;
++        }
++        pthread_mutex_unlock(&g_pf.mu);
++        if (slot < 0) continue;
++
++        uint8_t *buf = g_pf.slots[slot].buf;
++        const int ok =
++            ds4_pf_read_span(wi, req.gate_off, g_pf.gate_bytes, buf) &&
++            ds4_pf_read_span(wi, req.up_off, g_pf.gate_bytes,
++                             buf + g_pf.gate_bytes) &&
++            ds4_pf_read_span(wi, req.down_off, g_pf.down_bytes,
++                             buf + 2u * g_pf.gate_bytes);
++        pthread_mutex_lock(&g_pf.mu);
++        g_pf.slots[slot].state = ok ? 2 : 0;
++        if (ok) g_pf.filled++;
++        pthread_mutex_unlock(&g_pf.mu);
++    }
++    return NULL;
++}
++
++static void ds4_pf_init_once(uint64_t gate_bytes, uint64_t down_bytes) {
++    static int initialized = 0;
++    if (initialized) return;
++    initialized = 1;
++    if (getenv("DS4_GLM_PREFETCH") == NULL) return;
++    if (gate_bytes == 0 || down_bytes == 0 ||
++        gate_bytes > (UINT64_MAX - down_bytes) / 2u) return;
++
++    g_pf.gate_bytes = gate_bytes;
++    g_pf.down_bytes = down_bytes;
++    g_pf.slot_bytes = 2u * gate_bytes + down_bytes;
++    g_pf.align = g_model_direct_align > 1 ? g_model_direct_align : 4096;
++    const uint64_t max_part = gate_bytes > down_bytes ? gate_bytes : down_bytes;
++    g_pf.stage_bytes =
++        ((max_part + 2u * g_pf.align + g_pf.align - 1) / g_pf.align) *
++        g_pf.align;
++    g_pf.fd = -1;
++    if (g_model_direct_fd >= 0) {
++        char proc_path[64];
++        snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%d",
++                 g_model_direct_fd);
++#if defined(__linux__) && defined(O_DIRECT)
++        g_pf.fd = open(proc_path, O_RDONLY | O_DIRECT);
++#endif
++        if (g_pf.fd < 0) g_pf.fd = open(proc_path, O_RDONLY);
++    }
++
++    const char *threads_env = getenv("DS4_GLM_PREFETCH_THREADS");
++    g_pf.n_threads = threads_env ? atoi(threads_env) : 6;
++    if (g_pf.n_threads < 1) g_pf.n_threads = 1;
++    if (g_pf.n_threads > DS4_PF_MAX_THREADS)
++        g_pf.n_threads = DS4_PF_MAX_THREADS;
++
++    int alloc_ok = g_pf.fd >= 0;
++    for (int i = 0; alloc_ok && i < g_pf.n_threads; i++) {
++        void *stage = NULL;
++        if (posix_memalign(&stage, (size_t)g_pf.align,
++                           (size_t)g_pf.stage_bytes) != 0) {
++            alloc_ok = 0;
++        } else {
++            g_pf.stage[i] = (uint8_t *)stage;
++        }
++    }
++    for (int i = 0; alloc_ok && i < DS4_PF_SLOTS; i++) {
++        void *slab = NULL;
++        if (posix_memalign(&slab, 4096, (size_t)g_pf.slot_bytes) != 0) {
++            alloc_ok = 0;
++            break;
++        }
++        g_pf.slots[i].buf = (uint8_t *)slab;
++        if (cudaHostRegister(g_pf.slots[i].buf,
++                             (size_t)g_pf.slot_bytes,
++                             cudaHostRegisterPortable) != cudaSuccess) {
++            (void)cudaGetLastError();  /* correctness survives pageable copy */
++        }
++    }
++    if (!alloc_ok) {
++        fprintf(stderr, "ds4: expert prefetch DISABLED (allocation/fd)\n");
++        return;
++    }
++
++    pthread_mutex_init(&g_pf.mu, NULL);
++    pthread_cond_init(&g_pf.cv, NULL);
++    for (int i = 0; i < g_pf.n_threads; i++) {
++        if (pthread_create(&g_pf.threads[i], NULL, ds4_pf_worker,
++                           (void *)(intptr_t)i) != 0) {
++            fprintf(stderr, "ds4: expert prefetch DISABLED (thread %d)\n", i);
++            return;
++        }
++    }
++    g_pf.pool_generation = g_model_load_generation;
++    g_pf.started = 1;
++    g_pf.enabled = 1;
++    fprintf(stderr,
++            "ds4: cross-layer expert prefetch enabled (%d workers, "
++            "%d slots x %.2f MiB)\n",
++            g_pf.n_threads,
++            DS4_PF_SLOTS,
++            (double)g_pf.slot_bytes / (1024.0 * 1024.0));
++}
++
++extern "C" void ds4_gpu_expert_prefetch_hint(
++        const ds4_gpu_stream_expert_table *table,
++        const int32_t *ids,
++        uint32_t n_ids) {
++    if (!table || !ids) return;
++    /* This entry point is reached only through ds4.c's cached ON branch, so
++     * OFF mode never calls the initializer from the selected-load hot path. */
++    ds4_pf_init_once(table->gate_expert_bytes, table->down_expert_bytes);
++    if (!g_pf.enabled) return;
++    if (table->gate_expert_bytes != g_pf.gate_bytes ||
++        table->down_expert_bytes != g_pf.down_bytes) return;
++    if (g_pf.pool_generation != g_model_load_generation) {
++        pthread_mutex_lock(&g_pf.mu);
++        for (int i = 0; i < DS4_PF_SLOTS; i++) {
++            if (g_pf.slots[i].state == 2) g_pf.slots[i].state = 0;
++        }
++        g_pf.n_req = 0;
++        g_pf.enabled = 0;
++        pthread_mutex_unlock(&g_pf.mu);
++        fprintf(stderr, "ds4: expert prefetch disabled (model reload)\n");
++        return;
++    }
++
++    pthread_mutex_lock(&g_pf.mu);
++    const uint64_t epoch = ++g_pf.epoch;
++    for (int i = 0; i < DS4_PF_SLOTS; i++) {
++        if (g_pf.slots[i].state == 2 &&
++            epoch > g_pf.slots[i].epoch + 2u) {
++            g_pf.slots[i].state = 0;
++            g_pf.expired++;
++        }
++    }
++    g_pf.n_req = 0;
++    for (uint32_t i = 0; i < n_ids && g_pf.n_req < DS4_PF_SLOTS; i++) {
++        const int32_t expert = ids[i];
++        if (expert < 0 || (uint32_t)expert >= table->n_total_expert) continue;
++        const uint64_t key =
++            ((uint64_t)table->layer << 32) | (uint64_t)(uint32_t)expert;
++
++        /* Hint runs only after the current selected-load has joined, so this
++         * read-only map lookup cannot race the cache's selected-load writer. */
++        if (!g_expert_persist_cache.disabled && g_expert_persist_cache.map) {
++            auto resident = g_expert_persist_cache.map->find(key);
++            if (resident != g_expert_persist_cache.map->end() &&
++                g_expert_persist_cache.meta[resident->second].key == key) {
++                g_pf.skipped_resident++;
++                continue;
++            }
++        }
++        int duplicate = 0;
++        for (int q = 0; q < g_pf.n_req; q++) {
++            if (g_pf.reqs[q].key == key) duplicate = 1;
++        }
++        for (int s = 0; !duplicate && s < DS4_PF_SLOTS; s++) {
++            if (g_pf.slots[s].state != 0 && g_pf.slots[s].key == key)
++                duplicate = 1;
++        }
++        if (duplicate) continue;
++
++        ds4_pf_req *req = &g_pf.reqs[g_pf.n_req++];
++        req->key = key;
++        req->gate_off = table->gate_offset +
++            (uint64_t)expert * table->gate_expert_bytes;
++        req->up_off = table->up_offset +
++            (uint64_t)expert * table->gate_expert_bytes;
++        req->down_off = table->down_offset +
++            (uint64_t)expert * table->down_expert_bytes;
++        req->generation = g_model_load_generation;
++        req->epoch = epoch;
++        g_pf.issued++;
++    }
++    pthread_cond_broadcast(&g_pf.cv);
++    pthread_mutex_unlock(&g_pf.mu);
++}
++
++static uint8_t *ds4_pf_claim(uint64_t key,
++                             uint64_t gate_off,
++                             uint64_t up_off,
++                             uint64_t down_off,
++                             int *slot_out) {
++    if (!g_pf.enabled) return NULL;
++    uint8_t *buf = NULL;
++    pthread_mutex_lock(&g_pf.mu);
++    for (int i = 0; i < DS4_PF_SLOTS; i++) {
++        if (g_pf.slots[i].state != 2 || g_pf.slots[i].key != key) continue;
++        if (g_pf.slots[i].gate_off != gate_off ||
++            g_pf.slots[i].up_off != up_off ||
++            g_pf.slots[i].down_off != down_off ||
++            g_pf.slots[i].generation != g_model_load_generation ||
++            g_pf.pool_generation != g_model_load_generation) {
++            g_pf.slots[i].state = 0;
++            g_pf.stale++;
++            continue;
++        }
++        g_pf.slots[i].state = 3;
++        buf = g_pf.slots[i].buf;
++        *slot_out = i;
++        g_pf.served++;
++        break;
++    }
++    pthread_mutex_unlock(&g_pf.mu);
++    return buf;
++}
++
++static void ds4_pf_release(int slot) {
++    if (slot < 0) return;
++    pthread_mutex_lock(&g_pf.mu);
++    g_pf.slots[slot].state = 0;
++    pthread_mutex_unlock(&g_pf.mu);
++}
++
+ /* Called by the server on GET /v1/models: prints the finalized per-window
+  * access-stream digest + byte counters, then resets the window. */
+ extern "C" void ds4_gpu_expert_cache_stats_emit(const char *tag) {
+@@ -24365,6 +24670,91 @@
+             continue;
+         }
+         if (persist_ok) g_expert_persist_cache.misses++;
++        if (g_pf.enabled) {
++            int pf_slot = -1;
++            uint8_t *pf = ds4_pf_claim(key,
++                                       gate_src,
++                                       up_src,
++                                       down_src,
++                                       &pf_slot);
++            if (pf) {
++                /* Blocking copies consume the claimed host slab before its
++                 * worker slot is released.  The three ranges and layout are
++                 * identical to the demand-load path. */
++                if (ds4_gpu_decode_stage_timing_enabled_cached) {
++                    ds4_gpu_decode_stage_timing_begin(DS4_DECODE_STAGE_COPIES);
++                }
++                const bool copy_ok =
++                    cuda_ok(cudaMemcpy(
++                                g_stream_selected_cache.gate_ptr + gate_dst,
++                                pf,
++                                table->gate_expert_bytes,
++                                cudaMemcpyDefault),
++                            "prefetch gate copy") &&
++                    cuda_ok(cudaMemcpy(
++                                g_stream_selected_cache.up_ptr + gate_dst,
++                                pf + table->gate_expert_bytes,
++                                table->gate_expert_bytes,
++                                cudaMemcpyDefault),
++                            "prefetch up copy") &&
++                    cuda_ok(cudaMemcpy(
++                                g_stream_selected_cache.down_ptr + down_dst,
++                                pf + 2u * table->gate_expert_bytes,
++                                table->down_expert_bytes,
++                                cudaMemcpyDefault),
++                            "prefetch down copy");
++                if (ds4_gpu_decode_stage_timing_enabled_cached) {
++                    ds4_gpu_decode_stage_timing_end(DS4_DECODE_STAGE_COPIES);
++                }
++                if (copy_ok && persist_ok) {
++                    /* Admit through the shared insertion path on this
++                     * selected-load thread.  Its victim scan skips every
++                     * token-protected direct slot. */
++                    const uint32_t fslot =
++                        cuda_expert_cache_insert(key, gate_src, down_src);
++                    uint8_t *fill = fslot == UINT32_MAX ? NULL :
++                        g_expert_persist_cache.arena +
++                        (uint64_t)fslot * g_expert_persist_cache.slot_bytes;
++                    if (fill) {
++                        const bool fill_ok =
++                            cuda_ok(cudaMemcpy(
++                                        fill,
++                                        g_stream_selected_cache.gate_ptr + gate_dst,
++                                        table->gate_expert_bytes,
++                                        cudaMemcpyDefault),
++                                    "prefetch cache gate fill") &&
++                            cuda_ok(cudaMemcpy(
++                                        fill + table->gate_expert_bytes,
++                                        g_stream_selected_cache.up_ptr + gate_dst,
++                                        table->gate_expert_bytes,
++                                        cudaMemcpyDefault),
++                                    "prefetch cache up fill") &&
++                            cuda_ok(cudaMemcpy(
++                                        fill + 2u * table->gate_expert_bytes,
++                                        g_stream_selected_cache.down_ptr + down_dst,
++                                        table->down_expert_bytes,
++                                        cudaMemcpyDefault),
++                                    "prefetch cache down fill");
++                        if (!fill_ok) {
++                            g_expert_persist_cache.map->erase(key);
++                            g_expert_persist_cache.meta[fslot].key = UINT64_MAX;
++                            direct_this_layer = 0;
++                        } else if (direct_this_layer) {
++                            arena_slots[i] = fslot;
++                            g_expert_persist_cache.protected_slots[fslot] = 1;
++                        }
++                    } else if (direct_this_layer) {
++                        direct_this_layer = 0;
++                    }
++                }
++                ds4_pf_release(pf_slot);
++                if (copy_ok) continue;
++                cuda_stream_selected_cache_invalidate();
++                return cuda_stream_selected_reject(table,
++                                                   slot_count,
++                                                   "prefetch copy");
++            }
++        }
+         /* Parallel miss fetch (G4 I/O lever): measured QD sweep shows the
+          * drive delivers 8.4 GB/s at QD1 and 10-12.5 GB/s at QD4+ for these
+          * read sizes, while the sequential per-tensor loop reaches ~3.5
+@@ -24537,6 +24927,16 @@
+                     tot > 0 ? 100.0 * (double)g_expert_persist_cache.hits / tot : 0.0,
+                     g_expert_persist_cache.used,
+                     g_expert_persist_cache.n_slots);
++            if (g_pf.enabled) {
++                fprintf(stderr,
++                        "ds4: prefetch issued=%llu filled=%llu served=%llu "
++                        "expired=%llu resident_skip=%llu\n",
++                        (unsigned long long)g_pf.issued,
++                        (unsigned long long)g_pf.filled,
++                        (unsigned long long)g_pf.served,
++                        (unsigned long long)g_pf.expired,
++                        (unsigned long long)g_pf.skipped_resident);
++            }
+         }
+     }
+     if (direct_this_layer) {
+--- a/ds4_gpu.h
++++ b/ds4_gpu.h
+@@ -178,6 +178,9 @@
+     uint32_t    up_type;
+     uint32_t    down_type;
+ } ds4_gpu_stream_expert_table;
++
++void ds4_gpu_expert_prefetch_hint(const ds4_gpu_stream_expert_table *table,
++                                  const int32_t *ids, uint32_t n_ids);
+ /* Reset only the prompt-local eviction heuristic.  The resident SSD expert
+  * cache itself is intentionally kept warm across sessions. */
+ void ds4_gpu_stream_expert_cache_reset_route_hotness(void);
+
