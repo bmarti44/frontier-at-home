@@ -43,3 +43,13 @@ Probes are supplementary evidence (greedy, fixed prompts, server
 timings); README cells come only from 30_bench strict runs. Validation
 window (canary, MTP on/off greedy equivalence at n8p6, strict 0-ctx
 cell) follows in validate_n8p6.
+
+## Validation window (n8p6)
+
+- MTP greedy equivalence at n8 p0.6: 3/3 prompts byte-identical vs
+  MTP-off (mtp0-p*.txt vs mtp1-p*.txt). The tuned config remains exact.
+- Strict 0-ctx bench at n8p6: decode 17.72 (bench-n8p6.json) vs 19.34 at
+  n2 — the deep gated draft trades ~8% on the prose-like fixture for
+  +20% on code probes. Owner workload is code (directive 2026-08-18),
+  so n8 p0.6 is the production pick; the trade is recorded, and prose
+  workloads can override via profile env.
