@@ -100,6 +100,7 @@ allowlist = {
     # so a repeat look at the same holdout is visible to the auditor.
     "rowset_sha256",
     "pins_sha256",
+    "combined_sha256",
     "holdout_rowset_sha256",
     # 0731 evidence-bundle fields (scripts/105_build_dsv4_0731_bundle.py): the
     # digests of the arm artifacts and harnesses an attempt was computed from.
