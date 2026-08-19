@@ -18,6 +18,11 @@ GLM_PROFILE = ROOT / "configs" / "glm52-profile.json"
 GLM_PRODUCTION_PROFILE = (
     ROOT / "configs" / "glm52-fullq4-production-profile.json"
 )
+QWEN_PRODUCTION_PROFILE = ROOT / "configs" / "qwen38-production-profile.json"
+QWEN_BUILD = (
+    ROOT / "configs" / "build-manifests" / "llamacpp-qwen38-9d77fa17.json"
+)
+QWEN_WEIGHTS = ROOT / "weights" / "qwen3.8-27b" / "manifest.json"
 DSV4_PROFILE = ROOT / "configs" / "dsv4-profile.json"
 DSV4_SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
@@ -153,6 +158,165 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn('"$BINARY" --cuda -m "$GGUF" -c 32768', source)
         self.assertIn("provisional", source)
         self.assertIn("GLM process record already exists", source)
+
+    def test_qwen_production_launcher_matches_the_pinned_profile(self):
+        source = SCRIPT.read_text()
+        profile = json.loads(QWEN_PRODUCTION_PROFILE.read_text())
+        build = json.loads(QWEN_BUILD.read_text())
+        weights = {
+            item["name"]: item
+            for item in json.loads(QWEN_WEIGHTS.read_text())["files"]
+        }
+        self.assertEqual(profile["schema_version"], 3)
+        self.assertEqual(profile["profile"], "qwen38")
+        self.assertEqual(profile["context_cap"], 32_768)
+        self.assertEqual(profile["port"], 8013)
+        self.assertEqual(
+            profile["binary_path"],
+            "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/"
+            "src/build/bin/llama-server",
+        )
+        self.assertEqual(
+            profile["binary_sha256"],
+            build["binaries"]["llama-server"]["sha256"],
+        )
+        self.assertEqual(
+            profile["model_path"],
+            "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+        )
+        self.assertEqual(
+            profile["model_sha256"],
+            weights["Qwen3.8-27B-Q4_K_M.gguf"]["sha256"],
+        )
+        self.assertEqual(
+            profile["mmproj_path"],
+            "/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf",
+        )
+        self.assertEqual(
+            profile["mmproj_sha256"],
+            weights["mmproj-Qwen3.8-27B-f16.gguf"]["sha256"],
+        )
+        self.assertEqual(profile["runtime"]["engine_environment"], {})
+        self.assertEqual(profile["runtime"]["diagnostics_unset"], [])
+        self.assertEqual(
+            profile["runtime"]["launch_arguments"],
+            [
+                "--model", "{model}", "-ngl", "99", "-fa", "on",
+                "--no-mmap", "-c", "32768", "--mmproj", "{mmproj}",
+                "--parallel", "1", "--host", "127.0.0.1", "--port",
+                "{port}", "--alias", "qwen3.8-27b", "--spec-type",
+                "draft-mtp", "--spec-draft-n-max", "8",
+                "--spec-draft-p-min", "0.6", "--chat-template-kwargs",
+                '{"reasoning_effort":"low"}', "--cache-reuse", "256",
+            ],
+        )
+        self.assertEqual(
+            profile["runtime"]["containment"],
+            {
+                "unit": "qwen38-engine.service",
+                "memory_high": "45G",
+                "memory_max": "50G",
+                "memory_swap_max": "0",
+                "oom_policy": "kill",
+                "kill_mode": "control-group",
+            },
+        )
+        self.assertEqual(
+            profile["runtime"]["safety"],
+            {
+                "kill_floor_gib": 18,
+                "minimum_start_gib": 100,
+                "sample_hz": 1,
+                "startup_timeout_seconds": 1800,
+            },
+        )
+        for setting in (
+            "MemoryHigh=45G", "MemoryMax=50G", "MemorySwapMax=0",
+            "OOMPolicy=kill", "KillMode=control-group",
+        ):
+            self.assertIn(setting, source)
+        self.assertIn("configs/qwen38-production-profile.json", source)
+        self.assertNotIn("QWEN_PORT", source)
+        self.assertIn('--host 127.0.0.1 --port "$PORT"', source)
+        self.assertIn("verify_qwen_hashes", source)
+        self.assertIn("revalidate_qwen_identities", source)
+        self.assertIn('exe_sha=$(sha256 "/proc/$pid/exe")', source)
+        self.assertIn("Qwen transient unit executed an unapproved binary", source)
+        self.assertIn("stop_qwen_verified", source)
+        self.assertIn("start_qwen38", source)
+        self.assertIn('expected=qwen3.8-27b', source)
+        self.assertIn('systemctl show "$QWEN_UNIT"', source)
+        self.assertIn('"$QWEN_BINARY" --model "$QWEN_MODEL" -ngl 99 -fa on', source)
+        self.assertIn('--spec-draft-n-max 8 --spec-draft-p-min 0.6', source)
+        self.assertIn("--cache-reuse 256", source)
+        self.assertIn('--threshold-gib 18 --interval-sec 1', source)
+        self.assertIn('ARMED $pid $pgid $ticks provisional', source)
+        self.assertIn('ARMED $pid $pgid $ticks engine', source)
+
+    def test_qwen_readiness_is_bound_to_unit_executable_and_listener(self):
+        source = SCRIPT.read_text()
+        readiness = source[
+            source.index("verify_qwen_process_ready() {") :
+            source.index("wait_model_ready() {")
+        ]
+        for contract in (
+            'systemctl show "$QWEN_UNIT" --property=MainPID',
+            'proc_identity "$pid"',
+            'readlink -f "/proc/$pid/exe"',
+            'readlink -f "$QWEN_BINARY"',
+            'ss -H -ltnp "sport = :$PORT"',
+            'sockets == *"pid=$pid,"*',
+        ):
+            self.assertIn(contract, readiness)
+        wait = source[
+            source.index("wait_model_ready() {") : source.index("verify_serving() {")
+        ]
+        self.assertIn("verify_qwen_process_ready", wait)
+
+    def test_qwen_uses_the_shared_authenticated_semantic_verifier(self):
+        source = SCRIPT.read_text()
+        verify = source[
+            source.index("verify_serving() {") : source.index("commit_active() {")
+        ]
+        self.assertIn('"http://127.0.0.1:$PORT/v1/models"', verify)
+        self.assertIn('"http://127.0.0.1:$AUTH_PORT/health"', verify)
+        self.assertIn('"http://127.0.0.1:$AUTH_PORT/v1/chat/completions"', verify)
+        qwen_block = verify[verify.index("if [[ $profile == qwen38 ]]") :]
+        self.assertNotIn("return 0", qwen_block.split("unauth=", 1)[0])
+
+    def test_rollback_waits_for_every_restored_profile_before_verification(self):
+        source = SCRIPT.read_text()
+        rollback = source[source.index("rollback() {") : source.index("command=${1")]
+        start = rollback.index('"start_$previous_profile"')
+        wait = rollback.index('wait_model_ready "$previous_profile"')
+        verify = rollback.index('verify_serving "$previous_profile"')
+        self.assertLess(start, wait)
+        self.assertLess(wait, verify)
+
+    def test_status_and_restore_accept_qwen38(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38"})
+            )
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["active_profile"], "qwen38")
+        source = SCRIPT.read_text()
+        self.assertIn("status [--json]|restore|dsv4|glm52|qwen38", source)
+
+    def test_qwen_hash_failure_is_rejected_before_active_profile_is_stopped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            result = self.run_switch(root, "qwen38")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("qwen", result.stderr.lower())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
 
     def test_switch_uses_a_dedicated_internal_port_without_changing_auth_endpoint(self):
         source = SCRIPT.read_text()

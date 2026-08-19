@@ -75,6 +75,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
         statuses = {model["slug"]: model["repo_status"] for model in models}
         self.assertEqual(statuses["deepseek-v4-flash"], "qualified")
         self.assertEqual(statuses["glm-5.2"], "active")
+        self.assertEqual(statuses["qwen3.8-27b"], "qualified")
         self.assertEqual(
             statuses["gemini-3-flash-preview"], "reference_only"
         )

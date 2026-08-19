@@ -8,6 +8,10 @@ readonly PROD_STATE=/home/dsv4/ds4-project/engine-switch
 readonly PROD_BINARY=/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server
 readonly PROD_GGUF=/home/bmarti44/models/glm52-full-denseq40.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-fullq4-production-profile.json
+readonly QWEN_PROFILE_MANIFEST=$REPO/configs/qwen38-production-profile.json
+readonly PROD_QWEN_BINARY=/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server
+readonly PROD_QWEN_MODEL=/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf
+readonly PROD_QWEN_MMPROJ=/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf
 readonly PORT=8013
 readonly AUTH_PORT=8010
 
@@ -18,6 +22,9 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     STATE=$ENGINE_SWITCH_TEST_ROOT
     BINARY=$STATE/source/ds4-server
     GGUF=$STATE/model.gguf
+    QWEN_BINARY=$STATE/source/llama-server
+    QWEN_MODEL=$STATE/qwen-model.gguf
+    QWEN_MMPROJ=$STATE/qwen-mmproj.gguf
 else
     unset ENGINE_SWITCH_TEST_ROOT ENGINE_PORT DS4_GLM_TOPK_KEEP \
         DS4_GLM_TOPK_SKIP_LOAD DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL \
@@ -25,16 +32,26 @@ else
     STATE=$PROD_STATE
     BINARY=$PROD_BINARY
     GGUF=$PROD_GGUF
+    QWEN_BINARY=$PROD_QWEN_BINARY
+    QWEN_MODEL=$PROD_QWEN_MODEL
+    QWEN_MMPROJ=$PROD_QWEN_MMPROJ
 fi
-readonly STATE BINARY GGUF
+readonly STATE BINARY GGUF QWEN_BINARY QWEN_MODEL QWEN_MMPROJ
 readonly ACTIVE=$STATE/active.json
 readonly LOCK=$STATE/switch.lock
 readonly GLM_PROCESS=$STATE/glm52.process.json
 readonly GLM_WATCHDOG_TARGET=$STATE/glm52.memwatch.target
 readonly GLM_WATCHDOG_READY=$STATE/glm52.memwatch.ready
 readonly GLM_WATCHDOG_LOG=$STATE/glm52.memwatch.log
+readonly QWEN_PROCESS=$STATE/qwen38.process.json
+readonly QWEN_UNIT=qwen38-engine.service
+readonly QWEN_WATCHDOG_TARGET=$STATE/qwen38.memwatch.target
+readonly QWEN_WATCHDOG_READY=$STATE/qwen38.memwatch.ready
+readonly QWEN_WATCHDOG_LOG=$STATE/qwen38.memwatch.log
 rollback_needed=false
 previous_profile=
+qwen_hashes_verified=false
+qwen_verified_identities=
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -78,7 +95,7 @@ state = "inactive"
 try:
     with open(path, encoding="utf-8") as stream:
         value = json.load(stream)
-    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52"}:
+    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38"}:
         profile = value["profile"]
         state = "recorded"
 except (OSError, ValueError, TypeError):
@@ -95,7 +112,7 @@ try:
     with open(sys.argv[1], encoding="utf-8") as stream:
         value = json.load(stream)
     profile = value.get("profile")
-    print(profile if profile in {"dsv4", "glm52"} else "")
+    print(profile if profile in {"dsv4", "glm52", "qwen38"} else "")
 except (OSError, ValueError, TypeError):
     print("")
 PY
@@ -154,6 +171,71 @@ if hashlib.sha256(first_bytes).hexdigest() != identity.get("first_bytes_sha256")
     raise SystemExit("GLM model prefix hash is not approved")
 if manifest.get("context_cap") != 32768:
     raise SystemExit("GLM profile context cap is not 32768")
+PY
+}
+
+verify_qwen_hashes() {
+    qwen_verified_identities=$(clean_python - "$QWEN_PROFILE_MANIFEST" "$QWEN_BINARY" "$QWEN_MODEL" \
+            "$QWEN_MMPROJ" <<'PY'
+import hashlib, json, os, stat, sys
+manifest_path, binary_path, model_path, mmproj_path = sys.argv[1:]
+with open(manifest_path, encoding="utf-8") as stream:
+    manifest = json.load(stream)
+
+def digest_and_identity(path):
+    descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+    value = hashlib.sha256()
+    with os.fdopen(descriptor, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode):
+            raise SystemExit(f"Qwen artifact is not a regular file: {path}")
+        for chunk in iter(lambda: stream.read(16 * 1024 * 1024), b""):
+            value.update(chunk)
+        after = os.fstat(stream.fileno())
+    fields = lambda item: (
+        item.st_dev, item.st_ino, item.st_mode, item.st_nlink, item.st_size,
+        item.st_mtime_ns, item.st_ctime_ns,
+    )
+    if fields(before) != fields(after):
+        raise SystemExit(f"Qwen artifact changed during verification: {path}")
+    return value.hexdigest(), fields(after)
+
+identities = {}
+for label, path, path_key, hash_key in (
+    ("binary", binary_path, "binary_path", "binary_sha256"),
+    ("model", model_path, "model_path", "model_sha256"),
+    ("mmproj", mmproj_path, "mmproj_path", "mmproj_sha256"),
+):
+    if manifest.get(path_key) != path:
+        raise SystemExit(f"Qwen {label} path is not approved")
+    digest, identity = digest_and_identity(path)
+    if digest != manifest.get(hash_key):
+        raise SystemExit(f"Qwen {label} hash is not approved")
+    identities[label] = identity
+if manifest.get("profile") != "qwen38" or manifest.get("schema_version") != 3:
+    raise SystemExit("Qwen profile identity is not approved")
+if manifest.get("port") != 8013 or manifest.get("context_cap") != 32768:
+    raise SystemExit("Qwen serving topology is not approved")
+print(json.dumps(identities, separators=(",", ":"), sort_keys=True))
+PY
+    )
+    qwen_hashes_verified=true
+}
+
+revalidate_qwen_identities() {
+    [[ -n $qwen_verified_identities ]] || die "Qwen artifacts lack verified identities"
+    clean_python - "$qwen_verified_identities" "$QWEN_BINARY" "$QWEN_MODEL" \
+            "$QWEN_MMPROJ" <<'PY'
+import json, os, stat, sys
+expected = json.loads(sys.argv[1])
+for label, path in zip(("binary", "model", "mmproj"), sys.argv[2:]):
+    info = os.lstat(path)
+    actual = [
+        info.st_dev, info.st_ino, info.st_mode, info.st_nlink, info.st_size,
+        info.st_mtime_ns, info.st_ctime_ns,
+    ]
+    if not stat.S_ISREG(info.st_mode) or actual != expected[label]:
+        raise SystemExit(f"Qwen {label} identity changed after hash approval")
 PY
 }
 
@@ -219,6 +301,70 @@ PY
     rm -f -- "$GLM_PROCESS" "$GLM_WATCHDOG_TARGET" "$GLM_WATCHDOG_READY"
 }
 
+stop_qwen_verified() {
+    local values pid expected_pgid expected_ticks expected_sha expected_unit
+    local memwatch_pid memwatch_ticks current current_pgid current_ticks
+    local exe unit_pid cmdline
+    if [[ ! -f $QWEN_PROCESS ]]; then
+        unit_pid=$(systemctl show "$QWEN_UNIT" --property=MainPID --value \
+            2>/dev/null || true)
+        if [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+            die "Qwen unit is live without an identity record; refusing to continue"
+        fi
+        return 0
+    fi
+    values=$(clean_python - "$QWEN_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"],
+      value["exe_sha256"], value["unit"], value["memwatch_pid"],
+      value["memwatch_start_ticks"])
+PY
+    ) || die "invalid Qwen process record"
+    read -r pid expected_pgid expected_ticks expected_sha expected_unit \
+        memwatch_pid memwatch_ticks <<<"$values"
+    [[ $expected_unit == "$QWEN_UNIT" ]] ||
+        die "Qwen process record names an unexpected unit"
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    unit_pid=$(systemctl show "$QWEN_UNIT" --property=MainPID --value 2>/dev/null || true)
+    if [[ -n $current ]]; then
+        read -r current_pgid current_ticks <<<"$current"
+        exe=$(readlink -f "/proc/$pid/exe") ||
+            die "cannot resolve recorded Qwen executable"
+        [[ $unit_pid == "$pid" && $current_pgid == "$expected_pgid" &&
+                $current_ticks == "$expected_ticks" ]] ||
+            die "stale Qwen PID identity; refusing to stop unit"
+        [[ $(sha256 "$exe") == "$expected_sha" ]] ||
+            die "Qwen executable hash changed; refusing to stop unit"
+        systemctl stop "$QWEN_UNIT"
+        for _ in $(seq 1 600); do
+            [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] && break
+            sleep 0.1
+        done
+        [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] ||
+            die "Qwen transient unit did not stop its recorded process"
+    elif [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+        die "Qwen unit has an unrecorded live MainPID; refusing to stop it"
+    fi
+    if [[ $(proc_identity "$memwatch_pid" 2>/dev/null || true) == *" $memwatch_ticks" ]]; then
+        cmdline=$(tr '\0' ' ' <"/proc/$memwatch_pid/cmdline")
+        [[ $cmdline == *"$REPO/scripts/01_memwatch.sh"* &&
+                $cmdline == *"$QWEN_WATCHDOG_TARGET"* ]] ||
+            die "Qwen memwatch identity changed; refusing to disarm"
+        printf 'DISARM %s %s %s\n' "$pid" "$expected_pgid" "$expected_ticks" \
+            >"$QWEN_WATCHDOG_TARGET.tmp"
+        mv -- "$QWEN_WATCHDOG_TARGET.tmp" "$QWEN_WATCHDOG_TARGET"
+        for _ in $(seq 1 50); do
+            [[ -d /proc/$memwatch_pid ]] || break
+            sleep 0.1
+        done
+        [[ ! -d /proc/$memwatch_pid ]] ||
+            die "Qwen memwatch did not accept authenticated disarm"
+    fi
+    rm -f -- "$QWEN_PROCESS" "$QWEN_WATCHDOG_TARGET" "$QWEN_WATCHDOG_READY"
+}
+
 stop_profile() {
     case "$1" in
         dsv4)
@@ -236,6 +382,7 @@ stop_profile() {
             return 0
             ;;
         glm52) stop_glm_verified ;;
+        qwen38) stop_qwen_verified ;;
         "") return 0 ;;
         *) die "unknown previous profile $1" ;;
     esac
@@ -356,6 +503,167 @@ PY
         die "GLM memory watchdog did not arm final process"
 }
 
+start_qwen38() {
+    local pid identity pgid ticks exe_sha approved_sha unit_pid current load_state
+    local memwatch_pid memwatch_identity memwatch_ticks ready
+    [[ ! -e $QWEN_PROCESS ]] ||
+        die "Qwen process record already exists; refusing a second model"
+    "$qwen_hashes_verified" || verify_qwen_hashes
+    "$REPO/scripts/03_memory_guard.py" --required-gib 100 \
+        --stable-samples 3 --interval-seconds 1 --timeout-seconds 180
+    load_state=$(systemctl show "$QWEN_UNIT" --property=LoadState --value \
+        2>/dev/null || true)
+    [[ -z $load_state || $load_state == not-found ]] ||
+        die "Qwen transient unit already exists (LoadState=$load_state)"
+    rm -f -- "$QWEN_PROCESS.tmp" "$QWEN_WATCHDOG_TARGET" \
+        "$QWEN_WATCHDOG_READY"
+    "$REPO/scripts/01_memwatch.sh" \
+        --target-file "$QWEN_WATCHDOG_TARGET" \
+        --ready-file "$QWEN_WATCHDOG_READY" \
+        --threshold-gib 18 --interval-sec 1 --log "$QWEN_WATCHDOG_LOG" &
+    memwatch_pid=$!
+    memwatch_ticks=
+    ready=
+    for _ in $(seq 1 50); do
+        memwatch_identity=$(proc_identity "$memwatch_pid" 2>/dev/null || true)
+        memwatch_ticks=${memwatch_identity#* }
+        ready=$(cat "$QWEN_WATCHDOG_READY" 2>/dev/null || true)
+        [[ -n $memwatch_ticks && $ready == READY ]] && break
+        sleep 0.1
+    done
+    if [[ -z $memwatch_ticks || $ready != READY ]]; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Qwen memory watchdog failed to initialize"
+    fi
+    # The approved hashes were computed before stopping the old profile. Close
+    # the pathname reopen window as far as systemd permits by checking the full
+    # stat identities again immediately before systemd-run opens the paths.
+    if ! revalidate_qwen_identities; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Qwen artifact identity changed before execution"
+    fi
+    if ! systemd-run --unit=qwen38-engine --collect --quiet \
+        --property Type=exec \
+        --property User=bmarti44 \
+        --property MemoryHigh=45G \
+        --property MemoryMax=50G \
+        --property MemorySwapMax=0 \
+        --property OOMPolicy=kill \
+        --property KillMode=control-group \
+        --property Delegate=no \
+        --property "StandardOutput=append:$STATE/qwen38.server.log" \
+        --property "StandardError=append:$STATE/qwen38.server.log" \
+        /usr/bin/flock --nonblock --no-fork \
+        /run/lock/frontier-at-home/inference.lock \
+        "$QWEN_BINARY" --model "$QWEN_MODEL" -ngl 99 -fa on \
+        --no-mmap -c 32768 --mmproj "$QWEN_MMPROJ" --parallel 1 \
+        --host 127.0.0.1 --port "$PORT" --alias qwen3.8-27b \
+        --spec-type draft-mtp --spec-draft-n-max 8 --spec-draft-p-min 0.6 \
+        --chat-template-kwargs '{"reasoning_effort":"low"}' \
+        --cache-reuse 256; then
+        systemctl stop "$QWEN_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Qwen transient unit failed to start"
+    fi
+    pid=
+    identity=
+    for _ in $(seq 1 100); do
+        unit_pid=$(systemctl show "$QWEN_UNIT" --property=MainPID --value \
+            2>/dev/null || true)
+        if [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+            pid=$unit_pid
+            identity=$(proc_identity "$pid" 2>/dev/null || true)
+            [[ -n $identity ]] && break
+        fi
+        sleep 0.1
+    done
+    if [[ -z $pid || -z $identity ]]; then
+        systemctl stop "$QWEN_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Qwen transient unit died before identity capture"
+    fi
+    read -r pgid ticks <<<"$identity"
+    if [[ $pgid != "$pid" ]]; then
+        systemctl stop "$QWEN_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Qwen transient-unit server is not its process-group leader"
+    fi
+    if [[ $(readlink -f "/proc/$pid/exe" 2>/dev/null || true) != \
+            $(readlink -f "$QWEN_BINARY") ]]; then
+        systemctl stop "$QWEN_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Qwen transient unit executable identity is wrong"
+    fi
+    exe_sha=$(sha256 "/proc/$pid/exe")
+    approved_sha=$(clean_python - "$QWEN_PROFILE_MANIFEST" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    print(json.load(stream)["binary_sha256"])
+PY
+    )
+    if [[ $exe_sha != "$approved_sha" ]]; then
+        systemctl stop "$QWEN_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Qwen transient unit executed an unapproved binary"
+    fi
+    if ! clean_python - "$QWEN_PROCESS.tmp" "$pid" "$pgid" "$ticks" \
+            "$exe_sha" "$QWEN_UNIT" "$memwatch_pid" "$memwatch_ticks" <<'PY'
+import json, os, sys
+path, pid, pgid, ticks, digest, unit, watchdog_pid, watchdog_ticks = sys.argv[1:]
+with open(path, "x", encoding="utf-8") as stream:
+    json.dump({"schema_version":1, "pid":int(pid), "pgid":int(pgid),
+               "start_ticks":int(ticks), "exe_sha256":digest,
+               "unit":unit, "memwatch_pid":int(watchdog_pid),
+               "memwatch_start_ticks":int(watchdog_ticks)}, stream)
+    stream.flush(); os.fsync(stream.fileno())
+PY
+    then
+        systemctl stop "$QWEN_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$QWEN_PROCESS.tmp"
+        die "Qwen process identity record could not be created"
+    fi
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    if [[ $current != "$identity" ]]; then
+        systemctl stop "$QWEN_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$QWEN_PROCESS.tmp"
+        die "Qwen process identity changed before record publication"
+    fi
+    mv -- "$QWEN_PROCESS.tmp" "$QWEN_PROCESS"
+    printf '%s %s %s provisional\n' "$pid" "$pgid" "$ticks" \
+        >"$QWEN_WATCHDOG_TARGET.tmp"
+    mv -- "$QWEN_WATCHDOG_TARGET.tmp" "$QWEN_WATCHDOG_TARGET"
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$QWEN_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] ||
+        die "Qwen memory watchdog did not arm provisional process"
+    printf '%s %s %s engine\n' "$pid" "$pgid" "$ticks" \
+        >"$QWEN_WATCHDOG_TARGET.tmp"
+    mv -- "$QWEN_WATCHDOG_TARGET.tmp" "$QWEN_WATCHDOG_TARGET"
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$QWEN_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks engine" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks engine" ]] ||
+        die "Qwen memory watchdog did not arm final process"
+}
+
 api_key() {
     local file=${DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key}
     [[ -r $file ]] || return 1
@@ -378,10 +686,39 @@ for slot in value:
 PY
 }
 
+verify_qwen_process_ready() {
+    local values pid expected_pgid expected_ticks expected_exe expected_unit
+    local unit_pid identity pgid ticks live_exe sockets
+    [[ -r $QWEN_PROCESS ]] || return 1
+    values=$(clean_python - "$QWEN_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"], value["unit"])
+PY
+    ) || return 1
+    read -r pid expected_pgid expected_ticks expected_unit <<<"$values"
+    [[ $expected_unit == "$QWEN_UNIT" ]] || return 1
+    unit_pid=$(systemctl show "$QWEN_UNIT" --property=MainPID --value \
+        2>/dev/null || true)
+    [[ $unit_pid == "$pid" ]] || return 1
+    identity=$(proc_identity "$pid" 2>/dev/null || true)
+    [[ -n $identity ]] || return 1
+    read -r pgid ticks <<<"$identity"
+    [[ $pgid == "$expected_pgid" && $ticks == "$expected_ticks" ]] || return 1
+    live_exe=$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)
+    expected_exe=$(readlink -f "$QWEN_BINARY" 2>/dev/null || true)
+    [[ -n $live_exe && $live_exe == "$expected_exe" ]] || return 1
+    sockets=$(ss -H -ltnp "sport = :$PORT" 2>/dev/null) || return 1
+    [[ -n $sockets && $sockets == *"127.0.0.1:$PORT"* &&
+            $sockets == *"pid=$pid,"* ]]
+}
+
 wait_model_ready() {
     local profile=$1 expected body deadline probe_count=0 available
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
+    [[ $profile == qwen38 ]] && expected=qwen3.8-27b
     deadline=$((SECONDS + 1800))
     while (( SECONDS < deadline )); do
         body=$(clean_curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
@@ -395,7 +732,12 @@ if not any(expected == item["id"].lower() for item in value["data"]):
 PY
         then
             if [[ $profile != dsv4 ]] || verify_dsv4_context; then
-                return 0
+                if [[ $profile != qwen38 ]] || { \
+                        clean_curl -fsS --max-time 3 \
+                            "http://127.0.0.1:$PORT/health" >/dev/null &&
+                        verify_qwen_process_ready; }; then
+                    return 0
+                fi
             fi
         fi
         probe_count=$((probe_count + 1))
@@ -414,6 +756,7 @@ verify_serving() {
     local profile=$1 expected unauth code key body
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
+    [[ $profile == qwen38 ]] && expected=qwen3.8-27b
     body=$(clean_curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
     clean_python - "$expected" "$body" <<'PY'
@@ -425,6 +768,11 @@ if not any(expected == item["id"].lower() for item in value["data"]):
 PY
     if [[ $profile == dsv4 ]]; then
         verify_dsv4_context || return 1
+    fi
+    if [[ $profile == qwen38 ]]; then
+        clean_curl -fsS --max-time 5 \
+            "http://127.0.0.1:$PORT/health" >/dev/null || return 1
+        verify_qwen_process_ready || return 1
     fi
     unauth=$(clean_curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
@@ -481,8 +829,8 @@ rollback() {
     rollback_needed=false
     stop_profile "${1:-}" || true
     if [[ -n $previous_profile ]]; then
-        "start_$previous_profile" || true
-        if verify_serving "$previous_profile"; then
+        if "start_$previous_profile" && wait_model_ready "$previous_profile" &&
+                verify_serving "$previous_profile"; then
             commit_active "$previous_profile"
         else
             echo "ROLLBACK VERIFICATION FAILED" >&2
@@ -497,8 +845,9 @@ if [[ $command == status ]]; then
     json_status
     exit 0
 fi
-[[ $command == restore || $command == dsv4 || $command == glm52 ]] ||
-    die "usage: $0 status [--json]|restore|dsv4|glm52"
+[[ $command == restore || $command == dsv4 || $command == glm52 || \
+        $command == qwen38 ]] ||
+    die "usage: $0 status [--json]|restore|dsv4|glm52|qwen38"
 if [[ $command == restore ]]; then
     mkdir -p -- "$STATE"
     exec 9>"$LOCK"
@@ -507,6 +856,10 @@ if [[ $command == restore ]]; then
     [[ -n $command ]] || exit 0
     if [[ $command == glm52 ]] && ! glm_qualified; then
         die "recorded GLM-5.2 profile is no longer qualified"
+    fi
+    if [[ $command == qwen38 ]]; then
+        verify_qwen_hashes
+        revalidate_qwen_identities
     fi
     if verify_serving "$command"; then
         exit 0
@@ -527,9 +880,15 @@ fi
 if [[ $command == glm52 ]]; then
     verify_glm_hashes
 fi
+if [[ $command == qwen38 ]]; then
+    verify_qwen_hashes
+fi
 mkdir -p -- "$STATE"
 exec 9>"$LOCK"
 flock -x 9
+if [[ $command == qwen38 ]]; then
+    revalidate_qwen_identities
+fi
 previous_profile=$(read_active_profile)
 if [[ $previous_profile == "$command" ]] && verify_serving "$command"; then
     exit 0
