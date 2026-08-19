@@ -2,6 +2,8 @@
 """Golden and harness-selection tests for the Qwen3.8 chat encoder."""
 
 import importlib.util
+import contextlib
+import io
 import json
 import sys
 import unittest
@@ -145,6 +147,36 @@ class Qwen38EncodingTests(unittest.TestCase):
         self.assertEqual(dsv4_payload["encoder"], "dsv4")
         self.assertEqual(qwen38_payload["encoder"], "qwen38")
         self.assertNotEqual(dsv4_digest, qwen38_digest)
+
+    def test_reasoning_effort_accepts_each_encoder_contract(self):
+        benchmark = load_module("bench_accuracy_effort_accept_test", BENCHMARK_PATH)
+        self.assertEqual(
+            parse_benchmark(
+                benchmark, "--encoder", "dsv4", "--reasoning-effort", "max"
+            ).reasoning_effort,
+            "max",
+        )
+        self.assertEqual(
+            parse_benchmark(
+                benchmark, "--encoder", "qwen38", "--reasoning-effort", "low"
+            ).reasoning_effort,
+            "low",
+        )
+
+    def test_reasoning_effort_rejects_cross_encoder_values_early(self):
+        benchmark = load_module("bench_accuracy_effort_reject_test", BENCHMARK_PATH)
+        for encoder, effort in (("dsv4", "low"), ("qwen38", "max")):
+            with self.subTest(encoder=encoder, effort=effort):
+                stderr = io.StringIO()
+                with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit):
+                    parse_benchmark(
+                        benchmark,
+                        "--encoder", encoder,
+                        "--reasoning-effort", effort,
+                    )
+                message = stderr.getvalue()
+                self.assertIn(f"encoder '{encoder}' does not support", message)
+                self.assertIn(f"'{effort}'", message)
 
     def test_matches_pinned_jinja_for_golden_cases(self):
         try:

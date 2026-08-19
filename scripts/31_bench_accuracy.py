@@ -39,6 +39,12 @@ ENCODER_PATHS = {
     "dsv4": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_dsv4.py",
     "qwen38": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_qwen38.py",
 }
+# Public contracts of the pinned encoders. Validate here instead of relying on
+# encoder assertions so an incompatible request fails before dataset work.
+ENCODER_REASONING_EFFORTS = {
+    "dsv4": frozenset(("high", "max")),
+    "qwen38": frozenset(("low", "medium", "xhigh")),
+}
 # Retain the historical constant for callers that inspect the default encoder.
 ENCODER_PATH = ENCODER_PATHS["dsv4"]
 EXPECTED_ROWS = {"gsm8k": 1319, "mmlu-pro": 12032, "humaneval": 164}
@@ -126,7 +132,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--reasoning-effort",
         default=None,
-        choices=("low", "medium", "xhigh"),
+        choices=("low", "medium", "xhigh", "high", "max"),
         help=(
             "reasoning-effort rendering passed to the encoder (Qwen3.8 template "
             "levels; omit for the template default). Recorded in the config "
@@ -193,6 +199,16 @@ def parse_args() -> argparse.Namespace:
         help="JSON build/weights manifest file(s); required for holdout runs",
     )
     args = parser.parse_args()
+    if (
+        args.reasoning_effort is not None
+        and args.reasoning_effort not in ENCODER_REASONING_EFFORTS[args.encoder]
+    ):
+        supported = ", ".join(sorted(ENCODER_REASONING_EFFORTS[args.encoder]))
+        parser.error(
+            f"encoder {args.encoder!r} does not support reasoning effort "
+            f"{args.reasoning_effort!r}; supported values: {supported}, or omit "
+            "--reasoning-effort"
+        )
     if args.extra_body is not None:
         try:
             args.extra_body = json.loads(args.extra_body)
