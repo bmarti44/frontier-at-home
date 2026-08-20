@@ -1,0 +1,67 @@
+{
+ "schema_version": 3,
+ "profile": "qwen38-1m",
+ "purpose": "1M-total agentic profile: four native-262K slots (no RoPE scaling; 4x262144 = 1048576 exactly), f16 KV (gate 3: 26.68 tok/s @28K strict, identical numerics to the qualified 32K profile; q8_0 rejected at -1.8 HumanEval), MTP n8 p0.6, reasoning low",
+ "binary_path": "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server",
+ "binary_sha256": "bcef273b987786cd5d51e2f95a5b7d58ea70d3026b3733d67cdd8139331da7e9",
+ "model_path": "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+ "model_sha256": "e103abf9d914d1d7b2f2592f055f2759a71195c350a01c135f71aaae86bca52b",
+ "mmproj_path": "/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf",
+ "mmproj_sha256": "cb0a71fe9b84af2552fc6260acf8e9773a29d115c683aba01c72a7ac537b212b",
+ "port": 8013,
+ "context_cap": 1048576,
+ "promotion": {
+  "decision": "f16_kv_adopted_gate3_pass_fidelity_free",
+  "tuned_at": "2026-08-19",
+  "evidence": "results/qwen38-gates/trackc-1m-np4-2026-08-19/"
+ },
+ "runtime": {
+  "engine_environment": {},
+  "diagnostics_unset": [],
+  "launch_arguments": [
+   "--model",
+   "{model}",
+   "-ngl",
+   "99",
+   "-fa",
+   "on",
+   "--no-mmap",
+   "-c",
+   "1048576",
+   "--mmproj",
+   "{mmproj}",
+   "--parallel",
+   "4",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--alias",
+   "qwen3.8-27b",
+   "--spec-type",
+   "draft-mtp",
+   "--spec-draft-n-max",
+   "8",
+   "--spec-draft-p-min",
+   "0.6",
+   "--chat-template-kwargs",
+   "{\"reasoning_effort\":\"low\"}",
+   "--cache-reuse",
+   "256"
+  ],
+  "containment": {
+   "unit": "qwen38-engine.service",
+   "memory_high": "88G",
+   "memory_max": "95G",
+   "memory_swap_max": "0",
+   "oom_policy": "kill",
+   "kill_mode": "control-group"
+  },
+  "safety": {
+   "kill_floor_gib": 18,
+   "minimum_start_gib": 100,
+   "sample_hz": 1,
+   "startup_timeout_seconds": 1800
+  }
+ }
+}

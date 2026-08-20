@@ -9,6 +9,7 @@ readonly PROD_BINARY=/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server
 readonly PROD_GGUF=/home/bmarti44/models/glm52-full-denseq40.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-fullq4-production-profile.json
 readonly QWEN_PROFILE_MANIFEST=$REPO/configs/qwen38-production-profile.json
+readonly QWEN_1M_PROFILE_MANIFEST=$REPO/configs/qwen38-1m-production-profile.json
 readonly PROD_QWEN_BINARY=/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server
 readonly PROD_QWEN_MODEL=/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf
 readonly PROD_QWEN_MMPROJ=/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf
@@ -50,7 +51,7 @@ readonly QWEN_WATCHDOG_READY=$STATE/qwen38.memwatch.ready
 readonly QWEN_WATCHDOG_LOG=$STATE/qwen38.memwatch.log
 rollback_needed=false
 previous_profile=
-qwen_hashes_verified=false
+qwen_hashes_verified_profile=
 qwen_verified_identities=
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
@@ -95,7 +96,7 @@ state = "inactive"
 try:
     with open(path, encoding="utf-8") as stream:
         value = json.load(stream)
-    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38"}:
+    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m"}:
         profile = value["profile"]
         state = "recorded"
 except (OSError, ValueError, TypeError):
@@ -112,7 +113,7 @@ try:
     with open(sys.argv[1], encoding="utf-8") as stream:
         value = json.load(stream)
     profile = value.get("profile")
-    print(profile if profile in {"dsv4", "glm52", "qwen38"} else "")
+    print(profile if profile in {"dsv4", "glm52", "qwen38", "qwen38-1m"} else "")
 except (OSError, ValueError, TypeError):
     print("")
 PY
@@ -174,11 +175,12 @@ if manifest.get("context_cap") != 32768:
 PY
 }
 
-verify_qwen_hashes() {
-    qwen_verified_identities=$(clean_python - "$QWEN_PROFILE_MANIFEST" "$QWEN_BINARY" "$QWEN_MODEL" \
-            "$QWEN_MMPROJ" <<'PY'
+verify_qwen_profile_hashes() {
+    local manifest_path=$1 expected_profile=$2 expected_context=$3
+    qwen_verified_identities=$(clean_python - "$manifest_path" "$QWEN_BINARY" "$QWEN_MODEL" \
+            "$QWEN_MMPROJ" "$expected_profile" "$expected_context" <<'PY'
 import hashlib, json, os, stat, sys
-manifest_path, binary_path, model_path, mmproj_path = sys.argv[1:]
+manifest_path, binary_path, model_path, mmproj_path, expected_profile, expected_context = sys.argv[1:]
 with open(manifest_path, encoding="utf-8") as stream:
     manifest = json.load(stream)
 
@@ -212,14 +214,22 @@ for label, path, path_key, hash_key in (
     if digest != manifest.get(hash_key):
         raise SystemExit(f"Qwen {label} hash is not approved")
     identities[label] = identity
-if manifest.get("profile") != "qwen38" or manifest.get("schema_version") != 3:
+if manifest.get("profile") != expected_profile or manifest.get("schema_version") != 3:
     raise SystemExit("Qwen profile identity is not approved")
-if manifest.get("port") != 8013 or manifest.get("context_cap") != 32768:
+if manifest.get("port") != 8013 or manifest.get("context_cap") != int(expected_context):
     raise SystemExit("Qwen serving topology is not approved")
 print(json.dumps(identities, separators=(",", ":"), sort_keys=True))
 PY
     )
-    qwen_hashes_verified=true
+    qwen_hashes_verified_profile=$expected_profile
+}
+
+verify_qwen_hashes() {
+    verify_qwen_profile_hashes "$QWEN_PROFILE_MANIFEST" qwen38 32768
+}
+
+verify_qwen_1m_hashes() {
+    verify_qwen_profile_hashes "$QWEN_1M_PROFILE_MANIFEST" qwen38-1m 1048576
 }
 
 revalidate_qwen_identities() {
@@ -382,7 +392,7 @@ stop_profile() {
             return 0
             ;;
         glm52) stop_glm_verified ;;
-        qwen38) stop_qwen_verified ;;
+        qwen38|qwen38-1m) stop_qwen_verified ;;
         "") return 0 ;;
         *) die "unknown previous profile $1" ;;
     esac
@@ -503,12 +513,57 @@ PY
         die "GLM memory watchdog did not arm final process"
 }
 
-start_qwen38() {
+launch_qwen38() {
+    systemd-run --unit=qwen38-engine --collect --quiet \
+        --property Type=exec \
+        --property User=bmarti44 \
+        --property MemoryHigh=45G \
+        --property MemoryMax=50G \
+        --property MemorySwapMax=0 \
+        --property OOMPolicy=kill \
+        --property KillMode=control-group \
+        --property Delegate=no \
+        --property "StandardOutput=append:$STATE/qwen38.server.log" \
+        --property "StandardError=append:$STATE/qwen38.server.log" \
+        /usr/bin/flock --nonblock --no-fork \
+        /run/lock/frontier-at-home/inference.lock \
+        "$QWEN_BINARY" --model "$QWEN_MODEL" -ngl 99 -fa on \
+        --no-mmap -c 32768 --mmproj "$QWEN_MMPROJ" --parallel 1 \
+        --host 127.0.0.1 --port "$PORT" --alias qwen3.8-27b \
+        --spec-type draft-mtp --spec-draft-n-max 8 --spec-draft-p-min 0.6 \
+        --chat-template-kwargs '{"reasoning_effort":"low"}' \
+        --cache-reuse 256
+}
+
+launch_qwen38-1m() {
+    systemd-run --unit=qwen38-engine --collect --quiet \
+        --property Type=exec \
+        --property User=bmarti44 \
+        --property MemoryHigh=88G \
+        --property MemoryMax=95G \
+        --property MemorySwapMax=0 \
+        --property OOMPolicy=kill \
+        --property KillMode=control-group \
+        --property Delegate=no \
+        --property "StandardOutput=append:$STATE/qwen38-1m.server.log" \
+        --property "StandardError=append:$STATE/qwen38-1m.server.log" \
+        /usr/bin/flock --nonblock --no-fork \
+        /run/lock/frontier-at-home/inference.lock \
+        "$QWEN_BINARY" --model "$QWEN_MODEL" -ngl 99 -fa on \
+        --no-mmap -c 1048576 --mmproj "$QWEN_MMPROJ" --parallel 4 \
+        --host 127.0.0.1 --port "$PORT" --alias qwen3.8-27b \
+        --spec-type draft-mtp --spec-draft-n-max 8 --spec-draft-p-min 0.6 \
+        --chat-template-kwargs '{"reasoning_effort":"low"}' \
+        --cache-reuse 256
+}
+
+start_qwen_profile() {
+    local profile=$1 manifest_path=$2 verify_function=$3
     local pid identity pgid ticks exe_sha approved_sha unit_pid current load_state
     local memwatch_pid memwatch_identity memwatch_ticks ready
     [[ ! -e $QWEN_PROCESS ]] ||
         die "Qwen process record already exists; refusing a second model"
-    "$qwen_hashes_verified" || verify_qwen_hashes
+    [[ $qwen_hashes_verified_profile == "$profile" ]] || "$verify_function"
     "$REPO/scripts/03_memory_guard.py" --required-gib 100 \
         --stable-samples 3 --interval-seconds 1 --timeout-seconds 180
     load_state=$(systemctl show "$QWEN_UNIT" --property=LoadState --value \
@@ -544,25 +599,7 @@ start_qwen38() {
         wait "$memwatch_pid" 2>/dev/null || true
         die "Qwen artifact identity changed before execution"
     fi
-    if ! systemd-run --unit=qwen38-engine --collect --quiet \
-        --property Type=exec \
-        --property User=bmarti44 \
-        --property MemoryHigh=45G \
-        --property MemoryMax=50G \
-        --property MemorySwapMax=0 \
-        --property OOMPolicy=kill \
-        --property KillMode=control-group \
-        --property Delegate=no \
-        --property "StandardOutput=append:$STATE/qwen38.server.log" \
-        --property "StandardError=append:$STATE/qwen38.server.log" \
-        /usr/bin/flock --nonblock --no-fork \
-        /run/lock/frontier-at-home/inference.lock \
-        "$QWEN_BINARY" --model "$QWEN_MODEL" -ngl 99 -fa on \
-        --no-mmap -c 32768 --mmproj "$QWEN_MMPROJ" --parallel 1 \
-        --host 127.0.0.1 --port "$PORT" --alias qwen3.8-27b \
-        --spec-type draft-mtp --spec-draft-n-max 8 --spec-draft-p-min 0.6 \
-        --chat-template-kwargs '{"reasoning_effort":"low"}' \
-        --cache-reuse 256; then
+    if ! "launch_$profile"; then
         systemctl stop "$QWEN_UNIT" 2>/dev/null || true
         kill -TERM "$memwatch_pid" 2>/dev/null || true
         wait "$memwatch_pid" 2>/dev/null || true
@@ -601,7 +638,7 @@ start_qwen38() {
         die "Qwen transient unit executable identity is wrong"
     fi
     exe_sha=$(sha256 "/proc/$pid/exe")
-    approved_sha=$(clean_python - "$QWEN_PROFILE_MANIFEST" <<'PY'
+    approved_sha=$(clean_python - "$manifest_path" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as stream:
     print(json.load(stream)["binary_sha256"])
@@ -664,6 +701,15 @@ PY
         die "Qwen memory watchdog did not arm final process"
 }
 
+start_qwen38() {
+    start_qwen_profile qwen38 "$QWEN_PROFILE_MANIFEST" verify_qwen_hashes
+}
+
+start_qwen38-1m() {
+    start_qwen_profile qwen38-1m "$QWEN_1M_PROFILE_MANIFEST" \
+        verify_qwen_1m_hashes
+}
+
 api_key() {
     local file=${DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key}
     [[ -r $file ]] || return 1
@@ -683,6 +729,21 @@ if not isinstance(value, list) or len(value) != 2:
 for slot in value:
     if slot["n_ctx"] != 524288:
         raise SystemExit("DeepSeek per-slot context is not 524288 (2 x 512k)")
+PY
+}
+
+verify_qwen_1m_context() {
+    local body path="/slots"
+    body=$(clean_curl -fsS --max-time 5 \
+        "http://127.0.0.1:$PORT$path") || return 1
+    clean_python - "$body" <<'PY'
+import json, sys
+value = json.loads(sys.argv[1])
+if not isinstance(value, list) or len(value) != 4:
+    raise SystemExit("Qwen 1M slot topology is invalid")
+for slot in value:
+    if slot["n_ctx"] != 262144:
+        raise SystemExit("Qwen per-slot context is not 262144 (4 x 262K)")
 PY
 }
 
@@ -718,7 +779,7 @@ wait_model_ready() {
     local profile=$1 expected body deadline probe_count=0 available
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
-    [[ $profile == qwen38 ]] && expected=qwen3.8-27b
+    [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
     deadline=$((SECONDS + 1800))
     while (( SECONDS < deadline )); do
         body=$(clean_curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
@@ -732,11 +793,13 @@ if not any(expected == item["id"].lower() for item in value["data"]):
 PY
         then
             if [[ $profile != dsv4 ]] || verify_dsv4_context; then
-                if [[ $profile != qwen38 ]] || { \
+                if [[ $profile != qwen38 && $profile != qwen38-1m ]] || { \
                         clean_curl -fsS --max-time 3 \
                             "http://127.0.0.1:$PORT/health" >/dev/null &&
                         verify_qwen_process_ready; }; then
-                    return 0
+                    if [[ $profile != qwen38-1m ]] || verify_qwen_1m_context; then
+                        return 0
+                    fi
                 fi
             fi
         fi
@@ -756,7 +819,7 @@ verify_serving() {
     local profile=$1 expected unauth code key body
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
-    [[ $profile == qwen38 ]] && expected=qwen3.8-27b
+    [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
     body=$(clean_curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
     clean_python - "$expected" "$body" <<'PY'
@@ -769,10 +832,13 @@ PY
     if [[ $profile == dsv4 ]]; then
         verify_dsv4_context || return 1
     fi
-    if [[ $profile == qwen38 ]]; then
+    if [[ $profile == qwen38 || $profile == qwen38-1m ]]; then
         clean_curl -fsS --max-time 5 \
             "http://127.0.0.1:$PORT/health" >/dev/null || return 1
         verify_qwen_process_ready || return 1
+    fi
+    if [[ $profile == qwen38-1m ]]; then
+        verify_qwen_1m_context || return 1
     fi
     unauth=$(clean_curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
@@ -846,8 +912,8 @@ if [[ $command == status ]]; then
     exit 0
 fi
 [[ $command == restore || $command == dsv4 || $command == glm52 || \
-        $command == qwen38 ]] ||
-    die "usage: $0 status [--json]|restore|dsv4|glm52|qwen38"
+        $command == qwen38 || $command == qwen38-1m ]] ||
+    die "usage: $0 status [--json]|restore|dsv4|glm52|qwen38|qwen38-1m"
 if [[ $command == restore ]]; then
     mkdir -p -- "$STATE"
     exec 9>"$LOCK"
@@ -859,6 +925,10 @@ if [[ $command == restore ]]; then
     fi
     if [[ $command == qwen38 ]]; then
         verify_qwen_hashes
+        revalidate_qwen_identities
+    fi
+    if [[ $command == qwen38-1m ]]; then
+        verify_qwen_1m_hashes
         revalidate_qwen_identities
     fi
     if verify_serving "$command"; then
@@ -883,10 +953,13 @@ fi
 if [[ $command == qwen38 ]]; then
     verify_qwen_hashes
 fi
+if [[ $command == qwen38-1m ]]; then
+    verify_qwen_1m_hashes
+fi
 mkdir -p -- "$STATE"
 exec 9>"$LOCK"
 flock -x 9
-if [[ $command == qwen38 ]]; then
+if [[ $command == qwen38 || $command == qwen38-1m ]]; then
     revalidate_qwen_identities
 fi
 previous_profile=$(read_active_profile)
