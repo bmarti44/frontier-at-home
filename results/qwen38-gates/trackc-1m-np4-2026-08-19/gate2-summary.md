@@ -1,4 +1,4 @@
-# Track C gate 2 — fidelity under q8_0 KV + deep retrieval — 2026-08-19
+# Track C gate 2 — np4-1m-q8_0 quality comparison + deep retrieval — 2026-08-19
 
 Same serve config as gate 1 (-c 1048576 -np 4, q8_0 KV, MTP n8p6, low
 effort, 16384 budget). Holdout ledger namespace trackc-np4q8.
@@ -11,15 +11,17 @@ effort, 16384 budget). Holdout ledger namespace trackc-np4q8.
   (400 exceed_context_size, recorded in needle.json) — sizing artifact,
   not a model failure.
 
-## Accuracy suites under q8_0 KV (vs f16 baseline)
-| suite | q8_0 | f16 | delta |
+## Accuracy suites for np4-1m-q8_0 (vs cited qualified baseline)
+| suite | np4-1m-q8_0 config | cited baseline | delta |
 |---|---|---|---|
 | GSM8K holdout | 98.0 | 98.0 | 0 |
 | MMLU-Pro holdout | 84.21 (1 invalid) | 85.02 | -0.81 |
 | HumanEval | 77.44 | 79.27 | -1.83 |
 
-q8_0 KV is not free on this model: ~-1 to -2 points on MMLU/HumanEval
-(3 HumanEval items). Gate 3 therefore measures f16 KV at the same np4
-config — the memory math fits (~88 GB worst case) — to obtain a
-fidelity-free 1M profile; q8_0 stays the documented fallback where
-memory headroom matters.
+The np4-1m-q8_0 configuration scored ~1 to 2 points lower on
+MMLU-Pro/HumanEval (3 HumanEval items) than the cited f16 baseline. This
+delta is not isolated to KV format: the arms also differ in parallelism,
+total context, and MTP settings. Gate 3 therefore measures f16 KV at the
+same np4 configuration — the memory math fits (~88 GB worst case) — for
+the selected 1M profile; np4-1m-q8_0 remains the documented fallback
+configuration where memory headroom matters.

@@ -22,6 +22,9 @@ QWEN_PRODUCTION_PROFILE = ROOT / "configs" / "qwen38-production-profile.json"
 QWEN_1M_PRODUCTION_PROFILE = (
     ROOT / "configs" / "qwen38-1m-production-profile.json"
 )
+QWEN_1M_EVIDENCE = (
+    ROOT / "results" / "qwen38-gates" / "trackc-1m-np4-2026-08-19"
+)
 QWEN_BUILD = (
     ROOT / "configs" / "build-manifests" / "llamacpp-qwen38-9d77fa17.json"
 )
@@ -333,6 +336,29 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertTrue(
             (ROOT / profile["promotion"]["evidence"] / "gate1-summary.md").is_file()
         )
+        gate3 = ROOT / profile["promotion"]["evidence"] / "gate3-summary.md"
+        self.assertTrue(gate3.is_file())
+        gate3_text = gate3.read_text()
+        self.assertIn("ADOPTED", gate3_text)
+        self.assertIn("f16 KV adopted", gate3_text)
+        self.assertTrue(
+            profile["promotion"]["decision"].startswith("f16_kv_adopted_gate3_")
+        )
+        evidence_manifest = json.loads(
+            (QWEN_1M_EVIDENCE / "manifest.json").read_text()
+        )
+        manifest_files = {item["path"]: item for item in evidence_manifest["files"]}
+        actual_files = {
+            path.name for path in QWEN_1M_EVIDENCE.iterdir()
+            if path.is_file() and path.name != "manifest.json"
+        }
+        self.assertEqual(set(manifest_files), actual_files)
+        for name, record in manifest_files.items():
+            payload = (QWEN_1M_EVIDENCE / name).read_bytes()
+            self.assertEqual(record["bytes"], len(payload), name)
+            self.assertEqual(
+                record["sha256"], hashlib.sha256(payload).hexdigest(), name
+            )
         self.assertEqual(profile["runtime"]["engine_environment"], {})
         self.assertEqual(profile["runtime"]["diagnostics_unset"], [])
         self.assertEqual(
@@ -366,7 +392,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(
             profile["runtime"]["safety"],
             {
-                "kill_floor_gib": 18,
+                "kill_floor_gib": 8,
                 "minimum_start_gib": 100,
                 "sample_hz": 1,
                 "startup_timeout_seconds": 1800,
@@ -386,6 +412,8 @@ class EngineSwitchTests(unittest.TestCase):
         ):
             self.assertIn(contract, launch)
         self.assertNotIn("--rope", launch.lower())
+        self.assertNotIn("-ctk", launch)
+        self.assertNotIn("-ctv", launch)
         self.assertIn("configs/qwen38-1m-production-profile.json", source)
         self.assertIn("verify_qwen_1m_hashes", source)
         self.assertIn("start_qwen38-1m", source)
@@ -433,19 +461,56 @@ class EngineSwitchTests(unittest.TestCase):
             "status [--json]|restore|dsv4|glm52|qwen38|qwen38-1m", source
         )
 
-    def test_status_and_restore_accept_qwen38_1m(self):
+    def test_qwen38_1m_successful_launch_cleans_killed_unit_and_omits_q8_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            (root / "dsv4-running").touch()
+            (root / "qwen-hashes-valid").touch()
+            (root / "qwen-unit-killed").touch()
+            result = self.run_switch(root, "qwen38-1m")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38-1m",
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("SYSTEMCTL reset-failed qwen38-engine.service", actions)
+            self.assertIn("SYSTEMD_RUN", actions)
+            self.assertIn("-c 1048576", actions)
+            self.assertIn("--parallel 4", actions)
+            self.assertNotIn("-ctk", actions)
+            self.assertNotIn("-ctv", actions)
+            self.assertFalse((root / "qwen-unit-killed").exists())
+
+    def test_restore_qwen38_1m_start_failure_falls_back_to_dsv4(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "active.json").write_text(
                 json.dumps({"schema_version": 1, "profile": "qwen38-1m"})
             )
-            result = self.run_switch(root, "status", "--json")
+            (root / "qwen-hashes-valid").touch()
+            (root / "fail-qwen-start").touch()
+            result = self.run_switch(root, "restore")
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(json.loads(result.stdout)["active_profile"], "qwen38-1m")
-        source = SCRIPT.read_text()
-        self.assertIn('command == qwen38-1m', source)
-        rollback = source[source.index("rollback() {") : source.index("command=${1")]
-        self.assertIn('"start_$previous_profile"', rollback)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            self.assertIn(
+                "RESTORE FAILED for recorded profile qwen38-1m; "
+                "falling back to dsv4",
+                result.stderr,
+            )
+            self.assertIn(
+                "RESTORE FALLBACK committed dsv4 in active.json", result.stderr
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("SYSTEMD_RUN", actions)
+            self.assertIn("DSV4 start", actions)
+            self.assertIn("WAIT dsv4", actions)
+            self.assertIn("VERIFY dsv4", actions)
 
     def test_qwen_hash_failure_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:

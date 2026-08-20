@@ -557,25 +557,47 @@ launch_qwen38-1m() {
         --cache-reuse 256
 }
 
+cleanup_qwen_killed_unit() {
+    local load_state active_state
+    load_state=$(systemctl show "$QWEN_UNIT" --property=LoadState --value \
+        2>/dev/null || true)
+    [[ -z $load_state || $load_state == not-found ]] && return 0
+    active_state=$(systemctl show "$QWEN_UNIT" --property=ActiveState --value \
+        2>/dev/null || true)
+    if [[ $active_state == failed || $active_state == inactive ]]; then
+        systemctl reset-failed "$QWEN_UNIT" 2>/dev/null || true
+        for _ in $(seq 1 50); do
+            load_state=$(systemctl show "$QWEN_UNIT" --property=LoadState --value \
+                2>/dev/null || true)
+            [[ -z $load_state || $load_state == not-found ]] && return 0
+            sleep 0.1
+        done
+    fi
+    die "Qwen transient unit already exists (LoadState=$load_state, ActiveState=$active_state)"
+}
+
 start_qwen_profile() {
     local profile=$1 manifest_path=$2 verify_function=$3
-    local pid identity pgid ticks exe_sha approved_sha unit_pid current load_state
+    local pid identity pgid ticks exe_sha approved_sha unit_pid current
     local memwatch_pid memwatch_identity memwatch_ticks ready
+    # Watchdog floor: 18 GiB for the 32K profile. The 1m profile measured
+    # MemAvailable bottoming at 11 GiB with all four slots filled to ~260K
+    # (gate 4), so an 18 GiB floor would false-trip near full load; 8 GiB
+    # mirrors the owner-accepted DSV4 1M floor and still protects the box.
+    local watchdog_floor_gib=18
+    [[ $profile != qwen38-1m ]] || watchdog_floor_gib=8
     [[ ! -e $QWEN_PROCESS ]] ||
         die "Qwen process record already exists; refusing a second model"
     [[ $qwen_hashes_verified_profile == "$profile" ]] || "$verify_function"
     "$REPO/scripts/03_memory_guard.py" --required-gib 100 \
         --stable-samples 3 --interval-seconds 1 --timeout-seconds 180
-    load_state=$(systemctl show "$QWEN_UNIT" --property=LoadState --value \
-        2>/dev/null || true)
-    [[ -z $load_state || $load_state == not-found ]] ||
-        die "Qwen transient unit already exists (LoadState=$load_state)"
+    cleanup_qwen_killed_unit
     rm -f -- "$QWEN_PROCESS.tmp" "$QWEN_WATCHDOG_TARGET" \
         "$QWEN_WATCHDOG_READY"
     "$REPO/scripts/01_memwatch.sh" \
         --target-file "$QWEN_WATCHDOG_TARGET" \
         --ready-file "$QWEN_WATCHDOG_READY" \
-        --threshold-gib 18 --interval-sec 1 --log "$QWEN_WATCHDOG_LOG" &
+        --threshold-gib "$watchdog_floor_gib" --interval-sec 1 --log "$QWEN_WATCHDOG_LOG" &
     memwatch_pid=$!
     memwatch_ticks=
     ready=
@@ -905,6 +927,97 @@ rollback() {
     return "$rc"
 }
 
+restore_profile() {
+    local profile=$1
+    if [[ $profile == glm52 ]] && ! glm_qualified; then
+        echo "recorded GLM-5.2 profile is no longer qualified" >&2
+        return 1
+    fi
+    if [[ $profile == qwen38 ]]; then
+        verify_qwen_hashes || return 1
+        revalidate_qwen_identities || return 1
+    fi
+    if [[ $profile == qwen38-1m ]]; then
+        verify_qwen_1m_hashes || return 1
+        revalidate_qwen_identities || return 1
+    fi
+    verify_serving "$profile" && return 0
+    if [[ $profile != dsv4 || -e /run/dsv4/llamacpp.state.json ]]; then
+        stop_profile "$profile" || return 1
+    fi
+    "start_$profile" || return 1
+    wait_model_ready "$profile" || return 1
+    verify_serving "$profile"
+}
+
+# Exercise complete switch/restore control flow without loading a model. These
+# overrides exist only in the explicit test mode and retain the real Qwen launch
+# functions so their complete systemd-run argv is covered by subprocess tests.
+if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
+    test_action() { printf '%s\n' "$*" >>"$STATE/actions.log"; }
+    systemd-run() {
+        test_action "SYSTEMD_RUN $*"
+        [[ ! -e $STATE/fail-qwen-start ]] || return 1
+        : >"$STATE/qwen-running"
+    }
+    systemctl() {
+        local verb=${1:-} property=${2:-}
+        if [[ $verb == show && $property == "$QWEN_UNIT" ]]; then
+            if [[ $* == *--property=LoadState* ]]; then
+                [[ -e $STATE/qwen-unit-killed ]] && printf 'loaded\n' || printf 'not-found\n'
+            elif [[ $* == *--property=ActiveState* ]]; then
+                [[ -e $STATE/qwen-unit-killed ]] && printf 'failed\n' || printf 'inactive\n'
+            fi
+            return 0
+        fi
+        test_action "SYSTEMCTL $*"
+        if [[ $verb == reset-failed && $property == "$QWEN_UNIT" ]]; then
+            rm -f -- "$STATE/qwen-unit-killed"
+        fi
+    }
+    dsv4_launcher() {
+        test_action "DSV4 $*"
+        if [[ $1 == start ]]; then
+            : >"$STATE/dsv4-running"
+        else
+            rm -f -- "$STATE/dsv4-running"
+        fi
+    }
+    verify_qwen_profile_hashes() {
+        local _manifest_path=$1 expected_profile=$2 _expected_context=$3
+        if [[ ! -e $STATE/qwen-hashes-valid ]]; then
+            echo "Qwen test artifact hashes are not approved" >&2
+            return 1
+        fi
+        qwen_hashes_verified_profile=$expected_profile
+        qwen_verified_identities=test
+        test_action "HASHES $expected_profile"
+    }
+    revalidate_qwen_identities() {
+        [[ $qwen_verified_identities == test ]]
+    }
+    stop_qwen_verified() {
+        test_action "STOP qwen"
+        rm -f -- "$STATE/qwen-running"
+    }
+    start_qwen_profile() {
+        local profile=$1 _manifest_path=$2 verify_function=$3
+        [[ $qwen_hashes_verified_profile == "$profile" ]] || "$verify_function"
+        cleanup_qwen_killed_unit
+        "launch_$profile" || die "Qwen transient unit failed to start"
+        test_action "START $profile"
+    }
+    wait_model_ready() {
+        test_action "WAIT $1"
+        [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || printf qwen)-running ]]
+    }
+    verify_serving() {
+        test_action "VERIFY $1"
+        [[ ! -e $STATE/fail-$1-verify ]] &&
+            [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || printf qwen)-running ]]
+    }
+fi
+
 command=${1:-status}
 if [[ $command == status ]]; then
     [[ ${2:-} == --json ]] && { json_status; exit 0; }
@@ -920,29 +1033,19 @@ if [[ $command == restore ]]; then
     flock -x 9
     command=$(read_active_profile)
     [[ -n $command ]] || exit 0
-    if [[ $command == glm52 ]] && ! glm_qualified; then
-        die "recorded GLM-5.2 profile is no longer qualified"
-    fi
-    if [[ $command == qwen38 ]]; then
-        verify_qwen_hashes
-        revalidate_qwen_identities
-    fi
-    if [[ $command == qwen38-1m ]]; then
-        verify_qwen_1m_hashes
-        revalidate_qwen_identities
-    fi
-    if verify_serving "$command"; then
+    if ( restore_profile "$command" ); then
         exit 0
     fi
-    if [[ $command != dsv4 || -e /run/dsv4/llamacpp.state.json ]]; then
-        stop_profile "$command"
+    [[ $command != dsv4 ]] || die "dsv4 boot restoration failed"
+    echo "RESTORE FAILED for recorded profile $command; falling back to dsv4" >&2
+    ( stop_profile "$command" ) ||
+        die "cannot safely stop failed $command profile before dsv4 fallback"
+    if ( restore_profile dsv4 ); then
+        commit_active dsv4
+        echo "RESTORE FALLBACK committed dsv4 in active.json" >&2
+        exit 0
     fi
-    "start_$command"
-    wait_model_ready "$command" ||
-        die "$command boot restoration timed out or model identity is wrong"
-    verify_serving "$command" ||
-        die "$command boot restoration failed serving verification"
-    exit 0
+    die "dsv4 boot restoration fallback failed after $command"
 fi
 if [[ $command == glm52 ]] && ! glm_qualified; then
     die "GLM-5.2 production profile is not qualified"

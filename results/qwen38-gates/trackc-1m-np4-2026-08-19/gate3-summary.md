@@ -9,8 +9,9 @@ Same config as gate 1 but f16 KV (no -ctk/-ctv), caps 88G/95G.
   **26.68 @28K** — identical to the qualified 32K profile (26.71), vs
   q8_0's 23.06.
 
-Decision: **f16 KV adopted** for qwen38-1m. It is faster at every
-measured point, fits the envelope, and carries zero fidelity delta by
+Decision: **f16 KV adopted** for qwen38-1m: decode faster at every measured
+context; 28K median prefill slightly lower and TTFT slightly higher. It
+fits the envelope and carries zero fidelity delta by
 construction (same numerics as the qualified baseline), so no further
 suite gate is required. q8_0 results remain documented (gate 2) as the
 fallback if memory headroom is ever needed.

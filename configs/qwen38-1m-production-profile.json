@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "profile": "qwen38-1m",
- "purpose": "1M-total agentic profile: four native-262K slots (no RoPE scaling; 4x262144 = 1048576 exactly), f16 KV (gate 3: 26.68 tok/s @28K strict, identical numerics to the qualified 32K profile; q8_0 rejected at -1.8 HumanEval), MTP n8 p0.6, reasoning low",
+ "purpose": "1M-total agentic profile: four native-262K slots (no RoPE scaling; 4x262144 = 1048576 exactly), f16 KV (gate 3: 26.68 tok/s @28K strict; the np4-1m-q8_0 configuration scored 1.8 points lower on HumanEval than the cited qualified baseline), MTP n8 p0.6, reasoning low",
  "binary_path": "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server",
  "binary_sha256": "bcef273b987786cd5d51e2f95a5b7d58ea70d3026b3733d67cdd8139331da7e9",
  "model_path": "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
@@ -58,7 +58,7 @@
    "kill_mode": "control-group"
   },
   "safety": {
-   "kill_floor_gib": 18,
+   "kill_floor_gib": 8,
    "minimum_start_gib": 100,
    "sample_hz": 1,
    "startup_timeout_seconds": 1800
