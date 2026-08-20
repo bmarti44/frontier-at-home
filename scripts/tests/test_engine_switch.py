@@ -19,6 +19,12 @@ GLM_PRODUCTION_PROFILE = (
     ROOT / "configs" / "glm52-fullq4-production-profile.json"
 )
 QWEN_PRODUCTION_PROFILE = ROOT / "configs" / "qwen38-production-profile.json"
+QWEN_1M_PRODUCTION_PROFILE = (
+    ROOT / "configs" / "qwen38-1m-production-profile.json"
+)
+QWEN_1M_EVIDENCE = (
+    ROOT / "results" / "qwen38-gates" / "trackc-1m-np4-2026-08-19"
+)
 QWEN_BUILD = (
     ROOT / "configs" / "build-manifests" / "llamacpp-qwen38-9d77fa17.json"
 )
@@ -273,6 +279,151 @@ class EngineSwitchTests(unittest.TestCase):
         ]
         self.assertIn("verify_qwen_process_ready", wait)
 
+    def test_qwen_1m_production_launcher_matches_the_pinned_profile(self):
+        source = SCRIPT.read_text()
+        profile = json.loads(QWEN_1M_PRODUCTION_PROFILE.read_text())
+        qwen38 = json.loads(QWEN_PRODUCTION_PROFILE.read_text())
+        build = json.loads(QWEN_BUILD.read_text())
+        weights = {
+            item["name"]: item
+            for item in json.loads(QWEN_WEIGHTS.read_text())["files"]
+        }
+        self.assertEqual(profile["schema_version"], 3)
+        self.assertEqual(profile["profile"], "qwen38-1m")
+        self.assertEqual(set(profile), set(qwen38))
+        self.assertEqual(set(profile["promotion"]), set(qwen38["promotion"]))
+        self.assertEqual(set(profile["runtime"]), set(qwen38["runtime"]))
+        self.assertEqual(
+            set(profile["runtime"]["containment"]),
+            set(qwen38["runtime"]["containment"]),
+        )
+        self.assertEqual(
+            set(profile["runtime"]["safety"]),
+            set(qwen38["runtime"]["safety"]),
+        )
+        self.assertEqual(profile["context_cap"], 1_048_576)
+        self.assertEqual(profile["port"], 8013)
+        self.assertIn("four native-262K slots", profile["purpose"])
+        self.assertIn("no RoPE scaling", profile["purpose"])
+        self.assertEqual(profile["binary_path"], qwen38["binary_path"])
+        self.assertEqual(profile["binary_sha256"], qwen38["binary_sha256"])
+        self.assertEqual(
+            profile["binary_sha256"],
+            build["binaries"]["llama-server"]["sha256"],
+        )
+        self.assertEqual(profile["model_path"], qwen38["model_path"])
+        self.assertEqual(profile["model_sha256"], qwen38["model_sha256"])
+        self.assertEqual(
+            profile["model_sha256"],
+            weights["Qwen3.8-27B-Q4_K_M.gguf"]["sha256"],
+        )
+        self.assertEqual(profile["mmproj_path"], qwen38["mmproj_path"])
+        self.assertEqual(profile["mmproj_sha256"], qwen38["mmproj_sha256"])
+        self.assertEqual(
+            profile["mmproj_sha256"],
+            weights["mmproj-Qwen3.8-27B-f16.gguf"]["sha256"],
+        )
+        self.assertEqual(
+            profile["promotion"],
+            {
+                "decision": "f16_kv_adopted_gate3_pass_fidelity_free",
+                "tuned_at": "2026-08-19",
+                "evidence": (
+                    "results/qwen38-gates/trackc-1m-np4-2026-08-19/"
+                ),
+            },
+        )
+        self.assertTrue(
+            (ROOT / profile["promotion"]["evidence"] / "gate1-summary.md").is_file()
+        )
+        gate3 = ROOT / profile["promotion"]["evidence"] / "gate3-summary.md"
+        self.assertTrue(gate3.is_file())
+        gate3_text = gate3.read_text()
+        self.assertIn("ADOPTED", gate3_text)
+        self.assertIn("f16 KV adopted", gate3_text)
+        self.assertTrue(
+            profile["promotion"]["decision"].startswith("f16_kv_adopted_gate3_")
+        )
+        evidence_manifest = json.loads(
+            (QWEN_1M_EVIDENCE / "manifest.json").read_text()
+        )
+        manifest_files = {item["path"]: item for item in evidence_manifest["files"]}
+        actual_files = {
+            path.name for path in QWEN_1M_EVIDENCE.iterdir()
+            if path.is_file() and path.name != "manifest.json"
+        }
+        self.assertEqual(set(manifest_files), actual_files)
+        for name, record in manifest_files.items():
+            payload = (QWEN_1M_EVIDENCE / name).read_bytes()
+            self.assertEqual(record["bytes"], len(payload), name)
+            self.assertEqual(
+                record["sha256"], hashlib.sha256(payload).hexdigest(), name
+            )
+        self.assertEqual(profile["runtime"]["engine_environment"], {})
+        self.assertEqual(profile["runtime"]["diagnostics_unset"], [])
+        self.assertEqual(
+            profile["runtime"]["launch_arguments"],
+            [
+                "--model", "{model}", "-ngl", "99", "-fa", "on",
+                "--no-mmap", "-c", "1048576", "--mmproj", "{mmproj}",
+                "--parallel", "4",
+                "--host", "127.0.0.1", "--port", "{port}", "--alias",
+                "qwen3.8-27b", "--spec-type", "draft-mtp",
+                "--spec-draft-n-max", "8", "--spec-draft-p-min", "0.6",
+                "--chat-template-kwargs", '{"reasoning_effort":"low"}',
+                "--cache-reuse", "256",
+            ],
+        )
+        self.assertFalse(
+            any("rope" in argument.lower()
+                for argument in profile["runtime"]["launch_arguments"])
+        )
+        self.assertEqual(
+            profile["runtime"]["containment"],
+            {
+                "unit": "qwen38-engine.service",
+                "memory_high": "88G",
+                "memory_max": "95G",
+                "memory_swap_max": "0",
+                "oom_policy": "kill",
+                "kill_mode": "control-group",
+            },
+        )
+        self.assertEqual(
+            profile["runtime"]["safety"],
+            {
+                "kill_floor_gib": 8,
+                "minimum_start_gib": 100,
+                "sample_hz": 1,
+                "startup_timeout_seconds": 1800,
+            },
+        )
+        launch = source[
+            source.index("launch_qwen38-1m() {") :
+            source.index("start_qwen_profile() {")
+        ]
+        for contract in (
+            "MemoryHigh=88G", "MemoryMax=95G", "MemorySwapMax=0",
+            "OOMPolicy=kill", "KillMode=control-group",
+            '--no-mmap -c 1048576 --mmproj "$QWEN_MMPROJ" --parallel 4',
+            '--host 127.0.0.1 --port "$PORT"',
+            "--spec-draft-n-max 8 --spec-draft-p-min 0.6",
+            "--cache-reuse 256",
+        ):
+            self.assertIn(contract, launch)
+        self.assertNotIn("--rope", launch.lower())
+        self.assertNotIn("-ctk", launch)
+        self.assertNotIn("-ctv", launch)
+        self.assertIn("configs/qwen38-1m-production-profile.json", source)
+        self.assertIn("verify_qwen_1m_hashes", source)
+        self.assertIn("start_qwen38-1m", source)
+        context = source[
+            source.index("verify_qwen_1m_context() {") :
+            source.index("verify_qwen_process_ready() {")
+        ]
+        self.assertIn("len(value) != 4", context)
+        self.assertIn('slot["n_ctx"] != 262144', context)
+
     def test_qwen_uses_the_shared_authenticated_semantic_verifier(self):
         source = SCRIPT.read_text()
         verify = source[
@@ -281,8 +432,11 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn('"http://127.0.0.1:$PORT/v1/models"', verify)
         self.assertIn('"http://127.0.0.1:$AUTH_PORT/health"', verify)
         self.assertIn('"http://127.0.0.1:$AUTH_PORT/v1/chat/completions"', verify)
-        qwen_block = verify[verify.index("if [[ $profile == qwen38 ]]") :]
+        qwen_block = verify[
+            verify.index("if [[ $profile == qwen38 || $profile == qwen38-1m ]]") :
+        ]
         self.assertNotIn("return 0", qwen_block.split("unauth=", 1)[0])
+        self.assertIn("verify_qwen_1m_context", qwen_block)
 
     def test_rollback_waits_for_every_restored_profile_before_verification(self):
         source = SCRIPT.read_text()
@@ -303,7 +457,60 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout)["active_profile"], "qwen38")
         source = SCRIPT.read_text()
-        self.assertIn("status [--json]|restore|dsv4|glm52|qwen38", source)
+        self.assertIn(
+            "status [--json]|restore|dsv4|glm52|qwen38|qwen38-1m", source
+        )
+
+    def test_qwen38_1m_successful_launch_cleans_killed_unit_and_omits_q8_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            (root / "dsv4-running").touch()
+            (root / "qwen-hashes-valid").touch()
+            (root / "qwen-unit-killed").touch()
+            result = self.run_switch(root, "qwen38-1m")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38-1m",
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("SYSTEMCTL reset-failed qwen38-engine.service", actions)
+            self.assertIn("SYSTEMD_RUN", actions)
+            self.assertIn("-c 1048576", actions)
+            self.assertIn("--parallel 4", actions)
+            self.assertNotIn("-ctk", actions)
+            self.assertNotIn("-ctv", actions)
+            self.assertFalse((root / "qwen-unit-killed").exists())
+
+    def test_restore_qwen38_1m_start_failure_falls_back_to_dsv4(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-1m"})
+            )
+            (root / "qwen-hashes-valid").touch()
+            (root / "fail-qwen-start").touch()
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            self.assertIn(
+                "RESTORE FAILED for recorded profile qwen38-1m; "
+                "falling back to dsv4",
+                result.stderr,
+            )
+            self.assertIn(
+                "RESTORE FALLBACK committed dsv4 in active.json", result.stderr
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("SYSTEMD_RUN", actions)
+            self.assertIn("DSV4 start", actions)
+            self.assertIn("WAIT dsv4", actions)
+            self.assertIn("VERIFY dsv4", actions)
 
     def test_qwen_hash_failure_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -312,6 +519,19 @@ class EngineSwitchTests(unittest.TestCase):
                 json.dumps({"schema_version": 1, "profile": "dsv4"})
             )
             result = self.run_switch(root, "qwen38")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("qwen", result.stderr.lower())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+
+    def test_qwen_1m_hash_failure_is_rejected_before_active_profile_is_stopped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            result = self.run_switch(root, "qwen38-1m")
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("qwen", result.stderr.lower())
             self.assertEqual(
