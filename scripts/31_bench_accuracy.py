@@ -47,6 +47,15 @@ ENCODER_REASONING_EFFORTS = {
     "laguna": frozenset(("off", "max")),
     "qwen38": frozenset(("low", "medium", "xhigh")),
 }
+# Whether the encoder should emit the template's literal BOS text. Laguna's
+# GGUF sets add_bos_token=true (BOS == EOS == token 2), so llama.cpp adds the
+# token during /v1/completions tokenization; emitting the literal glyph too
+# would double it. The other stacks add no BOS at tokenization on this path.
+ENCODER_EMIT_BOS_TEXT = {
+    "dsv4": True,
+    "laguna": False,
+    "qwen38": True,
+}
 # Retain the historical constant for callers that inspect the default encoder.
 ENCODER_PATH = ENCODER_PATHS["dsv4"]
 EXPECTED_ROWS = {"gsm8k": 1319, "mmlu-pro": 12032, "humaneval": 164}
@@ -631,6 +640,7 @@ def render_item(
         [{"role": "user", "content": content}],
         thinking_mode=thinking_mode,
         reasoning_effort=reasoning_effort,
+        add_default_bos_token=ENCODER_EMIT_BOS_TEXT[encoder_name],
     )
     if not isinstance(rendered, str) or not rendered:
         raise RuntimeError("official encoder returned an invalid prompt")

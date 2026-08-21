@@ -342,3 +342,44 @@ class LagunaEncodingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LagunaBosTextTests(unittest.TestCase):
+    """add_default_bos_token=False omits the literal leading EOS glyph.
+
+    The Laguna GGUF sets add_bos_token=true (BOS == EOS == token 2), so
+    llama.cpp adds the token at /v1/completions tokenization; emitting the
+    glyph too would double it (G1 smoke finding, 2026-08-21).
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.encoder = load_module("encoding_laguna_bos_test", LAGUNA_ENCODER_PATH)
+
+    def test_default_keeps_the_template_faithful_prefix(self):
+        rendered = self.encoder.encode_messages(
+            [{"role": "user", "content": "Hi"}], thinking_mode="thinking"
+        )
+        self.assertTrue(rendered.startswith(self.encoder.EOS))
+
+    def test_false_omits_only_the_leading_glyph(self):
+        messages = [
+            {"role": "system", "content": "Terse."},
+            {"role": "user", "content": "Hi"},
+        ]
+        with_bos = self.encoder.encode_messages(
+            messages, thinking_mode="thinking"
+        )
+        without_bos = self.encoder.encode_messages(
+            messages, thinking_mode="thinking", add_default_bos_token=False
+        )
+        self.assertEqual(self.encoder.EOS + without_bos, with_bos)
+
+    def test_context_continuation_never_emits_the_glyph(self):
+        rendered = self.encoder.encode_messages(
+            [{"role": "user", "content": "More"}],
+            thinking_mode="thinking",
+            context=[{"role": "user", "content": "Hi"}],
+            add_default_bos_token=True,
+        )
+        self.assertFalse(rendered.startswith(self.encoder.EOS))

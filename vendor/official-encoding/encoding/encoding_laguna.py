@@ -2,9 +2,10 @@
 
 The public entry point intentionally matches ``encoding_dsv4.encode_messages``.
 Laguna's template emits its EOS prefix for a complete render. Incremental
-renders with ``context`` omit that already-rendered prefix. The
-``add_default_bos_token`` argument is accepted for interface compatibility but
-does not otherwise alter the rendered text.
+renders with ``context`` omit that already-rendered prefix. Pass
+``add_default_bos_token=False`` to omit the literal leading ``〈|EOS|〉``
+when the serving tokenizer adds BOS itself (the Laguna GGUF sets
+``add_bos_token=true``), e.g. for text posted to ``/v1/completions``.
 """
 
 from typing import Any, Dict, List, Optional
@@ -41,6 +42,7 @@ def _render_messages(
     drop_thinking: bool,
     reasoning_effort: Optional[str],
     start_index: int = 0,
+    emit_bos_text: bool = True,
 ) -> str:
     if not messages:
         raise ValueError("No messages provided.")
@@ -53,7 +55,7 @@ def _render_messages(
     if not any(message.get("role") == "user" for message in messages):
         raise ValueError("No user query found in messages.")
 
-    prompt = EOS if start_index == 0 else ""
+    prompt = EOS if (start_index == 0 and emit_bos_text) else ""
     message_start = 0
     if start_index == 0:
         system_message = DEFAULT_SYSTEM_MESSAGE
@@ -119,12 +121,19 @@ def encode_messages(
     ``reasoning_effort`` accepts ``"max"`` (the default) and ``"off"``.
     ``thinking_mode='chat'`` also selects the non-thinking rendering. Context
     messages are treated as preceding conversation messages, matching the other
-    repository encoders, and are not emitted again. The official template's EOS
-    prefix is unconditional for a complete render, irrespective of
-    ``add_default_bos_token``. It is omitted from an incremental continuation
-    when ``context`` supplies the already-rendered prefix.
+    repository encoders, and are not emitted again.
+
+    ``add_default_bos_token`` controls the template's literal leading
+    ``〈|EOS|〉`` on a complete render. The Laguna GGUF metadata sets
+    ``add_bos_token=true`` (BOS == EOS == token 2), so llama.cpp adds the
+    token during tokenization and strips the leading BOS text from its own
+    chat-template rendering. Text posted to ``/v1/completions`` must
+    therefore be rendered with ``add_default_bos_token=False`` or the
+    prompt begins with a doubled token 2. ``True`` (the default) keeps the
+    byte-faithful template render. The prefix is always omitted from an
+    incremental continuation when ``context`` supplies the already-rendered
+    prefix.
     """
-    del add_default_bos_token
     context_messages = list(context or [])
     full_messages = context_messages + list(messages)
     return _render_messages(
@@ -133,4 +142,5 @@ def encode_messages(
         drop_thinking=drop_thinking,
         reasoning_effort=reasoning_effort,
         start_index=len(context_messages),
+        emit_bos_text=add_default_bos_token,
     )
