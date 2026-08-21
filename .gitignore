@@ -16,6 +16,14 @@ __pycache__/
 .venv/
 .cache/
 vendor/
+# Encoders are harness-critical and must always be tracked (see
+# scripts/tests/test_encoder_registration.py); everything else under
+# vendor/ stays ignored.
+!vendor/official-encoding/
+vendor/official-encoding/*
+!vendor/official-encoding/encoding/
+vendor/official-encoding/encoding/*
+!vendor/official-encoding/encoding/encoding_*.py
 .venv-harness/
 results/glm52-goal/state.json
 results/glm52-goal/events.jsonl

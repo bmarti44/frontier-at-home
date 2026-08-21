@@ -146,3 +146,55 @@ qualification, authenticated endpoint preserved, safe one-command switching
 with rollback (including stale-PID / wrong-model / startup-death tests), and a
 passing review of the evidence. Until then it stays `active`, and the README
 shows a dash.
+
+## 8. Mechanics that repeatedly bit us (Qwen3.8/Laguna campaigns, 2026-08)
+
+Start here for a new model: `scripts/90_scaffold_model.sh` generates the
+build script, serve script, and encoder/test stubs from the newest reference
+implementation and prints the manual-steps checklist.
+
+**Sol (codex) workflow.** Implementation:
+`codex exec -m gpt-5.6-sol -c model_reasoning_effort=medium -s workspace-write "<task>" </dev/null`
+— the `</dev/null` is mandatory (codex hangs waiting on stdin otherwise) and
+there is no `--full-auto` flag; use `-s workspace-write` (or `-s read-only`
+for reviews at `model_reasoning_effort=high`). Never let the implementer be
+the only author of its acceptance tests: sol's first Laguna encoder passed
+9/9 of its own tests while diverging from the official template on three
+byte-level inputs; only the adversarial sol-high review caught it. Route
+every encoder through the shared matrix in
+`scripts/tests/template_fidelity.py` (see
+`scripts/tests/test_template_fidelity_laguna.py` for the wiring), and have
+sol-high review every deliverable before it lands.
+
+**Git traps.**
+- `vendor/` is gitignored with negation patterns carved out for
+  `vendor/official-encoding/encoding/encoding_*.py`.
+  `scripts/tests/test_encoder_registration.py` fails if a registered encoder
+  is neither tracked nor covered by the DSV4 official-encoding pin — run it
+  after adding an encoder.
+- `models/` is gitignored but `models/catalog.json` is tracked: `git add`
+  by directory prints an ignore warning and exits 1, killing `&&` chains.
+  Add the file path explicitly.
+- Never pipe a commit (`git commit ... | tail`) — the pipe masks lint-hook
+  failures. Run commits unpiped or check `PIPESTATUS`.
+- The pre-commit hook now verifies `verification/MANIFEST.sha256` against
+  the working tree: if you edit a manifested harness file (e.g.
+  `31_bench_accuracy.py`, `lint_secrets.sh`), refresh its line in the same
+  commit (`sha256sum <file>`, replace the line).
+- `scripts/lint_secrets.sh` blocks commits on new digest-bearing paths;
+  budget for allowlist entries for `results/<slug>-gates/`,
+  `weights/<slug>/manifest.json`, profile configs, and any new script that
+  prints public digests.
+
+**Downloads.** Weight downloads saturate the uplink and starve `git push` /
+`gh` calls: push branches and open the claim PR *before* starting a big
+download, and run pushes in the background with generous timeouts during
+one. Fetch only the primary quant; start ladder quants (the bigger/smaller
+fallbacks) only when a gate actually asks for them.
+
+**Engine builds beside live production.** The build scripts refuse to run
+uncontained when less than 110 GiB is available; wrap them in a capped user
+unit (`systemd-run --user --collect -p MemoryMax=11G -p MemorySwapMax=0
+-p OOMPolicy=kill`). Remember the GB10 rule: cgroup accounting is blind to
+CUDA unified memory, so systemd caps are backstops and the 8 GiB
+MemAvailable watchdog floor is the real guard.
