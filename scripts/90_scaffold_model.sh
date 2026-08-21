@@ -15,13 +15,14 @@ REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P) || {
 readonly REFERENCE_BUILD=$REPO_ROOT/scripts/13_build_laguna_llamacpp.sh
 readonly REFERENCE_SERVE=$REPO_ROOT/scripts/25_serve_laguna.sh
 readonly REFERENCE_ENCODER=$REPO_ROOT/vendor/official-encoding/encoding/encoding_laguna.py
+readonly BACKEND_REGISTRY=$REPO_ROOT/configs/backends.json
 
 usage() {
     cat <<EOF
 Usage: $SELF_NAME --slug <catalog-slug> --port <dev-port> \\
   --engine-repo <git-url> --engine-ref <branch-or-tag> \\
   --engine-commit <sha> --weights-root <abs-path> \\
-  [--quant-env-prefix <PREFIX>]
+  [--quant-env-prefix <PREFIX>] [--backend <name>]
        $SELF_NAME --self-test
 
 Generate non-overwriting model-integration scaffolding from the Laguna S 2.1
@@ -83,6 +84,28 @@ validate_inputs() {
     [[ $quant_prefix =~ ^[A-Z_][A-Z0-9_]*$ ]] \
         || die '--quant-env-prefix must be a valid uppercase environment-variable prefix'
     [[ $output_root == /* ]] || die '--output-root must be absolute'
+
+    backend_implemented=$(python3 - "$BACKEND_REGISTRY" "$backend" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+name = sys.argv[2]
+try:
+    with path.open(encoding="utf-8") as stream:
+        registry = json.load(stream)
+    if registry.get("schema_version") != 1 or type(registry.get("backends")) is not dict:
+        raise ValueError("unsupported registry schema")
+    entry = registry["backends"].get(name)
+    if type(entry) is not dict or type(entry.get("implemented")) is not bool:
+        raise ValueError(f"backend {name!r} is not registered")
+except (OSError, json.JSONDecodeError, ValueError) as error:
+    print(error, file=sys.stderr)
+    raise SystemExit(1)
+print("true" if entry["implemented"] else "false")
+PY
+    ) || die "cannot select backend $backend from configs/backends.json"
 }
 
 check_reference_contract() {
@@ -166,6 +189,7 @@ EOF
 }
 
 print_checklist() {
+    local serve_name=$1
     cat <<EOF
 
 Scaffold complete. Remaining integration checklist:
@@ -180,9 +204,15 @@ Scaffold complete. Remaining integration checklist:
       for results/${slug}-gates/ paths and weights/${slug}/manifest.json.
   [ ] Add the ${slug} case to scripts/52_engine_switch.sh.
   [ ] Add and validate the ${slug} profile JSON.
+  [ ] Register scripts/${serve_name} under backend "${backend}" in
+      configs/backends.json.
   [ ] Download politeness: push branches BEFORE starting weight downloads; fetch
       only the primary quant, and defer ladder quants until a gate needs them.
 EOF
+    if [[ $backend_implemented == false ]]; then
+        printf '\n*** NOTE: backend %s is registered but not implemented; implement it per docs/BACKEND-CONTRACT.md before serving. ***\n' \
+            "$backend"
+    fi
 }
 
 generate() {
@@ -304,7 +334,7 @@ generate() {
 
     printf 'Generated:\n  %s\n  %s\n  %s\n  %s\n' \
         "$build_target" "$serve_target" "$encoder_target" "$test_target"
-    print_checklist
+    print_checklist "$serve_name"
 }
 
 self_test() {
@@ -346,6 +376,8 @@ self_test() {
         || die 'self-test serve scaffold has the wrong derived environment prefix'
     grep -Fq 'claim%3Aexample-model' <<<"$output" \
         || die 'self-test checklist lacks the encoded claim label'
+    grep -Fq 'under backend "cuda" in' <<<"$output" \
+        || die 'self-test checklist lacks the default backend registration'
     if "${BASH_SOURCE[0]}" \
         --slug example-model \
         --port 8099 \
@@ -372,12 +404,14 @@ engine_ref=
 engine_commit=
 weights_root=
 quant_prefix=
+backend=cuda
+backend_implemented=
 output_root=$REPO_ROOT
 self_test_requested=false
 
 while (( $# > 0 )); do
     case $1 in
-        --slug|--port|--engine-repo|--engine-ref|--engine-commit|--weights-root|--quant-env-prefix|--output-root)
+        --slug|--port|--engine-repo|--engine-ref|--engine-commit|--weights-root|--quant-env-prefix|--backend|--output-root)
             (( $# >= 2 )) || die "missing value for $1"
             case $1 in
                 --slug) slug=$2 ;;
@@ -387,6 +421,7 @@ while (( $# > 0 )); do
                 --engine-commit) engine_commit=$2 ;;
                 --weights-root) weights_root=$2 ;;
                 --quant-env-prefix) quant_prefix=$2 ;;
+                --backend) backend=$2 ;;
                 --output-root) output_root=$2 ;;
             esac
             shift 2

@@ -151,7 +151,13 @@ shows a dash.
 
 Start here for a new model: `scripts/90_scaffold_model.sh` generates the
 build script, serve script, and encoder/test stubs from the newest reference
-implementation and prints the manual-steps checklist.
+implementation and prints the manual-steps checklist (`--backend <name>`
+targets a non-cuda backend). Serving routes through the backend registry:
+`scripts/91_serve.sh --model <slug> --backend <name> start|stop|status`
+(configs/backends.json). Only `cuda` is implemented on this host; other
+backends fail closed with a pointer to **docs/BACKEND-CONTRACT.md**, the
+one-page surface a new architecture must implement to inherit every gate
+and suite unchanged.
 
 **Sol (codex) workflow.** Implementation:
 `codex exec -m gpt-5.6-sol -c model_reasoning_effort=medium -s workspace-write "<task>" </dev/null`
