@@ -1,0 +1,63 @@
+{
+ "schema_version": 3,
+ "profile": "laguna",
+ "purpose": "Laguna S 2.1 production profile: four 131K slots (4x131072 = 524288 total), UD-Q4_K_XL weights, f16 KV, DFlash n4, thinking enabled",
+ "binary_path": "/home/bmarti44/.cache/llamacpp-laguna-06f8cebd/src/build/bin/llama-server",
+ "binary_sha256": "ec0fc5dbd48943169947a06615b761ce26b363123fff5c220b949ee8ca28374d",
+ "binary_bytes": 72488,
+ "model_path": "/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf",
+ "model_sha256": "0cfaf46917260d253773e5e2fab64329fa5c9c60fdf0db0f59f31205b5f5dd32",
+ "model_shards": [
+  {
+   "path": "/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf",
+   "bytes": 3683648,
+   "sha256": "0cfaf46917260d253773e5e2fab64329fa5c9c60fdf0db0f59f31205b5f5dd32"
+  },
+  {
+   "path": "/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00002-of-00003.gguf",
+   "bytes": 49971821312,
+   "sha256": "2296102462b02edca70163121ac62bacf7a82078c0eafc91625c8822850769bf"
+  },
+  {
+   "path": "/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00003-of-00003.gguf",
+   "bytes": 23419667040,
+   "sha256": "9150e2338f7690af29685b6a2ca621a8fda7ecf9724678266c4b04b7c6dd0ef3"
+  }
+ ],
+ "draft_model_path": "/home/bmarti44/models/laguna-s-2.1/poolside/laguna-s-2.1-DFlash-BF16.gguf",
+ "draft_model_sha256": "2ee8aa30338d6599bc7a8ce008cc57c56f2c2b2fdc21f6db9ecda203c751bfd4",
+ "draft_model_bytes": 2233764224,
+ "port": 8013,
+ "context_cap": 524288,
+ "promotion": {
+  "decision": "production_candidate",
+  "tuned_at": "2026-08-21",
+  "evidence": "results/laguna-gates/"
+ },
+ "runtime": {
+  "engine_environment": {},
+  "diagnostics_unset": [],
+  "launch_arguments": [
+   "--model", "{model}", "-ngl", "99", "-fa", "on", "--no-mmap",
+   "-c", "524288", "-md", "{draft_model}", "--parallel", "4",
+   "--host", "127.0.0.1", "--port", "{port}", "--alias", "laguna-s-2.1",
+   "--spec-type", "draft-dflash", "--spec-draft-n-max", "4", "--jinja",
+   "--chat-template-kwargs", "{\"enable_thinking\":true}",
+   "--cache-reuse", "256"
+  ],
+  "containment": {
+   "unit": "laguna-engine.service",
+   "memory_high": "88G",
+   "memory_max": "95G",
+   "memory_swap_max": "0",
+   "oom_policy": "kill",
+   "kill_mode": "control-group"
+  },
+  "safety": {
+   "kill_floor_gib": 8,
+   "minimum_start_gib": 100,
+   "sample_hz": 1,
+   "startup_timeout_seconds": 1800
+  }
+ }
+}

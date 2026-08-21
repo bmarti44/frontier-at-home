@@ -29,6 +29,11 @@ QWEN_BUILD = (
     ROOT / "configs" / "build-manifests" / "llamacpp-qwen38-9d77fa17.json"
 )
 QWEN_WEIGHTS = ROOT / "weights" / "qwen3.8-27b" / "manifest.json"
+LAGUNA_PRODUCTION_PROFILE = ROOT / "configs" / "laguna-production-profile.json"
+LAGUNA_BUILD = (
+    ROOT / "configs" / "build-manifests" / "llamacpp-laguna-06f8cebd.json"
+)
+LAGUNA_WEIGHTS = ROOT / "weights" / "laguna-s-2.1" / "manifest.json"
 DSV4_PROFILE = ROOT / "configs" / "dsv4-profile.json"
 DSV4_SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
@@ -438,6 +443,75 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertNotIn("return 0", qwen_block.split("unauth=", 1)[0])
         self.assertIn("verify_qwen_1m_context", qwen_block)
 
+    def test_laguna_production_launcher_matches_the_pinned_profile(self):
+        source = SCRIPT.read_text()
+        profile = json.loads(LAGUNA_PRODUCTION_PROFILE.read_text())
+        build = json.loads(LAGUNA_BUILD.read_text())
+        weights = {
+            item["name"]: item
+            for item in json.loads(LAGUNA_WEIGHTS.read_text())["files"]
+        }
+        self.assertEqual(profile["schema_version"], 3)
+        self.assertEqual(profile["profile"], "laguna")
+        self.assertEqual(profile["context_cap"], 524_288)
+        self.assertEqual(profile["port"], 8013)
+        self.assertEqual(
+            profile["binary_sha256"],
+            build["binaries"]["llama-server"]["sha256"],
+        )
+        shard_names = [
+            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf",
+            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00002-of-00003.gguf",
+            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00003-of-00003.gguf",
+        ]
+        self.assertEqual(len(profile["model_shards"]), 3)
+        for record, name in zip(profile["model_shards"], shard_names):
+            expected = weights[name]
+            self.assertEqual(record["sha256"], expected["sha256"])
+            self.assertEqual(record["bytes"], expected["bytes"])
+            self.assertTrue(record["path"].endswith(name))
+        draft = weights["poolside/laguna-s-2.1-DFlash-BF16.gguf"]
+        self.assertEqual(profile["draft_model_sha256"], draft["sha256"])
+        self.assertEqual(profile["draft_model_bytes"], draft["bytes"])
+        self.assertEqual(
+            profile["runtime"]["containment"],
+            {
+                "unit": "laguna-engine.service",
+                "memory_high": "88G",
+                "memory_max": "95G",
+                "memory_swap_max": "0",
+                "oom_policy": "kill",
+                "kill_mode": "control-group",
+            },
+        )
+        arguments = profile["runtime"]["launch_arguments"]
+        for expected in (
+            "524288", "4", "draft-dflash", "laguna-s-2.1", "--jinja",
+            '{"enable_thinking":true}', "256",
+        ):
+            self.assertIn(expected, arguments)
+        self.assertNotIn("-ctk", arguments)
+        self.assertNotIn("-ctv", arguments)
+        launch = source[
+            source.index("launch_laguna() {") :
+            source.index("cleanup_laguna_killed_unit() {")
+        ]
+        for contract in (
+            "MemoryHigh=88G", "MemoryMax=95G", "MemorySwapMax=0",
+            '"$LAGUNA_BINARY" --model "$LAGUNA_MODEL" -ngl 99 -fa on',
+            '--no-mmap -c 524288 -md "$LAGUNA_DRAFT" --parallel 4',
+            "--spec-type draft-dflash --spec-draft-n-max 4 --jinja",
+            "--cache-reuse 256",
+        ):
+            self.assertIn(contract, launch)
+        verify = source[
+            source.index("verify_laguna_profile_hashes() {") :
+            source.index("revalidate_laguna_identities() {")
+        ]
+        self.assertIn("os.O_NOFOLLOW", verify)
+        self.assertIn("before.st_size != expected_bytes", verify)
+        self.assertIn("len(shards) != 3", verify)
+
     def test_rollback_waits_for_every_restored_profile_before_verification(self):
         source = SCRIPT.read_text()
         rollback = source[source.index("rollback() {") : source.index("command=${1")]
@@ -511,6 +585,85 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertIn("DSV4 start", actions)
             self.assertIn("WAIT dsv4", actions)
             self.assertIn("VERIFY dsv4", actions)
+
+    def test_laguna_hash_failure_is_rejected_before_active_profile_is_stopped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            (root / "dsv4-running").touch()
+            result = self.run_switch(root, "laguna")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("laguna", result.stderr.lower())
+            self.assertTrue((root / "dsv4-running").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+
+    def test_laguna_successful_launch_cleans_killed_unit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            (root / "dsv4-running").touch()
+            (root / "laguna-hashes-valid").touch()
+            (root / "laguna-unit-killed").touch()
+            result = self.run_switch(root, "laguna")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "laguna"
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("SYSTEMCTL reset-failed laguna-engine.service", actions)
+            self.assertIn("SYSTEMD_RUN --unit=laguna-engine", actions)
+            self.assertIn("-c 524288", actions)
+            self.assertIn("--parallel 4", actions)
+            self.assertFalse((root / "laguna-unit-killed").exists())
+
+    def test_status_accepts_laguna(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "laguna"})
+            )
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["active_profile"], "laguna")
+
+    def test_stop_halts_laguna_without_touching_active_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "laguna"})
+            )
+            (root / "laguna-running").touch()
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("STOPPED laguna", result.stdout)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "laguna"
+            )
+            self.assertFalse((root / "laguna-running").exists())
+
+    def test_restore_laguna_start_failure_falls_back_to_dsv4(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "laguna"})
+            )
+            (root / "laguna-hashes-valid").touch()
+            (root / "fail-laguna-start").touch()
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            self.assertIn(
+                "RESTORE FAILED for recorded profile laguna; falling back to dsv4",
+                result.stderr,
+            )
 
     def test_background_spawns_close_the_switch_lock_fd(self):
         # Regression for the 2026-08-21 deadlock: a memwatch spawned without

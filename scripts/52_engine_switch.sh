@@ -10,9 +10,13 @@ readonly PROD_GGUF=/home/bmarti44/models/glm52-full-denseq40.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-fullq4-production-profile.json
 readonly QWEN_PROFILE_MANIFEST=$REPO/configs/qwen38-production-profile.json
 readonly QWEN_1M_PROFILE_MANIFEST=$REPO/configs/qwen38-1m-production-profile.json
+readonly LAGUNA_PROFILE_MANIFEST=$REPO/configs/laguna-production-profile.json
 readonly PROD_QWEN_BINARY=/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server
 readonly PROD_QWEN_MODEL=/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf
 readonly PROD_QWEN_MMPROJ=/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf
+readonly PROD_LAGUNA_BINARY=/home/bmarti44/.cache/llamacpp-laguna-06f8cebd/src/build/bin/llama-server
+readonly PROD_LAGUNA_MODEL=/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf
+readonly PROD_LAGUNA_DRAFT=/home/bmarti44/models/laguna-s-2.1/poolside/laguna-s-2.1-DFlash-BF16.gguf
 readonly PORT=8013
 readonly AUTH_PORT=8010
 
@@ -26,6 +30,9 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     QWEN_BINARY=$STATE/source/llama-server
     QWEN_MODEL=$STATE/qwen-model.gguf
     QWEN_MMPROJ=$STATE/qwen-mmproj.gguf
+    LAGUNA_BINARY=$STATE/source/laguna-server
+    LAGUNA_MODEL=$STATE/laguna-model-00001-of-00003.gguf
+    LAGUNA_DRAFT=$STATE/laguna-dflash.gguf
 else
     unset ENGINE_SWITCH_TEST_ROOT ENGINE_PORT DS4_GLM_TOPK_KEEP \
         DS4_GLM_TOPK_SKIP_LOAD DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL \
@@ -36,8 +43,12 @@ else
     QWEN_BINARY=$PROD_QWEN_BINARY
     QWEN_MODEL=$PROD_QWEN_MODEL
     QWEN_MMPROJ=$PROD_QWEN_MMPROJ
+    LAGUNA_BINARY=$PROD_LAGUNA_BINARY
+    LAGUNA_MODEL=$PROD_LAGUNA_MODEL
+    LAGUNA_DRAFT=$PROD_LAGUNA_DRAFT
 fi
-readonly STATE BINARY GGUF QWEN_BINARY QWEN_MODEL QWEN_MMPROJ
+readonly STATE BINARY GGUF QWEN_BINARY QWEN_MODEL QWEN_MMPROJ \
+    LAGUNA_BINARY LAGUNA_MODEL LAGUNA_DRAFT
 readonly ACTIVE=$STATE/active.json
 readonly LOCK=$STATE/switch.lock
 readonly GLM_PROCESS=$STATE/glm52.process.json
@@ -49,10 +60,17 @@ readonly QWEN_UNIT=qwen38-engine.service
 readonly QWEN_WATCHDOG_TARGET=$STATE/qwen38.memwatch.target
 readonly QWEN_WATCHDOG_READY=$STATE/qwen38.memwatch.ready
 readonly QWEN_WATCHDOG_LOG=$STATE/qwen38.memwatch.log
+readonly LAGUNA_PROCESS=$STATE/laguna.process.json
+readonly LAGUNA_UNIT=laguna-engine.service
+readonly LAGUNA_WATCHDOG_TARGET=$STATE/laguna.memwatch.target
+readonly LAGUNA_WATCHDOG_READY=$STATE/laguna.memwatch.ready
+readonly LAGUNA_WATCHDOG_LOG=$STATE/laguna.memwatch.log
 rollback_needed=false
 previous_profile=
 qwen_hashes_verified_profile=
 qwen_verified_identities=
+laguna_hashes_verified=false
+laguna_verified_identities=
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -116,7 +134,7 @@ state = "inactive"
 try:
     with open(path, encoding="utf-8") as stream:
         value = json.load(stream)
-    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m"}:
+    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna"}:
         profile = value["profile"]
         state = "recorded"
 except (OSError, ValueError, TypeError):
@@ -133,7 +151,7 @@ try:
     with open(sys.argv[1], encoding="utf-8") as stream:
         value = json.load(stream)
     profile = value.get("profile")
-    print(profile if profile in {"dsv4", "glm52", "qwen38", "qwen38-1m"} else "")
+    print(profile if profile in {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna"} else "")
 except (OSError, ValueError, TypeError):
     print("")
 PY
@@ -269,6 +287,88 @@ for label, path in zip(("binary", "model", "mmproj"), sys.argv[2:]):
 PY
 }
 
+verify_laguna_profile_hashes() {
+    laguna_verified_identities=$(clean_python - "$LAGUNA_PROFILE_MANIFEST" \
+            "$LAGUNA_BINARY" "$LAGUNA_MODEL" "$LAGUNA_DRAFT" <<'PY'
+import hashlib, json, os, stat, sys
+manifest_path, binary_path, model_path, draft_path = sys.argv[1:]
+with open(manifest_path, encoding="utf-8") as stream:
+    manifest = json.load(stream)
+
+def digest_and_identity(path, expected_bytes):
+    descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+    value = hashlib.sha256()
+    with os.fdopen(descriptor, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size != expected_bytes:
+            raise SystemExit(f"Laguna artifact size or type is not approved: {path}")
+        for chunk in iter(lambda: stream.read(16 * 1024 * 1024), b""):
+            value.update(chunk)
+        after = os.fstat(stream.fileno())
+    fields = lambda item: (
+        item.st_dev, item.st_ino, item.st_mode, item.st_nlink, item.st_size,
+        item.st_mtime_ns, item.st_ctime_ns,
+    )
+    if fields(before) != fields(after):
+        raise SystemExit(f"Laguna artifact changed during verification: {path}")
+    return value.hexdigest(), fields(after)
+
+if manifest.get("profile") != "laguna" or manifest.get("schema_version") != 3:
+    raise SystemExit("Laguna profile identity is not approved")
+if manifest.get("port") != 8013 or manifest.get("context_cap") != 524288:
+    raise SystemExit("Laguna serving topology is not approved")
+if manifest.get("binary_path") != binary_path:
+    raise SystemExit("Laguna binary path is not approved")
+identities = {}
+digest, identity = digest_and_identity(binary_path, manifest.get("binary_bytes"))
+if digest != manifest.get("binary_sha256"):
+    raise SystemExit("Laguna binary hash is not approved")
+identities["binary"] = identity
+shards = manifest.get("model_shards")
+if not isinstance(shards, list) or len(shards) != 3:
+    raise SystemExit("Laguna shard inventory is not approved")
+if manifest.get("model_path") != model_path or shards[0].get("path") != model_path:
+    raise SystemExit("Laguna model load path is not approved")
+for index, shard in enumerate(shards):
+    path = shard.get("path")
+    digest, identity = digest_and_identity(path, shard.get("bytes"))
+    if digest != shard.get("sha256"):
+        raise SystemExit(f"Laguna shard {index + 1} hash is not approved")
+    identities[f"shard{index + 1}"] = identity
+if manifest.get("model_sha256") != shards[0].get("sha256"):
+    raise SystemExit("Laguna load-shard hash is inconsistent")
+if manifest.get("draft_model_path") != draft_path:
+    raise SystemExit("Laguna draft path is not approved")
+digest, identity = digest_and_identity(draft_path, manifest.get("draft_model_bytes"))
+if digest != manifest.get("draft_model_sha256"):
+    raise SystemExit("Laguna draft hash is not approved")
+identities["draft"] = identity
+print(json.dumps(identities, separators=(",", ":"), sort_keys=True))
+PY
+    )
+    laguna_hashes_verified=true
+}
+
+revalidate_laguna_identities() {
+    [[ -n $laguna_verified_identities ]] || die "Laguna artifacts lack verified identities"
+    clean_python - "$laguna_verified_identities" "$LAGUNA_BINARY" \
+            "$LAGUNA_MODEL" "$LAGUNA_DRAFT" "$LAGUNA_PROFILE_MANIFEST" <<'PY'
+import json, os, stat, sys
+expected = json.loads(sys.argv[1])
+paths = [("binary", sys.argv[2]), ("shard1", sys.argv[3]), ("draft", sys.argv[4])]
+with open(sys.argv[5], encoding="utf-8") as stream:
+    manifest = json.load(stream)
+paths.extend((f"shard{i}", record["path"])
+             for i, record in enumerate(manifest["model_shards"][1:], start=2))
+for label, path in paths:
+    info = os.lstat(path)
+    actual = [info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+              info.st_size, info.st_mtime_ns, info.st_ctime_ns]
+    if not stat.S_ISREG(info.st_mode) or actual != expected[label]:
+        raise SystemExit(f"Laguna {label} identity changed after hash approval")
+PY
+}
+
 proc_identity() {
     local pid=$1 line
     [[ $pid =~ ^[0-9]+$ && $pid -gt 1 && -r /proc/$pid/stat ]] || return 1
@@ -395,6 +495,69 @@ PY
     rm -f -- "$QWEN_PROCESS" "$QWEN_WATCHDOG_TARGET" "$QWEN_WATCHDOG_READY"
 }
 
+stop_laguna_verified() {
+    local values pid expected_pgid expected_ticks expected_sha expected_unit
+    local memwatch_pid memwatch_ticks current current_pgid current_ticks
+    local exe unit_pid cmdline
+    if [[ ! -f $LAGUNA_PROCESS ]]; then
+        unit_pid=$(systemctl show "$LAGUNA_UNIT" --property=MainPID --value \
+            2>/dev/null || true)
+        if [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+            die "Laguna unit is live without an identity record; refusing to continue"
+        fi
+        return 0
+    fi
+    values=$(clean_python - "$LAGUNA_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"], value["exe_sha256"],
+      value["unit"], value["memwatch_pid"], value["memwatch_start_ticks"])
+PY
+    ) || die "invalid Laguna process record"
+    read -r pid expected_pgid expected_ticks expected_sha expected_unit \
+        memwatch_pid memwatch_ticks <<<"$values"
+    [[ $expected_unit == "$LAGUNA_UNIT" ]] ||
+        die "Laguna process record names an unexpected unit"
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    unit_pid=$(systemctl show "$LAGUNA_UNIT" --property=MainPID --value 2>/dev/null || true)
+    if [[ -n $current ]]; then
+        read -r current_pgid current_ticks <<<"$current"
+        exe=$(readlink -f "/proc/$pid/exe") ||
+            die "cannot resolve recorded Laguna executable"
+        [[ $unit_pid == "$pid" && $current_pgid == "$expected_pgid" &&
+                $current_ticks == "$expected_ticks" ]] ||
+            die "stale Laguna PID identity; refusing to stop unit"
+        [[ $(sha256 "$exe") == "$expected_sha" ]] ||
+            die "Laguna executable hash changed; refusing to stop unit"
+        systemctl stop "$LAGUNA_UNIT"
+        for _ in $(seq 1 600); do
+            [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] && break
+            sleep 0.1
+        done
+        [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] ||
+            die "Laguna transient unit did not stop its recorded process"
+    elif [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+        die "Laguna unit has an unrecorded live MainPID; refusing to stop it"
+    fi
+    if [[ $(proc_identity "$memwatch_pid" 2>/dev/null || true) == *" $memwatch_ticks" ]]; then
+        cmdline=$(tr '\0' ' ' <"/proc/$memwatch_pid/cmdline")
+        [[ $cmdline == *"$REPO/scripts/01_memwatch.sh"* &&
+                $cmdline == *"$LAGUNA_WATCHDOG_TARGET"* ]] ||
+            die "Laguna memwatch identity changed; refusing to disarm"
+        printf 'DISARM %s %s %s\n' "$pid" "$expected_pgid" "$expected_ticks" \
+            >"$LAGUNA_WATCHDOG_TARGET.tmp"
+        mv -- "$LAGUNA_WATCHDOG_TARGET.tmp" "$LAGUNA_WATCHDOG_TARGET"
+        for _ in $(seq 1 50); do
+            [[ -d /proc/$memwatch_pid ]] || break
+            sleep 0.1
+        done
+        [[ ! -d /proc/$memwatch_pid ]] ||
+            die "Laguna memwatch did not accept authenticated disarm"
+    fi
+    rm -f -- "$LAGUNA_PROCESS" "$LAGUNA_WATCHDOG_TARGET" "$LAGUNA_WATCHDOG_READY"
+}
+
 stop_profile() {
     case "$1" in
         dsv4)
@@ -413,6 +576,7 @@ stop_profile() {
             ;;
         glm52) stop_glm_verified ;;
         qwen38|qwen38-1m) stop_qwen_verified ;;
+        laguna) stop_laguna_verified ;;
         "") return 0 ;;
         *) die "unknown previous profile $1" ;;
     esac
@@ -575,6 +739,188 @@ launch_qwen38-1m() {
         --spec-type draft-mtp --spec-draft-n-max 8 --spec-draft-p-min 0.6 \
         --chat-template-kwargs '{"reasoning_effort":"low"}' \
         --cache-reuse 256
+}
+
+launch_laguna() {
+    systemd-run --unit=laguna-engine --collect --quiet \
+        --property Type=exec \
+        --property User=bmarti44 \
+        --property MemoryHigh=88G \
+        --property MemoryMax=95G \
+        --property MemorySwapMax=0 \
+        --property OOMPolicy=kill \
+        --property KillMode=control-group \
+        --property Delegate=no \
+        --property "StandardOutput=append:$STATE/laguna.server.log" \
+        --property "StandardError=append:$STATE/laguna.server.log" \
+        /usr/bin/flock --nonblock --no-fork \
+        /run/lock/frontier-at-home/inference.lock \
+        "$LAGUNA_BINARY" --model "$LAGUNA_MODEL" -ngl 99 -fa on \
+        --no-mmap -c 524288 -md "$LAGUNA_DRAFT" --parallel 4 \
+        --host 127.0.0.1 --port "$PORT" --alias laguna-s-2.1 \
+        --spec-type draft-dflash --spec-draft-n-max 4 --jinja \
+        --chat-template-kwargs '{"enable_thinking":true}' \
+        --cache-reuse 256
+}
+
+cleanup_laguna_killed_unit() {
+    local load_state active_state
+    load_state=$(systemctl show "$LAGUNA_UNIT" --property=LoadState --value \
+        2>/dev/null || true)
+    [[ -z $load_state || $load_state == not-found ]] && return 0
+    active_state=$(systemctl show "$LAGUNA_UNIT" --property=ActiveState --value \
+        2>/dev/null || true)
+    if [[ $active_state == failed || $active_state == inactive ]]; then
+        systemctl reset-failed "$LAGUNA_UNIT" 2>/dev/null || true
+        for _ in $(seq 1 50); do
+            load_state=$(systemctl show "$LAGUNA_UNIT" --property=LoadState --value \
+                2>/dev/null || true)
+            [[ -z $load_state || $load_state == not-found ]] && return 0
+            sleep 0.1
+        done
+    fi
+    die "Laguna transient unit already exists (LoadState=$load_state, ActiveState=$active_state)"
+}
+
+start_laguna_profile() {
+    local pid identity pgid ticks exe_sha approved_sha unit_pid current
+    local memwatch_pid memwatch_identity memwatch_ticks ready
+    [[ ! -e $LAGUNA_PROCESS ]] ||
+        die "Laguna process record already exists; refusing a second model"
+    "$laguna_hashes_verified" || verify_laguna_profile_hashes
+    "$REPO/scripts/03_memory_guard.py" --required-gib 100 \
+        --stable-samples 3 --interval-seconds 1 --timeout-seconds 180
+    cleanup_laguna_killed_unit
+    rm -f -- "$LAGUNA_PROCESS.tmp" "$LAGUNA_WATCHDOG_TARGET" \
+        "$LAGUNA_WATCHDOG_READY"
+    "$REPO/scripts/01_memwatch.sh" \
+        --target-file "$LAGUNA_WATCHDOG_TARGET" \
+        --ready-file "$LAGUNA_WATCHDOG_READY" \
+        --threshold-gib 8 --interval-sec 1 --log "$LAGUNA_WATCHDOG_LOG" 9>&- &
+    memwatch_pid=$!
+    memwatch_ticks=
+    ready=
+    for _ in $(seq 1 50); do
+        memwatch_identity=$(proc_identity "$memwatch_pid" 2>/dev/null || true)
+        memwatch_ticks=${memwatch_identity#* }
+        ready=$(cat "$LAGUNA_WATCHDOG_READY" 2>/dev/null || true)
+        [[ -n $memwatch_ticks && $ready == READY ]] && break
+        sleep 0.1
+    done
+    if [[ -z $memwatch_ticks || $ready != READY ]]; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Laguna memory watchdog failed to initialize"
+    fi
+    if ! revalidate_laguna_identities; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Laguna artifact identity changed before execution"
+    fi
+    if ! launch_laguna; then
+        systemctl stop "$LAGUNA_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Laguna transient unit failed to start"
+    fi
+    pid=
+    identity=
+    for _ in $(seq 1 100); do
+        unit_pid=$(systemctl show "$LAGUNA_UNIT" --property=MainPID --value \
+            2>/dev/null || true)
+        if [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+            pid=$unit_pid
+            identity=$(proc_identity "$pid" 2>/dev/null || true)
+            [[ -n $identity ]] && break
+        fi
+        sleep 0.1
+    done
+    if [[ -z $pid || -z $identity ]]; then
+        systemctl stop "$LAGUNA_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Laguna transient unit died before identity capture"
+    fi
+    read -r pgid ticks <<<"$identity"
+    if [[ $pgid != "$pid" ]]; then
+        systemctl stop "$LAGUNA_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Laguna transient-unit server is not its process-group leader"
+    fi
+    if [[ $(readlink -f "/proc/$pid/exe" 2>/dev/null || true) != \
+            $(readlink -f "$LAGUNA_BINARY") ]]; then
+        systemctl stop "$LAGUNA_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Laguna transient unit executable identity is wrong"
+    fi
+    exe_sha=$(sha256 "/proc/$pid/exe")
+    approved_sha=$(clean_python - "$LAGUNA_PROFILE_MANIFEST" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    print(json.load(stream)["binary_sha256"])
+PY
+    )
+    if [[ $exe_sha != "$approved_sha" ]]; then
+        systemctl stop "$LAGUNA_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Laguna transient unit executed an unapproved binary"
+    fi
+    if ! clean_python - "$LAGUNA_PROCESS.tmp" "$pid" "$pgid" "$ticks" \
+            "$exe_sha" "$LAGUNA_UNIT" "$memwatch_pid" "$memwatch_ticks" <<'PY'
+import json, os, sys
+path, pid, pgid, ticks, digest, unit, watchdog_pid, watchdog_ticks = sys.argv[1:]
+with open(path, "x", encoding="utf-8") as stream:
+    json.dump({"schema_version":1, "pid":int(pid), "pgid":int(pgid),
+               "start_ticks":int(ticks), "exe_sha256":digest, "unit":unit,
+               "memwatch_pid":int(watchdog_pid),
+               "memwatch_start_ticks":int(watchdog_ticks)}, stream)
+    stream.flush(); os.fsync(stream.fileno())
+PY
+    then
+        systemctl stop "$LAGUNA_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$LAGUNA_PROCESS.tmp"
+        die "Laguna process identity record could not be created"
+    fi
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    if [[ $current != "$identity" ]]; then
+        systemctl stop "$LAGUNA_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$LAGUNA_PROCESS.tmp"
+        die "Laguna process identity changed before record publication"
+    fi
+    mv -- "$LAGUNA_PROCESS.tmp" "$LAGUNA_PROCESS"
+    printf '%s %s %s provisional\n' "$pid" "$pgid" "$ticks" \
+        >"$LAGUNA_WATCHDOG_TARGET.tmp"
+    mv -- "$LAGUNA_WATCHDOG_TARGET.tmp" "$LAGUNA_WATCHDOG_TARGET"
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$LAGUNA_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] ||
+        die "Laguna memory watchdog did not arm provisional process"
+    printf '%s %s %s engine\n' "$pid" "$pgid" "$ticks" \
+        >"$LAGUNA_WATCHDOG_TARGET.tmp"
+    mv -- "$LAGUNA_WATCHDOG_TARGET.tmp" "$LAGUNA_WATCHDOG_TARGET"
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$LAGUNA_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks engine" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks engine" ]] ||
+        die "Laguna memory watchdog did not arm final process"
+}
+
+start_laguna() {
+    start_laguna_profile
 }
 
 cleanup_qwen_killed_unit() {
@@ -789,6 +1135,21 @@ for slot in value:
 PY
 }
 
+verify_laguna_context() {
+    local body path="/slots"
+    body=$(clean_curl -fsS --max-time 5 \
+        "http://127.0.0.1:$PORT$path") || return 1
+    clean_python - "$body" <<'PY'
+import json, sys
+value = json.loads(sys.argv[1])
+if not isinstance(value, list) or len(value) != 4:
+    raise SystemExit("Laguna slot topology is invalid")
+for slot in value:
+    if slot["n_ctx"] != 131072:
+        raise SystemExit("Laguna per-slot context is not 131072 (4 x 131K)")
+PY
+}
+
 verify_qwen_process_ready() {
     local values pid expected_pgid expected_ticks expected_exe expected_unit
     local unit_pid identity pgid ticks live_exe sockets
@@ -817,11 +1178,40 @@ PY
             $sockets == *"pid=$pid,"* ]]
 }
 
+verify_laguna_process_ready() {
+    local values pid expected_pgid expected_ticks expected_unit
+    local unit_pid identity pgid ticks live_exe expected_exe sockets
+    [[ -r $LAGUNA_PROCESS ]] || return 1
+    values=$(clean_python - "$LAGUNA_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"], value["unit"])
+PY
+    ) || return 1
+    read -r pid expected_pgid expected_ticks expected_unit <<<"$values"
+    [[ $expected_unit == "$LAGUNA_UNIT" ]] || return 1
+    unit_pid=$(systemctl show "$LAGUNA_UNIT" --property=MainPID --value \
+        2>/dev/null || true)
+    [[ $unit_pid == "$pid" ]] || return 1
+    identity=$(proc_identity "$pid" 2>/dev/null || true)
+    [[ -n $identity ]] || return 1
+    read -r pgid ticks <<<"$identity"
+    [[ $pgid == "$expected_pgid" && $ticks == "$expected_ticks" ]] || return 1
+    live_exe=$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)
+    expected_exe=$(readlink -f "$LAGUNA_BINARY" 2>/dev/null || true)
+    [[ -n $live_exe && $live_exe == "$expected_exe" ]] || return 1
+    sockets=$(ss -H -ltnp "sport = :$PORT" 2>/dev/null) || return 1
+    [[ -n $sockets && $sockets == *"127.0.0.1:$PORT"* &&
+            $sockets == *"pid=$pid,"* ]]
+}
+
 wait_model_ready() {
     local profile=$1 expected body deadline probe_count=0 available
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
     [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
+    [[ $profile == laguna ]] && expected=laguna-s-2.1
     deadline=$((SECONDS + 1800))
     while (( SECONDS < deadline )); do
         body=$(clean_curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
@@ -840,7 +1230,13 @@ PY
                             "http://127.0.0.1:$PORT/health" >/dev/null &&
                         verify_qwen_process_ready; }; then
                     if [[ $profile != qwen38-1m ]] || verify_qwen_1m_context; then
-                        return 0
+                        if [[ $profile != laguna ]] || { \
+                                clean_curl -fsS --max-time 3 \
+                                    "http://127.0.0.1:$PORT/health" >/dev/null &&
+                                verify_laguna_process_ready &&
+                                verify_laguna_context; }; then
+                            return 0
+                        fi
                     fi
                 fi
             fi
@@ -862,6 +1258,7 @@ verify_serving() {
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
     [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
+    [[ $profile == laguna ]] && expected=laguna-s-2.1
     body=$(clean_curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
     clean_python - "$expected" "$body" <<'PY'
@@ -881,6 +1278,12 @@ PY
     fi
     if [[ $profile == qwen38-1m ]]; then
         verify_qwen_1m_context || return 1
+    fi
+    if [[ $profile == laguna ]]; then
+        clean_curl -fsS --max-time 5 \
+            "http://127.0.0.1:$PORT/health" >/dev/null || return 1
+        verify_laguna_process_ready || return 1
+        verify_laguna_context || return 1
     fi
     unauth=$(clean_curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
@@ -961,6 +1364,10 @@ restore_profile() {
         verify_qwen_1m_hashes || return 1
         revalidate_qwen_identities || return 1
     fi
+    if [[ $profile == laguna ]]; then
+        verify_laguna_profile_hashes || return 1
+        revalidate_laguna_identities || return 1
+    fi
     verify_serving "$profile" && return 0
     if [[ $profile != dsv4 || -e /run/dsv4/llamacpp.state.json ]]; then
         stop_profile "$profile" || return 1
@@ -977,8 +1384,13 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     test_action() { printf '%s\n' "$*" >>"$STATE/actions.log"; }
     systemd-run() {
         test_action "SYSTEMD_RUN $*"
-        [[ ! -e $STATE/fail-qwen-start ]] || return 1
-        : >"$STATE/qwen-running"
+        if [[ $* == *laguna-engine* ]]; then
+            [[ ! -e $STATE/fail-laguna-start ]] || return 1
+            : >"$STATE/laguna-running"
+        else
+            [[ ! -e $STATE/fail-qwen-start ]] || return 1
+            : >"$STATE/qwen-running"
+        fi
     }
     systemctl() {
         local verb=${1:-} property=${2:-}
@@ -993,6 +1405,17 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         test_action "SYSTEMCTL $*"
         if [[ $verb == reset-failed && $property == "$QWEN_UNIT" ]]; then
             rm -f -- "$STATE/qwen-unit-killed"
+        fi
+        if [[ $verb == show && $property == "$LAGUNA_UNIT" ]]; then
+            if [[ $* == *--property=LoadState* ]]; then
+                [[ -e $STATE/laguna-unit-killed ]] && printf 'loaded\n' || printf 'not-found\n'
+            elif [[ $* == *--property=ActiveState* ]]; then
+                [[ -e $STATE/laguna-unit-killed ]] && printf 'failed\n' || printf 'inactive\n'
+            fi
+            return 0
+        fi
+        if [[ $verb == reset-failed && $property == "$LAGUNA_UNIT" ]]; then
+            rm -f -- "$STATE/laguna-unit-killed"
         fi
     }
     dsv4_launcher() {
@@ -1016,9 +1439,25 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     revalidate_qwen_identities() {
         [[ $qwen_verified_identities == test ]]
     }
+    verify_laguna_profile_hashes() {
+        if [[ ! -e $STATE/laguna-hashes-valid ]]; then
+            echo "Laguna test artifact hashes are not approved" >&2
+            return 1
+        fi
+        laguna_hashes_verified=true
+        laguna_verified_identities=test
+        test_action "HASHES laguna"
+    }
+    revalidate_laguna_identities() {
+        [[ $laguna_verified_identities == test ]]
+    }
     stop_qwen_verified() {
         test_action "STOP qwen"
         rm -f -- "$STATE/qwen-running"
+    }
+    stop_laguna_verified() {
+        test_action "STOP laguna"
+        rm -f -- "$STATE/laguna-running"
     }
     start_qwen_profile() {
         local profile=$1 _manifest_path=$2 verify_function=$3
@@ -1027,14 +1466,22 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         "launch_$profile" || die "Qwen transient unit failed to start"
         test_action "START $profile"
     }
+    start_laguna_profile() {
+        "$laguna_hashes_verified" || verify_laguna_profile_hashes
+        cleanup_laguna_killed_unit
+        launch_laguna || die "Laguna transient unit failed to start"
+        test_action "START laguna"
+    }
     wait_model_ready() {
         test_action "WAIT $1"
-        [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || printf qwen)-running ]]
+        [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || \
+            { [[ $1 == laguna ]] && printf laguna || printf qwen; })-running ]]
     }
     verify_serving() {
         test_action "VERIFY $1"
         [[ ! -e $STATE/fail-$1-verify ]] &&
-            [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || printf qwen)-running ]]
+            [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || \
+                { [[ $1 == laguna ]] && printf laguna || printf qwen; })-running ]]
     }
 fi
 
@@ -1045,8 +1492,9 @@ if [[ $command == status ]]; then
     exit 0
 fi
 [[ $command == restore || $command == stop || $command == dsv4 || \
-        $command == glm52 || $command == qwen38 || $command == qwen38-1m ]] ||
-    die "usage: $0 status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m"
+        $command == glm52 || $command == qwen38 || $command == qwen38-1m || \
+        $command == laguna ]] ||
+    die "usage: $0 status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m|laguna"
 if [[ $command == stop ]]; then
     # Gate-window helper: stop the active engine but leave active.json
     # untouched so `restore` brings the same profile back afterwards.
@@ -1090,10 +1538,16 @@ fi
 if [[ $command == qwen38-1m ]]; then
     verify_qwen_1m_hashes
 fi
+if [[ $command == laguna ]]; then
+    verify_laguna_profile_hashes
+fi
 mkdir -p -- "$STATE"
 acquire_switch_lock
 if [[ $command == qwen38 || $command == qwen38-1m ]]; then
     revalidate_qwen_identities
+fi
+if [[ $command == laguna ]]; then
+    revalidate_laguna_identities
 fi
 previous_profile=$(read_active_profile)
 if [[ $previous_profile == "$command" ]] && verify_serving "$command"; then
