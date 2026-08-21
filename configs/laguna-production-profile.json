@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "profile": "laguna",
- "purpose": "Laguna S 2.1 production profile: four 131K slots (4x131072 = 524288 total), UD-Q4_K_XL weights, f16 KV, DFlash n4, thinking enabled",
+ "purpose": "Laguna S 2.1 production profile: four 96K slots (4x98304 = 393216 total), UD-Q4_K_XL weights, f16 KV, DFlash n4, thinking enabled",
  "binary_path": "/home/bmarti44/.cache/llamacpp-laguna-06f8cebd/src/build/bin/llama-server",
  "binary_sha256": "ec0fc5dbd48943169947a06615b761ce26b363123fff5c220b949ee8ca28374d",
  "binary_bytes": 72488,
@@ -28,7 +28,7 @@
  "draft_model_sha256": "2ee8aa30338d6599bc7a8ce008cc57c56f2c2b2fdc21f6db9ecda203c751bfd4",
  "draft_model_bytes": 2233764224,
  "port": 8013,
- "context_cap": 524288,
+ "context_cap": 393216,
  "promotion": {
   "decision": "production_candidate",
   "tuned_at": "2026-08-21",
@@ -39,7 +39,7 @@
   "diagnostics_unset": [],
   "launch_arguments": [
    "--model", "{model}", "-ngl", "99", "-fa", "on", "--no-mmap",
-   "-c", "524288", "-md", "{draft_model}", "--parallel", "4",
+   "-c", "393216", "-md", "{draft_model}", "--parallel", "4",
    "--host", "127.0.0.1", "--port", "{port}", "--alias", "laguna-s-2.1",
    "--spec-type", "draft-dflash", "--spec-draft-n-max", "4", "--jinja",
    "--chat-template-kwargs", "{\"enable_thinking\":true}",

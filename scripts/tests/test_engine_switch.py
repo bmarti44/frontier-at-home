@@ -453,7 +453,7 @@ class EngineSwitchTests(unittest.TestCase):
         }
         self.assertEqual(profile["schema_version"], 3)
         self.assertEqual(profile["profile"], "laguna")
-        self.assertEqual(profile["context_cap"], 524_288)
+        self.assertEqual(profile["context_cap"], 393_216)
         self.assertEqual(profile["port"], 8013)
         self.assertEqual(
             profile["binary_sha256"],
@@ -486,7 +486,7 @@ class EngineSwitchTests(unittest.TestCase):
         )
         arguments = profile["runtime"]["launch_arguments"]
         for expected in (
-            "524288", "4", "draft-dflash", "laguna-s-2.1", "--jinja",
+            "393216", "4", "draft-dflash", "laguna-s-2.1", "--jinja",
             '{"enable_thinking":true}', "256",
         ):
             self.assertIn(expected, arguments)
@@ -499,7 +499,7 @@ class EngineSwitchTests(unittest.TestCase):
         for contract in (
             "MemoryHigh=88G", "MemoryMax=95G", "MemorySwapMax=0",
             '"$LAGUNA_BINARY" --model "$LAGUNA_MODEL" -ngl 99 -fa on',
-            '--no-mmap -c 524288 -md "$LAGUNA_DRAFT" --parallel 4',
+            '--no-mmap -c 393216 -md "$LAGUNA_DRAFT" --parallel 4',
             "--spec-type draft-dflash --spec-draft-n-max 4 --jinja",
             "--cache-reuse 256",
         ):
@@ -655,7 +655,7 @@ class EngineSwitchTests(unittest.TestCase):
             actions = (root / "actions.log").read_text()
             self.assertIn("SYSTEMCTL reset-failed laguna-engine.service", actions)
             self.assertIn("SYSTEMD_RUN --unit=laguna-engine", actions)
-            self.assertIn("-c 524288", actions)
+            self.assertIn("-c 393216", actions)
             self.assertIn("--parallel 4", actions)
             self.assertFalse((root / "laguna-unit-killed").exists())
 
@@ -814,7 +814,7 @@ class EngineSwitchTests(unittest.TestCase):
     def test_deepseek_readiness_requires_the_exact_1m_context(self):
         source = SCRIPT.read_text()
         self.assertIn('"/slots"', source)
-        self.assertIn('slot["n_ctx"] != 524288', source)
+        self.assertIn('slot["n_ctx"] != 393216', source)
 
     def test_switch_runs_deepseek_as_engine_user_with_frozen_1m_profile(self):
         source = SCRIPT.read_text()

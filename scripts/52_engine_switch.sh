@@ -3,8 +3,26 @@
 set -Eeuo pipefail
 umask 077
 
-readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
-readonly PROD_STATE=/home/dsv4/ds4-project/engine-switch
+if [[ -n ${ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT:-} ]]; then
+    [[ ! ${ENGINE_SWITCH_TESTING+x} && ${BASH_SOURCE[0]} != "$0" &&
+            $ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT == /* &&
+            -d $ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT ]] || {
+        printf 'invalid engine-switch source-only fixture invocation\n' >&2
+        return 2 2>/dev/null || exit 2
+    }
+    REPO=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/repo
+    PROD_STATE=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/state
+    PROD_LAGUNA_BINARY=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/bin/laguna-server
+    PROD_LAGUNA_MODEL=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/models/laguna-00001-of-00003.gguf
+    PROD_LAGUNA_DRAFT=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/models/laguna-dflash.gguf
+else
+    REPO=/home/bmarti44/spark-deepseek-v4-flash
+    PROD_STATE=/home/dsv4/ds4-project/engine-switch
+    PROD_LAGUNA_BINARY=/home/bmarti44/.cache/llamacpp-laguna-06f8cebd/src/build/bin/llama-server
+    PROD_LAGUNA_MODEL=/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf
+    PROD_LAGUNA_DRAFT=/home/bmarti44/models/laguna-s-2.1/poolside/laguna-s-2.1-DFlash-BF16.gguf
+fi
+readonly REPO PROD_STATE PROD_LAGUNA_BINARY PROD_LAGUNA_MODEL PROD_LAGUNA_DRAFT
 readonly PROD_BINARY=/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server
 readonly PROD_GGUF=/home/bmarti44/models/glm52-full-denseq40.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-fullq4-production-profile.json
@@ -15,9 +33,6 @@ readonly LAGUNA_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-laguna-06f
 readonly PROD_QWEN_BINARY=/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server
 readonly PROD_QWEN_MODEL=/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf
 readonly PROD_QWEN_MMPROJ=/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf
-readonly PROD_LAGUNA_BINARY=/home/bmarti44/.cache/llamacpp-laguna-06f8cebd/src/build/bin/llama-server
-readonly PROD_LAGUNA_MODEL=/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf
-readonly PROD_LAGUNA_DRAFT=/home/bmarti44/models/laguna-s-2.1/poolside/laguna-s-2.1-DFlash-BF16.gguf
 readonly PORT=8013
 readonly AUTH_PORT=8010
 
@@ -329,7 +344,7 @@ def digest_and_identity(path, expected_bytes, *, nofollow=True,
 
 if manifest.get("profile") != "laguna" or manifest.get("schema_version") != 3:
     raise SystemExit("Laguna profile identity is not approved")
-if manifest.get("port") != 8013 or manifest.get("context_cap") != 524288:
+if manifest.get("port") != 8013 or manifest.get("context_cap") != 393216:
     raise SystemExit("Laguna serving topology is not approved")
 if manifest.get("binary_path") != binary_path:
     raise SystemExit("Laguna binary path is not approved")
@@ -840,7 +855,7 @@ launch_laguna() {
         /usr/bin/flock --nonblock --no-fork \
         /run/lock/frontier-at-home/inference.lock \
         "$LAGUNA_BINARY" --model "$LAGUNA_MODEL" -ngl 99 -fa on \
-        --no-mmap -c 524288 -md "$LAGUNA_DRAFT" --parallel 4 \
+        --no-mmap -c 393216 -md "$LAGUNA_DRAFT" --parallel 4 \
         --host 127.0.0.1 --port "$PORT" --alias laguna-s-2.1 \
         --spec-type draft-dflash --spec-draft-n-max 4 --jinja \
         --chat-template-kwargs '{"enable_thinking":true}' \
@@ -1299,8 +1314,8 @@ value = json.loads(sys.argv[1])
 if not isinstance(value, list) or len(value) != 2:
     raise SystemExit("DeepSeek slot topology is invalid")
 for slot in value:
-    if slot["n_ctx"] != 524288:
-        raise SystemExit("DeepSeek per-slot context is not 524288 (2 x 512k)")
+    if slot["n_ctx"] != 393216:
+        raise SystemExit("DeepSeek per-slot context is not 393216 (2 x 512k)")
 PY
 }
 
@@ -1667,6 +1682,10 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
             [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || \
                 { [[ $1 == laguna ]] && printf laguna || printf qwen; })-running ]]
     }
+fi
+
+if [[ -n ${ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT:-} ]]; then
+    return 0
 fi
 
 command=${1:-status}
