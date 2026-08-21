@@ -512,6 +512,43 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("before.st_size != expected_bytes", verify)
         self.assertIn("len(shards) != 3", verify)
 
+    def test_laguna_and_qwen_launch_safety_guards_are_explicit(self):
+        source = SCRIPT.read_text()
+        for start_name, end_name in (
+            ("start_laguna_profile() {", "start_laguna() {"),
+            ("start_qwen_profile() {", "start_qwen38() {"),
+        ):
+            starter = source[source.index(start_name) : source.index(end_name)]
+            self.assertRegex(
+                starter,
+                r"(?s)03_memory_guard\.py.*?--timeout-seconds 180\s+\|\|\s+die",
+            )
+
+        launch = source[
+            source.index("launch_laguna() {") :
+            source.index("cleanup_laguna_killed_unit() {")
+        ]
+        self.assertIn("--property NoNewPrivileges=yes", launch)
+
+        verify = source[
+            source.index("verify_laguna_profile_hashes() {") :
+            source.index("revalidate_laguna_identities() {")
+        ]
+        self.assertIn("derived_shard_paths", verify)
+        self.assertIn('"-00001-of-00003.gguf"', verify)
+        self.assertIn("shared_libraries", verify)
+        self.assertIn("os.path.basename(name) != name", verify)
+
+        for stop_name, end_name in (
+            ("stop_qwen_verified() {", "stop_laguna_verified() {"),
+            ("stop_laguna_verified() {", "stop_profile() {"),
+        ):
+            stop = source[source.index(stop_name) : source.index(end_name)]
+            self.assertIn("if ! unit_pid=$(systemctl show", stop)
+            self.assertIn(
+                'DISARMED $pid $expected_pgid $expected_ticks', stop
+            )
+
     def test_rollback_waits_for_every_restored_profile_before_verification(self):
         source = SCRIPT.read_text()
         rollback = source[source.index("rollback() {") : source.index("command=${1")]
