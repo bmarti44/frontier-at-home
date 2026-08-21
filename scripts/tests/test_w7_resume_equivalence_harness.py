@@ -10,8 +10,16 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT / "results/glm52-gates/harness/w7_resume_equivalence_v1.sh"
+FROZEN_W7_REQUESTS = (
+    Path("/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/live-request.json"),
+    Path("/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json"),
+)
 
 
+@unittest.skipUnless(
+    all(path.is_file() for path in FROZEN_W7_REQUESTS),
+    "requires the frozen W7 live-request.json and primary-request.json fixtures",
+)
 class W7HarnessTest(unittest.TestCase):
     def test_self_test_passes_without_starting_model(self) -> None:
         result = subprocess.run(

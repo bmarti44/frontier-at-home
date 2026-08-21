@@ -21,8 +21,13 @@ PREFETCH_SHA_PIPELINE_PATCH = (
 PREFETCH_SHARED_AUTHORITY_PATCH = (
     ROOT / "results/glm52-gates/harness/ds4-prefetch-shared-read-authority.patch"
 )
+FROZEN_RUNG0_ENGINE_SOURCE = Path("/tmp/glm52-rung0-prefetch-candidate/ds4_cuda.cu")
 
 
+@unittest.skipUnless(
+    FROZEN_RUNG0_ENGINE_SOURCE.is_file(),
+    "requires frozen rung-0 candidate source /tmp/glm52-rung0-prefetch-candidate/ds4_cuda.cu",
+)
 class ExpertSlabSourceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

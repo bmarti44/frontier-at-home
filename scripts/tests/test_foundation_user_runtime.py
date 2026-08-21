@@ -7,6 +7,7 @@ import importlib.util
 import hashlib
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,18 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "69_foundation_user_runtime.py"
 
 
+def loopback_socket_available() -> bool:
+    try:
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+    except OSError:
+        return False
+    return True
+
+
+LOOPBACK_SOCKET_AVAILABLE = loopback_socket_available()
+
+
 def load_runtime():
     spec = importlib.util.spec_from_file_location("foundation_user_runtime", SCRIPT)
     if spec is None or spec.loader is None:
@@ -29,6 +42,10 @@ def load_runtime():
     return module
 
 
+@unittest.skipUnless(
+    LOOPBACK_SOCKET_AVAILABLE,
+    "requires permission to create and bind a loopback TCP socket",
+)
 class FoundationRuntimeTests(unittest.TestCase):
     def test_cli_requires_exact_arm_identity_arguments(self):
         completed = subprocess.run(
