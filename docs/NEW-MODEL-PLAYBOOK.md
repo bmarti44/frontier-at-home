@@ -201,6 +201,34 @@ process keeps the old inode untouched. If an invocation is *queued*
 when it unblocks — kill and re-issue it after the fix lands. If the
 switch ever hangs, see docs/RUNBOOK-stuck-switch.md.
 
+**Gate windows.** Don't hand-roll window boilerplate — source
+`scripts/lib/gate_window.sh` (`gate_window_open` → `gate_serve_cycle` →
+probes → `gate_window_close`; the EXIT trap restores production even on
+mid-probe death, and `capture_json` refuses multi-line evidence files that
+the lint hook would later reject).
+
+**Harness runtime contracts** (discoverable only from source/old results —
+read this before burning a window):
+- `31_bench_accuracy.py` **holdout** runs REQUIRE `--config-evidence
+  <files>` (convention: build manifest + weights manifest + the speed
+  result binding the serving config) and a `--config-hash` string; dev
+  runs don't. Run a **dev-split truncation probe first** — holdout rowsets
+  are one-shot per ledger namespace (`DSV4_LEDGER_NAMESPACE` to re-spend,
+  owner-authorized only).
+- Accuracy result JSON top-level keys: `n`, `correct`, `accuracy`,
+  `invalid_count` (truncation proxy), `config_digest`, `ledger_namespace`.
+  Per-item detail lives in the transcripts dir, not the result file.
+- `30_bench_speed.py` strict cells need `--ignore-eos-supported`,
+  `--output-tokenizer-path` + `--output-tokenizer-sha256` for non-DSV4
+  models, `--request-timeout ≤2700`; a cell is README-quotable only if
+  `suite_valid` is true. Verify per-token streaming first if a
+  speculative decoder is on (G2-style granularity check) — block
+  streaming invalidates the timestamp pipeline.
+- Evidence files must each be a single valid JSON document (the lint hook
+  parses exempted JSON); use `capture_json`, never `tee` a mixed stream.
+- When giving the owner a command to run, use **absolute paths** — they
+  won't be sitting in the repo directory.
+
 **Engine builds beside live production.** The build scripts refuse to run
 uncontained when less than 110 GiB is available; wrap them in a capped user
 unit (`systemd-run --user --collect -p MemoryMax=11G -p MemorySwapMax=0
