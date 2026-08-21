@@ -458,7 +458,7 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertEqual(json.loads(result.stdout)["active_profile"], "qwen38")
         source = SCRIPT.read_text()
         self.assertIn(
-            "status [--json]|restore|dsv4|glm52|qwen38|qwen38-1m", source
+            "status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m", source
         )
 
     def test_qwen38_1m_successful_launch_cleans_killed_unit_and_omits_q8_flags(self):
@@ -511,6 +511,30 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertIn("DSV4 start", actions)
             self.assertIn("WAIT dsv4", actions)
             self.assertIn("VERIFY dsv4", actions)
+
+    def test_stop_halts_active_profile_without_touching_active_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-1m"})
+            )
+            (root / "qwen-running").touch()
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("STOPPED qwen38-1m", result.stdout)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38-1m",
+            )
+            self.assertFalse((root / "qwen-running").exists())
+            self.assertIn("STOP qwen", (root / "actions.log").read_text())
+
+    def test_stop_with_no_recorded_profile_is_a_noop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((root / "actions.log").exists())
 
     def test_qwen_hash_failure_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -606,7 +630,7 @@ class EngineSwitchTests(unittest.TestCase):
         source = SCRIPT.read_text()
         installer = INSTALLER.read_text()
         unit = RESTORE_SERVICE.read_text()
-        self.assertIn("status [--json]|restore|dsv4|glm52", source)
+        self.assertIn("status [--json]|stop|restore|dsv4|glm52", source)
         self.assertIn('if [[ $command == restore ]]', source)
         self.assertIn("dsv4-engine-restore.service", installer)
         self.assertIn("52_engine_switch.sh restore", unit)

@@ -1024,9 +1024,22 @@ if [[ $command == status ]]; then
     json_status
     exit 0
 fi
-[[ $command == restore || $command == dsv4 || $command == glm52 || \
-        $command == qwen38 || $command == qwen38-1m ]] ||
-    die "usage: $0 status [--json]|restore|dsv4|glm52|qwen38|qwen38-1m"
+[[ $command == restore || $command == stop || $command == dsv4 || \
+        $command == glm52 || $command == qwen38 || $command == qwen38-1m ]] ||
+    die "usage: $0 status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m"
+if [[ $command == stop ]]; then
+    # Gate-window helper: stop the active engine but leave active.json
+    # untouched so `restore` brings the same profile back afterwards.
+    mkdir -p -- "$STATE"
+    exec 9>"$LOCK"
+    flock -x 9
+    stop_target=$(read_active_profile)
+    [[ -n $stop_target ]] || exit 0
+    ( stop_profile "$stop_target" ) ||
+        die "cannot safely stop active profile $stop_target"
+    echo "STOPPED $stop_target (active.json unchanged; '$0 restore' restarts it)"
+    exit 0
+fi
 if [[ $command == restore ]]; then
     mkdir -p -- "$STATE"
     exec 9>"$LOCK"
