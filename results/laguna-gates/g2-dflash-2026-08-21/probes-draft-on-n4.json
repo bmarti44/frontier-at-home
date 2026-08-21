@@ -1,0 +1,47 @@
+[
+ {
+  "prompt_index": 0,
+  "wall_s": 11.759812116622925,
+  "usage": {
+   "completion_tokens": 384,
+   "prompt_tokens": 74,
+   "total_tokens": 458,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "tok_s": 32.65358291372716,
+  "content": "",
+  "reasoning_content": "Okay, I need to write a Python function called merge_intervals that takes a list of intervals and merges any overlapping ones. The result should be sorted. Hmm, let's think about how to approach this.\n\nFirst, I remember that the standard way to merge intervals is to sort them first based on their start times. Once sorted, you can iterate through them and check if the current interval overlaps with the previous one. If they do, merge them by updating the end of the previous interval. If not, add the current interval to the result.\n\nWait, right. So the steps would be:\n\n1. Sort the intervals by their start values.\n2. Initialize a list to hold the merged intervals. Maybe start by adding the first interval.\n3. Then loop through the remaining intervals. For each interval, compare its start with the end of the last merged interval.\n4. If the current interval's start is less than or equal to the end of the last merged interval, they overlap. So merge them by taking the max of the ends.\n5. If they don't overlap, add the current interval to the merged list.\n\nBut wait, what if the intervals list is empty? I should handle that case first. Like, if there are no intervals, return an empty list.\n\nLet me think about the example. Suppose intervals are [[1,3],[2,6],[8,10],[15,18]]. After sorting, they are already in order. The first interval is [1,3]. The next is [2,6], which starts at 2 which is <= 3, so merge to [1,6]. Then [8,10] starts after 6, so add it. Then [15,18] is added. So the result is [[1,6],[8,10],[15"
+ },
+ {
+  "prompt_index": 1,
+  "wall_s": 8.502179861068726,
+  "usage": {
+   "completion_tokens": 384,
+   "prompt_tokens": 69,
+   "total_tokens": 453,
+   "prompt_tokens_details": {
+    "cached_tokens": 33
+   }
+  },
+  "tok_s": 45.16488786109156,
+  "content": "```python\nclass Node:\n    def __init__(self, key=None, value=None):\n        self.key = key\n        self.value = value\n        self.prev = None\n        self.next = None\n\nclass LRUCache:\n    def __init__(self, capacity: int):\n        self.capacity = capacity\n        self.cache = {}\n        self.size = 0\n        self.head = Node()\n        self.tail = Node()\n        self.head.next = self.tail\n        self.tail.prev = self.head\n\n    def _add_node(self, node):\n        node.prev = self.head\n        node.next = self.head.next\n        self.head.next.prev = node\n        self.head.next = node\n\n    def _remove_node(self, node):\n        prev_node = node.prev\n        next_node = node.next\n        prev_node.next = next_node\n        next_node.prev = prev_node\n\n    def _move_to_head(self, node):\n        self._remove_node(node)\n        self._add_node(node)\n\n    def _pop_tail(self):\n        node = self.tail.prev\n        self._remove_node(node)\n        return node\n\n    def get(self, key: int) -> int:\n        if key in self.cache:\n            node = self.cache[key]\n            self._move_to_head(node)\n            return node.value\n        return -1\n\n    def put(self, key: int, value: int) -> None:\n        if key in self.cache:\n            node = self.cache[key]\n            node.value = value\n            self._move_to_head(node)\n        else:\n            new_node = Node(key, value)\n            self.cache[key] = new_node\n            self._add_node(new_node)\n            self.size += 1\n            if self.size",
+  "reasoning_content": ""
+ },
+ {
+  "prompt_index": 2,
+  "wall_s": 13.55173373222351,
+  "usage": {
+   "completion_tokens": 384,
+   "prompt_tokens": 71,
+   "total_tokens": 455,
+   "prompt_tokens_details": {
+    "cached_tokens": 33
+   }
+  },
+  "tok_s": 28.33585780149437,
+  "content": "",
+  "reasoning_content": "Okay, I need to write a bash script that finds the 10 largest files under a directory given as $1. The script should follow no symlinks and print the size and path of each file. Let me think about how to approach this.\n\nFirst, I remember that the 'find' command is useful for searching files. Since we need to follow no symlinks, I should use the -type f option to ensure we only get regular files, not directories or symlinks. Wait, but symlinks themselves are files, but maybe the user wants to exclude them. The problem says \"following no symlinks,\" so maybe we should not follow any symlinks when traversing directories. Hmm, actually, the -P option in find makes it not follow symbolic links. So maybe I should use find with -P to prevent following symlinks.\n\nSo the command would start with find -P \"$1\" ... but I need to make sure that it's only looking for files. So adding -type f. Then, to get the size and path, I can use the -printf option. The format for size is %s which gives the size in bytes, and %p for the path. So something like -printf \"%s %p\\n\".\n\nOnce I have all the files with their sizes, I need to sort them by size in descending order and pick the top 10. The sort command can be used here. Since the size is the first field, I can sort numerically in reverse order. So sort -nr. Then, take the first 10 lines with head -n 10.\n\nPutting it all together: find -P \"$1\" -type f -printf \"%s %p\\n\" | sort -nr | head -n 10.\n\nWait, but what if the directory has subdirectories? The find command should traverse all subdirectories by default. Also, need to make sure"
+ }
+]
