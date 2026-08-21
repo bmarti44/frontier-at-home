@@ -414,7 +414,7 @@ start_glm52() {
     "$REPO/scripts/01_memwatch.sh" \
         --target-file "$GLM_WATCHDOG_TARGET" \
         --ready-file "$GLM_WATCHDOG_READY" \
-        --threshold-gib 18 --interval-sec 1 --log "$GLM_WATCHDOG_LOG" &
+        --threshold-gib 18 --interval-sec 1 --log "$GLM_WATCHDOG_LOG" 9>&- &
     memwatch_pid=$!
     memwatch_ticks=
     ready=
@@ -442,7 +442,7 @@ start_glm52() {
         "$BINARY" --cuda -m "$GGUF" -c 32768 \
         --host 127.0.0.1 --port "$PORT" --ssd-streaming \
         --ssd-streaming-cache-experts 40GB \
-        >"$STATE/glm52.server.log" 2>&1 &
+        >"$STATE/glm52.server.log" 2>&1 9>&- &
     pid=$!
     identity=
     for _ in $(seq 1 20); do
@@ -597,7 +597,7 @@ start_qwen_profile() {
     "$REPO/scripts/01_memwatch.sh" \
         --target-file "$QWEN_WATCHDOG_TARGET" \
         --ready-file "$QWEN_WATCHDOG_READY" \
-        --threshold-gib "$watchdog_floor_gib" --interval-sec 1 --log "$QWEN_WATCHDOG_LOG" &
+        --threshold-gib "$watchdog_floor_gib" --interval-sec 1 --log "$QWEN_WATCHDOG_LOG" 9>&- &
     memwatch_pid=$!
     memwatch_ticks=
     ready=
