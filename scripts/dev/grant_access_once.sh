@@ -51,6 +51,12 @@ bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl start deepseek-v4-flash-llamacp
 bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl start dsv4-guard.timer, /usr/bin/systemctl stop dsv4-guard.timer, /usr/bin/systemctl status dsv4-guard.timer
 bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl start dsv4-authhelper.service, /usr/bin/systemctl stop dsv4-authhelper.service, /usr/bin/systemctl status dsv4-authhelper.service
 bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl start dsv4-caddy.service, /usr/bin/systemctl stop dsv4-caddy.service, /usr/bin/systemctl status dsv4-caddy.service
+# Per-engine production units (added 2026-08-21): the switch's `stop` verb is
+# the normal gate-window path; these direct grants are the break-glass escape
+# hatch for when the switch itself is wedged (see docs/RUNBOOK-stuck-switch.md).
+bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl start qwen38-engine.service, /usr/bin/systemctl stop qwen38-engine.service, /usr/bin/systemctl status qwen38-engine.service, /usr/bin/systemctl restart qwen38-engine.service
+bmarti44 ALL=(root) NOPASSWD: /usr/bin/systemctl start laguna-engine.service, /usr/bin/systemctl stop laguna-engine.service, /usr/bin/systemctl status laguna-engine.service, /usr/bin/systemctl restart laguna-engine.service
+bmarti44 ALL=(root) NOPASSWD: /usr/bin/pkill -f 52_engine_switch.sh
 bmarti44 ALL=(dsv4) NOPASSWD: /home/dsv4/*
 EOF
 visudo -cf "${SUDOERS_FILE}.tmp"

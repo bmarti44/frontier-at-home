@@ -192,6 +192,15 @@ download, and run pushes in the background with generous timeouts during
 one. Fetch only the primary quant; start ladder quants (the bigger/smaller
 fallbacks) only when a gate actually asks for them.
 
+**Live-script edits.** Never edit a script in place while any process may
+be running (or queued to run) it — a running bash keeps reading from its
+open inode, and in-place writes corrupt it mid-parse. Install changes by
+editing a copy and atomically `mv`-ing it over the original; the running
+process keeps the old inode untouched. If an invocation is *queued*
+(e.g. blocked on a lock), remember it will execute its original text
+when it unblocks — kill and re-issue it after the fix lands. If the
+switch ever hangs, see docs/RUNBOOK-stuck-switch.md.
+
 **Engine builds beside live production.** The build scripts refuse to run
 uncontained when less than 110 GiB is available; wrap them in a capped user
 unit (`systemd-run --user --collect -p MemoryMax=11G -p MemorySwapMax=0

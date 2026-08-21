@@ -512,6 +512,51 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertIn("WAIT dsv4", actions)
             self.assertIn("VERIFY dsv4", actions)
 
+    def test_background_spawns_close_the_switch_lock_fd(self):
+        # Regression for the 2026-08-21 deadlock: a memwatch spawned without
+        # `9>&-` inherited the switch.lock open-file description, so the lock
+        # outlived the switch and every later invocation hung in flock.
+        # Every backgrounded command in this script must close fd 9.
+        source = SCRIPT.read_text()
+        offenders = []
+        for number, line in enumerate(source.splitlines(), start=1):
+            stripped = line.rstrip()
+            if not stripped.endswith("&") or stripped.endswith("&&"):
+                continue
+            # Find the full command by walking back over continuation lines.
+            command_lines = [stripped]
+            index = number - 2
+            lines = source.splitlines()
+            while index >= 0 and lines[index].rstrip().endswith("\\"):
+                command_lines.insert(0, lines[index].rstrip())
+                index -= 1
+            command = " ".join(command_lines)
+            if "9>&-" not in command:
+                offenders.append(f"line {number}: {stripped.strip()}")
+        self.assertEqual(
+            offenders, [],
+            "backgrounded commands must close the switch-lock fd with 9>&- "
+            "so children cannot inherit the lock's open-file description:\n"
+            + "\n".join(offenders),
+        )
+
+    def test_lock_acquisition_is_bounded_and_names_the_holder(self):
+        source = SCRIPT.read_text()
+        self.assertNotIn(
+            "\n    flock -x 9\n", source,
+            "raw unbounded flock reintroduced; use acquire_switch_lock",
+        )
+        self.assertNotIn(
+            "\nflock -x 9\n", source,
+            "raw unbounded flock reintroduced; use acquire_switch_lock",
+        )
+        self.assertIn("acquire_switch_lock() {", source)
+        self.assertIn('flock -w "$SWITCH_LOCK_TIMEOUT_SECONDS" -x 9', source)
+        self.assertIn("/proc/locks", source)
+        # All three entry points (stop, restore, profile switch) go through
+        # the helper: one definition plus three call sites.
+        self.assertEqual(source.count("acquire_switch_lock"), 4)
+
     def test_stop_halts_active_profile_without_touching_active_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

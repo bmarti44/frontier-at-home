@@ -56,6 +56,26 @@ qwen_verified_identities=
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
+# Acquire the switch lock on fd 9 with a bounded wait. An unbounded flock
+# turned a leaked-fd bug into a silent multi-hour hang (2026-08-21); on
+# timeout, name the holder from /proc/locks so the operator can see whether
+# the holding PID is alive or the lock is a leaked open-file description
+# surviving in a spawned child (see docs/RUNBOOK-stuck-switch.md).
+readonly SWITCH_LOCK_TIMEOUT_SECONDS=${SWITCH_LOCK_TIMEOUT_SECONDS:-300}
+acquire_switch_lock() {
+    exec 9>"$LOCK"
+    flock -w "$SWITCH_LOCK_TIMEOUT_SECONDS" -x 9 && return 0
+    local inode holder
+    inode=$(stat -Lc %i -- "$LOCK" 2>/dev/null || echo '?')
+    holder=$(awk -v ino=":$inode " \
+        '$0 ~ ino && $0 !~ /->/ {print $5; exit}' /proc/locks 2>/dev/null \
+        || true)
+    if [[ -n ${holder:-} && -d /proc/$holder ]]; then
+        die "switch lock not acquired after ${SWITCH_LOCK_TIMEOUT_SECONDS}s; held by live pid $holder ($(tr '\0' ' ' <"/proc/$holder/cmdline" 2>/dev/null || echo unknown))"
+    fi
+    die "switch lock not acquired after ${SWITCH_LOCK_TIMEOUT_SECONDS}s; holder pid ${holder:-unknown} is not running — likely a leaked open-file description in a spawned child (memwatch/server); see docs/RUNBOOK-stuck-switch.md"
+}
+
 clean_python() {
     env -i PATH=/usr/bin:/bin HOME=/nonexistent LANG=C.UTF-8 \
         /usr/bin/python3 "$@"
@@ -1031,8 +1051,7 @@ if [[ $command == stop ]]; then
     # Gate-window helper: stop the active engine but leave active.json
     # untouched so `restore` brings the same profile back afterwards.
     mkdir -p -- "$STATE"
-    exec 9>"$LOCK"
-    flock -x 9
+    acquire_switch_lock
     stop_target=$(read_active_profile)
     [[ -n $stop_target ]] || exit 0
     ( stop_profile "$stop_target" ) ||
@@ -1042,8 +1061,7 @@ if [[ $command == stop ]]; then
 fi
 if [[ $command == restore ]]; then
     mkdir -p -- "$STATE"
-    exec 9>"$LOCK"
-    flock -x 9
+    acquire_switch_lock
     command=$(read_active_profile)
     [[ -n $command ]] || exit 0
     if ( restore_profile "$command" ); then
@@ -1073,8 +1091,7 @@ if [[ $command == qwen38-1m ]]; then
     verify_qwen_1m_hashes
 fi
 mkdir -p -- "$STATE"
-exec 9>"$LOCK"
-flock -x 9
+acquire_switch_lock
 if [[ $command == qwen38 || $command == qwen38-1m ]]; then
     revalidate_qwen_identities
 fi
