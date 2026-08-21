@@ -19,13 +19,50 @@ readonly W8_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W8-exact-preflight-rev
 readonly W9_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/harness/w9_real_capture_v1\.sh:[0-9]+:readonly (BINARY|MODEL|TOKENIZER)_SHA256=[0-9a-f]{64}$|^scripts/93_score_w9_fp4_falsifier\.py:[0-9]+:        "tree_sha256": "[0-9a-f]{64}",$|^scripts/93_score_w9_fp4_falsifier\.py:[0-9]+:    "(kv\.f32|query\.f32|selected\.u32|selected-count\.u32|metadata\.json|W9_CAPTURE_COMPLETE)": "[0-9a-f]{64}",$|^scripts/96_verify_drand_receipt_w9\.mjs:[0-9]+:const PUBLIC_KEY = "[0-9a-f]{96}";$|^scripts/tests/test_glm52_goal\.py:[0-9]+:        seed = "[0-9a-f]{64}"$|^scripts/tests/test_glm52_goal\.py:[0-9]+:                "randomness": "[0-9a-f]{64}",$|^scripts/tests/test_glm52_goal\.py:[0-9]+:                "(signature|previous_signature)": "[0-9a-f]{192}"[,]?$|^results/glm52-gates/W9-real-capture-pass-a14e364/(off|on)/safety/main\.log:[0-9]+:[0-9T:+,.-]+ (candidate_src=[^ ]+ candidate_binary_sha256=[0-9a-f]{64} candidate_device_inode=[0-9:]+|executed_candidate_verified pid=[0-9]+ start_ticks=[0-9]+ path=[^ ]+ executed_binary_sha256=[0-9a-f]{64} device_inode=[0-9:]+|safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+)$|^results/glm52-gates/W9-real-capture-pass-a14e364/prompt-build\.txt:[0-9]+:tokens=8192 sha256=[0-9a-f]{64}$'
 readonly MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-goal/harness/decisive_matched\.sh:[0-9]+:TOKENIZER_NATIVE_SHA256=[0-9a-f]{64}$'
 
+readonly LINT_ALLOWLIST_FILE="$(
+  cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+  pwd
+)/configs/lint-allowlist.json"
+declare -a EXEMPT_PATHS=()
+
+load_exempt_paths() {
+  local serialized
+  if ! serialized="$(python3 - "$LINT_ALLOWLIST_FILE" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, encoding="utf-8") as stream:
+        document = json.load(stream)
+    for key in ("exempt_paths", "exempt_json_fields"):
+        values = document[key]
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"{key} must be a non-empty array")
+        if not all(isinstance(value, str) and value and "\n" not in value for value in values):
+            raise ValueError(f"{key} must contain only non-empty single-line strings")
+except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+    print(f"ERROR: invalid lint allowlist {path}: {error}", file=sys.stderr)
+    raise SystemExit(1)
+print("\n".join(document["exempt_paths"]))
+PY
+  )"; then
+    return 1
+  fi
+  mapfile -t EXEMPT_PATHS <<<"$serialized"
+}
+
+load_exempt_paths
+readonly -a EXEMPT_PATHS
+
 is_checksum_file() {
-  case "$1" in
-    results/glm52-gates/W9-fp4-falsifier-diagnostic-*/raw.jsonl) return 0 ;;
-    scripts/103_verify_drand_receipt_bundle.mjs|verification/MANIFEST.sha256|configs/versions.lock|configs/glm52-profile.json|configs/glm52-fullq4-production-profile.json|configs/qwen38-production-profile.json|configs/qwen38-1m-production-profile.json|configs/laguna-production-profile.json|configs/glm52-lossless-plateau-profile.json|configs/dsv4-profile.json|configs/dsv4-matched-32k-profile.json|configs/pins/*|configs/decision-specs/*|configs/build-manifests/*|evalsets/pins.json|evalsets/*/pins.json|results/qwen38-gates/*/*.json|results/qwen38-gates/*/*/*.json|results/laguna-gates/*/*.json|results/laguna-gates/*/*/*.json|results/transcripts/*|results/acc-*.json|results/audit-*.json|results/speed-*.json|results/decision.json|results/holdout-ledger.json|results/glm52-gates/G6-rung0-io-sidecar-build.json|results/glm52-gates/G6-rung0-io-slab-calibration-no-results.json|results/glm52-gates/G6-rung0-io-accelerated-sha-falsifier.json|results/glm52-gates/R0-slab-canary-attempts-2026-08-02.json|results/glm52-gates/R0-e637-campaign-attempt-2026-08-02.json|results/glm52-gates/R0-e637-quality-timeout-attempt-2026-08-03.json|results/glm52-gates/R0-e637-slab-final-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-freeze-2026-08-03.json|results/glm52-gates/R0.2-prefetch-build-*.json|results/glm52-gates/R0.2-prefetch-freeze-*.json|results/glm52-gates/R0.2-prefetch-randomness-*.json|results/glm52-gates/R0.2-prefetch-probe-*-attempt-*.json|results/glm52-gates/R0.2-prefetch-probe-6885a45-final-2026-08-04.json|results/glm52-gates/R0[abc]-*.json|results/glm52-gates/W3-slot-gemv-*.json|results/glm52-gates/W3-slot-lifetime-*.json|results/glm52-gates/W3-performance-*.json|results/glm52-gates/NVME-characterization-attempt-*.json|results/glm52-gates/NVME-characterization-final-*.json|results/glm52-goal/evidence/roofline-*.json|results/glm52-goal/evidence/*-confirmation-*.json|results/glm52-goal/evidence/build-repro/*/*.json|results/glm52-goal/evidence/dsv4-decode-*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/manifest.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.json|results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity|results/glm52-goal/evidence/w1-affine-*/manifest.json|results/glm52-goal/evidence/w1-affine-*/raw.jsonl|results/glm52-goal/evidence/w1-affine-*/raw-inputs/randomness.json|results/glm52-goal/evidence/w1-telemetry-probe-*/manifest.json|results/glm52-goal/evidence/w1-telemetry-probe-*/raw.jsonl|results/glm52-goal/*/attempt-*/manifest.json|results/glm52-goal/*/attempt-*/raw.jsonl|results/dsv4-0731-attempts/attempt-*/manifest.json|results/dsv4-0731-attempts/attempt-*/raw.jsonl|results/dsv4-0731-attempts/attempt-*/summary.json|weights/*/manifest.json|*.sha256) return 0 ;;
-    results/dsv4-0731-staging/*.json|results/dsv4-cold-load/*.json|results/glm52-gates/lossless-plateau-*.json|results/glm52-gates/fullq4-*/*.json|results/glm52-gates/lossless-plateau-*/raw.jsonl|results/glm52-gates/lossless-plateau-*/manifest.json|results/glm52-gates/lossless-plateau-*/summary.json|results/glm52-gates/W3-performance-campaign-*/raw.jsonl|results/glm52-gates/R0.5-*.json|results/glm52-gates/W4-topk-*.json|results/glm52-gates/W4-serving-*.json|results/glm52-gates/W4-topk-*/manifest.json|results/glm52-gates/W4-topk-*/raw.jsonl|results/glm52-gates/W4-topk-*/summary.json|results/glm52-gates/W5-indexer-f16-*.json|results/glm52-gates/W6-indexer-tile-reuse-*.json|results/glm52-gates/W7-cache-generation-*.json|results/glm52-gates/W7-cache-generation-*-pass/manifest.json|results/glm52-gates/W7-cache-generation-*-pass/raw.jsonl|results/glm52-gates/W7-cache-generation-*-pass/summary.json|results/glm52-gates/W7-cache-generation-*-fail/manifest.json|results/glm52-gates/W7-cache-generation-*-fail/raw.jsonl|results/glm52-gates/W7-cache-generation-*-fail/summary.json|results/glm52-gates/W7-cache-generation-*-pass/artifacts/model.identity.json|results/glm52-gates/W7-evict-store-*.json|results/glm52-gates/W7-resume-correctness-plan-v*.json|results/glm52-gates/W7-resume-candidate*-red.json|results/glm52-gates/W7-resume-review-r*.json|results/glm52-gates/W7-resume-build-attempt-v*.json|results/glm52-gates/W7-resume-compiled-red-freeze-v*.json|results/glm52-gates/W7-resume-restored-frontier-freeze-v*.json|results/glm52-gates/W7-resume-compiled-red-attempt*.json|results/glm52-gates/W7-resume-equivalence-*.json|results/glm52-gates/W7-resume-production-*.json|results/glm52-gates/W7-resume-smoke-randomness-v*.json|results/glm52-gates/W8-exact-*.json|results/glm52-gates/W9-*.json|results/glm52-gates/W9-real-capture-pass-a14e364/*.json|results/glm52-gates/W9-real-capture-pass-a14e364/raw.jsonl|results/glm52-gates/W9-real-capture-pass-a14e364/on/capture/metadata.json|results/glm52-gates/harness/w7-production-fixture-pool-v1.json) return 0 ;;
-    *) return 1 ;;
-  esac
+  local pattern
+  for pattern in "${EXEMPT_PATHS[@]}"; do
+    if [[ "$1" == $pattern ]]; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 # Split a NUL-delimited file list (stdin) into the two scan tiers.
@@ -83,320 +120,26 @@ scan_stream() {
 
 scan_digest_json() {
   local display_path="$1"
-  python3 - "$display_path" 3<&0 <<'PY'
+  python3 - "$display_path" "$LINT_ALLOWLIST_FILE" 3<&0 <<'PY'
 import json
 import os
 import re
 import sys
 
 display_path = sys.argv[1]
-allowlist = {
-    "sha256",
-    "source_parquet_sha256",
-    "oid",
-    "git_oid_sha1",
-    "rendered_prompt_sha256",
-    # scripts/31_bench_accuracy.py: digest of the dataset rows an arm consumed,
-    # so a repeat look at the same holdout is visible to the auditor.
-    "rowset_sha256",
-    "pins_sha256",
-    "combined_sha256",
-    "mmproj_sha256",
-    "holdout_rowset_sha256",
-    # 0731 evidence-bundle fields (scripts/105_build_dsv4_0731_bundle.py): the
-    # digests of the arm artifacts and harnesses an attempt was computed from.
-    "artifact_sha256",
-    "raw_jsonl_sha256",
-    "diff_sha256",
-    "pin_sha256",
-    # Golden-test response digests. 32_golden_tests.py records the reasoning and
-    # content streams separately so a pass that accepted reasoning-only output can
-    # be recomputed from the artifact instead of taken on trust.
-    "content_sha256",
-    "reasoning_sha256",
-    "generated_sha256",
-    "commit",
-    "revision",
-    "config_digest",
-    "sha1",
-    "server_binary_sha256",
-    "normalized_cli_sha256",
-    "normalized_server_sha256",
-    "model_manifest_sha256s",
-    "model_manifest_sha256",
-    # The llama.cpp GGUF generation actually loaded by the serving arm. Distinct
-    # from weights_manifest_sha256, which names the ds4 weights.
-    "serving_weights_manifest_sha256",
-    "dsv4_serving_weights_manifest_sha256",
-    "diagnostic_events_sha256",
-    "runtime_start_sha256",
-    "run_log_sha256",
-    "canonical_sha256",
-    "canonical_tree_sha256",
-    "tree_sha256",
-    "source_summary_sha256",
-    "source_receipt_sha256",
-    "source_transcript_sha256",
-    "tokenizer_sha256",
-    "tokenizer_native_sha256",
-    "executable_sha256",
-    "stdlib_tree_sha256",
-    "libpython_sha256",
-    "tsa_certificate_sha256",
-    "binary_sha256",
-    "draft_model_sha256",
-    "strict_binary_sha256",
-    "launcher_sha256",
-    "campaign_runner_sha256",
-    "glm_arm_sha256",
-    "dsv4_arm_sha256",
-    "glm_binary_sha256",
-    "glm_model_sha256",
-    "dsv4_binary_sha256",
-    "dsv_containment_sha256",
-    "dsv4_weights_manifest_sha256",
-    "benchmark_sha256",
-    "collector_sha256",
-    "arm_order_sha256",
-    "executed_binary_sha256",
-    "build_manifest_sha256",
-    "binary_freeze_sha256",
-    "owner_decision_sha256",
-    "review_sha256",
-    "ca_certificate_sha256",
-    "configuration_sha256",
-    "source_commit_object_sha256",
-    "production_binary_sha256",
-    "candidate_binary_sha256",
-    "quality_binary_sha256",
-    "metric_scorer_sha256",
-    "fixed_scorer_sha256",
-    "frozen_scorer_sha256",
-    "test_binary_sha256",
-    "microgate_sha256",
-    "metric_scorer_tests_sha256",
-    "tests_sha256",
-    # W4 RED receipts bind the unchanged runner and the two exact test modules.
-    "unchanged_runner_sha256",
-    "runner_test_sha256",
-    "scorer_test_sha256",
-    "immutable_server_log_sha256",
-    "red_test_output_sha256",
-    "lint_sha256",
-    "freeze_sha256",
-    "supersedes_freeze_sha256",
-    "randomness_sha256",
-    "raw_jsonl_sha256",
-    "raw_sha256",
-    "reference_continuation_sha256",
-    "reference_token_ids_sha256",
-    "manifest_sha256",
-    "stage_receipt_sha256",
-    "all_arm_tsv_sha256",
-    "arm_sha256",
-    "off_arm_sha256",
-    "on_arm_sha256",
-    "off_containment_sha256",
-    "on_containment_sha256",
-    "off_containment_stdout_sha256",
-    "off_containment_stderr_sha256",
-    "off_result_sha256",
-    "on_result_sha256",
-    "off_result_1_sha256",
-    "off_result_2_sha256",
-    "on_result_1_sha256",
-    "on_result_2_sha256",
-    "off_ledger_sha256",
-    "on_ledger_sha256",
-    "off_responses_sha256",
-    "on_responses_sha256",
-    "manifest_sha256",
-    "stdout_manifest_sha256",
-    "splitter_sha256",
-    "source_manifest_sha256",
-    "source_output_sha256",
-    "split_plan_sha256",
-    "top_manifest_sha256",
-    "quality_output_sha256",
-    "long_output_sha256",
-    "off_server_log_sha256",
-    "on_server_log_sha256",
-    "nll_sha256",
-    "summary_sha256",
-    "runtime_final_sha256",
-    "runtime_bundle_sha256",
-    "runtime_init_sha256",
-    "runtime_native_sha256",
-    "checkpoint_chain_tail_sha256",
-    "candidate_semantic_sha256",
-    "strict_semantic_sha256",
-    "selected_checkpoint_semantic_sha256",
-    "console_log_sha256",
-    "generated_content_sha256",
-    "generated_reasoning_sha256",
-    "generated_sha256",
-    "diff_sha256",
-    "patch_sha256",
-    "engine_source_sha256",
-    "environment_sha256",
-    "engine_test_sha256",
-    "generator_sha256",
-    "pool_sha256",
-    "test_sha256",
-    "production_cuda_source_sha256",
-    "stdout_sha256",
-    "stderr_sha256",
-    "ds4_cuda_sha256",
-    "state_header_sha256",
-    "state_header_engine_copy_sha256",
-    "acceptance_test_sha256",
-    "build_1_binary_sha256",
-    "build_2_binary_sha256",
-    "raw_cli_sha256",
-    "raw_server_sha256",
-    "canonical_cli_sha256",
-    "canonical_server_sha256",
-    "server_raw_1_sha256",
-    "server_raw_2_sha256",
-    "server_canonical_sha256",
-    "score_raw_1_sha256",
-    "score_raw_2_sha256",
-    "score_canonical_sha256",
-    "fixture_sha256",
-    "first_bytes_sha256",
-    # Matched-32K bundle fields (scripts/57_build_matched32k_bundle.py): the
-    # campaign sidecar digests and per-arm fresh-server boot identity recorded
-    # by the frozen collector.
-    "dsv4_configuration_sha256",
-    "dsv4_model_shards_sha256",
-    "glm_profile_sha256",
-    "identity_sha256",
-    "preflight_sha256",
-    "server_boot_id",
-    "freeze_json_sha256",
-    "freeze_sha256",
-    "harness_sha256",
-    "cgroup_sha256",
-    "safe_sha256",
-    "safe_run_sha256",
-    "harness_tests_sha256",
-    "fio_result_sha256",
-    "model_sha256",
-    "sidecar_sha256",
-    "slab_on_configuration_sha256",
-    "output_tokenizer_sha256",
-    "profile_sha256",
-    "public_randomness",
-    "randomness",
-    "signature",
-    "previous_signature",
-    "request_sha256",
-    "response_sha256",
-    "result_sha256",
-    "output_sha256",
-    "scorer_sha256",
-    "unchanged_scorer_sha256",
-    "red_test_sha256",
-    "test_output_sha256",
-    "runner_sha256",
-    "runner_file_sha256",
-    "runner_closure_sha256",
-    "cgroup_launcher_sha256",
-    "safe_wrapper_sha256",
-    "base_runner_sha256",
-    "memory_guard_sha256",
-    "test_diff_sha256",
-    "compactor_sha256",
-    "scorer_tests_sha256",
-    "source_contract_tests_sha256",
-    "test_source_sha256",
-    "server_sha256",
-    "server_log_sha256",
-    "containment_stdout_sha256",
-    "nvme_inflight_sha256",
-    "safety_samples_sha256",
-    "partial_tsv_sha256",
-    "main_log_sha256",
-    "safety_main_sha256",
-    "command_log_sha256",
-    "full_log_sha256",
-    "engine_log_sha256",
-    "access_stream_sha256",
-    "raw_artifact_sha256",
-    "frozen_target_manifest_sha256",
-    "target_sha256_before",
-    "target_sha256_after",
-    "wrapper_log_sha256",
-    "samples_log_sha256",
-    "kernel_log_sha256",
-    "installer_sha256",
-    "submitter_sha256",
-    "controller_sha256",
-    "approval_sha256",
-    "reservation_sha256",
-    "marker_sha256",
-    "failed_tree_manifest_sha256",
-    "ledger_sha256",
-    "attempt_sha256",
-    "root_reservation_sha256",
-    "cmd_log_sha256",
-    "cmd_sha256",
-    "kernel_sha256",
-    "main_sha256",
-    "samples_sha256",
-    "seed_sha256",
-    "master_seed_sha256",
-    "calibration_keys_sha256",
-    "heldout_keys_sha256",
-    "heldout_queries_sha256",
-    "staged_binary_sha256",
-    "cuda_sass_sha256",
-    "source_sha256",
-    "source_raw_sha256",
-    "preserved_archive_sha256",
-    "randomness_receipt_sha256",
-    "terminal_receipt_sha256",
-    "prompt_sha256",
-    "prompt_builder_sha256",
-    "logit_sha256",
-    "kv_sha256",
-    "query_sha256",
-    "metadata_sha256",
-    "count_sha256",
-    "selected_count_sha256",
-    "selected_sha256",
-    "ids_sha256",
-    "selected_ids_sha256",
-    "capture_summary_sha256",
-    "plan_sha256",
-    "red_log_sha256",
-    "drand_verifier_sha256",
-    "freeze_verifier_sha256",
-    "freeze_verifier_test_sha256",
-    "python_sha256",
-    "numpy_init_sha256",
-    "numpy_multiarray_sha256",
-    "node_sha256",
-    "git_sha256",
-    "drand_randomness",
-    "drand_signature",
-    "pin_sha256",
-    "entry_sha256",
-    "expected_sha256",
-    "actual_sha256",
-    "candidate_diff_sha256",
-    "candidate_delta_sha256",
-    "binary_sha256_verified",
-    "candidate3_patch_sha256_verified",
-    "candidate_delta_sha256_verified",
-    "tarball_sha256",
-    "weights_manifest_sha256",
-    "GLM_SAFE_EXPECTED_BINARY_SHA256",
-    "campaign_preflight_sha256",
-    "observed_stderr_sha256",
-    "retained_manifest_sha256",
-    "runtime_attempt_record_sha256",
-}
+allowlist_path = sys.argv[2]
+try:
+    with open(allowlist_path, encoding="utf-8") as stream:
+        allowlist_document = json.load(stream)
+    fields = allowlist_document["exempt_json_fields"]
+    if not isinstance(fields, list) or not fields or not all(
+        isinstance(field, str) and field for field in fields
+    ):
+        raise ValueError("exempt_json_fields must be a non-empty string array")
+    allowlist = set(fields)
+except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+    print(f"ERROR: invalid lint allowlist {allowlist_path}: {error}", file=sys.stderr)
+    raise SystemExit(1)
 # Keys whose value is a MAP of repo-relative path -> sha256 (audit bindings).
 # Every string leaf under them is an allowed digest.
 map_allowlist = {
