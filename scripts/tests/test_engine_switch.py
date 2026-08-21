@@ -22,6 +22,9 @@ QWEN_PRODUCTION_PROFILE = ROOT / "configs" / "qwen38-production-profile.json"
 QWEN_1M_PRODUCTION_PROFILE = (
     ROOT / "configs" / "qwen38-1m-production-profile.json"
 )
+QWEN_SGLANG_PRODUCTION_PROFILE = (
+    ROOT / "configs" / "qwen38-sglang-production-profile.json"
+)
 QWEN_1M_EVIDENCE = (
     ROOT / "results" / "qwen38-gates" / "trackc-1m-np4-2026-08-19"
 )
@@ -29,6 +32,12 @@ QWEN_BUILD = (
     ROOT / "configs" / "build-manifests" / "llamacpp-qwen38-9d77fa17.json"
 )
 QWEN_WEIGHTS = ROOT / "weights" / "qwen3.8-27b" / "manifest.json"
+QWEN_SGLANG_BUILD = (
+    ROOT / "configs" / "build-manifests" / "sglang-qwen38-image.json"
+)
+QWEN_SGLANG_WEIGHTS = (
+    ROOT / "weights" / "qwen3.8-27b-sglang" / "manifest.json"
+)
 DSV4_PROFILE = ROOT / "configs" / "dsv4-profile.json"
 DSV4_SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
@@ -437,6 +446,189 @@ class EngineSwitchTests(unittest.TestCase):
         ]
         self.assertNotIn("return 0", qwen_block.split("unauth=", 1)[0])
         self.assertIn("verify_qwen_1m_context", qwen_block)
+
+    def test_qwen_sglang_production_launcher_matches_the_pinned_profile(self):
+        source = SCRIPT.read_text()
+        profile = json.loads(QWEN_SGLANG_PRODUCTION_PROFILE.read_text())
+        build = json.loads(QWEN_SGLANG_BUILD.read_text())
+        weights = json.loads(QWEN_SGLANG_WEIGHTS.read_text())
+        self.assertEqual(profile["schema_version"], 3)
+        self.assertEqual(profile["profile"], "qwen38-sglang")
+        self.assertEqual(profile["image"], build["image"])
+        self.assertEqual(profile["image_id"], build["image_id"])
+        self.assertEqual(
+            profile["server_binary_sha256"], build["server_binary_sha256"]
+        )
+        self.assertEqual(
+            profile["weights_manifest_sha256"],
+            hashlib.sha256(QWEN_SGLANG_WEIGHTS.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(profile["model_path"], weights["sets"]["nvfp4"]["root"])
+        self.assertEqual(
+            profile["draft_model_path"], weights["sets"]["dspark"]["root"]
+        )
+        self.assertEqual(profile["arm"], "nvfp4-spec")
+        self.assertEqual(profile["port"], 8013)
+        self.assertEqual(
+            profile["promotion"],
+            {
+                "decision": "pending_fidelity_suites",
+                "gsm8k": "98/100",
+                "in_flight": ["mmlu-pro", "humaneval"],
+                "evidence": "results/qwen38-gates/trackb-sglang-2026-08-20/",
+            },
+        )
+        self.assertEqual(profile["runtime"]["engine_environment"], {})
+        self.assertEqual(profile["runtime"]["diagnostics_unset"], [])
+        self.assertEqual(
+            profile["runtime"]["containment"],
+            {
+                "memory": "100g",
+                "memory_swap": "100g",
+                "shm_size": "16g",
+            },
+        )
+        self.assertEqual(
+            profile["runtime"]["safety"],
+            {
+                "kill_floor_gib": 8,
+                "minimum_start_gib": 100,
+                "sample_hz": 1,
+                "startup_timeout_seconds": 1800,
+            },
+        )
+        arguments = profile["runtime"]["launch_arguments"]
+        self.assertEqual(
+            arguments,
+            [
+                "--trust-remote-code", "--model-path", "{model}",
+                "--tp-size", "1", "--served-model-name", "qwen3.8-27b",
+                "--mem-fraction-static", "0.50", "--attention-backend",
+                "flashinfer", "--chunked-prefill-size", "8192",
+                "--disable-prefill-cuda-graph", "--cuda-graph-max-bs", "8",
+                "--disable-flashinfer-autotune", "--mamba-radix-cache-strategy",
+                "extra_buffer", "--mamba-ssm-dtype", "float32",
+                "--max-mamba-cache-size", "96", "--max-running-requests", "8",
+                "--num-continuous-decode-steps", "2", "--reasoning-parser",
+                "qwen3", "--tool-call-parser", "qwen3_coder", "--host",
+                "127.0.0.1", "--port", "{port}", "--speculative-algorithm",
+                "DSPARK", "--speculative-draft-model-path", "{draft_model}",
+                "--speculative-num-draft-tokens", "8",
+                "--speculative-draft-model-quantization", "unquant",
+            ],
+        )
+        for expected in (
+            ("--model-path", "{model}"),
+            ("--mamba-ssm-dtype", "float32"),
+            ("--mem-fraction-static", "0.50"),
+            ("--speculative-algorithm", "DSPARK"),
+            ("--speculative-draft-model-path", "{draft_model}"),
+            ("--speculative-num-draft-tokens", "8"),
+            ("--chunked-prefill-size", "8192"),
+            ("--reasoning-parser", "qwen3"),
+            ("--tool-call-parser", "qwen3_coder"),
+            ("--host", "127.0.0.1"),
+            ("--port", "{port}"),
+        ):
+            offset = arguments.index(expected[0])
+            self.assertEqual(arguments[offset + 1], expected[1])
+        launch = source[
+            source.index("launch_qwen38-sglang() {") :
+            source.index("start_qwen38-sglang() {")
+        ]
+        for contract in (
+            'docker image inspect --format \'{{.Id}}\'',
+            '--memory 100g --memory-swap 100g',
+            '--shm-size 16g',
+            '--mamba-ssm-dtype float32',
+            '--mem-fraction-static 0.50',
+            '--speculative-algorithm DSPARK',
+            '--speculative-num-draft-tokens 8',
+            '--chunked-prefill-size 8192',
+            '--reasoning-parser qwen3',
+            '--tool-call-parser qwen3_coder',
+            '--host 127.0.0.1 --port "$PORT"',
+        ):
+            self.assertIn(contract, launch)
+        self.assertNotIn("30000", launch)
+        self.assertIn("verify_qwen_sglang_hashes", source)
+        self.assertIn("stop_qwen_sglang_verified", source)
+        self.assertIn('--threshold-gib 8 --interval-sec 1', source)
+
+    def test_qwen_sglang_status_launch_and_restore_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-sglang"})
+            )
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads(result.stdout)["active_profile"], "qwen38-sglang"
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            (root / "dsv4-running").touch()
+            (root / "qwen-sglang-hashes-valid").touch()
+            result = self.run_switch(root, "qwen38-sglang")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38-sglang",
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("DOCKER run", actions)
+            self.assertIn("--port 8013", actions)
+            self.assertNotIn("30000", actions)
+            result = self.run_switch(root, "dsv4")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            self.assertIn(
+                "STOP qwen38-sglang", (root / "actions.log").read_text()
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-sglang"})
+            )
+            (root / "qwen-sglang-hashes-valid").touch()
+            (root / "fail-qwen-sglang-start").touch()
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            self.assertIn(
+                "RESTORE FAILED for recorded profile qwen38-sglang; "
+                "falling back to dsv4",
+                result.stderr,
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("DSV4 start", actions)
+            self.assertIn("WAIT dsv4", actions)
+            self.assertIn("VERIFY dsv4", actions)
+
+    def test_qwen_sglang_hash_failure_precedes_stopping_active_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            (root / "dsv4-running").touch()
+            result = self.run_switch(root, "qwen38-sglang")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("hashes are not approved", result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            self.assertFalse((root / "actions.log").exists())
 
     def test_rollback_waits_for_every_restored_profile_before_verification(self):
         source = SCRIPT.read_text()

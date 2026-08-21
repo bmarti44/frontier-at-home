@@ -10,9 +10,15 @@ readonly PROD_GGUF=/home/bmarti44/models/glm52-full-denseq40.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-fullq4-production-profile.json
 readonly QWEN_PROFILE_MANIFEST=$REPO/configs/qwen38-production-profile.json
 readonly QWEN_1M_PROFILE_MANIFEST=$REPO/configs/qwen38-1m-production-profile.json
+readonly QWEN_SGLANG_PROFILE_MANIFEST=$REPO/configs/qwen38-sglang-production-profile.json
+readonly QWEN_SGLANG_WEIGHTS_MANIFEST=$REPO/weights/qwen3.8-27b-sglang/manifest.json
 readonly PROD_QWEN_BINARY=/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server
 readonly PROD_QWEN_MODEL=/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf
 readonly PROD_QWEN_MMPROJ=/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf
+readonly QWEN_SGLANG_CONTAINER=qwen38-sglang
+readonly QWEN_SGLANG_IMAGE=lmsysorg/sglang@sha256:febfb971c7352570fc445c466ebd6ffc9d896024958e544a60f2137fd85856b1
+readonly QWEN_SGLANG_MODEL=/home/bmarti44/models/qwen3.8-27b-nvfp4
+readonly QWEN_SGLANG_DRAFT=/home/bmarti44/models/qwen3.8-27b-dspark
 readonly PORT=8013
 readonly AUTH_PORT=8010
 
@@ -49,10 +55,16 @@ readonly QWEN_UNIT=qwen38-engine.service
 readonly QWEN_WATCHDOG_TARGET=$STATE/qwen38.memwatch.target
 readonly QWEN_WATCHDOG_READY=$STATE/qwen38.memwatch.ready
 readonly QWEN_WATCHDOG_LOG=$STATE/qwen38.memwatch.log
+readonly QWEN_SGLANG_PROCESS=$STATE/qwen38-sglang.process.json
+readonly QWEN_SGLANG_WATCHDOG_TARGET=$STATE/qwen38-sglang.memwatch.target
+readonly QWEN_SGLANG_WATCHDOG_READY=$STATE/qwen38-sglang.memwatch.ready
+readonly QWEN_SGLANG_WATCHDOG_LOG=$STATE/qwen38-sglang.memwatch.log
 rollback_needed=false
 previous_profile=
 qwen_hashes_verified_profile=
 qwen_verified_identities=
+qwen_sglang_verified_identities=
+qwen_sglang_verified_image_id=
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -96,7 +108,7 @@ state = "inactive"
 try:
     with open(path, encoding="utf-8") as stream:
         value = json.load(stream)
-    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m"}:
+    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m", "qwen38-sglang"}:
         profile = value["profile"]
         state = "recorded"
 except (OSError, ValueError, TypeError):
@@ -113,7 +125,7 @@ try:
     with open(sys.argv[1], encoding="utf-8") as stream:
         value = json.load(stream)
     profile = value.get("profile")
-    print(profile if profile in {"dsv4", "glm52", "qwen38", "qwen38-1m"} else "")
+    print(profile if profile in {"dsv4", "glm52", "qwen38", "qwen38-1m", "qwen38-sglang"} else "")
 except (OSError, ValueError, TypeError):
     print("")
 PY
@@ -249,6 +261,122 @@ for label, path in zip(("binary", "model", "mmproj"), sys.argv[2:]):
 PY
 }
 
+verify_qwen_sglang_hashes() {
+    local image_id
+    qwen_sglang_verified_identities=$(clean_python - \
+            "$QWEN_SGLANG_PROFILE_MANIFEST" "$QWEN_SGLANG_WEIGHTS_MANIFEST" \
+            "$QWEN_SGLANG_MODEL" "$QWEN_SGLANG_DRAFT" <<'PY'
+import hashlib, json, os, stat, sys
+
+profile_path, weights_path, model_path, draft_path = sys.argv[1:]
+
+def file_sha256(path):
+    value = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(16 * 1024 * 1024), b""):
+            value.update(chunk)
+    return value.hexdigest()
+
+with open(profile_path, encoding="utf-8") as stream:
+    profile = json.load(stream)
+if profile.get("schema_version") != 3 or profile.get("profile") != "qwen38-sglang":
+    raise SystemExit("SGLang profile identity is not approved")
+expected_image = "lmsysorg/sglang@sha256:febfb971c7352570fc445c466ebd6ffc9d896024958e544a60f2137fd85856b1"
+expected_image_id = "sha256:0076dffa60b76b7bf033c04d05e0cc69d46f2b8cd60aa2468827782afe9bc38f"
+expected_digest = "febfb971c7352570fc445c466ebd6ffc9d896024958e544a60f2137fd85856b1"
+if (profile.get("image"), profile.get("image_id"),
+        profile.get("server_binary_sha256")) != (
+        expected_image, expected_image_id, expected_digest):
+    raise SystemExit("SGLang image identity is not approved")
+if profile.get("model_path") != model_path or profile.get("draft_model_path") != draft_path:
+    raise SystemExit("SGLang model directories are not approved")
+if profile.get("weights_manifest_sha256") != file_sha256(weights_path):
+    raise SystemExit("SGLang weights manifest hash is not approved")
+if profile.get("arm") != "nvfp4-spec" or profile.get("port") != 8013:
+    raise SystemExit("SGLang serving topology is not approved")
+
+with open(weights_path, encoding="utf-8") as stream:
+    weights = json.load(stream)
+if weights.get("model") != "qwen3.8-27b" or weights.get("backend") != "sglang":
+    raise SystemExit("SGLang weights manifest identity is not approved")
+
+def fields(item):
+    return [item.st_dev, item.st_ino, item.st_mode, item.st_nlink,
+            item.st_size, item.st_mtime_ns, item.st_ctime_ns]
+
+identities = {}
+for set_name, approved_root in (("nvfp4", model_path), ("dspark", draft_path)):
+    record = weights["sets"].get(set_name)
+    if not isinstance(record, dict) or record.get("root") != approved_root:
+        raise SystemExit(f"SGLang {set_name} root is not approved")
+    root_info = os.lstat(approved_root)
+    if not stat.S_ISDIR(root_info.st_mode) or stat.S_ISLNK(root_info.st_mode):
+        raise SystemExit(f"SGLang {set_name} root is absent or unsafe")
+    identities[set_name] = {"root": fields(root_info), "files": {}}
+    seen = set()
+    for artifact in record.get("files", []):
+        name = artifact.get("name")
+        if (not isinstance(name, str) or not name or name in seen or
+                os.path.isabs(name) or os.path.normpath(name) != name or
+                name.startswith("../")):
+            raise SystemExit(f"SGLang {set_name} manifest file name is unsafe")
+        seen.add(name)
+        path = os.path.join(approved_root, name)
+        descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+        digest = hashlib.sha256()
+        with os.fdopen(descriptor, "rb") as stream:
+            before = os.fstat(stream.fileno())
+            if not stat.S_ISREG(before.st_mode):
+                raise SystemExit(f"SGLang artifact is not a regular file: {path}")
+            for chunk in iter(lambda: stream.read(16 * 1024 * 1024), b""):
+                digest.update(chunk)
+            after = os.fstat(stream.fileno())
+        if fields(before) != fields(after):
+            raise SystemExit(f"SGLang artifact changed during verification: {path}")
+        if after.st_size != artifact.get("bytes") or digest.hexdigest() != artifact.get("sha256"):
+            raise SystemExit(f"SGLang artifact hash is not approved: {path}")
+        identities[set_name]["files"][name] = fields(after)
+    if not seen:
+        raise SystemExit(f"SGLang {set_name} manifest set is empty")
+print(json.dumps(identities, separators=(",", ":"), sort_keys=True))
+PY
+    )
+    image_id=$(docker image inspect --format '{{.Id}}' "$QWEN_SGLANG_IMAGE") ||
+        die "required pinned SGLang image is absent"
+    [[ $image_id == sha256:0076dffa60b76b7bf033c04d05e0cc69d46f2b8cd60aa2468827782afe9bc38f ]] ||
+        die "local SGLang image ID is not approved"
+    qwen_sglang_verified_image_id=$image_id
+}
+
+revalidate_qwen_sglang_identities() {
+    [[ -n $qwen_sglang_verified_identities ]] ||
+        die "SGLang artifacts lack verified identities"
+    clean_python - "$qwen_sglang_verified_identities" \
+            "$QWEN_SGLANG_WEIGHTS_MANIFEST" <<'PY'
+import json, os, stat, sys
+expected = json.loads(sys.argv[1])
+with open(sys.argv[2], encoding="utf-8") as stream:
+    weights = json.load(stream)
+
+def fields(item):
+    return [item.st_dev, item.st_ino, item.st_mode, item.st_nlink,
+            item.st_size, item.st_mtime_ns, item.st_ctime_ns]
+
+for set_name in ("nvfp4", "dspark"):
+    record = weights["sets"][set_name]
+    root = record["root"]
+    info = os.lstat(root)
+    if not stat.S_ISDIR(info.st_mode) or fields(info) != expected[set_name]["root"]:
+        raise SystemExit(f"SGLang {set_name} root identity changed after approval")
+    for artifact in record["files"]:
+        path = os.path.join(root, artifact["name"])
+        info = os.lstat(path)
+        if (not stat.S_ISREG(info.st_mode) or
+                fields(info) != expected[set_name]["files"][artifact["name"]]):
+            raise SystemExit(f"SGLang {set_name} artifact identity changed after approval: {path}")
+PY
+}
+
 proc_identity() {
     local pid=$1 line
     [[ $pid =~ ^[0-9]+$ && $pid -gt 1 && -r /proc/$pid/stat ]] || return 1
@@ -375,6 +503,72 @@ PY
     rm -f -- "$QWEN_PROCESS" "$QWEN_WATCHDOG_TARGET" "$QWEN_WATCHDOG_READY"
 }
 
+stop_qwen_sglang_verified() {
+    local values container_id expected_image_id pid expected_pgid expected_ticks
+    local memwatch_pid memwatch_ticks current current_pgid current_ticks
+    local live_id live_image cmdline
+    if [[ ! -f $QWEN_SGLANG_PROCESS ]]; then
+        live_id=$(docker container inspect --format '{{.Id}}' \
+            "$QWEN_SGLANG_CONTAINER" 2>/dev/null || true)
+        [[ -z $live_id ]] ||
+            die "SGLang container is present without an identity record; refusing to continue"
+        return 0
+    fi
+    values=$(clean_python - "$QWEN_SGLANG_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["container_id"], value["image_id"], value["pid"], value["pgid"],
+      value["start_ticks"], value["memwatch_pid"],
+      value["memwatch_start_ticks"])
+PY
+    ) || die "invalid SGLang process record"
+    read -r container_id expected_image_id pid expected_pgid expected_ticks \
+        memwatch_pid memwatch_ticks <<<"$values"
+    live_id=$(docker container inspect --format '{{.Id}}' \
+        "$QWEN_SGLANG_CONTAINER" 2>/dev/null || true)
+    if [[ -n $live_id ]]; then
+        [[ $live_id == "$container_id" ]] ||
+            die "SGLang container identity changed; refusing to stop it"
+        live_image=$(docker container inspect --format '{{.Image}}' \
+            "$container_id" 2>/dev/null || true)
+        [[ $live_image == "$expected_image_id" ]] ||
+            die "SGLang container image changed; refusing to stop it"
+        current=$(proc_identity "$pid" 2>/dev/null || true)
+        [[ -n $current ]] ||
+            die "SGLang container has no recorded host process; refusing to stop it"
+        read -r current_pgid current_ticks <<<"$current"
+        [[ $current_pgid == "$expected_pgid" && $current_ticks == "$expected_ticks" ]] ||
+            die "stale SGLang process identity; refusing to stop container"
+        docker stop --time 30 "$container_id" >/dev/null ||
+            die "Docker could not stop the verified SGLang container"
+        for _ in $(seq 1 100); do
+            live_id=$(docker container inspect --format '{{.Id}}' \
+                "$container_id" 2>/dev/null || true)
+            [[ -z $live_id ]] && break
+            sleep 0.1
+        done
+        [[ -z $live_id ]] || die "SGLang container still exists after stop"
+    fi
+    if [[ $(proc_identity "$memwatch_pid" 2>/dev/null || true) == *" $memwatch_ticks" ]]; then
+        cmdline=$(tr '\0' ' ' <"/proc/$memwatch_pid/cmdline")
+        [[ $cmdline == *"$REPO/scripts/01_memwatch.sh"* &&
+                $cmdline == *"$QWEN_SGLANG_WATCHDOG_TARGET"* ]] ||
+            die "SGLang memwatch identity changed; refusing to disarm"
+        printf 'DISARM %s %s %s\n' "$pid" "$expected_pgid" "$expected_ticks" \
+            >"$QWEN_SGLANG_WATCHDOG_TARGET.tmp"
+        mv -- "$QWEN_SGLANG_WATCHDOG_TARGET.tmp" "$QWEN_SGLANG_WATCHDOG_TARGET"
+        for _ in $(seq 1 50); do
+            [[ -d /proc/$memwatch_pid ]] || break
+            sleep 0.1
+        done
+        [[ ! -d /proc/$memwatch_pid ]] ||
+            die "SGLang memwatch did not accept authenticated disarm"
+    fi
+    rm -f -- "$QWEN_SGLANG_PROCESS" "$QWEN_SGLANG_WATCHDOG_TARGET" \
+        "$QWEN_SGLANG_WATCHDOG_READY"
+}
+
 stop_profile() {
     case "$1" in
         dsv4)
@@ -393,6 +587,7 @@ stop_profile() {
             ;;
         glm52) stop_glm_verified ;;
         qwen38|qwen38-1m) stop_qwen_verified ;;
+        qwen38-sglang) stop_qwen_sglang_verified ;;
         "") return 0 ;;
         *) die "unknown previous profile $1" ;;
     esac
@@ -732,6 +927,177 @@ start_qwen38-1m() {
         verify_qwen_1m_hashes
 }
 
+launch_qwen38-sglang() {
+    local image_id
+    image_id=$(docker image inspect --format '{{.Id}}' "$QWEN_SGLANG_IMAGE") ||
+        return 1
+    [[ $image_id == "$qwen_sglang_verified_image_id" ]] || return 1
+    docker run --rm --detach --pull never \
+        --name "$QWEN_SGLANG_CONTAINER" \
+        --gpus all \
+        --memory 100g --memory-swap 100g \
+        --shm-size 16g \
+        --network host --ipc=host \
+        --volume /home/bmarti44/models:/home/bmarti44/models:ro \
+        "$QWEN_SGLANG_IMAGE" \
+        python3 -m sglang.launch_server \
+        --trust-remote-code \
+        --model-path "$QWEN_SGLANG_MODEL" \
+        --tp-size 1 \
+        --served-model-name qwen3.8-27b \
+        --mem-fraction-static 0.50 \
+        --attention-backend flashinfer \
+        --chunked-prefill-size 8192 \
+        --disable-prefill-cuda-graph \
+        --cuda-graph-max-bs 8 \
+        --disable-flashinfer-autotune \
+        --mamba-radix-cache-strategy extra_buffer \
+        --mamba-ssm-dtype float32 \
+        --max-mamba-cache-size 96 \
+        --max-running-requests 8 \
+        --num-continuous-decode-steps 2 \
+        --reasoning-parser qwen3 \
+        --tool-call-parser qwen3_coder \
+        --host 127.0.0.1 --port "$PORT" \
+        --speculative-algorithm DSPARK \
+        --speculative-draft-model-path "$QWEN_SGLANG_DRAFT" \
+        --speculative-num-draft-tokens 8 \
+        --speculative-draft-model-quantization unquant
+}
+
+start_qwen38-sglang() {
+    local container_id inspection running pid live_id live_image
+    local identity pgid ticks current memwatch_pid memwatch_identity
+    local memwatch_ticks ready
+    [[ ! -e $QWEN_SGLANG_PROCESS ]] ||
+        die "SGLang process record already exists; refusing a second model"
+    [[ ! -e $GLM_PROCESS && ! -e $QWEN_PROCESS ]] ||
+        die "another engine process record remains; refusing a second model"
+    [[ -n $qwen_sglang_verified_image_id ]] || verify_qwen_sglang_hashes
+    revalidate_qwen_sglang_identities
+    "$REPO/scripts/03_memory_guard.py" --required-gib 100 \
+        --stable-samples 3 --interval-seconds 1 --timeout-seconds 180
+    live_id=$(docker container inspect --format '{{.Id}}' \
+        "$QWEN_SGLANG_CONTAINER" 2>/dev/null || true)
+    [[ -z $live_id ]] ||
+        die "SGLang container already exists without an approved process record"
+    rm -f -- "$QWEN_SGLANG_PROCESS.tmp" "$QWEN_SGLANG_WATCHDOG_TARGET" \
+        "$QWEN_SGLANG_WATCHDOG_READY"
+    "$REPO/scripts/01_memwatch.sh" \
+        --target-file "$QWEN_SGLANG_WATCHDOG_TARGET" \
+        --ready-file "$QWEN_SGLANG_WATCHDOG_READY" \
+        --threshold-gib 8 --interval-sec 1 --log "$QWEN_SGLANG_WATCHDOG_LOG" &
+    memwatch_pid=$!
+    memwatch_ticks=
+    ready=
+    for _ in $(seq 1 50); do
+        memwatch_identity=$(proc_identity "$memwatch_pid" 2>/dev/null || true)
+        memwatch_ticks=${memwatch_identity#* }
+        ready=$(cat "$QWEN_SGLANG_WATCHDOG_READY" 2>/dev/null || true)
+        [[ -n $memwatch_ticks && $ready == READY ]] && break
+        sleep 0.1
+    done
+    if [[ -z $memwatch_ticks || $ready != READY ]]; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "SGLang memory watchdog failed to initialize"
+    fi
+    if ! revalidate_qwen_sglang_identities; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "SGLang artifact identity changed before execution"
+    fi
+    container_id=$(launch_qwen38-sglang) || {
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "SGLang container failed to start"
+    }
+    [[ $container_id =~ ^[0-9a-f]{12,64}$ ]] || {
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "Docker returned an invalid SGLang container ID"
+    }
+    inspection=
+    for _ in $(seq 1 100); do
+        inspection=$(docker container inspect \
+            --format '{{.State.Running}} {{.State.Pid}} {{.Id}} {{.Image}}' \
+            "$container_id" 2>/dev/null || true)
+        [[ $inspection == true\ * ]] && break
+        sleep 0.1
+    done
+    read -r running pid live_id live_image <<<"$inspection"
+    if [[ $running != true || $live_id != "$container_id" ||
+            $live_image != "$qwen_sglang_verified_image_id" ||
+            ! $pid =~ ^[0-9]+$ || $pid -le 1 ]]; then
+        docker stop --time 30 "$container_id" >/dev/null 2>&1 || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "SGLang container identity is not approved after launch"
+    fi
+    identity=$(proc_identity "$pid" 2>/dev/null || true)
+    if [[ -z $identity ]]; then
+        docker stop --time 30 "$container_id" >/dev/null 2>&1 || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "SGLang container process died before identity capture"
+    fi
+    read -r pgid ticks <<<"$identity"
+    [[ $pgid == "$pid" ]] || {
+        docker stop --time 30 "$container_id" >/dev/null 2>&1 || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "SGLang container server is not its host process-group leader"
+    }
+    if ! clean_python - "$QWEN_SGLANG_PROCESS.tmp" "$container_id" \
+            "$qwen_sglang_verified_image_id" "$pid" "$pgid" "$ticks" \
+            "$memwatch_pid" "$memwatch_ticks" <<'PY'
+import json, os, sys
+(path, container_id, image_id, pid, pgid, ticks,
+ watchdog_pid, watchdog_ticks) = sys.argv[1:]
+with open(path, "x", encoding="utf-8") as stream:
+    json.dump({"schema_version":1, "container_id":container_id,
+               "image_id":image_id, "pid":int(pid), "pgid":int(pgid),
+               "start_ticks":int(ticks), "memwatch_pid":int(watchdog_pid),
+               "memwatch_start_ticks":int(watchdog_ticks)}, stream)
+    stream.flush(); os.fsync(stream.fileno())
+PY
+    then
+        docker stop --time 30 "$container_id" >/dev/null 2>&1 || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "SGLang process identity record could not be created"
+    fi
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    if [[ $current != "$identity" ]]; then
+        docker stop --time 30 "$container_id" >/dev/null 2>&1 || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$QWEN_SGLANG_PROCESS.tmp"
+        die "SGLang process identity changed before record publication"
+    fi
+    mv -- "$QWEN_SGLANG_PROCESS.tmp" "$QWEN_SGLANG_PROCESS"
+    printf '%s %s %s provisional\n' "$pid" "$pgid" "$ticks" \
+        >"$QWEN_SGLANG_WATCHDOG_TARGET.tmp"
+    mv -- "$QWEN_SGLANG_WATCHDOG_TARGET.tmp" "$QWEN_SGLANG_WATCHDOG_TARGET"
+    for _ in $(seq 1 50); do
+        ready=$(cat "$QWEN_SGLANG_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] ||
+        die "SGLang memory watchdog did not arm provisional process"
+    printf '%s %s %s engine\n' "$pid" "$pgid" "$ticks" \
+        >"$QWEN_SGLANG_WATCHDOG_TARGET.tmp"
+    mv -- "$QWEN_SGLANG_WATCHDOG_TARGET.tmp" "$QWEN_SGLANG_WATCHDOG_TARGET"
+    for _ in $(seq 1 50); do
+        ready=$(cat "$QWEN_SGLANG_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks engine" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks engine" ]] ||
+        die "SGLang memory watchdog did not arm final process"
+}
+
 api_key() {
     local file=${DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key}
     [[ -r $file ]] || return 1
@@ -797,11 +1163,48 @@ PY
             $sockets == *"pid=$pid,"* ]]
 }
 
+verify_qwen_sglang_container_ready() {
+    local values container_id expected_image_id pid expected_pgid expected_ticks
+    local inspection running live_pid live_id live_image identity pgid ticks body
+    [[ -r $QWEN_SGLANG_PROCESS ]] || return 1
+    values=$(clean_python - "$QWEN_SGLANG_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["container_id"], value["image_id"], value["pid"], value["pgid"],
+      value["start_ticks"])
+PY
+    ) || return 1
+    read -r container_id expected_image_id pid expected_pgid expected_ticks <<<"$values"
+    inspection=$(docker container inspect \
+        --format '{{.State.Running}} {{.State.Pid}} {{.Id}} {{.Image}}' \
+        "$container_id" 2>/dev/null) || return 1
+    read -r running live_pid live_id live_image <<<"$inspection"
+    [[ $running == true && $live_pid == "$pid" && $live_id == "$container_id" &&
+            $live_image == "$expected_image_id" ]] || return 1
+    identity=$(proc_identity "$pid" 2>/dev/null || true)
+    [[ -n $identity ]] || return 1
+    read -r pgid ticks <<<"$identity"
+    [[ $pgid == "$expected_pgid" && $ticks == "$expected_ticks" ]] || return 1
+    clean_curl -fsS --max-time 3 \
+        "http://127.0.0.1:$PORT/health" >/dev/null || return 1
+    body=$(clean_curl -fsS --max-time 3 \
+        "http://127.0.0.1:$PORT/v1/models") || return 1
+    clean_python - "$body" <<'PY'
+import json, sys
+value = json.loads(sys.argv[1])
+if not any(item.get("id", "").lower() == "qwen3.8-27b"
+           for item in value.get("data", [])):
+    raise SystemExit("exact SGLang model identity mismatch")
+PY
+}
+
 wait_model_ready() {
     local profile=$1 expected body deadline probe_count=0 available
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
-    [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
+    [[ $profile == qwen38 || $profile == qwen38-1m || \
+            $profile == qwen38-sglang ]] && expected=qwen3.8-27b
     deadline=$((SECONDS + 1800))
     while (( SECONDS < deadline )); do
         body=$(clean_curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
@@ -820,7 +1223,10 @@ PY
                             "http://127.0.0.1:$PORT/health" >/dev/null &&
                         verify_qwen_process_ready; }; then
                     if [[ $profile != qwen38-1m ]] || verify_qwen_1m_context; then
-                        return 0
+                        if [[ $profile != qwen38-sglang ]] || \
+                                verify_qwen_sglang_container_ready; then
+                            return 0
+                        fi
                     fi
                 fi
             fi
@@ -841,7 +1247,8 @@ verify_serving() {
     local profile=$1 expected unauth code key body
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
-    [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
+    [[ $profile == qwen38 || $profile == qwen38-1m || \
+            $profile == qwen38-sglang ]] && expected=qwen3.8-27b
     body=$(clean_curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
     clean_python - "$expected" "$body" <<'PY'
@@ -861,6 +1268,9 @@ PY
     fi
     if [[ $profile == qwen38-1m ]]; then
         verify_qwen_1m_context || return 1
+    fi
+    if [[ $profile == qwen38-sglang ]]; then
+        verify_qwen_sglang_container_ready || return 1
     fi
     unauth=$(clean_curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
@@ -941,6 +1351,10 @@ restore_profile() {
         verify_qwen_1m_hashes || return 1
         revalidate_qwen_identities || return 1
     fi
+    if [[ $profile == qwen38-sglang ]]; then
+        verify_qwen_sglang_hashes || return 1
+        revalidate_qwen_sglang_identities || return 1
+    fi
     verify_serving "$profile" && return 0
     if [[ $profile != dsv4 || -e /run/dsv4/llamacpp.state.json ]]; then
         stop_profile "$profile" || return 1
@@ -996,9 +1410,44 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     revalidate_qwen_identities() {
         [[ $qwen_verified_identities == test ]]
     }
+    verify_qwen_sglang_hashes() {
+        if [[ ! -e $STATE/qwen-sglang-hashes-valid ]]; then
+            echo "SGLang test artifact hashes are not approved" >&2
+            return 1
+        fi
+        qwen_sglang_verified_identities=test
+        qwen_sglang_verified_image_id=sha256:0076dffa60b76b7bf033c04d05e0cc69d46f2b8cd60aa2468827782afe9bc38f
+        test_action "HASHES qwen38-sglang"
+    }
+    revalidate_qwen_sglang_identities() {
+        [[ $qwen_sglang_verified_identities == test ]]
+    }
+    docker() {
+        test_action "DOCKER $*"
+        if [[ $1 == image && $2 == inspect ]]; then
+            printf '%s\n' \
+                sha256:0076dffa60b76b7bf033c04d05e0cc69d46f2b8cd60aa2468827782afe9bc38f
+            return 0
+        fi
+        if [[ $1 == run ]]; then
+            [[ ! -e $STATE/fail-qwen-sglang-start ]] || return 1
+            : >"$STATE/qwen-sglang-running"
+            printf '%064d\n' 1
+            return 0
+        fi
+        if [[ $1 == stop ]]; then
+            rm -f -- "$STATE/qwen-sglang-running"
+            return 0
+        fi
+        return 1
+    }
     stop_qwen_verified() {
         test_action "STOP qwen"
         rm -f -- "$STATE/qwen-running"
+    }
+    stop_qwen_sglang_verified() {
+        test_action "STOP qwen38-sglang"
+        rm -f -- "$STATE/qwen-sglang-running"
     }
     start_qwen_profile() {
         local profile=$1 _manifest_path=$2 verify_function=$3
@@ -1007,14 +1456,26 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         "launch_$profile" || die "Qwen transient unit failed to start"
         test_action "START $profile"
     }
+    start_qwen38-sglang() {
+        [[ -n $qwen_sglang_verified_image_id ]] || verify_qwen_sglang_hashes
+        revalidate_qwen_sglang_identities
+        launch_qwen38-sglang >/dev/null || die "SGLang container failed to start"
+        test_action "START qwen38-sglang"
+    }
     wait_model_ready() {
+        local marker=qwen-running
+        [[ $1 == dsv4 ]] && marker=dsv4-running
+        [[ $1 == qwen38-sglang ]] && marker=qwen-sglang-running
         test_action "WAIT $1"
-        [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || printf qwen)-running ]]
+        [[ -e $STATE/$marker ]]
     }
     verify_serving() {
+        local marker=qwen-running
+        [[ $1 == dsv4 ]] && marker=dsv4-running
+        [[ $1 == qwen38-sglang ]] && marker=qwen-sglang-running
         test_action "VERIFY $1"
         [[ ! -e $STATE/fail-$1-verify ]] &&
-            [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || printf qwen)-running ]]
+            [[ -e $STATE/$marker ]]
     }
 fi
 
@@ -1025,8 +1486,9 @@ if [[ $command == status ]]; then
     exit 0
 fi
 [[ $command == restore || $command == dsv4 || $command == glm52 || \
-        $command == qwen38 || $command == qwen38-1m ]] ||
-    die "usage: $0 status [--json]|restore|dsv4|glm52|qwen38|qwen38-1m"
+        $command == qwen38 || $command == qwen38-1m || \
+        $command == qwen38-sglang ]] ||
+    die "usage: $0 status [--json]|restore|dsv4|glm52|qwen38|qwen38-1m|qwen38-sglang"
 if [[ $command == restore ]]; then
     mkdir -p -- "$STATE"
     exec 9>"$LOCK"
@@ -1059,11 +1521,17 @@ fi
 if [[ $command == qwen38-1m ]]; then
     verify_qwen_1m_hashes
 fi
+if [[ $command == qwen38-sglang ]]; then
+    verify_qwen_sglang_hashes
+fi
 mkdir -p -- "$STATE"
 exec 9>"$LOCK"
 flock -x 9
 if [[ $command == qwen38 || $command == qwen38-1m ]]; then
     revalidate_qwen_identities
+fi
+if [[ $command == qwen38-sglang ]]; then
+    revalidate_qwen_sglang_identities
 fi
 previous_profile=$(read_active_profile)
 if [[ $previous_profile == "$command" ]] && verify_serving "$command"; then
