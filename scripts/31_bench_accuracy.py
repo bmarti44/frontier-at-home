@@ -37,12 +37,14 @@ HARNESS_MANIFEST_PATH = REPO_ROOT / "verification" / "MANIFEST.sha256"
 HUMANEVAL_RUNTIME_PIN_PATH = REPO_ROOT / "configs" / "pins" / "humaneval-runtime.json"
 ENCODER_PATHS = {
     "dsv4": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_dsv4.py",
+    "laguna": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_laguna.py",
     "qwen38": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_qwen38.py",
 }
 # Public contracts of the pinned encoders. Validate here instead of relying on
 # encoder assertions so an incompatible request fails before dataset work.
 ENCODER_REASONING_EFFORTS = {
     "dsv4": frozenset(("high", "max")),
+    "laguna": frozenset(("off", "max")),
     "qwen38": frozenset(("low", "medium", "xhigh")),
 }
 # Retain the historical constant for callers that inspect the default encoder.
@@ -132,9 +134,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--reasoning-effort",
         default=None,
-        choices=("low", "medium", "xhigh", "high", "max"),
+        choices=("off", "low", "medium", "xhigh", "high", "max"),
         help=(
-            "reasoning-effort rendering passed to the encoder (Qwen3.8 template "
+            "reasoning-effort rendering passed to the encoder (encoder-specific "
             "levels; omit for the template default). Recorded in the config "
             "digest: runs under different efforts are different measurements."
         ),
