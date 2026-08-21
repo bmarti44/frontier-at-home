@@ -5,7 +5,7 @@ umask 077
 
 readonly STACK=laguna
 readonly PORT=8016
-readonly RUNTIME_DIR=/run/dsv4
+readonly RUNTIME_DIR=/run/user/1000
 readonly LOCK_FILE=/run/lock/frontier-at-home/inference.lock
 readonly STATE_FILE=$RUNTIME_DIR/laguna.state.json
 readonly TARGET_FILE=$RUNTIME_DIR/laguna.engine.target
@@ -352,7 +352,7 @@ do_start() {
     done
     [[ -d $RUNTIME_DIR && ! -L $RUNTIME_DIR ]] \
         || die "runtime directory is absent or unsafe: $RUNTIME_DIR"
-    [[ $(stat -Lc '%U:%G:%a' -- "$RUNTIME_DIR") == root:dsv4:1770 ]] \
+    [[ $(stat -Lc '%U:%G:%a' -- "$RUNTIME_DIR") == "$(id -un):$(id -gn):700" ]] \
         || die 'runtime directory ownership or mode is unsafe'
 
     SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P) \
