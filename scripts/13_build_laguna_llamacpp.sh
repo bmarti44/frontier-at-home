@@ -53,20 +53,33 @@ cmake_flags=(
 )
 
 mkdir -p -- "$CACHE_ROOT"
-exec 9>"$CACHE_ROOT/build.lock"
+if [[ -e $CACHE_ROOT/build.lock ]]; then
+    exec 9<"$CACHE_ROOT/build.lock"
+else
+    exec 9>"$CACHE_ROOT/build.lock"
+fi
 flock -n 9 || die 'another Laguna llama.cpp build holds the build lock'
 
 SERVER_BINARY=$BUILD_DIR/bin/llama-server
 CLI_BINARY=$BUILD_DIR/bin/llama-cli
 if [[ -x $SERVER_BINARY && -f $MANIFEST ]] && python3 - \
     "$MANIFEST" "$LLAMACPP_REPOSITORY" "$LLAMACPP_BRANCH" \
-    "$LLAMACPP_COMMIT" "$SERVER_BINARY" "${cmake_flags[@]}" <<'PY'
+    "$LLAMACPP_COMMIT" "$SERVER_BINARY" "$CLI_BINARY" "${cmake_flags[@]}" <<'PY'
 import hashlib
 import json
 import pathlib
+import subprocess
 import sys
 
-manifest_name, repository, branch, commit, server_name, *cmake_flags = sys.argv[1:]
+(
+    manifest_name,
+    repository,
+    branch,
+    commit,
+    server_name,
+    cli_name,
+    *cmake_flags,
+) = sys.argv[1:]
 
 
 def digest(path):
@@ -81,6 +94,10 @@ try:
     with open(manifest_name, encoding="utf-8") as stream:
         manifest = json.load(stream)
     server = manifest["binaries"]["llama-server"]
+    cli = manifest["binaries"]["llama-cli"]
+    binary_directory = pathlib.Path(server_name).parent
+    libraries = manifest["shared_libraries"]
+    source_directory = manifest["source_directory"]
     matches = (
         manifest["repository"] == repository
         and manifest["branch"] == branch
@@ -88,8 +105,32 @@ try:
         and manifest["cmake_flags"] == cmake_flags
         and server["path"] == server_name
         and server["sha256"] == digest(pathlib.Path(server_name))
+        and cli["path"] == cli_name
+        and cli["sha256"] == digest(pathlib.Path(cli_name))
+        and isinstance(libraries, dict)
+        and bool(libraries)
+        and all(
+            pathlib.Path(name).name == name
+            and name.endswith(".so")
+            and entry["sha256"] == digest(binary_directory / name)
+            for name, entry in libraries.items()
+        )
+        and subprocess.run(
+            ["git", "-C", source_directory, "rev-parse", "HEAD"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).stdout.strip() == commit
+        and subprocess.run(
+            ["git", "-C", source_directory, "status", "--porcelain"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).stdout == ""
     )
-except (KeyError, OSError, TypeError, ValueError):
+except (KeyError, OSError, subprocess.SubprocessError, TypeError, ValueError):
     matches = False
 raise SystemExit(0 if matches else 1)
 PY
@@ -172,6 +213,12 @@ actual_commit=$(git -C "$SOURCE_DIR" rev-parse HEAD) \
 
 printf '[3/6] Removing the prior CMake build tree...\n' >&2
 [[ $BUILD_DIR == "$CACHE_ROOT/src/build" ]] || die 'refusing unsafe build-directory removal'
+build_parent=$(cd -- "$(dirname -- "$BUILD_DIR")" && pwd -P) \
+    || die 'cannot resolve physical build-directory parent'
+physical_build_dir=$build_parent/$(basename -- "$BUILD_DIR")
+expected_build_dir=${HOME:?HOME must be set}/.cache/llamacpp-laguna-06f8cebd/src/build
+[[ $physical_build_dir == "$expected_build_dir" ]] \
+    || die "refusing build-directory removal through symlinked parent: $physical_build_dir"
 cmake -E remove_directory "$BUILD_DIR" \
     || die 'failed to remove prior CMake build tree'
 
@@ -185,6 +232,10 @@ PATH=/usr/local/cuda/bin:$PATH cmake --build "$BUILD_DIR" --config Release \
 
 [[ -x $SERVER_BINARY ]] || die "missing executable: $SERVER_BINARY"
 [[ -x $CLI_BINARY ]] || die "missing executable: $CLI_BINARY"
+actual_commit=$(git -C "$SOURCE_DIR" rev-parse HEAD) \
+    || die 'cannot re-read Laguna llama.cpp commit after build'
+[[ $actual_commit == "$LLAMACPP_COMMIT" ]] \
+    || die "Laguna llama.cpp commit changed during the build: $actual_commit"
 [[ -z $(git -C "$SOURCE_DIR" status --porcelain) ]] \
     || die 'Laguna llama.cpp source became dirty during the build; refusing manifest publication'
 
