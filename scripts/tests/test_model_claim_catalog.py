@@ -30,6 +30,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
             "gemma4",
             "qwen3.8-max",
             "qwen3.8-27b",
+            "laguna-s-2.1",
             "minimax-m2.7",
             "nemotron-3-super",
             "minimax-m2.5",
@@ -76,6 +77,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertEqual(statuses["deepseek-v4-flash"], "qualified")
         self.assertEqual(statuses["glm-5.2"], "active")
         self.assertEqual(statuses["qwen3.8-27b"], "qualified")
+        self.assertEqual(statuses["laguna-s-2.1"], "qualified")
         self.assertEqual(
             statuses["gemini-3-flash-preview"], "reference_only"
         )

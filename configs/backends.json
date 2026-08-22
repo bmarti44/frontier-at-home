@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "backends": {
+    "cuda": {
+      "implemented": true,
+      "platform": "NVIDIA CUDA",
+      "serve_scripts": {
+        "qwen38": "scripts/22_serve_qwen38.sh",
+        "qwen38-sglang": "scripts/23_serve_qwen38_sglang.sh",
+        "laguna-s-2.1": "scripts/25_serve_laguna.sh"
+      }
+    },
+    "apple-silicon": {
+      "implemented": false,
+      "platform": "Apple Silicon",
+      "serve_scripts": {}
+    },
+    "rocm": {
+      "implemented": false,
+      "platform": "AMD ROCm",
+      "serve_scripts": {}
+    },
+    "vulkan": {
+      "implemented": false,
+      "platform": "Vulkan",
+      "serve_scripts": {}
+    },
+    "intel-xe": {
+      "implemented": false,
+      "platform": "Intel Xe",
+      "serve_scripts": {}
+    },
+    "qualcomm": {
+      "implemented": false,
+      "platform": "Qualcomm",
+      "serve_scripts": {}
+    },
+    "tenstorrent": {
+      "implemented": false,
+      "platform": "Tenstorrent",
+      "serve_scripts": {}
+    },
+    "cpu": {
+      "implemented": false,
+      "platform": "CPU",
+      "serve_scripts": {}
+    }
+  }
+}

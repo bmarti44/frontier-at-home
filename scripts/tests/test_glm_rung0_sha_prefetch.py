@@ -20,8 +20,13 @@ ROOT = Path(__file__).resolve().parents[2]
 HEADER = ROOT / "results/glm52-gates/harness/ds4_slab_prefetch_state.h"
 CPP_TEST = ROOT / "scripts/tests/cpp/test_ds4_slab_prefetch_state.cpp"
 CAMPAIGN_PATH = ROOT / "scripts/70_glm_rung0_slab_campaign.py"
+FROZEN_RUNG0_ENGINE_SOURCE = Path("/tmp/glm52-rung0-prefetch-candidate/ds4_cuda.cu")
 
 
+@unittest.skipUnless(
+    FROZEN_RUNG0_ENGINE_SOURCE.is_file(),
+    "requires frozen rung-0 candidate source /tmp/glm52-rung0-prefetch-candidate/ds4_cuda.cu",
+)
 class GlmRung0ShaPrefetchTests(unittest.TestCase):
     @staticmethod
     def load_campaign():

@@ -1,4 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The harness manifest must always match the working tree: a stale line
+# surfaces later as a runtime failure inside a gate window (the accuracy
+# harness refuses to run when its own recorded hash is wrong). Catch it at
+# commit time instead. Regenerate a drifted line with:
+#   sha256sum <file>   # then replace the line in verification/MANIFEST.sha256
+if ! sha256sum --check --quiet verification/MANIFEST.sha256; then
+    echo "ERROR: verification/MANIFEST.sha256 does not match the working tree." >&2
+    echo "A manifested file changed without its manifest line being refreshed." >&2
+    echo "Failing entries:" >&2
+    sha256sum --check verification/MANIFEST.sha256 2>&1 | grep -v ': OK$' >&2 || true
+    exit 1
+fi
+
 exec scripts/lint_secrets.sh --staged

@@ -70,6 +70,10 @@ MODEL_IDENTITY = (
     '{"bytes":211075856448,"device":1,"inode":2,'
     f'"sha256":"{MODEL_SHA256}","executed_path":"/proc/123/fd/10"}}'
 )
+FROZEN_W7_REQUESTS = (
+    Path("/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/live-request.json"),
+    Path("/home/bmarti44/.local/state/glm52-w7-red/attempt-22decf741c3dafa862eb08dc28aee7e8/primary-request.json"),
+)
 
 
 def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
@@ -93,6 +97,10 @@ def score(text: str = GOOD, *, http: str = HTTP, response: str = RESPONSE,
     )
 
 
+@unittest.skipUnless(
+    all(path.is_file() for path in FROZEN_W7_REQUESTS),
+    "requires the frozen W7 live-request.json and primary-request.json fixtures",
+)
 class W7CacheGenerationGateTest(unittest.TestCase):
     def test_safe_wrapper_binds_exact_inference_lock_parent(self) -> None:
         safe = SAFE.read_text(encoding="utf-8")

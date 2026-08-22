@@ -15,6 +15,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 HARNESS = ROOT / "results/glm52-gates/harness/w7_resume_compiled_red_v1.sh"
 TRACE_SCORER_PATH = ROOT / "scripts/83_score_w7_deployed_trace.py"
 FROZEN_LAUNCHER = ROOT / "scripts/84_run_w7_frozen_candidate12.sh"
+FROZEN_ORACLE_SOURCE = pathlib.Path("/tmp/glm52-w7-build1.ob4Q0O/src/ds4_server.c")
 
 
 def _load_trace_scorer():
@@ -25,6 +26,10 @@ def _load_trace_scorer():
     return module
 
 
+@unittest.skipUnless(
+    FROZEN_ORACLE_SOURCE.is_file(),
+    "requires frozen W7 oracle source /tmp/glm52-w7-build1.ob4Q0O/src/ds4_server.c",
+)
 class W7CompiledRedHarnessTests(unittest.TestCase):
     def test_function_locals_do_not_collide_with_readonly_globals(self):
         source = HARNESS.read_text(encoding="utf-8")

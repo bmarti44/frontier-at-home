@@ -24,6 +24,10 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
+@unittest.skipUnless(
+    MODULE.LIVE.is_file() and MODULE.PRIMARY.is_file(),
+    "requires the frozen W7 live-request.json and primary-request.json fixtures",
+)
 class W7CacheGenerationCampaignRunnerTest(unittest.TestCase):
     def make_arm(self, arm: str = "off") -> tuple[tempfile.TemporaryDirectory, Path, str]:
         temporary = tempfile.TemporaryDirectory(prefix="w7-runner-test-")

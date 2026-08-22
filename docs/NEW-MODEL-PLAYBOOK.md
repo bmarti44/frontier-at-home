@@ -146,3 +146,98 @@ qualification, authenticated endpoint preserved, safe one-command switching
 with rollback (including stale-PID / wrong-model / startup-death tests), and a
 passing review of the evidence. Until then it stays `active`, and the README
 shows a dash.
+
+## 8. Mechanics that repeatedly bit us (Qwen3.8/Laguna campaigns, 2026-08)
+
+Start here for a new model: `scripts/90_scaffold_model.sh` generates the
+build script, serve script, and encoder/test stubs from the newest reference
+implementation and prints the manual-steps checklist (`--backend <name>`
+targets a non-cuda backend). Serving routes through the backend registry:
+`scripts/91_serve.sh --model <slug> --backend <name> start|stop|status`
+(configs/backends.json). Only `cuda` is implemented on this host; other
+backends fail closed with a pointer to **docs/BACKEND-CONTRACT.md**, the
+one-page surface a new architecture must implement to inherit every gate
+and suite unchanged.
+
+**Sol (codex) workflow.** Implementation:
+`codex exec -m gpt-5.6-sol -c model_reasoning_effort=medium -s workspace-write "<task>" </dev/null`
+— the `</dev/null` is mandatory (codex hangs waiting on stdin otherwise) and
+there is no `--full-auto` flag; use `-s workspace-write` (or `-s read-only`
+for reviews at `model_reasoning_effort=high`). Never let the implementer be
+the only author of its acceptance tests: sol's first Laguna encoder passed
+9/9 of its own tests while diverging from the official template on three
+byte-level inputs; only the adversarial sol-high review caught it. Route
+every encoder through the shared matrix in
+`scripts/tests/template_fidelity.py` (see
+`scripts/tests/test_template_fidelity_laguna.py` for the wiring), and have
+sol-high review every deliverable before it lands.
+
+**Git traps.**
+- `vendor/` is gitignored with negation patterns carved out for
+  `vendor/official-encoding/encoding/encoding_*.py`.
+  `scripts/tests/test_encoder_registration.py` fails if a registered encoder
+  is neither tracked nor covered by the DSV4 official-encoding pin — run it
+  after adding an encoder.
+- `models/` is gitignored but `models/catalog.json` is tracked: `git add`
+  by directory prints an ignore warning and exits 1, killing `&&` chains.
+  Add the file path explicitly.
+- Never pipe a commit (`git commit ... | tail`) — the pipe masks lint-hook
+  failures. Run commits unpiped or check `PIPESTATUS`.
+- The pre-commit hook now verifies `verification/MANIFEST.sha256` against
+  the working tree: if you edit a manifested harness file (e.g.
+  `31_bench_accuracy.py`, `lint_secrets.sh`), refresh its line in the same
+  commit (`sha256sum <file>`, replace the line).
+- `scripts/lint_secrets.sh` blocks commits on new digest-bearing paths;
+  budget for allowlist entries for `results/<slug>-gates/`,
+  `weights/<slug>/manifest.json`, profile configs, and any new script that
+  prints public digests.
+
+**Downloads.** Weight downloads saturate the uplink and starve `git push` /
+`gh` calls: push branches and open the claim PR *before* starting a big
+download, and run pushes in the background with generous timeouts during
+one. Fetch only the primary quant; start ladder quants (the bigger/smaller
+fallbacks) only when a gate actually asks for them.
+
+**Live-script edits.** Never edit a script in place while any process may
+be running (or queued to run) it — a running bash keeps reading from its
+open inode, and in-place writes corrupt it mid-parse. Install changes by
+editing a copy and atomically `mv`-ing it over the original; the running
+process keeps the old inode untouched. If an invocation is *queued*
+(e.g. blocked on a lock), remember it will execute its original text
+when it unblocks — kill and re-issue it after the fix lands. If the
+switch ever hangs, see docs/RUNBOOK-stuck-switch.md.
+
+**Gate windows.** Don't hand-roll window boilerplate — source
+`scripts/lib/gate_window.sh` (`gate_window_open` → `gate_serve_cycle` →
+probes → `gate_window_close`; the EXIT trap restores production even on
+mid-probe death, and `capture_json` refuses multi-line evidence files that
+the lint hook would later reject).
+
+**Harness runtime contracts** (discoverable only from source/old results —
+read this before burning a window):
+- `31_bench_accuracy.py` **holdout** runs REQUIRE `--config-evidence
+  <files>` (convention: build manifest + weights manifest + the speed
+  result binding the serving config) and a `--config-hash` string; dev
+  runs don't. Run a **dev-split truncation probe first** — holdout rowsets
+  are one-shot per ledger namespace (`DSV4_LEDGER_NAMESPACE` to re-spend,
+  owner-authorized only).
+- Accuracy result JSON top-level keys: `n`, `correct`, `accuracy`,
+  `invalid_count` (truncation proxy), `config_digest`, `ledger_namespace`.
+  Per-item detail lives in the transcripts dir, not the result file.
+- `30_bench_speed.py` strict cells need `--ignore-eos-supported`,
+  `--output-tokenizer-path` + `--output-tokenizer-sha256` for non-DSV4
+  models, `--request-timeout ≤2700`; a cell is README-quotable only if
+  `suite_valid` is true. Verify per-token streaming first if a
+  speculative decoder is on (G2-style granularity check) — block
+  streaming invalidates the timestamp pipeline.
+- Evidence files must each be a single valid JSON document (the lint hook
+  parses exempted JSON); use `capture_json`, never `tee` a mixed stream.
+- When giving the owner a command to run, use **absolute paths** — they
+  won't be sitting in the repo directory.
+
+**Engine builds beside live production.** The build scripts refuse to run
+uncontained when less than 110 GiB is available; wrap them in a capped user
+unit (`systemd-run --user --collect -p MemoryMax=11G -p MemorySwapMax=0
+-p OOMPolicy=kill`). Remember the GB10 rule: cgroup accounting is blind to
+CUDA unified memory, so systemd caps are backstops and the 8 GiB
+MemAvailable watchdog floor is the real guard.

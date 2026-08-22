@@ -37,13 +37,24 @@ HARNESS_MANIFEST_PATH = REPO_ROOT / "verification" / "MANIFEST.sha256"
 HUMANEVAL_RUNTIME_PIN_PATH = REPO_ROOT / "configs" / "pins" / "humaneval-runtime.json"
 ENCODER_PATHS = {
     "dsv4": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_dsv4.py",
+    "laguna": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_laguna.py",
     "qwen38": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_qwen38.py",
 }
 # Public contracts of the pinned encoders. Validate here instead of relying on
 # encoder assertions so an incompatible request fails before dataset work.
 ENCODER_REASONING_EFFORTS = {
     "dsv4": frozenset(("high", "max")),
+    "laguna": frozenset(("off", "max")),
     "qwen38": frozenset(("low", "medium", "xhigh")),
+}
+# Whether the encoder should emit the template's literal BOS text. Laguna's
+# GGUF sets add_bos_token=true (BOS == EOS == token 2), so llama.cpp adds the
+# token during /v1/completions tokenization; emitting the literal glyph too
+# would double it. The other stacks add no BOS at tokenization on this path.
+ENCODER_EMIT_BOS_TEXT = {
+    "dsv4": True,
+    "laguna": False,
+    "qwen38": True,
 }
 # Retain the historical constant for callers that inspect the default encoder.
 ENCODER_PATH = ENCODER_PATHS["dsv4"]
@@ -132,9 +143,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--reasoning-effort",
         default=None,
-        choices=("low", "medium", "xhigh", "high", "max"),
+        choices=("off", "low", "medium", "xhigh", "high", "max"),
         help=(
-            "reasoning-effort rendering passed to the encoder (Qwen3.8 template "
+            "reasoning-effort rendering passed to the encoder (encoder-specific "
             "levels; omit for the template default). Recorded in the config "
             "digest: runs under different efforts are different measurements."
         ),
@@ -629,6 +640,7 @@ def render_item(
         [{"role": "user", "content": content}],
         thinking_mode=thinking_mode,
         reasoning_effort=reasoning_effort,
+        add_default_bos_token=ENCODER_EMIT_BOS_TEXT[encoder_name],
     )
     if not isinstance(rendered, str) or not rendered:
         raise RuntimeError("official encoder returned an invalid prompt")

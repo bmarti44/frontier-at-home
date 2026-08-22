@@ -29,6 +29,11 @@ QWEN_BUILD = (
     ROOT / "configs" / "build-manifests" / "llamacpp-qwen38-9d77fa17.json"
 )
 QWEN_WEIGHTS = ROOT / "weights" / "qwen3.8-27b" / "manifest.json"
+LAGUNA_PRODUCTION_PROFILE = ROOT / "configs" / "laguna-production-profile.json"
+LAGUNA_BUILD = (
+    ROOT / "configs" / "build-manifests" / "llamacpp-laguna-06f8cebd.json"
+)
+LAGUNA_WEIGHTS = ROOT / "weights" / "laguna-s-2.1" / "manifest.json"
 DSV4_PROFILE = ROOT / "configs" / "dsv4-profile.json"
 DSV4_SERVICE = ROOT / "configs/systemd/deepseek-v4-flash-llamacpp.service"
 DSV4_BUILD = ROOT / "configs/build-manifests/llamacpp-fusion.json"
@@ -438,6 +443,112 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertNotIn("return 0", qwen_block.split("unauth=", 1)[0])
         self.assertIn("verify_qwen_1m_context", qwen_block)
 
+    def test_laguna_production_launcher_matches_the_pinned_profile(self):
+        source = SCRIPT.read_text()
+        profile = json.loads(LAGUNA_PRODUCTION_PROFILE.read_text())
+        build = json.loads(LAGUNA_BUILD.read_text())
+        weights = {
+            item["name"]: item
+            for item in json.loads(LAGUNA_WEIGHTS.read_text())["files"]
+        }
+        self.assertEqual(profile["schema_version"], 3)
+        self.assertEqual(profile["profile"], "laguna")
+        self.assertEqual(profile["context_cap"], 393_216)
+        self.assertEqual(profile["port"], 8013)
+        self.assertEqual(
+            profile["binary_sha256"],
+            build["binaries"]["llama-server"]["sha256"],
+        )
+        shard_names = [
+            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf",
+            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00002-of-00003.gguf",
+            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00003-of-00003.gguf",
+        ]
+        self.assertEqual(len(profile["model_shards"]), 3)
+        for record, name in zip(profile["model_shards"], shard_names):
+            expected = weights[name]
+            self.assertEqual(record["sha256"], expected["sha256"])
+            self.assertEqual(record["bytes"], expected["bytes"])
+            self.assertTrue(record["path"].endswith(name))
+        draft = weights["poolside/laguna-s-2.1-DFlash-BF16.gguf"]
+        self.assertEqual(profile["draft_model_sha256"], draft["sha256"])
+        self.assertEqual(profile["draft_model_bytes"], draft["bytes"])
+        self.assertEqual(
+            profile["runtime"]["containment"],
+            {
+                "unit": "laguna-engine.service",
+                "memory_high": "88G",
+                "memory_max": "95G",
+                "memory_swap_max": "0",
+                "oom_policy": "kill",
+                "kill_mode": "control-group",
+            },
+        )
+        arguments = profile["runtime"]["launch_arguments"]
+        for expected in (
+            "393216", "4", "draft-dflash", "laguna-s-2.1", "--jinja",
+            '{"enable_thinking":true}', "256",
+        ):
+            self.assertIn(expected, arguments)
+        self.assertNotIn("-ctk", arguments)
+        self.assertNotIn("-ctv", arguments)
+        launch = source[
+            source.index("launch_laguna() {") :
+            source.index("cleanup_laguna_killed_unit() {")
+        ]
+        for contract in (
+            "MemoryHigh=88G", "MemoryMax=95G", "MemorySwapMax=0",
+            '"$LAGUNA_BINARY" --model "$LAGUNA_MODEL" -ngl 99 -fa on',
+            '--no-mmap -c 393216 -md "$LAGUNA_DRAFT" --parallel 4',
+            "--spec-type draft-dflash --spec-draft-n-max 4 --jinja",
+            "--cache-reuse 256",
+        ):
+            self.assertIn(contract, launch)
+        verify = source[
+            source.index("verify_laguna_profile_hashes() {") :
+            source.index("revalidate_laguna_identities() {")
+        ]
+        self.assertIn("os.O_NOFOLLOW", verify)
+        self.assertIn("before.st_size != expected_bytes", verify)
+        self.assertIn("len(shards) != 3", verify)
+
+    def test_laguna_and_qwen_launch_safety_guards_are_explicit(self):
+        source = SCRIPT.read_text()
+        for start_name, end_name in (
+            ("start_laguna_profile() {", "start_laguna() {"),
+            ("start_qwen_profile() {", "start_qwen38() {"),
+        ):
+            starter = source[source.index(start_name) : source.index(end_name)]
+            self.assertRegex(
+                starter,
+                r"(?s)03_memory_guard\.py.*?--timeout-seconds 180\s+\|\|\s+die",
+            )
+
+        launch = source[
+            source.index("launch_laguna() {") :
+            source.index("cleanup_laguna_killed_unit() {")
+        ]
+        self.assertIn("--property NoNewPrivileges=yes", launch)
+
+        verify = source[
+            source.index("verify_laguna_profile_hashes() {") :
+            source.index("revalidate_laguna_identities() {")
+        ]
+        self.assertIn("derived_shard_paths", verify)
+        self.assertIn('"-00001-of-00003.gguf"', verify)
+        self.assertIn("shared_libraries", verify)
+        self.assertIn("os.path.basename(name) != name", verify)
+
+        for stop_name, end_name in (
+            ("stop_qwen_verified() {", "stop_laguna_verified() {"),
+            ("stop_laguna_verified() {", "stop_profile() {"),
+        ):
+            stop = source[source.index(stop_name) : source.index(end_name)]
+            self.assertIn("if ! unit_pid=$(systemctl show", stop)
+            self.assertIn(
+                'DISARMED $pid $expected_pgid $expected_ticks', stop
+            )
+
     def test_rollback_waits_for_every_restored_profile_before_verification(self):
         source = SCRIPT.read_text()
         rollback = source[source.index("rollback() {") : source.index("command=${1")]
@@ -458,7 +569,7 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertEqual(json.loads(result.stdout)["active_profile"], "qwen38")
         source = SCRIPT.read_text()
         self.assertIn(
-            "status [--json]|restore|dsv4|glm52|qwen38|qwen38-1m", source
+            "status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m", source
         )
 
     def test_qwen38_1m_successful_launch_cleans_killed_unit_and_omits_q8_flags(self):
@@ -512,6 +623,154 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertIn("WAIT dsv4", actions)
             self.assertIn("VERIFY dsv4", actions)
 
+    def test_laguna_hash_failure_is_rejected_before_active_profile_is_stopped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            (root / "dsv4-running").touch()
+            result = self.run_switch(root, "laguna")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("laguna", result.stderr.lower())
+            self.assertTrue((root / "dsv4-running").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+
+    def test_laguna_successful_launch_cleans_killed_unit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "dsv4"})
+            )
+            (root / "dsv4-running").touch()
+            (root / "laguna-hashes-valid").touch()
+            (root / "laguna-unit-killed").touch()
+            result = self.run_switch(root, "laguna")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "laguna"
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("SYSTEMCTL reset-failed laguna-engine.service", actions)
+            self.assertIn("SYSTEMD_RUN --unit=laguna-engine", actions)
+            self.assertIn("-c 393216", actions)
+            self.assertIn("--parallel 4", actions)
+            self.assertFalse((root / "laguna-unit-killed").exists())
+
+    def test_status_accepts_laguna(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "laguna"})
+            )
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["active_profile"], "laguna")
+
+    def test_stop_halts_laguna_without_touching_active_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "laguna"})
+            )
+            (root / "laguna-running").touch()
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("STOPPED laguna", result.stdout)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "laguna"
+            )
+            self.assertFalse((root / "laguna-running").exists())
+
+    def test_restore_laguna_start_failure_falls_back_to_dsv4(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "laguna"})
+            )
+            (root / "laguna-hashes-valid").touch()
+            (root / "fail-laguna-start").touch()
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            self.assertIn(
+                "RESTORE FAILED for recorded profile laguna; falling back to dsv4",
+                result.stderr,
+            )
+
+    def test_background_spawns_close_the_switch_lock_fd(self):
+        # Regression for the 2026-08-21 deadlock: a memwatch spawned without
+        # `9>&-` inherited the switch.lock open-file description, so the lock
+        # outlived the switch and every later invocation hung in flock.
+        # Every backgrounded command in this script must close fd 9.
+        source = SCRIPT.read_text()
+        offenders = []
+        for number, line in enumerate(source.splitlines(), start=1):
+            stripped = line.rstrip()
+            if not stripped.endswith("&") or stripped.endswith("&&"):
+                continue
+            # Find the full command by walking back over continuation lines.
+            command_lines = [stripped]
+            index = number - 2
+            lines = source.splitlines()
+            while index >= 0 and lines[index].rstrip().endswith("\\"):
+                command_lines.insert(0, lines[index].rstrip())
+                index -= 1
+            command = " ".join(command_lines)
+            if "9>&-" not in command:
+                offenders.append(f"line {number}: {stripped.strip()}")
+        self.assertEqual(
+            offenders, [],
+            "backgrounded commands must close the switch-lock fd with 9>&- "
+            "so children cannot inherit the lock's open-file description:\n"
+            + "\n".join(offenders),
+        )
+
+    def test_lock_acquisition_is_bounded_and_names_the_holder(self):
+        source = SCRIPT.read_text()
+        self.assertNotIn(
+            "\n    flock -x 9\n", source,
+            "raw unbounded flock reintroduced; use acquire_switch_lock",
+        )
+        self.assertNotIn(
+            "\nflock -x 9\n", source,
+            "raw unbounded flock reintroduced; use acquire_switch_lock",
+        )
+        self.assertIn("acquire_switch_lock() {", source)
+        self.assertIn('flock -w "$SWITCH_LOCK_TIMEOUT_SECONDS" -x 9', source)
+        self.assertIn("/proc/locks", source)
+        # All three entry points (stop, restore, profile switch) go through
+        # the helper: one definition plus three call sites.
+        self.assertEqual(source.count("acquire_switch_lock"), 4)
+
+    def test_stop_halts_active_profile_without_touching_active_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-1m"})
+            )
+            (root / "qwen-running").touch()
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("STOPPED qwen38-1m", result.stdout)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38-1m",
+            )
+            self.assertFalse((root / "qwen-running").exists())
+            self.assertIn("STOP qwen", (root / "actions.log").read_text())
+
+    def test_stop_with_no_recorded_profile_is_a_noop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((root / "actions.log").exists())
+
     def test_qwen_hash_failure_is_rejected_before_active_profile_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -555,7 +814,7 @@ class EngineSwitchTests(unittest.TestCase):
     def test_deepseek_readiness_requires_the_exact_1m_context(self):
         source = SCRIPT.read_text()
         self.assertIn('"/slots"', source)
-        self.assertIn('slot["n_ctx"] != 524288', source)
+        self.assertIn('slot["n_ctx"] != 393216', source)
 
     def test_switch_runs_deepseek_as_engine_user_with_frozen_1m_profile(self):
         source = SCRIPT.read_text()
@@ -606,7 +865,7 @@ class EngineSwitchTests(unittest.TestCase):
         source = SCRIPT.read_text()
         installer = INSTALLER.read_text()
         unit = RESTORE_SERVICE.read_text()
-        self.assertIn("status [--json]|restore|dsv4|glm52", source)
+        self.assertIn("status [--json]|stop|restore|dsv4|glm52", source)
         self.assertIn('if [[ $command == restore ]]', source)
         self.assertIn("dsv4-engine-restore.service", installer)
         self.assertIn("52_engine_switch.sh restore", unit)
