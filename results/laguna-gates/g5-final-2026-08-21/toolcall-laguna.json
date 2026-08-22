@@ -1,0 +1,1049 @@
+{
+  "suite": "toolcall-v1",
+  "pins_sha256": "286ed4b759d68ef5fc2d2fb4f53b9b6c52a7731ec290a5ef86fa3648631165ec",
+  "model": "laguna-s-2.1",
+  "base_url": "http://127.0.0.1:8013/v1",
+  "config_digest": "0393f397ee86a127e002fdeed9e49ae49ecf8b34c3ce65ab6d4ff9933a00c253",
+  "per_case": [
+    {
+      "id": "typed-string",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Reykjavík"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Reykjavík"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\":\"Reykjavík\"}"
+                  },
+                  "id": "GX7EpzBUoAUpy7HXzZN6WVPafwAbL7dd"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390781,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 27,
+          "prompt_tokens": 152,
+          "total_tokens": 179,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-dXmSgMdih086WznZ5E9rJBeOtNheSmC2",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 152,
+          "prompt_ms": 513.83,
+          "prompt_per_token_ms": 3.38046052631579,
+          "prompt_per_second": 295.81768289122857,
+          "predicted_n": 27,
+          "predicted_ms": 1104.947,
+          "predicted_per_token_ms": 40.92396296296296,
+          "predicted_per_second": 24.435561162662104,
+          "draft_n": 48,
+          "draft_n_accepted": 14
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-integer",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "reserve_room",
+        "arguments": {
+          "room": "Cedar",
+          "attendees": 7
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "reserve_room",
+        "required_args": {
+          "room": "Cedar",
+          "attendees": 7
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'll reserve the Cedar conference room for 7 attendees.",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "reserve_room",
+                    "arguments": "{\"room\":\"Cedar\",\"attendees\":7}"
+                  },
+                  "id": "39hPPh1qo1g4xxJldJLxbUYqkZJANgpN"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390783,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 54,
+          "prompt_tokens": 161,
+          "total_tokens": 215,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-CnSxvN1fFcyCE9fWxMzzE6GtEdYmU6e5",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 161,
+          "prompt_ms": 634.023,
+          "prompt_per_token_ms": 3.938031055900621,
+          "prompt_per_second": 253.93400554869459,
+          "predicted_n": 54,
+          "predicted_ms": 2068.841,
+          "predicted_per_token_ms": 38.31187037037037,
+          "predicted_per_second": 26.10157087954077,
+          "draft_n": 88,
+          "draft_n_accepted": 31
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-boolean",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "set_light",
+        "arguments": {
+          "light": "porch",
+          "on": true
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "set_light",
+        "required_args": {
+          "light": "porch",
+          "on": true
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'll turn the porch light on for you.",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "set_light",
+                    "arguments": "{\"light\":\"porch\",\"on\":true}"
+                  },
+                  "id": "EWJ5rwNAMRaApsi5z1mVsnO22yA9kgHC"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390786,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 49,
+          "prompt_tokens": 156,
+          "total_tokens": 205,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-4jpz31mVUaq0Y6WnBDyAF6Ir9Zy6OUMm",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 156,
+          "prompt_ms": 523.133,
+          "prompt_per_token_ms": 3.353416666666667,
+          "prompt_per_second": 298.20332496707334,
+          "predicted_n": 49,
+          "predicted_ms": 2245.014,
+          "predicted_per_token_ms": 45.81661224489796,
+          "predicted_per_second": 21.826144514020847,
+          "draft_n": 96,
+          "draft_n_accepted": 24
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-array",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "label_issue",
+        "arguments": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "label_issue",
+        "required_args": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'll add the labels \"bug\", \"urgent\", and \"backend\" to issue 418 for you.",
+              "reasoning_content": "The user wants me to add the labels \"bug\", \"urgent\", and \"backend\" to issue 418. I have access to the `label_issue` function which requires the issue number and an array of labels. Let me call this function with the appropriate parameters.",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "label_issue",
+                    "arguments": "{\"issue\":418,\"labels\":[\"bug\", \"urgent\", \"backend\"]}"
+                  },
+                  "id": "JBIYhKcIZofI0QeHq8ZkMijBaI9T2Ynh"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390791,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 129,
+          "prompt_tokens": 173,
+          "total_tokens": 302,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-0jcCynuUE50D1Hft4t2kJ2xCrhr9l41y",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 173,
+          "prompt_ms": 555.07,
+          "prompt_per_token_ms": 3.20849710982659,
+          "prompt_per_second": 311.6724016790675,
+          "predicted_n": 129,
+          "predicted_ms": 4312.865,
+          "predicted_per_token_ms": 33.43306201550387,
+          "predicted_per_second": 29.910511921889512,
+          "draft_n": 184,
+          "draft_n_accepted": 82
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "choose-weather-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Nairobi"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Nairobi"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\":\"Nairobi\"}"
+                  },
+                  "id": "f7tFeeiHEcO3Tl5HPc1FeDMlxC4vdFJL"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390793,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 24,
+          "prompt_tokens": 259,
+          "total_tokens": 283,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-Ajl74jVBeFYPDyCg2S4DctM6NSXoeebh",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 259,
+          "prompt_ms": 854.889,
+          "prompt_per_token_ms": 3.3007297297297296,
+          "prompt_per_second": 302.9633086868588,
+          "predicted_n": 24,
+          "predicted_ms": 1033.395,
+          "predicted_per_token_ms": 43.058125,
+          "predicted_per_second": 23.224420478132757,
+          "draft_n": 44,
+          "draft_n_accepted": 12
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "choose-calendar-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_calendar_event",
+        "arguments": {
+          "title": "Design Review",
+          "start": "2026-09-03T14:30:00Z"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_calendar_event",
+        "required_args": {
+          "title": "Design Review",
+          "start": "2026-09-03T14:30:00Z"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'll schedule the Design Review for you on September 3, 2026 at 14:30 UTC.",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "create_calendar_event",
+                    "arguments": "{\"title\":\"Design Review\",\"start\":\"2026-09-03T14:30:00Z\"}"
+                  },
+                  "id": "gV7thWSg3oWmiP3I6BijmQUUCnO9XBRm"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390797,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 87,
+          "prompt_tokens": 279,
+          "total_tokens": 366,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-EWRIGmhNLBwKTEyXzII335c4viiiqwH8",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 279,
+          "prompt_ms": 869.67,
+          "prompt_per_token_ms": 3.117096774193548,
+          "prompt_per_second": 320.81134223326086,
+          "predicted_n": 87,
+          "predicted_ms": 3597.645,
+          "predicted_per_token_ms": 41.35224137931034,
+          "predicted_per_second": 24.1824860429531,
+          "draft_n": 156,
+          "draft_n_accepted": 47
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "parallel-weather",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Oslo"
+        },
+        "tool_call_count": 2
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Oslo"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'll check the current weather in both Oslo and Lima simultaneously.",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\":\"Oslo\"}"
+                  },
+                  "id": "OmTQP6exWbEShJ3So5OKV75crf0X0AaN"
+                },
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\":\"Lima\"}"
+                  },
+                  "id": "D1dxVVrh7v3dI05YGtxFsKekldJsEk4t"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390801,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 58,
+          "prompt_tokens": 157,
+          "total_tokens": 215,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-ZUhanlK3YptF5oTsPkBWv6zdY7FYAOIQ",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 157,
+          "prompt_ms": 491.089,
+          "prompt_per_token_ms": 3.127955414012739,
+          "prompt_per_second": 319.69765154585014,
+          "predicted_n": 58,
+          "predicted_ms": 2553.287,
+          "predicted_per_token_ms": 44.02218965517241,
+          "predicted_per_second": 22.715816905815917,
+          "draft_n": 108,
+          "draft_n_accepted": 30
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "parallel-inventory",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "check_inventory",
+        "arguments": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "check_inventory",
+        "required_args": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'll check the inventory for both SKUs in parallel, starting with AX-10 at the east warehouse and BQ-22 at the west warehouse.",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "check_inventory",
+                    "arguments": "{\"sku\":\"AX-10\",\"warehouse\":\"east\"}"
+                  },
+                  "id": "A5gc3WA4m8ZqkJxh01wg2uO2fHv9Aex0"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390804,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 75,
+          "prompt_tokens": 180,
+          "total_tokens": 255,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-2zZlzBjTi3ErziEGOPCEZ63TkGA0teRq",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 180,
+          "prompt_ms": 680.525,
+          "prompt_per_token_ms": 3.7806944444444444,
+          "prompt_per_second": 264.5016715036185,
+          "predicted_n": 75,
+          "predicted_ms": 3140.781,
+          "predicted_per_token_ms": 41.87708,
+          "predicted_per_second": 23.87941088538169,
+          "draft_n": 132,
+          "draft_n_accepted": 41
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "multi-turn-weather-final",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The current temperature in Kyoto is **18°C** with clear conditions."
+            }
+          }
+        ],
+        "created": 1787390805,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 17,
+          "prompt_tokens": 194,
+          "total_tokens": 211,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-UNszTJWrWYPrAHHUjZEy6ShrH8OINfZf",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 194,
+          "prompt_ms": 534.663,
+          "prompt_per_token_ms": 2.7559948453608247,
+          "prompt_per_second": 362.8453811092221,
+          "predicted_n": 17,
+          "predicted_ms": 459.443,
+          "predicted_per_token_ms": 27.02605882352941,
+          "predicted_per_second": 37.001325518072974,
+          "draft_n": 20,
+          "draft_n_accepted": 11
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "multi-turn-order-final",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "Order A-900 has a status of **shipped** and is estimated to arrive on **August 22, 2026**."
+            }
+          }
+        ],
+        "created": 1787390807,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 34,
+          "prompt_tokens": 204,
+          "total_tokens": 238,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-xmoqxqVK3jfPXrkADREFnk3ZZCfsX1mj",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 204,
+          "prompt_ms": 792.6,
+          "prompt_per_token_ms": 3.885294117647059,
+          "prompt_per_second": 257.38077214231646,
+          "predicted_n": 34,
+          "predicted_ms": 837.049,
+          "predicted_per_token_ms": 24.619088235294118,
+          "predicted_per_second": 40.61888849995639,
+          "draft_n": 36,
+          "draft_n_accepted": 24
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "no-tool-opinion",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "\"Hello\" generally sounds friendlier than \"Greetings.\" It's more casual, warm, and commonly used in everyday interactions, whereas \"Greetings\" can feel more formal or ceremonial."
+            }
+          }
+        ],
+        "created": 1787390809,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 39,
+          "prompt_tokens": 154,
+          "total_tokens": 193,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-GXJL31S4002WhtGQYGFTZUMnniOt3mZ0",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 154,
+          "prompt_ms": 684.515,
+          "prompt_per_token_ms": 4.4449025974025975,
+          "prompt_per_second": 224.97680839718635,
+          "predicted_n": 39,
+          "predicted_ms": 1269.741,
+          "predicted_per_token_ms": 32.55746153846154,
+          "predicted_per_second": 30.71492532729116,
+          "draft_n": 56,
+          "draft_n_accepted": 24
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "no-tool-translation",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The translation of \"good morning\" into Spanish is \"buenos días\"."
+            }
+          }
+        ],
+        "created": 1787390810,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 18,
+          "prompt_tokens": 209,
+          "total_tokens": 227,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-Yhiz2FLkuFmA2ZJMwc9NKbJsopXtbM9G",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 209,
+          "prompt_ms": 699.158,
+          "prompt_per_token_ms": 3.3452535885167465,
+          "prompt_per_second": 298.9309998598314,
+          "predicted_n": 18,
+          "predicted_ms": 631.023,
+          "predicted_per_token_ms": 35.05683333333334,
+          "predicted_per_second": 28.52510922739742,
+          "draft_n": 28,
+          "draft_n_accepted": 10
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "long-context-ticket",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_ticket",
+        "arguments": {
+          "title": "Payments timeout",
+          "severity": 2,
+          "component": "checkout-api"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_ticket",
+        "required_args": {
+          "title": "Payments timeout",
+          "severity": 2,
+          "component": "checkout-api"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'll create the support ticket based on the final observation details.",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "create_ticket",
+                    "arguments": "{\"title\":\"Payments timeout\",\"severity\":2,\"component\":\"checkout-api\"}"
+                  },
+                  "id": "xRdMM3CLf5VSo5zXIxUEXwAbn1z8G4U9"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390815,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 70,
+          "prompt_tokens": 231,
+          "total_tokens": 301,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-FVrfDCAn5IW1ZzLerPCKgIwa1hipOcKn",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 231,
+          "prompt_ms": 788.604,
+          "prompt_per_token_ms": 3.41387012987013,
+          "prompt_per_second": 292.9226836282849,
+          "predicted_n": 70,
+          "predicted_ms": 3272.305,
+          "predicted_per_token_ms": 46.747214285714286,
+          "predicted_per_second": 21.391649005823115,
+          "draft_n": 136,
+          "draft_n_accepted": 35
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "long-context-reference",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "track_shipment",
+        "arguments": {
+          "reference": "ZX-8841-Q"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "track_shipment",
+        "required_args": {
+          "reference": "ZX-8841-Q"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "I'll track the shipment using the authoritative reference provided in the memo.",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "track_shipment",
+                    "arguments": "{\"reference\":\"ZX-8841-Q\"}"
+                  },
+                  "id": "L4SJQ4btoMLggv222S4SGRqvIq3dM2hL"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1787390817,
+        "model": "laguna-s-2.1",
+        "system_fingerprint": "b10010-06f8cebd7",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 44,
+          "prompt_tokens": 207,
+          "total_tokens": 251,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-FYuTgrPzZvfkrMnDDTAIsEJlDD4JunDc",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 207,
+          "prompt_ms": 766.903,
+          "prompt_per_token_ms": 3.7048454106280193,
+          "prompt_per_second": 269.9167952139971,
+          "predicted_n": 44,
+          "predicted_ms": 1623.334,
+          "predicted_per_token_ms": 36.89395454545455,
+          "predicted_per_second": 27.104711661309377,
+          "draft_n": 68,
+          "draft_n_accepted": 26
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "nested-json-shipment",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "create_shipment",
+        "required_args": {
+          "recipient": {
+            "name": "Ada Lovelace",
+            "address": {
+              "line1": "12 St James Square",
+              "city": "London",
+              "postal_code": "SW1Y 4LB",
+              "country": "GB"
+            }
+          },
+          "package": {
+            "dimensions_cm": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            },
+            "weight_kg": 2.5
+          }
+        }
+      },
+      "response": null,
+      "error": "RemoteDisconnected: Remote end closed connection without response"
+    },
+    {
+      "id": "nested-json-filter",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "search_products",
+        "required_args": {
+          "filter": {
+            "category": "laptops",
+            "price": {
+              "min": 800,
+              "max": 1500,
+              "currency": "USD"
+            },
+            "features": [
+              "wifi6",
+              "backlit-keyboard"
+            ]
+          }
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "enum-unit",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "get_forecast",
+        "required_args": {
+          "city": "Toronto",
+          "unit": "fahrenheit"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "enum-priority",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "create_task",
+        "required_args": {
+          "title": "Rotate signing key",
+          "priority": "high"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "choose-email-among-distractors",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "send_email",
+        "required_args": {
+          "to": "dev@example.com",
+          "subject": "Build green",
+          "body": "Release can proceed."
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "typed-composite",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "deploy_service",
+        "required_args": {
+          "service": "ledger",
+          "version": "v4.2",
+          "replicas": 3,
+          "dry_run": true,
+          "notify": [
+            "alice",
+            "bob"
+          ]
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    }
+  ],
+  "passed": 14,
+  "total": 20,
+  "score": 0.7
+}

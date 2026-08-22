@@ -30,20 +30,55 @@
  "port": 8013,
  "context_cap": 393216,
  "promotion": {
-  "decision": "production_candidate",
-  "tuned_at": "2026-08-21",
-  "evidence": "results/laguna-gates/"
+  "decision": "qualified_switchable_engine_not_default_owner_2026-08-21",
+  "qualified_at": "2026-08-22",
+  "evidence_bundles": [
+   "results/laguna-gates/g1-smoke-2026-08-21/",
+   "results/laguna-gates/g2-dflash-2026-08-21/",
+   "results/laguna-gates/g3-speed-2026-08-21/",
+   "results/laguna-gates/g4-fidelity-2026-08-21/",
+   "results/laguna-gates/g5-final-2026-08-21/"
+  ],
+  "evidence_sha256": {
+   "acc-gsm8k-holdout": "3474c208e64654f2c69a91aa6eff36e83dda5402876dd3ccf64c8459c760d918",
+   "acc-mmlu-pro-holdout": "41809a8d43b75539a9c0ca67bc89a56318f6240c9ff7502a83cb3eaae8871be4",
+   "acc-humaneval-all": "a160e10d3b11bcc93f5e525e4c866e83fabda5ab8e3bdf4bc6347305cc4d8111",
+   "bench-prod-393k": "ab81ee5be4ae3d1a2f73fe9f5877744c8dae54e11f45eedc22750fc0195161e0",
+   "toolcall-laguna": "f59ab58cd840b6900f6ab58b007332f12937d559c429c92b84be37f869ae80a1"
+  }
  },
  "runtime": {
   "engine_environment": {},
   "diagnostics_unset": [],
   "launch_arguments": [
-   "--model", "{model}", "-ngl", "99", "-fa", "on", "--no-mmap",
-   "-c", "393216", "-md", "{draft_model}", "--parallel", "4",
-   "--host", "127.0.0.1", "--port", "{port}", "--alias", "laguna-s-2.1",
-   "--spec-type", "draft-dflash", "--spec-draft-n-max", "4", "--jinja",
-   "--chat-template-kwargs", "{\"enable_thinking\":true}",
-   "--cache-reuse", "256"
+   "--model",
+   "{model}",
+   "-ngl",
+   "99",
+   "-fa",
+   "on",
+   "--no-mmap",
+   "-c",
+   "393216",
+   "-md",
+   "{draft_model}",
+   "--parallel",
+   "4",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--alias",
+   "laguna-s-2.1",
+   "--spec-type",
+   "draft-dflash",
+   "--spec-draft-n-max",
+   "4",
+   "--jinja",
+   "--chat-template-kwargs",
+   "{\"enable_thinking\":true}",
+   "--cache-reuse",
+   "256"
   ],
   "containment": {
    "unit": "laguna-engine.service",
