@@ -1494,7 +1494,7 @@ PY
             clean_curl --config - -sS -o "$STATE/probe.json.tmp" \
                 -w '%{http_code}' --max-time 1800 \
                 -H 'Content-Type: application/json' \
-                -d '{"model":"default","messages":[{"role":"user","content":"Calculate 2+2. State the decimal answer clearly."}],"max_tokens":64,"temperature":0}' \
+                -d '{"model":"default","messages":[{"role":"user","content":"Calculate 2+2. State the decimal answer clearly."}],"max_tokens":768,"temperature":0}' \
                 "http://127.0.0.1:$AUTH_PORT/v1/chat/completions" || true
     )
     unset key REPLY
