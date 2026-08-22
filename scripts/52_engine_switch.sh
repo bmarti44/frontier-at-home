@@ -1344,8 +1344,8 @@ value = json.loads(sys.argv[1])
 if not isinstance(value, list) or len(value) != 4:
     raise SystemExit("Laguna slot topology is invalid")
 for slot in value:
-    if slot["n_ctx"] != 131072:
-        raise SystemExit("Laguna per-slot context is not 131072 (4 x 131K)")
+    if slot["n_ctx"] != 98304:
+        raise SystemExit("Laguna per-slot context is not 98304 (4 x 96K)")
 PY
 }
 
