@@ -1,0 +1,42 @@
+{
+ "schema_version": 1,
+ "alias": "glm52",
+ "mechanism": "setsid-memwatch",
+ "binary": "/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server",
+ "argv": [
+  "--cuda",
+  "-m",
+  "/home/bmarti44/models/glm52-full-denseq40.gguf",
+  "-c",
+  "32768",
+  "--host",
+  "127.0.0.1",
+  "--port",
+  "8013",
+  "--ssd-streaming",
+  "--ssd-streaming-cache-experts",
+  "40GB"
+ ],
+ "env": {
+  "HOME": "/home/dsv4",
+  "LANG": "C.UTF-8",
+  "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+  "DS4_CUDA_EXPERT_CACHE_GB": "94",
+  "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+  "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+  "DS4_CUDA_FETCH_THREADS": "6",
+  "DS4_CUDA_STABLE_MODEL_REMAP": "1",
+  "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+  "DS4_CUDA_EXPERT_DIRECT_SLOT": "1"
+ },
+ "memory_guard": {
+  "required_gib": 110,
+  "stable_samples": 3,
+  "interval_seconds": 1,
+  "timeout_seconds": 180
+ },
+ "memwatch": {
+  "threshold_gib": 18,
+  "interval_sec": 1
+ }
+}

@@ -1,0 +1,41 @@
+{
+ "schema_version": 1,
+ "model": "glm-5.2",
+ "artifacts": {
+  "full-denseq40": {
+   "kind": "gguf",
+   "path": "{model_root}/glm52-full-denseq40.gguf",
+   "identity": {
+    "first_bytes": 1048576,
+    "first_bytes_sha256": "b70b4e19c1aaca7898c795c6085a291c1eee45a861bad91522e2f1844a0676f6",
+    "size_bytes": 202307598400,
+    "device": 66306,
+    "inode": 3571134,
+    "full_sha256_status": "not_computed_no_cheap_cached_value"
+   },
+   "weights_gib": 188.4
+  }
+ },
+ "engines": {
+  "ds4-glm52-patched": {
+   "build_manifest": null,
+   "binary_path": "{cache_root}/glm52-dynexp2-patched/ds4-server",
+   "binary_sha256": "a093812a8dd2c02f23ab3a12cdd69f77e1fcfcb36919acccfbea24d526825e60",
+   "note": "repo-locally patched ds4 CUDA binary (patches/); not reproducible from a pin"
+  }
+ },
+ "backend_support": {
+  "cuda": {
+   "supported": true,
+   "hardware_class": ["spark"],
+   "reason_restricted": "engine is a repo-locally patched ds4 CUDA binary (patches/*.patch: expert cache, direct-slot, dense Q4 GEMV, DSA opt) built for sm_121; expert streaming assumes 128 GB unified memory"
+  },
+  "apple-silicon": {"supported": false, "reason": "depends on repo-local CUDA kernel patches to ds4; no Metal equivalents exist"},
+  "rocm": {"supported": false, "reason": "depends on repo-local CUDA kernel patches to ds4; no ROCm equivalents exist"},
+  "cpu": {"supported": false, "reason": "depends on repo-local CUDA kernel patches to ds4; expert streaming has no CPU path"},
+  "vulkan": {"supported": false, "reason": "same as apple-silicon"},
+  "intel-xe": {"supported": false, "reason": "same as apple-silicon"},
+  "qualcomm": {"supported": false, "reason": "same as apple-silicon"},
+  "tenstorrent": {"supported": false, "reason": "same as apple-silicon"}
+ }
+}

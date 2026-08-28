@@ -1,5 +1,6 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "contract": "docs/BACKEND-CONTRACT.md",
   "backends": {
     "cuda": {
       "implemented": true,
@@ -8,42 +9,39 @@
         "qwen38": "scripts/22_serve_qwen38.sh",
         "qwen38-sglang": "scripts/23_serve_qwen38_sglang.sh",
         "laguna-s-2.1": "scripts/25_serve_laguna.sh"
-      }
+      },
+      "notes": "serve_scripts are the legacy dev-port lifecycles and take precedence; every other model dispatches through configs/profiles/ via scripts/93_profile_serve.sh. qwen38-sglang is Docker/CUDA-only."
     },
     "apple-silicon": {
       "implemented": false,
       "platform": "Apple Silicon",
-      "serve_scripts": {}
+      "notes": "profiles exist (status estimated); flips to implemented when one qualifies on real hardware via docs/QUALIFY-OFFHOST.md"
     },
     "rocm": {
       "implemented": false,
       "platform": "AMD ROCm",
-      "serve_scripts": {}
+      "notes": "profiles exist (status estimated); build path per vendor/ds4/STRIXHALO.md"
     },
     "vulkan": {
       "implemented": false,
-      "platform": "Vulkan",
-      "serve_scripts": {}
+      "platform": "Vulkan"
     },
     "intel-xe": {
       "implemented": false,
-      "platform": "Intel Xe",
-      "serve_scripts": {}
+      "platform": "Intel Xe"
     },
     "qualcomm": {
       "implemented": false,
-      "platform": "Qualcomm",
-      "serve_scripts": {}
+      "platform": "Qualcomm"
     },
     "tenstorrent": {
       "implemented": false,
-      "platform": "Tenstorrent",
-      "serve_scripts": {}
+      "platform": "Tenstorrent"
     },
     "cpu": {
       "implemented": false,
       "platform": "CPU",
-      "serve_scripts": {}
+      "notes": "profiles exist (status estimated); llama.cpp CPU build, any OS"
     }
   }
 }

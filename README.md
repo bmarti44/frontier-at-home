@@ -3,11 +3,14 @@
 Run frontier-scale models on hardware you can actually buy — with receipts.
 
 This repository builds reproducible, safe ways to operate frontier-level models
-on consumer-accessible hardware. It is CUDA-first today, not CUDA-only:
-DeepSeek V4 Flash and GLM-5.2 on an NVIDIA GB10 DGX Spark are the first
-implementations, not the boundary. Additional models, accelerators, inference
-architectures, compression methods, and storage tiers all belong here — as long
-as they arrive with honest measurements and a dependable operator path.
+on consumer-accessible hardware. Serving configuration is declarative: every
+model is described by profiles keyed by (model, backend, RAM tier) under
+[`configs/profiles/`](configs/profiles/), so the same model can be set up on a
+128 GB DGX Spark, a 32 GB MacBook, a 16 GB discrete GPU, or a CPU-only box —
+each with its own quantization, context cap, and memory budget. The NVIDIA GB10
+DGX Spark (CUDA) is the qualified reference host today; profiles for Apple
+Silicon, AMD ROCm, discrete CUDA GPUs, and CPU ship as computed estimates until
+someone qualifies them on real hardware.
 
 This is not a collection of one-off demos. A contributed profile should be
 something another person can build, qualify at its largest useful context,
@@ -16,11 +19,35 @@ evidence.
 
 ## Project direction
 
-Finish the CUDA profiles for DeepSeek V4 Flash and GLM-5.2, then apply the same
-reproducible workflow to other frontier-class model families and
-consumer-accessible systems. A backend need not copy the CUDA implementation:
-platform-native engines and memory strategies are encouraged when they preserve
-the same standards for correctness, safety, evidence, and repeatable operation.
+Grow the set of qualified (model × backend × RAM tier) profiles: more frontier
+model families, more consumer hardware, one workflow. A backend need not copy
+the CUDA implementation: platform-native engines and memory strategies are
+encouraged when they preserve the same standards for correctness, safety,
+evidence, and repeatable operation.
+
+## Serving profiles
+
+Launch truth lives in [`configs/profiles/<catalog-slug>/`](configs/profiles/):
+a shared `model.json` (artifact digests, engines, backend support) plus one
+profile per backend and RAM tier. [`configs/hardware-matrix.json`](configs/hardware-matrix.json)
+records the host classes, memory tiers, usable-memory formulas, and every
+infeasible cell with its reason. The schema and rules are in
+[`docs/PROFILE-SCHEMA.md`](docs/PROFILE-SCHEMA.md).
+
+```bash
+scripts/04_host_facts.py                                  # describe this machine
+scripts/92_resolve_profile.py list                        # what this host can serve
+scripts/92_resolve_profile.py check --profile <model>/<profile>   # fit + digests
+scripts/93_profile_serve.sh --profile <model>/<profile> start     # dev serving
+```
+
+Profiles carry a status: `qualified` (measured, evidence linked) or
+`estimated` (feasibility computed from weight sizes and measured KV rates —
+never a performance claim). Estimated profiles are promoted by running the
+gate suite on the target hardware; the procedure is
+[`docs/QUALIFY-OFFHOST.md`](docs/QUALIFY-OFFHOST.md). Production switching on
+the reference host renders from the same profiles
+(`scripts/52_engine_switch.sh`).
 
 ## Model integration queue
 
@@ -98,159 +125,92 @@ being qualified rather than a secondary fallback.
 
 ## Current model status and measurements
 
-> **Weights changed 2026-08-09.** The serving endpoint now loads
-> [DeepSeek-V4-Flash-0731](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
-> (unsloth UD-Q2_K_XL, revision `fbbb5b93`). Every measurement in the table below
-> predates that swap and was taken on the previous release — treat them as the
-> incumbent baseline, not as 0731 results. What has been verified for 0731 is
-> bring-up only: weight integrity including full SHA-256, memory admission,
-> health, two slots at 524,288 tokens each, and golden correctness 10/10
-> ([bring-up record](results/dsv4-0731-staging/bringup-llamacpp-2026-08-09.json)).
-> Token parity passes (`exact-ids`) and golden correctness is 11/11. Accuracy has
-> been re-run under the baselines' own non-thinking contract on the serving arm:
-> GSM8K dev 97/100 (parity with the 97/100 baseline) and MMLU-Pro dev 188/253
-> against 197/253 — nine items down, with overlapping Wilson intervals and
-> comparable invalid counts (15 vs 16), so it is a point-estimate regression under
-> a contract this model is not meant to run in. Speed, soak, holdout, and context
-> qualification have **not** been re-run, so 0731 is **not qualified**.
->
-> 0731 emits reasoning content by default, which changes the generation contract
-> these baselines were measured under; golden checks had to be made reasoning-aware
-> before they would score it correctly, and thinking is now the harness default.
->
-> **There is no local rollback path.** The `*.gguf.pre0731` anchors were deleted at
-> owner instruction on 2026-08-09. Reverting requires re-fetching
-> `unsloth/DeepSeek-V4-Flash-GGUF` at revision `e3aa0d6a`; the shard digests needed
-> to verify that fetch are in the git history of
-> `weights/unsloth-ud-q2_k_xl/manifest.json` at `72d1db7^`. No rollback has been
-> executed or verified end-to-end. The two pre-0731 copies under
-> `/var/lib/dsv4-context/models/` are not a rollback path — see
-> [the accounting record](results/dsv4-0731-staging/thinking-default-and-disk-2026-08-09.json).
-
-Status below is current as of 2026-08-19. Only DeepSeek V4 Flash and GLM-5.2 on
-CUDA are actively worked on; every other model/backend combination is N/A until
-someone qualifies it. A dash means this repository does not yet contain a
-qualifying measurement — it does not mean zero. Context size materially changes
-TTFT and prefill, so every number includes its measured prompt size. These are
-single-user measurements, not concurrency throughput. Performance cells use the
-fastest measured production path with diagnostics disabled. Evidence-mode,
-control-configuration, instrumented, smoke, and one-token diagnostic timings are
-kept in the evidence archive but never substituted for headline model speed.
+Status below is current as of 2026-08-19. Four models are qualified on the
+CUDA reference host: Qwen 3.8 27B (`qwen38-1m` is the current serving default,
+owner decision 2026-08-21), DeepSeek V4 Flash (the safe fallback the switch
+restores to), and Laguna S 2.1 and GLM-5.2 as switchable engines. Every other
+model/backend combination is N/A until someone qualifies it. A dash means this repository
+does not yet contain a qualifying measurement — it does not mean zero. Context
+size materially changes TTFT and prefill, so every number includes its
+measured prompt size. These are single-user measurements, not concurrency
+throughput. Performance cells use the fastest measured production path with
+diagnostics disabled. Evidence-mode, control-configuration, instrumented,
+smoke, and one-token diagnostic timings are kept in the evidence archive but
+never substituted for headline model speed.
 
 ### Claim progress
 
 | Model | Hardware / format | Context | Prefill t/s | Decode t/s | TTFT | Warm / short-prompt TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | NVIDIA GB10 DGX Spark; UD-Q2_K_XL; llama.cpp | **1,000,044 tokens processed** with a `1,048,576` cap (qualified single-slot profile); installed default serves a `1,048,576` cap split across two 512k slots | **484.989 tok/s @ 4K**; **472.834 tok/s @ 16K**; **445.501 tok/s @ 28K** | **18.615 tok/s @ 4K**; **18.043 tok/s @ 16K**; **17.306 tok/s @ 28K** | **8.555 s @ 4K**; **34.761 s @ 16K**; **64.478 s @ 28K** | **0.421 s @ 52-token prompt**; agent-shaped cached turns process ~17 tokens ([agent-gate](results/agent-gate-2026-08-01.json)) | GSM8K holdout **97.00%** (97/100); MMLU-Pro holdout **74.09%** (183/247); HumanEval **73.78%** (121/164); composite **81.62%** | Qualified CUDA default. Speed values are the 2026-08-01 five-rep suite on the installed 1M-fast profile (ub/b=2048, two 512k slots, owner-accepted 8 GiB watchdog floor — see the unit file history). Direct 1M retrieval, negative control, generation, and safety checks passed on the single-slot ub=256 profile (>14 GiB at the low point), which remains available via the engine switch; the installed default caps a single request at 512k tokens. The displayed latency/throughput measurements are the ≤28K suite, not a 1M speed claim. The 52-token result is a short-prompt baseline, not proof of a restored 1M prefix. |
-| **GLM-5.2** | NVIDIA GB10 DGX Spark; full 256-expert model, dense Q4_0 + routed IQ2_XXS, direct-slot expert cache (owner-accepted candidate 2026-08-18) | Fast profile configured for **32,768 tokens**; direct 1M not yet qualified | — (28K bench cell not strict-valid: GLM THINKING token accounting; measured ~41 tok/s recorded in [the qualification bundle](results/glm52-gates/fullq4-qualification-2026-08-18/summary.md)) | **3.28 tok/s** (qualified diagnostics-off bench, shallow context); 28K cell — (same caveat; measured 2.27–2.77) | — | **21.5 s** warm short-prompt (second rep; residual cache warming in rep 1) | Full 100-case suite: mean NLL **0.5139**, hosted-reference top-1 **82.9%** (full-Q8 reference: 0.4672 / 83.4%) | Switchable production candidate (`scripts/52_engine_switch.sh glm52`), not the serving default. Decode improved 2.33→3.28 (shallow) via direct-slot dispatch + Q4_0 dense; fidelity delta owner-accepted. Expert prune, prefetch, GPU directory, and two kernel widenings were measured and rejected/neutral (see results/glm52-gates/). Remaining levers are multi-day kernel projects; parity with DSV4 is recorded as not achievable on this hardware. |
-| **Qwen 3.8 27B** | NVIDIA GB10 DGX Spark; Q4_K_M GGUF + mmproj-f16; mainline llama.cpp b10488 | Fast profile configured for **32,768 tokens** (native 262,144; 4×262K-slot profile planned) | **698.7 tok/s @ 28K** | **17.46 tok/s @ 0-ctx**; **26.71 tok/s @ 28K** (production MTP profile n-max 8, p-min 0.6 — code-tuned, greedy-exact-validated) | **49.75 s @ 28K** | **0.39 s** short prompt | GSM8K holdout **98.00%** (98/100); MMLU-Pro holdout **85.02%** (210/247); HumanEval **79.27%** (130/164); MMMU-val-100 vision **64%** (0 transport errors) — reasoning effort low, 16384-token budget | Qualified switchable engine (`scripts/52_engine_switch.sh qwen38`), not the serving default. All cells strict-valid diagnostics-off ([speed](results/qwen38-gates/speed-2026-08-18/), [tune](results/qwen38-gates/tune-2026-08-19/summary.md), [accuracy](results/qwen38-gates/accuracy-2026-08-18/summary.md), [vision](results/qwen38-gates/vision-2026-08-19/summary.md)). MTP is byte-identical under greedy; deep-context decode exceeds shallow because draft acceptance rises on fixture continuations. Micro-batch prefill sweep null (hybrid GDN); 1M-context (-np 4 native) and SGLang tracks planned. |
-| **Laguna S 2.1** | NVIDIA GB10 DGX Spark; UD-Q4_K_XL GGUF (3 shards) + DFlash BF16 draft; poolside llama.cpp fork `laguna` @ 06f8cebd | Qualified profile serves **393,216 tokens** as four native 98,304-token slots (1M native declined: measured 52.8 KiB/token f16 KV does not fit beside 73.4 GB weights; 524,288 breached the 8 GiB watchdog floor under sustained load) | **622.4 tok/s @28K** | **25.55 tok/s @0**; **27.52 tok/s @28K** (strict cells on the switch-launched production shape, DFlash n-max 4; raw decode without the draft is 20.97 @28K; code probes 28-45 tok/s acceptance-dependent) | **57.16 s @28K** | **0.60 s** short-prompt | GSM8K holdout **86.00%** (86/100); MMLU-Pro holdout **63.56%** (157/247; 64 of 90 misses are 16,384-token max-thinking truncations); HumanEval **89.63%** (147/164 — best on this host, +10.4 over the qwen default); tool-call probe 14/20 vs qwen38-1m 19/20 on the same harness | Qualified CUDA **switchable engine — NOT the serving default** (owner decision 2026-08-21; qwen38-1m remains default). Switch in with `sudo scripts/52_engine_switch.sh laguna`, back with `... qwen38-1m`. Thinking `max` is the model default and self-budgets: math/knowledge suites are truncation-sensitive at the repo's 16,384-token budget; code strength is the qualification case. Evidence: results/laguna-gates/ (G1-G5), hashes pinned in configs/laguna-production-profile.json. |
+| **DeepSeek V4 Flash** | NVIDIA GB10 DGX Spark; UD-Q2_K_XL; llama.cpp | **1,000,044 tokens processed** with a `1,048,576` cap (qualified single-slot profile); installed default serves a `1,048,576` cap split across two 512k slots | **484.989 tok/s @ 4K**; **472.834 tok/s @ 16K**; **445.501 tok/s @ 28K** | **18.615 tok/s @ 4K**; **18.043 tok/s @ 16K**; **17.306 tok/s @ 28K** | **8.555 s @ 4K**; **34.761 s @ 16K**; **64.478 s @ 28K** | **0.421 s @ 52-token prompt**; agent-shaped cached turns process ~17 tokens ([agent-gate](results/agent-gate-2026-08-01.json)) | GSM8K holdout **97.00%** (97/100); MMLU-Pro holdout **74.09%** (183/247); HumanEval **73.78%** (121/164); composite **81.62%** | Qualified CUDA default; measurements predate the 2026-08-09 weights swap to the 0731 release — see the [DeepSeek notes](#deepseek-v4-flash-notes) below. Speed values are the 2026-08-01 five-rep suite on the installed 1M-fast profile (ub/b=2048, two 512k slots, owner-accepted 8 GiB watchdog floor). Direct 1M retrieval, negative control, generation, and safety checks passed on the single-slot ub=256 profile, which remains available via the engine switch; the installed default caps a single request at 512k tokens. The displayed latency/throughput measurements are the ≤28K suite, not a 1M speed claim. |
+| **GLM-5.2** | NVIDIA GB10 DGX Spark; full 256-expert model, dense Q4_0 + routed IQ2_XXS, direct-slot expert cache (owner-accepted candidate 2026-08-18) | Fast profile configured for **32,768 tokens**; direct 1M not yet qualified | — (28K bench cell not strict-valid: GLM THINKING token accounting; measured ~41 tok/s recorded in [the qualification bundle](results/glm52-gates/fullq4-qualification-2026-08-18/summary.md)) | **3.28 tok/s** (qualified diagnostics-off bench, shallow context); 28K cell — (same caveat; measured 2.27–2.77) | — | **21.5 s** warm short-prompt (second rep; residual cache warming in rep 1) | Full 100-case suite: mean NLL **0.5139**, hosted-reference top-1 **82.9%** (full-Q8 reference: 0.4672 / 83.4%) | Switchable production candidate (`scripts/52_engine_switch.sh glm52`), not the serving default. Decode improved 2.33→3.28 (shallow) via direct-slot dispatch + Q4_0 dense; fidelity delta owner-accepted. Expert prune, prefetch, GPU directory, and two kernel widenings were measured and rejected/neutral (see results/glm52-gates/). Remaining levers are multi-day kernel projects; parity with DSV4 is recorded as not achievable on this hardware. Spark-only: the engine is a repo-locally patched ds4 CUDA binary with no portable equivalent. |
+| **Qwen 3.8 27B** | NVIDIA GB10 DGX Spark; Q4_K_M GGUF + mmproj-f16; mainline llama.cpp b10488 | Fast profile configured for **32,768 tokens**; 1M profile (`qwen38-1m`) serves 1,048,576 as four native 262K slots | **698.7 tok/s @ 28K** | **17.46 tok/s @ 0-ctx**; **26.71 tok/s @ 28K** (production MTP profile n-max 8, p-min 0.6 — code-tuned, greedy-exact-validated) | **49.75 s @ 28K** | **0.39 s** short prompt | GSM8K holdout **98.00%** (98/100); MMLU-Pro holdout **85.02%** (210/247); HumanEval **79.27%** (130/164); MMMU-val-100 vision **64%** (0 transport errors) — reasoning effort low, 16384-token budget | Qualified switchable engine (`scripts/52_engine_switch.sh qwen38` / `qwen38-1m`). All cells strict-valid diagnostics-off ([speed](results/qwen38-gates/speed-2026-08-18/), [tune](results/qwen38-gates/tune-2026-08-19/summary.md), [accuracy](results/qwen38-gates/accuracy-2026-08-18/summary.md), [vision](results/qwen38-gates/vision-2026-08-19/summary.md)). MTP is byte-identical under greedy; deep-context decode exceeds shallow because draft acceptance rises on fixture continuations. |
+| **Laguna S 2.1** | NVIDIA GB10 DGX Spark; UD-Q4_K_XL GGUF (3 shards) + DFlash BF16 draft; poolside llama.cpp fork `laguna` @ 06f8cebd | Qualified profile serves **393,216 tokens** as four native 98,304-token slots (1M native declined: measured 52.8 KiB/token f16 KV does not fit beside 73.4 GB weights; 524,288 breached the 8 GiB watchdog floor under sustained load) | **622.4 tok/s @28K** | **25.55 tok/s @0**; **27.52 tok/s @28K** (strict cells on the switch-launched production shape, DFlash n-max 4; raw decode without the draft is 20.97 @28K; code probes 28-45 tok/s acceptance-dependent) | **57.16 s @28K** | **0.60 s** short-prompt | GSM8K holdout **86.00%** (86/100); MMLU-Pro holdout **63.56%** (157/247; 64 of 90 misses are 16,384-token max-thinking truncations); HumanEval **89.63%** (147/164 — best on this host, +10.4 over the qwen default); tool-call probe 14/20 vs qwen38-1m 19/20 on the same harness | Qualified CUDA **switchable engine — NOT the serving default** (owner decision 2026-08-21; qwen38-1m remains default). Switch in with `sudo scripts/52_engine_switch.sh laguna`, back with `... qwen38-1m`. Thinking `max` is the model default and self-budgets: math/knowledge suites are truncation-sensitive at the repo's 16,384-token budget; code strength is the qualification case. Evidence: results/laguna-gates/ (G1-G5). |
 
-DeepSeek performance values come from the five-repetition
-[speed suite](results/speed-llamacpp.json), re-run 2026-08-01 on the installed
-1M-fast profile. Results from superseded slower profiles remain in their raw
-evidence files and are intentionally omitted here. The 1M capability result and
-the ≤28K performance suite answer different questions and must not be combined
-into an implied 1M throughput figure.
+Production traffic follows
+`Tailscale Serve → Caddy :8010 → authenticated streaming helper :8014 → engine :8013`.
+The engine port is set by `scripts/52_engine_switch.sh` (`PORT=8013`). Listeners
+are loopback-only, Funnel is forbidden, credentials are stripped before the
+engine, and a watchdog protects unified CPU/GPU memory from a whole-system
+freeze.
 
-**0731 on the ds4 arm (not the serving path).** The banner above covers the
-llama.cpp endpoint, which is what this box actually serves per
-[DECISION-OVERRIDE](results/DECISION-OVERRIDE.md). The rest of this section
-records the separate 0731 evaluation on the **ds4** engine, which is retained as
-the fast small-context alternative (≤~28K prompt tokens) and is not the serving
-path. Its findings are what established that 0731 requires thinking enabled.
+### DeepSeek V4 Flash notes
 
-The [0731 release](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
-was fetched for both arms — the ds4 lineage
-([pin](configs/pins/antirez-imatrix-0731.json)) and the llama.cpp lineage
-([pin](configs/pins/unsloth-ud-q2_k_xl-0731.json)) — every file verified
-against its published SHA-256, and the ds4 lineage
-[serves and generates](results/dsv4-0731-staging/bringup-2026-08-09.json) on the
-`mtp` profile. A partial qualification run
-([comparison](results/dsv4-0731-staging/comparison-2026-08-09.json)) measured it
-against the v0.4.2 `dspark` baseline under each baseline's own recorded
-generation contract:
+The serving endpoint has loaded the
+[0731 release](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
+(unsloth UD-Q2_K_XL, revision `fbbb5b93`) since 2026-08-09; every measurement in
+the table above predates that swap and is the incumbent baseline, not a 0731
+result. 0731 is the installed default **and** it is not qualified — both are
+true: bring-up, weight integrity, token parity, golden correctness (11/11), and
+dev-split accuracy re-runs are recorded, but speed, soak, holdout, and context
+qualification have not been re-run. Key records:
 
-| Check | 0731 | v0.4.2 baseline |
-| --- | ---: | ---: |
-| Golden correctness | 10 / 10 | 10 / 10 |
-| Decode @ 52-token prompt | **21.630 tok/s** | 19.153 tok/s |
-| Decode @ 4K | **19.742 tok/s** | 18.739 tok/s |
-| Decode @ 16K | **19.172 tok/s** | 16.175 tok/s |
-| GSM8K dev | 97 / 100 | 98 / 100 |
-| MMLU-Pro dev | 178 / 253 | 192 / 253 |
-| HumanEval | not run | 147 / 164 |
-
-The speed suite is `suite_valid=true` across all fifteen reps and is faster at
-every context. Accuracy was measured with `enable_thinking: false`, matching the
-baselines' recorded `extra_body`; an earlier run that left it unset scored GSM8K
-94/100 purely from that mismatch, so the contract is now asserted before any
-delta is reported. GSM8K is parity (overlapping Wilson intervals). **MMLU-Pro is
-a genuine 5.5-point regression**: a failure-mode breakdown attributes ten of the
-fourteen lost items to incorrect answers rather than parse failures, and output
-lengths are nearly identical (median 56 vs 60 tokens), so it is not a formatting
-or truncation artifact. Forcing non-thinking on a release whose stated
-improvements are in reasoning may itself be the wrong contract for 0731; 0731
-with thinking enabled has not been measured against anything.
-
-**0731 is the installed default as of 2026-08-09, and it is not qualified.** Those
-are separate statements and both are true: the owner directed the swap on a box
-carrying no traffic, so 0731 is what the endpoint serves, while the evidence
-required by `scripts/34_decision.py` has not been produced for it. The table above
-is the **ds4** arm under the non-thinking contract and predates the swap.
-
-Thinking is the serving contract for 0731. The endpoint emits `reasoning_content`
-with no request flag on both engines, so `scripts/31_bench_accuracy.py` defaults to
-`--thinking-mode thinking` as of 2026-08-09; reproducing any pre-0731 baseline now
-requires passing `--thinking-mode chat` explicitly. HumanEval
-has not run (its harness pins a Docker-image runtime digest and the account
-lacks docker group membership), and no holdout, token-parity, soak, or
-agent-gate evidence exists. Three further findings are recorded: the MTP weights
-are byte-identical across the release; no 0731 DSpark drafter exists in any
-published repository, so the `dspark` profile cannot start; and one GSM8K item
-returned `completion_tokens=0` with `finish_reason=stop` on a 69-token prompt,
-reproduced by the harness fallback retry.
+- [Bring-up + accuracy comparison](results/dsv4-0731-staging/bringup-llamacpp-2026-08-09.json)
+  — GSM8K dev at parity; MMLU-Pro dev showed a point-estimate regression under
+  the non-thinking contract this reasoning model is not meant to run in.
+- Thinking is the 0731 serving contract: the endpoint emits `reasoning_content`
+  unconditionally, so `scripts/31_bench_accuracy.py` defaults to
+  `--thinking-mode thinking`; reproducing a pre-0731 baseline requires
+  `--thinking-mode chat` explicitly.
+- **No verified local rollback path exists.** The pre-0731 anchors were deleted
+  at owner instruction; re-fetch digests live in the git history of
+  `weights/unsloth-ud-q2_k_xl/manifest.json` — see
+  [the accounting record](results/dsv4-0731-staging/thinking-default-and-disk-2026-08-09.json).
+- A separate 0731 evaluation on the **ds4** engine arm (the fast ≤28K
+  alternative, not the serving path) is preserved in
+  [results/dsv4-0731-staging/comparison-2026-08-09.json](results/dsv4-0731-staging/comparison-2026-08-09.json);
+  the historical engine decision and its override are
+  [results/DECISION.md](results/DECISION.md) and
+  [results/DECISION-OVERRIDE.md](results/DECISION-OVERRIDE.md).
 
 DeepSeek task accuracy is the audited llama.cpp result in
 [results/DECISION.md](results/DECISION.md). GLM fidelity is the teacher-forced
 comparison with a hosted FP8 reference in
-[results/glm52-gates/G4-bench.json](results/glm52-gates/G4-bench.json). These
-measure different things: GLM's top-1 agreement and log-probability error are
-diagnostic fidelity measurements, not task accuracy or qualification. Live
-campaign values are excluded until the fixed scorer publishes a complete
-result.
-
-DeepSeek's older frozen ≤28K engine comparison selected `entrpi/ds4-on-spark`
-over upstream llama.cpp on composite accuracy and speed. The product profile
-uses llama.cpp because long context is the priority; the older benchmark remains
-unchanged in [results/DECISION.md](results/DECISION.md), with the rationale in
-[results/DECISION-OVERRIDE.md](results/DECISION-OVERRIDE.md).
-
-Production traffic follows
-`Tailscale Serve → Caddy :8010 → authenticated streaming helper :8014 → llama.cpp :8013`.
-The engine port is set by `scripts/52_engine_switch.sh` (`PORT=8013`), which overrides
-the launcher's own `DSV4_PORT` default of 8011; 8013 is what is actually listening.
-Listeners are loopback-only, Funnel is forbidden, credentials are stripped
-before the engine, and a watchdog protects unified CPU/GPU memory from a
-whole-system freeze.
+[results/glm52-gates/G4-bench.json](results/glm52-gates/G4-bench.json) —
+diagnostic fidelity, not task accuracy or qualification.
 
 ### Other backends
 
-No other backend has a repository-qualified measurement yet — every cell that
-would appear below is N/A, and every row is open to pull requests. The same
-evidence, largest-context, safety, authentication, switching, and rollback
-expectations apply, adapted to each platform's memory and service controls.
+No other backend has a repository-qualified measurement yet — every row is open
+to pull requests. Estimated profiles for Apple Silicon, discrete CUDA GPUs,
+Strix Halo, and CPU already exist under [`configs/profiles/`](configs/profiles/)
+with computed memory budgets and recommended quantizations per RAM tier;
+qualifying one on real hardware follows
+[`docs/QUALIFY-OFFHOST.md`](docs/QUALIFY-OFFHOST.md). The same evidence,
+largest-context, safety, authentication, switching, and rollback expectations
+apply, adapted to each platform's memory and service controls.
 
 | Backend | Hardware notes | Status |
 | --- | --- | --- |
-| Apple Silicon | MLX, Metal, or llama.cpp Metal. | N/A — open to pull requests |
-| AMD Strix Halo | Zen 5 + RDNA 3.5 iGPU (`gfx1151`) via ROCm/HIP, up to 128 GB shared LPDDR5X at 256 GB/s. See AMD's [processor specifications](https://www.amd.com/en/products/processors/desktops/ryzen/ryzen-ai-halo/ryzen-ai-max-plus-395.html) and [ROCm system guidance](https://rocm.docs.amd.com/en/latest/how-to/system-optimization/strixhalo.html). | N/A — open to pull requests |
+| Apple Silicon | MLX, Metal, or llama.cpp Metal. Estimated profiles cover 32-192 GB unified memory; 16 GB needs a smaller quant artifact (see the matrix). | Estimated profiles — open to pull requests |
+| AMD Strix Halo | Zen 5 + RDNA 3.5 iGPU (`gfx1151`) via ROCm/HIP, up to 128 GB shared LPDDR5X at 256 GB/s. See AMD's [processor specifications](https://www.amd.com/en/products/processors/desktops/ryzen/ryzen-ai-halo/ryzen-ai-max-plus-395.html) and [ROCm system guidance](https://rocm.docs.amd.com/en/latest/how-to/system-optimization/strixhalo.html). | Estimated profiles — open to pull requests |
 | AMD discrete ROCm | Radeon, Radeon Pro, and Instinct with dedicated VRAM; verify against AMD's [compatibility matrix](https://rocm.docs.amd.com/en/develop/compatibility/compatibility-matrix.html). Multi-card and host-RAM offload setups need their own profiles. | N/A — open to pull requests |
+| NVIDIA discrete CUDA | GeForce/RTX with 8-32 GB VRAM; estimated profiles use computed layer offload (small models) or MoE-on-CPU (large sparse models, 128 GB system RAM). | Estimated profiles — open to pull requests |
 | NVIDIA Jetson Thor | AGX Thor T5000: ARM64 Blackwell, 128 GB unified LPDDR5X at 273 GB/s, CUDA-X/JetPack. See NVIDIA's [specifications](https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/). | N/A — open to pull requests |
 | Intel Xe | Arc Pro B-series via oneAPI/Level Zero, SYCL, or Vulkan; the [Arc Pro B60](https://www.intel.com/content/www/us/en/products/sku/243916/intel-arc-pro-b60-graphics/specifications.html) has 24 GB GDDR6 at 456 GB/s and is multi-GPU Linux ready. | N/A — open to pull requests |
 | Qualcomm Snapdragon X | X2 Elite: ARM64 SoC with Adreno GPU, Hexagon NPU, up to 128+ GB shared LPDDR5X at 228 GB/s. Practical large-model path may be CPU or Vulkan before the NPU is usable by an open engine. See the [product brief](https://www.qualcomm.com/content/dam/qcomm-martech/dm-assets/documents/Snapdragon-X2-Elite-Product-Brief.pdf). | N/A — open to pull requests |
 | Tenstorrent Tensix | Blackhole PCIe cards and QuietBox 2 with the open-source TT-Metalium/TT-NN stack; memory is distributed per device, not unified. See the [card overview](https://tenstorrent.com/en/hardware/cards) and [QuietBox 2 docs](https://docs.tenstorrent.com/tt-quietbox2-guide/first-timer/01-what-just-arrived/). | N/A — open to pull requests |
-| CPU / other Linux accelerators | Start with a measured baseline and roofline; do not assume a CUDA-specific optimization or DGX Spark memory threshold transfers to another machine. | N/A — open to pull requests |
+| CPU / other Linux accelerators | Start with a measured baseline and roofline; do not assume a CUDA-specific optimization or DGX Spark memory threshold transfers to another machine. | Estimated profiles — open to pull requests |
 
 Contributions must record the exact hardware (device, per-card memory, PCIe or
 interconnect topology), OS/kernel and driver or toolkit versions, backend,
@@ -261,6 +221,9 @@ throughput includes inter-device transfers.
 
 - [REPRODUCING.md](REPRODUCING.md) gives the pinned host, build, benchmark, audit, and
   `llamacpp` production-install sequence.
+- [docs/PROFILE-SCHEMA.md](docs/PROFILE-SCHEMA.md) is the normative profile
+  schema; [docs/QUALIFY-OFFHOST.md](docs/QUALIFY-OFFHOST.md) is the
+  community-hardware qualification procedure.
 - [docs/runbook.md](docs/runbook.md) covers day-2 operation and incidents.
 - [PROTOCOL.md](PROTOCOL.md) defines the frozen evaluation versions.
 - [docs/threat-model.md](docs/threat-model.md) states what the evidence does and does not

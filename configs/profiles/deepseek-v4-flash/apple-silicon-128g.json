@@ -1,0 +1,65 @@
+{
+ "schema_version": 4,
+ "profile_id": "deepseek-v4-flash/apple-silicon-128g",
+ "model": "deepseek-v4-flash",
+ "backend": "apple-silicon",
+ "hardware_class": "mac",
+ "ram_tier_gib": 128,
+ "status": {
+  "state": "estimated",
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "engine": "llamacpp-base",
+ "artifact_roles": {
+  "model": "udq2kxl"
+ },
+ "launch": {
+  "mechanism": "setsid-watchdog-portable",
+  "log_name": "apple-silicon-128g",
+  "env": {},
+  "diagnostics_unset": [],
+  "args": [
+   "--model",
+   "{model}",
+   "-ngl",
+   "99",
+   "-fa",
+   "on",
+   "--no-mmap",
+   "-c",
+   "262144",
+   "--parallel",
+   "1",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--alias",
+   "deepseek-v4-flash",
+   "--cache-reuse",
+   "256"
+  ]
+ },
+ "safety": {
+  "kill_floor_gib": 10,
+  "minimum_start_gib": 100,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 7066,
+  "overhead_gib": 3.0,
+  "extra_gib": 0,
+  "floor_gib": 10,
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "context_cap": 262144,
+ "port_role": "production",
+ "bench": {
+  "stack_label": "deepseek-v4-flash-apple-silicon-mac-128g"
+ },
+ "verify_on_hardware": [
+  "raised-wired-limit (fit ~95 GiB against ~96 GiB usable)"
+ ],
+ "purpose": "90.2 GiB weights leave almost no headroom at the default Metal wired limit; decode_baseline: pre-fusion"
+}

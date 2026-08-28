@@ -1,0 +1,71 @@
+{
+ "schema_version": 4,
+ "profile_id": "qwen3.8-27b/cpu-32g",
+ "model": "qwen3.8-27b",
+ "backend": "cpu",
+ "hardware_class": "any",
+ "ram_tier_gib": 32,
+ "status": {
+  "state": "estimated",
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "engine": "llamacpp-qwen38-portable",
+ "artifact_roles": {
+  "model": "q4km"
+ },
+ "launch": {
+  "mechanism": "setsid-watchdog-portable",
+  "log_name": "cpu-32g",
+  "env": {},
+  "diagnostics_unset": [],
+  "args": [
+   "--model",
+   "{model}",
+   "-ngl",
+   "0",
+   "-fa",
+   "on",
+   "-c",
+   "16384",
+   "--parallel",
+   "1",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--alias",
+   "qwen3.8-27b",
+   "--spec-type",
+   "draft-mtp",
+   "--spec-draft-n-max",
+   "8",
+   "--spec-draft-p-min",
+   "0.6",
+   "--chat-template-kwargs",
+   "{\"reasoning_effort\":\"low\"}",
+   "--cache-reuse",
+   "256"
+  ]
+ },
+ "safety": {
+  "kill_floor_gib": 8,
+  "minimum_start_gib": 26,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 65536,
+  "overhead_gib": 3.0,
+  "extra_gib": 0,
+  "floor_gib": 8,
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "context_cap": 16384,
+ "port_role": "production",
+ "bench": {
+  "stack_label": "qwen3.8-27b-cpu-any-32g"
+ },
+ "verify_on_hardware": [
+  "cpu-throughput (dense 27B: expect low single-digit tok/s)"
+ ]
+}

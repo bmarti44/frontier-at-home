@@ -1,0 +1,52 @@
+{
+ "schema_version": 4,
+ "profile_id": "qwen3.8-27b/cuda-spark-128g",
+ "extends": "_base-cuda-spark.json",
+ "purpose": "Production switch profile for Qwen3.8-27B Q4_K_M with the 2026-08-19 code-workload MTP winner (n8 p0.6); greedy-exact validated (3/3 byte-identical) same day",
+ "status": {
+  "state": "qualified",
+  "decision": "code_workload_winner_greedy_exact_validated",
+  "qualified_at": "2026-08-19",
+  "evidence": "results/qwen38-gates/tune-2026-08-19/"
+ },
+ "launch": {
+  "log_name": "qwen38",
+  "args": [
+   "--model", "{model}",
+   "-ngl", "99",
+   "-fa", "on",
+   "--no-mmap",
+   "-c", "32768",
+   "--mmproj", "{mmproj}",
+   "--parallel", "1",
+   "--host", "127.0.0.1",
+   "--port", "{port}",
+   "--alias", "qwen3.8-27b",
+   "--spec-type", "draft-mtp",
+   "--spec-draft-n-max", "8",
+   "--spec-draft-p-min", "0.6",
+   "--chat-template-kwargs", "{\"reasoning_effort\":\"low\"}",
+   "--cache-reuse", "256"
+  ]
+ },
+ "containment": {
+  "memory_high": "45G",
+  "memory_max": "50G"
+ },
+ "safety": {
+  "kill_floor_gib": 18,
+  "minimum_start_gib": 100,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 65536,
+  "overhead_gib": 6.0,
+  "extra_gib": 0,
+  "floor_gib": 18,
+  "basis": "kv measured ~66 GB at 1M ctx f16 (results/qwen38-gates/trackc-1m-np4-2026-08-19/)"
+ },
+ "context_cap": 32768,
+ "bench": {"stack_label": "qwen38-q4km-mtp"},
+ "switch_alias": "qwen38"
+}

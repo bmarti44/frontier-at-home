@@ -1,0 +1,67 @@
+{
+ "schema_version": 4,
+ "profile_id": "deepseek-v4-flash/cuda-dgpu-12g",
+ "model": "deepseek-v4-flash",
+ "backend": "cuda",
+ "hardware_class": "dgpu",
+ "ram_tier_gib": 12,
+ "status": {
+  "state": "estimated",
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "engine": "llamacpp-base",
+ "artifact_roles": {
+  "model": "udq2kxl"
+ },
+ "launch": {
+  "mechanism": "setsid-watchdog-portable",
+  "log_name": "cuda-dgpu-12g",
+  "env": {},
+  "diagnostics_unset": [],
+  "args": [
+   "--model",
+   "{model}",
+   "-ngl",
+   "99",
+   "-fa",
+   "on",
+   "-c",
+   "32768",
+   "-ot",
+   "exps=CPU",
+   "--parallel",
+   "1",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--alias",
+   "deepseek-v4-flash",
+   "--cache-reuse",
+   "256"
+  ]
+ },
+ "safety": {
+  "kill_floor_gib": 8,
+  "minimum_start_gib": 100,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 7066,
+  "overhead_gib": 3.0,
+  "extra_gib": 0,
+  "floor_gib": 8,
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "context_cap": 32768,
+ "port_role": "production",
+ "bench": {
+  "stack_label": "deepseek-v4-flash-cuda-dgpu-12g"
+ },
+ "min_system_ram_gib": 128,
+ "verify_on_hardware": [
+  "moe-on-cpu-throughput (13B active streamed from host RAM)"
+ ],
+ "purpose": "one profile covers 12-32 GiB VRAM: dense layers on GPU, experts on CPU; decode_baseline: pre-fusion"
+}

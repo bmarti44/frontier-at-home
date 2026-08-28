@@ -1,0 +1,53 @@
+{
+ "schema_version": 1,
+ "alias": "laguna",
+ "mechanism": "systemd-run",
+ "binary": "/home/bmarti44/.cache/llamacpp-laguna-06f8cebd/src/build/bin/llama-server",
+ "argv": [
+  "--model",
+  "/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf",
+  "-ngl",
+  "99",
+  "-fa",
+  "on",
+  "--no-mmap",
+  "-c",
+  "393216",
+  "-md",
+  "/home/bmarti44/models/laguna-s-2.1/poolside/laguna-s-2.1-DFlash-BF16.gguf",
+  "--parallel",
+  "4",
+  "--host",
+  "127.0.0.1",
+  "--port",
+  "8013",
+  "--alias",
+  "laguna-s-2.1",
+  "--spec-type",
+  "draft-dflash",
+  "--spec-draft-n-max",
+  "4",
+  "--jinja",
+  "--chat-template-kwargs",
+  "{\"enable_thinking\":true}",
+  "--cache-reuse",
+  "256"
+ ],
+ "env": {},
+ "systemd": {
+  "unit": "laguna-engine",
+  "properties": {
+   "Type": "exec",
+   "User": "bmarti44",
+   "MemoryHigh": "88G",
+   "MemoryMax": "95G",
+   "MemorySwapMax": "0",
+   "OOMPolicy": "kill",
+   "KillMode": "control-group",
+   "Delegate": "no",
+   "NoNewPrivileges": "yes"
+  },
+  "server_log": "/home/dsv4/ds4-project/engine-switch/laguna.server.log",
+  "flock": "/run/lock/frontier-at-home/inference.lock"
+ }
+}

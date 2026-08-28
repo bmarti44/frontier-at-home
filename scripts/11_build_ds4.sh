@@ -4,10 +4,13 @@ umask 077
 
 usage() {
     cat <<'EOF'
-Usage: 11_build_ds4.sh [--help]
+Usage: 11_build_ds4.sh [--host-class CLASS] [--cuda-arch N] [--rocm-arch gfxNNNN] [--help]
 
-Build the pinned ds4 engine with the official GB10 cuda-spark target, verify
-the resulting CUDA architecture and binaries, and write a build manifest.
+Build the pinned ds4 engine and write a build manifest. The default host
+class cuda-spark uses the official GB10 Makefile target with the sm_121
+assertion intact; cuda-generic|metal|rocm|cpu dispatch to the ds4 Makefile
+targets that already exist upstream (cuda-generic, the Darwin default Metal
+target, strix-halo, cpu). See scripts/lib/build_host_class.sh.
 EOF
 }
 
@@ -21,14 +24,8 @@ die_env() {
     exit 2
 }
 
-if (( $# > 1 )); then
-    usage >&2
-    exit 2
-fi
 case "${1:-}" in
-    '') ;;
     -h|--help) usage; exit 0 ;;
-    *) usage >&2; exit 2 ;;
 esac
 
 [[ -n "${HOME:-}" ]] || die_env 'HOME is not set'
@@ -39,9 +36,26 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)" \
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd -P)" \
     || die_env 'cannot resolve repository root'
 PIN_FILE="$REPO_ROOT/configs/pins/ds4-weights.json"
-BUILD_COMMAND='make -C $SRC_DIR -j$(nproc) cuda-spark'
+# shellcheck source=lib/build_host_class.sh
+source "$SCRIPT_DIR/lib/build_host_class.sh"
+build_host_class_parse "$@"
+(( ${#BUILD_HOST_CLASS_ARGS[@]} == 0 )) || { usage >&2; exit 2; }
+case $BUILD_HOST_CLASS in
+    cuda-spark) MAKE_TARGET=cuda-spark ;;
+    cuda-generic)
+        if [[ $BUILD_CUDA_ARCH == native ]]; then
+            MAKE_TARGET=cuda-generic
+        else
+            MAKE_TARGET="cuda CUDA_ARCH=sm_$BUILD_CUDA_ARCH"
+        fi
+        ;;
+    metal) MAKE_TARGET=all ;;  # Darwin default target builds Metal upstream
+    rocm) MAKE_TARGET=strix-halo ;;
+    cpu) MAKE_TARGET=cpu ;;
+esac
+BUILD_COMMAND="make -C \$SRC_DIR -j\$(nproc) $MAKE_TARGET"
 
-for command_name in python3 git make nproc sha256sum gcc uname; do
+for command_name in python3 git make sha256sum gcc uname; do
     command -v "$command_name" >/dev/null 2>&1 \
         || die_env "required command not found: $command_name"
 done
@@ -60,7 +74,8 @@ PY
 )" || die_env "failed to parse pin file: $PIN_FILE"
 [[ "$engine_commit" =~ ^[0-9a-f]{40}$ ]] || die_env 'invalid engine commit pin'
 
-[[ "$(uname -m)" == aarch64 ]] || die_env 'this build requires uname -m to report aarch64'
+[[ $BUILD_HOST_CLASS != cuda-spark || "$(uname -m)" == aarch64 ]] \
+    || die_env 'this build requires uname -m to report aarch64 (pass --host-class to build elsewhere)'
 [[ -d "$SRC_DIR" ]] || die_build "engine source directory is absent: $SRC_DIR"
 actual_commit="$(git -C "$SRC_DIR" rev-parse HEAD 2>/dev/null)" \
     || die_build "cannot read engine HEAD: $SRC_DIR"
@@ -73,18 +88,20 @@ engine_describe=$(git -C "$SRC_DIR" describe --always --dirty) \
 [[ $engine_describe != *-dirty ]] \
     || die_build "engine worktree describe reports dirty: $engine_describe"
 
-export PATH="/usr/local/cuda/bin:$PATH"
-command -v nvcc >/dev/null 2>&1 || die_env 'nvcc not found after adding /usr/local/cuda/bin to PATH'
-command -v cuobjdump >/dev/null 2>&1 \
-    || die_env 'cuobjdump not found after adding /usr/local/cuda/bin to PATH'
-nvcc_version="$(nvcc --version)" || die_env 'nvcc --version failed'
-[[ "$nvcc_version" =~ release[[:space:]]13\. ]] \
-    || die_env 'nvcc release must start with 13.'
+build_host_class_require_platform
+nvcc_version="n/a"
+if [[ $BUILD_HOST_CLASS == cuda-spark || $BUILD_HOST_CLASS == cuda-generic ]]; then
+    nvcc_version="$(nvcc --version)" || die_env 'nvcc --version failed'
+fi
 gcc_version="$(gcc --version)" || die_env 'gcc --version failed'
 gcc_version=${gcc_version%%$'\n'*}
+parallelism="$(nproc 2>/dev/null || sysctl -n hw.ncpu)" \
+    || die_env 'cannot determine build parallelism'
 
-printf 'Building pinned engine with cuda-spark target...\n' >&2
-make -C "$SRC_DIR" -j"$(nproc)" cuda-spark >&2 || die_build 'cuda-spark build failed'
+printf 'Building pinned engine with %s target...\n' "$MAKE_TARGET" >&2
+# shellcheck disable=SC2086
+make -C "$SRC_DIR" -j"$parallelism" $MAKE_TARGET >&2 \
+    || die_build "$MAKE_TARGET build failed"
 
 # The target also builds ds4-agent and ds4_weight_server; they must NEVER be
 # executed in service. Serving uses only ds4-server.
@@ -94,11 +111,31 @@ for binary in "${binaries[@]}"; do
         || die_build "required executable is missing: $SRC_DIR/$binary"
 done
 
-set +o pipefail
-elf_head="$(cuobjdump --list-elf "$SRC_DIR/ds4-server" 2>/dev/null | head)"
-set -o pipefail
-[[ "$elf_head" == *sm_121* ]] \
-    || die_build 'ds4-server CUDA objects do not report sm_121'
+case $BUILD_HOST_CLASS in
+    cuda-spark)
+        set +o pipefail
+        elf_head="$(cuobjdump --list-elf "$SRC_DIR/ds4-server" 2>/dev/null | head)"
+        set -o pipefail
+        [[ "$elf_head" == *sm_121* ]] \
+            || die_build 'ds4-server CUDA objects do not report sm_121'
+        arch_observed=sm_121
+        ;;
+    cuda-generic)
+        set +o pipefail
+        elf_head="$(cuobjdump --list-elf "$SRC_DIR/ds4-server" 2>/dev/null | head)"
+        set -o pipefail
+        arch_observed=$(printf '%s\n' "$elf_head" | grep -o 'sm_[0-9]*' | sort -u | tr '\n' ',')
+        [[ -n $arch_observed ]] \
+            || die_build 'ds4-server reports no CUDA sm_ architectures'
+        ;;
+    metal)
+        otool -L "$SRC_DIR/ds4-server" 2>/dev/null | grep -q Metal \
+            || die_build 'ds4-server shows no Metal framework linkage'
+        arch_observed=metal
+        ;;
+    rocm) arch_observed=$BUILD_ROCM_ARCH ;;
+    cpu) arch_observed=cpu ;;
+esac
 "$SRC_DIR/ds4" --help >/dev/null 2>&1 || die_build 'ds4 --help smoke test failed'
 
 hashes=()
@@ -113,20 +150,25 @@ manifest="$DS4_HOME/build-manifest.json"
 manifest_tmp="$manifest.partial"
 python3 - "$manifest_tmp" "$manifest" "$engine_commit" "$engine_describe" "$BUILD_COMMAND" \
     "$nvcc_version" "$gcc_version" "$built_at" \
-    "${hashes[0]}" "${hashes[1]}" "${hashes[2]}" <<'PY' \
+    "${hashes[0]}" "${hashes[1]}" "${hashes[2]}" \
+    "$BUILD_HOST_CLASS" "$(build_host_class_backend)" "$arch_observed" <<'PY' \
     || die_build 'failed to write build manifest'
 import json
 import os
 import sys
 
 (temporary, output, commit, describe, command, nvcc, gcc, built_at,
- ds4_hash, server_hash, bench_hash) = sys.argv[1:]
+ ds4_hash, server_hash, bench_hash, host_class, backend,
+ arch_observed) = sys.argv[1:]
 manifest = {
     "engine_commit": commit,
     "engine_describe": describe,
     "build_command": command,
     "nvcc_version": nvcc,
     "gcc_version": gcc,
+    "backend": backend,
+    "host_class": host_class,
+    "arch_assertion": {"observed": arch_observed},
     "binaries": {
         "ds4": {"sha256": ds4_hash},
         "ds4-server": {"sha256": server_hash},

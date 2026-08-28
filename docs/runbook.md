@@ -248,15 +248,21 @@ product override and the basis of the 1M-context roadmap; it is not a claim that
 
 ## Changing serving knobs or profiles
 
-Any change to the serving profile (`configs/profiles/dsv4-1m-fast.env`, the
-`Environment=` block in `configs/systemd/deepseek-v4-flash-llamacpp.service`,
-the `dsv4_launcher()` block in `scripts/52_engine_switch.sh`, or launcher
-flags in `scripts/21_serve_llamacpp.sh`) must pass, in order:
+Any change to a serving profile (the declarative profiles under
+`configs/profiles/` — see `docs/PROFILE-SCHEMA.md` — the legacy
+`configs/profiles/dsv4-1m-fast.env`, the `Environment=` block in
+`configs/systemd/deepseek-v4-flash-llamacpp.service`, the launch plumbing in
+`scripts/52_engine_switch.sh`, or launcher flags in
+`scripts/21_serve_llamacpp.sh`) must pass, in order:
 
 1. `python3 -m unittest discover -s scripts/tests -p 'test_*.py'` — the
-   profile-conformance test pins the tuned fast-prefill values and keeps the
-   three profile copies in sync (this is the guard added after the 2026-07-27/28
-   reverts silently halved prefill throughput).
+   profile-conformance tests pin the tuned fast-prefill values, keep every
+   surface that still carries a copy in sync, and byte-compare rendered
+   profiles against the captured production fixtures
+   (`scripts/tests/fixtures/profile-conformance/`); update the fixture in
+   the same commit as any intentional launch change (this is the guard
+   added after the 2026-07-27/28 reverts silently halved prefill
+   throughput).
 2. `scripts/dev/regression-suite.py agent-gate --base http://127.0.0.1:<port>`
    against the restarted server — prefix-cache, turn-continuation, slot-thrash
    (the default profile runs 2 slots), and the novel-prompt prefill-throughput

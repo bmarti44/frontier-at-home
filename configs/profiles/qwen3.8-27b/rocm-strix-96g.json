@@ -1,0 +1,74 @@
+{
+ "schema_version": 4,
+ "profile_id": "qwen3.8-27b/rocm-strix-96g",
+ "model": "qwen3.8-27b",
+ "backend": "rocm",
+ "hardware_class": "strix",
+ "ram_tier_gib": 96,
+ "status": {
+  "state": "estimated",
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "engine": "llamacpp-qwen38-portable",
+ "artifact_roles": {
+  "model": "q8"
+ },
+ "launch": {
+  "mechanism": "setsid-watchdog-portable",
+  "log_name": "rocm-strix-96g",
+  "env": {},
+  "diagnostics_unset": [],
+  "args": [
+   "--model",
+   "{model}",
+   "-ngl",
+   "99",
+   "-fa",
+   "on",
+   "--no-mmap",
+   "-c",
+   "262144",
+   "--mmproj",
+   "{mmproj}",
+   "--parallel",
+   "1",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--alias",
+   "qwen3.8-27b",
+   "--spec-type",
+   "draft-mtp",
+   "--spec-draft-n-max",
+   "8",
+   "--spec-draft-p-min",
+   "0.6",
+   "--chat-template-kwargs",
+   "{\"reasoning_effort\":\"low\"}",
+   "--cache-reuse",
+   "256"
+  ]
+ },
+ "safety": {
+  "kill_floor_gib": 8,
+  "minimum_start_gib": 37,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 65536,
+  "overhead_gib": 3.0,
+  "extra_gib": 0,
+  "floor_gib": 8,
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "context_cap": 262144,
+ "port_role": "production",
+ "bench": {
+  "stack_label": "qwen3.8-27b-rocm-strix-96g"
+ },
+ "verify_on_hardware": [
+  "rocm-hip-build"
+ ]
+}

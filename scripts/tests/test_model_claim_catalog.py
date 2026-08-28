@@ -17,33 +17,34 @@ WORKFLOW = ROOT / ".github/workflows/model-claim.yml"
 
 
 class ModelClaimCatalogTests(unittest.TestCase):
-    def test_catalog_matches_the_refreshed_ollama_cloud_families(self):
+    def test_catalog_matches_the_manual_queue_schema(self):
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
         self.assertEqual(catalog["schema_version"], 1)
-        self.assertEqual(
-            catalog["source"], "https://ollama.com/search?c=cloud"
+        self.assertEqual(catalog["source"], "manually maintained")
+        self.assertRegex(catalog["refreshed_at"], r"^\d{4}-\d{2}-\d{2}$")
+        backends_registry = json.loads(
+            (ROOT / "configs/backends.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(catalog["refreshed_at"], "2026-07-29")
+        self.assertEqual(
+            catalog["claim_backends"], list(backends_registry["backends"])
+        )
         expected = {
             "glm-5.2",
+            "glm-5.3-flash",
             "kimi-k3",
             "gemma4",
             "qwen3.8-max",
             "qwen3.8-27b",
+            "qwen3.8-flash-next",
             "laguna-s-2.1",
-            "minimax-m2.7",
-            "nemotron-3-super",
-            "minimax-m2.5",
             "minimax-m3",
+            "nemotron-3-super",
+            "nemotron-3-ultra",
+            "nemotron-3-nano",
             "kimi-k2.7-code",
-            "kimi-k2.6",
             "deepseek-v4-pro",
             "deepseek-v4-flash",
-            "nemotron-3-ultra",
             "gpt-oss",
-            "gemini-3-flash-preview",
-            "nemotron-3-nano",
-            "kimi-k2.5",
             "mistral-large-3",
         }
         models = catalog["models"]
@@ -51,7 +52,6 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertEqual(len(models), len(expected))
         required = {
             "slug",
-            "ollama_tag",
             "context",
             "parameters",
             "modalities",
@@ -67,20 +67,11 @@ class ModelClaimCatalogTests(unittest.TestCase):
                 model["repo_status"],
                 {"available", "active", "qualified", "reference_only"},
             )
-            # An entry with no tag must still say where its numbers came
-            # from, so a claimant can verify them.
-            if model["ollama_tag"] is None:
-                self.assertIn("source", model)
-            else:
-                self.assertIsInstance(model["ollama_tag"], str)
         statuses = {model["slug"]: model["repo_status"] for model in models}
         self.assertEqual(statuses["deepseek-v4-flash"], "qualified")
         self.assertEqual(statuses["glm-5.2"], "active")
         self.assertEqual(statuses["qwen3.8-27b"], "qualified")
         self.assertEqual(statuses["laguna-s-2.1"], "qualified")
-        self.assertEqual(
-            statuses["gemini-3-flash-preview"], "reference_only"
-        )
 
     def test_readme_claim_links_are_catalogued_and_keep_active_models(self):
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))

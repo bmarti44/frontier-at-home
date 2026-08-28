@@ -1,0 +1,26 @@
+{
+ "schema_version": 1,
+ "host_id": "spark-aba1",
+ "os": "linux",
+ "arch": "aarch64",
+ "hardware_class": "spark",
+ "backends": ["cuda"],
+ "ram_gib": 128,
+ "paths": {
+  "repo": "/home/bmarti44/spark-deepseek-v4-flash",
+  "model_root": "/home/bmarti44/models",
+  "cache_root": "/home/bmarti44/.cache",
+  "state_root": "/home/dsv4/ds4-project/engine-switch",
+  "inference_lock": "/run/lock/frontier-at-home/inference.lock"
+ },
+ "ports": {
+  "production": 8013,
+  "auth": 8010,
+  "dev": {
+   "qwen3.8-27b": 8015,
+   "laguna-s-2.1": 8016,
+   "qwen3.8-27b-sglang": 30000
+  }
+ },
+ "versions_lock": "configs/versions.lock"
+}

@@ -103,3 +103,16 @@ bundles committed, README row citing exactly those numbers. Numbers from
 different backends are never merged into one row — a model qualified on
 `cuda` shows a dash for `apple-silicon` until someone qualifies it
 there.
+
+## 7. Profile contract
+
+A backend port ships declarative profiles (`docs/PROFILE-SCHEMA.md`), not
+bespoke launch scripts: `configs/profiles/<model>/<backend>-<tier>.json`
+resolved by `scripts/lib/profile_resolver.py` and served by
+`scripts/93_profile_serve.sh`. Off-host profiles carry `status: estimated`
+(computed feasibility, `configs/hardware-matrix.json`) and are promoted to
+`qualified` only by running the gate set of this contract on real hardware
+(`docs/QUALIFY-OFFHOST.md`). The backend registry's `implemented` flag flips
+with the first qualified profile on that backend — never on estimated
+profiles. Community-qualified rows carry the "Qualified (community)"
+attestation and are never merged with reference-host numbers.

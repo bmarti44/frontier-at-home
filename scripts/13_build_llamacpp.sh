@@ -4,10 +4,13 @@ umask 077
 
 usage() {
     cat <<'EOF'
-Usage: 13_build_llamacpp.sh [--help]
+Usage: 13_build_llamacpp.sh [--host-class CLASS] [--cuda-arch N] [--rocm-arch gfxNNNN] [--help]
 
-Clone and build the pinned llama.cpp revision with CUDA support for sm_121,
-verify the resulting binaries, and write a build manifest.
+Clone and build the pinned llama.cpp revision, verify the resulting
+binaries, and write a build manifest. The default host class cuda-spark
+builds CUDA for sm_121 with every historical Spark assertion intact;
+cuda-generic|metal|rocm|cpu build for other consumer hardware
+(scripts/lib/build_host_class.sh, configs/hardware-matrix.json).
 EOF
 }
 
@@ -21,15 +24,13 @@ die_env() {
     exit 2
 }
 
-if (( $# > 1 )); then
-    usage >&2
-    exit 2
-fi
 case "${1:-}" in
-    '') ;;
     -h|--help) usage; exit 0 ;;
-    *) usage >&2; exit 2 ;;
 esac
+# shellcheck source=lib/build_host_class.sh
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib/build_host_class.sh"
+build_host_class_parse "$@"
+(( ${#BUILD_HOST_CLASS_ARGS[@]} == 0 )) || { usage >&2; exit 2; }
 
 [[ -n "${HOME:-}" ]] || die_env 'HOME is not set'
 LLAMACPP_HOME="${LLAMACPP_HOME:-$HOME/llamacpp-project}"
@@ -41,7 +42,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd -P)" \
     || die_env 'cannot resolve repository root'
 PIN_FILE="$REPO_ROOT/configs/versions.lock"
 
-for command_name in python3 git mkdir nproc sha256sum gcc uname date head; do
+for command_name in python3 git mkdir sha256sum gcc uname date head; do
     command -v "$command_name" >/dev/null 2>&1 \
         || die_env "required command not found: $command_name"
 done
@@ -97,29 +98,25 @@ source_describe=$(git -C "$SRC_DIR" describe --always --dirty) \
 [[ $source_describe != *-dirty ]] \
     || die_build "llama.cpp worktree describe reports dirty: $source_describe"
 
-[[ "$(uname -m)" == aarch64 ]] \
-    || die_env 'this build requires uname -m to report aarch64'
-export PATH="/usr/local/cuda/bin:$PATH"
-command -v nvcc >/dev/null 2>&1 \
-    || die_env 'nvcc not found after adding /usr/local/cuda/bin to PATH'
-command -v cuobjdump >/dev/null 2>&1 \
-    || die_env 'cuobjdump not found after adding /usr/local/cuda/bin to PATH'
+build_host_class_require_platform
 command -v cmake >/dev/null 2>&1 \
     || die_env 'cmake is required to build llama.cpp but was not found in PATH'
 
-nvcc_version="$(nvcc --version)" || die_env 'nvcc --version failed'
-[[ "$nvcc_version" =~ release[[:space:]]13\. ]] \
-    || die_env 'nvcc release must start with 13.'
+nvcc_version="n/a"
+if [[ $BUILD_HOST_CLASS == cuda-spark || $BUILD_HOST_CLASS == cuda-generic ]]; then
+    nvcc_version="$(nvcc --version)" || die_env 'nvcc --version failed'
+fi
 gcc_version="$(gcc --version)" || die_env 'gcc --version failed'
 gcc_version=${gcc_version%%$'\n'*}
 cmake_version="$(cmake --version)" || die_env 'cmake --version failed'
 cmake_version=${cmake_version%%$'\n'*}
-parallelism="$(nproc)" || die_env 'nproc failed'
+parallelism="$(nproc 2>/dev/null || sysctl -n hw.ncpu)" \
+    || die_env 'cannot determine build parallelism'
 
+mapfile -t accelerator_flags < <(build_host_class_cmake_flags)
 configure_args=(
     cmake -S "$SRC_DIR" -B "$BUILD_DIR"
-    -DGGML_CUDA=ON
-    -DCMAKE_CUDA_ARCHITECTURES=121
+    "${accelerator_flags[@]}"
     -DCMAKE_BUILD_TYPE=Release
     -DLLAMA_CURL=OFF
 )
@@ -139,15 +136,11 @@ for binary in "${binaries[@]}"; do
         || die_build "required executable is missing: $BUILD_DIR/bin/$binary"
 done
 
-# CUDA fatbinaries live in the shared libggml-cuda.so, not the executable
-# (llama.cpp default builds ggml as shared libraries).
-set +o pipefail
-elf_head="$(cuobjdump --list-elf "$BUILD_DIR/bin/libggml-cuda.so" 2>/dev/null | head)"
-elf_status=$?
-set -o pipefail
-(( elf_status == 0 )) || die_build 'cuobjdump inspection of libggml-cuda.so failed'
-[[ "$elf_head" == *sm_121* ]] \
-    || die_build 'libggml-cuda.so CUDA objects do not report sm_121'
+# Accelerator code lives in the shared ggml libraries, not the executable
+# (llama.cpp default builds ggml as shared libraries); the per-class
+# assertion inspects them and reports the observed architecture.
+arch_observed=$(build_host_class_assert_artifacts "$BUILD_DIR/bin") \
+    || die_build 'per-host-class artifact assertion failed'
 "$BUILD_DIR/bin/llama-server" --version >/dev/null 2>&1 \
     || die_build 'llama-server --version smoke test failed'
 
@@ -165,7 +158,9 @@ manifest_tmp="$manifest.partial"
 python3 - "$manifest_tmp" "$manifest" "$llamacpp_commit" "$source_describe" \
     "$SRC_DIR" "$BUILD_DIR" "$parallelism" "$nvcc_version" \
     "$gcc_version" "$cmake_version" "$built_at" \
-    "${hashes[0]}" "${hashes[1]}" "${hashes[2]}" <<'PY' \
+    "${hashes[0]}" "${hashes[1]}" "${hashes[2]}" \
+    "$BUILD_HOST_CLASS" "$(build_host_class_backend)" "$arch_observed" \
+    "${accelerator_flags[@]}" <<'PY' \
     || die_build 'failed to write build manifest'
 import hashlib
 import json
@@ -174,7 +169,8 @@ import shlex
 import sys
 
 (temporary, output, commit, describe, source, build, parallelism, nvcc, gcc, cmake,
- built_at, server_hash, cli_hash, bench_hash) = sys.argv[1:]
+ built_at, server_hash, cli_hash, bench_hash, host_class, backend,
+ arch_observed, *accelerator_flags) = sys.argv[1:]
 
 
 def sha256_file(path):
@@ -193,15 +189,15 @@ bin_dir = os.path.join(build, "bin")
 shared_libraries = {
     name: {"sha256": sha256_file(os.path.join(bin_dir, name))}
     for name in sorted(os.listdir(bin_dir))
-    if name.endswith(".so")
+    if name.endswith((".so", ".dylib"))
 }
 if not shared_libraries:
     raise SystemExit("build produced no shared libraries to record")
-configure = [
-    "cmake", "-S", source, "-B", build, "-DGGML_CUDA=ON",
-    "-DCMAKE_CUDA_ARCHITECTURES=121", "-DCMAKE_BUILD_TYPE=Release",
-    "-DLLAMA_CURL=OFF",
-]
+configure = (
+    ["cmake", "-S", source, "-B", build]
+    + accelerator_flags
+    + ["-DCMAKE_BUILD_TYPE=Release", "-DLLAMA_CURL=OFF"]
+)
 build_command = [
     "cmake", "--build", build, "--config", "Release", f"-j{parallelism}",
     "--target", "llama-server", "llama-cli", "llama-bench",
@@ -220,6 +216,9 @@ manifest = {
         "llama-bench": {"sha256": bench_hash},
     },
     "shared_libraries": shared_libraries,
+    "backend": backend,
+    "host_class": host_class,
+    "arch_assertion": {"observed": arch_observed},
     "built_at": built_at,
 }
 with open(temporary, "w", encoding="utf-8") as stream:

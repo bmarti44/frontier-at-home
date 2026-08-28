@@ -1,0 +1,66 @@
+{
+ "schema_version": 1,
+ "purpose": "Consumer-hardware matrix for the profile system: host classes, RAM/VRAM tiers, usable-memory formulas, engine-pin applicability, and every infeasible model x tier cell with its reason. Feasible cells get a profile file under configs/profiles/<model>/; infeasible cells get an entry here and no file.",
+ "host_classes": {
+  "spark": {
+   "backend": "cuda",
+   "uma": true,
+   "tiers_gib": [128],
+   "usable_model": "ram_gib - floor_gib - 6 (OS reserve); cgroup accounting is blind to CUDA unified memory, the MemAvailable watchdog is the real guard",
+   "detection": "nvidia-smi reports GB10 and memory ~= MemTotal"
+  },
+  "mac": {
+   "backend": "apple-silicon",
+   "uma": true,
+   "tiers_gib": [16, 24, 32, 48, 64, 96, 128, 192],
+   "usable_model": "min(0.75 * ram_gib, ram_gib - 8) at the default Metal wired limit; a raised_wired_limit mode (iogpu.wired_limit_mb sysctl) allows ram_gib - 10 on >= 96 GiB tiers - verify on hardware",
+   "detection": "darwin + arm64; ram via sysctl hw.memsize"
+  },
+  "dgpu": {
+   "backend": "cuda",
+   "uma": false,
+   "tiers_gib": [8, 12, 16, 24, 32],
+   "tier_semantics": "tier is VRAM; profiles carry min_system_ram_gib separately",
+   "usable_model": "weights split across (vram_gib - 1.5) on-GPU plus system RAM; -ngl computed from VRAM; --no-mmap not forced",
+   "detection": "nvidia-smi memory.total much smaller than MemTotal"
+  },
+  "strix": {
+   "backend": "rocm",
+   "uma": true,
+   "tiers_gib": [32, 64, 96, 128],
+   "usable_model": "ram_gib - floor_gib - 6; GPU-visible memory (GTT) sizing per vendor/ds4/STRIXHALO.md section 3",
+   "detection": "rocminfo reports gfx1151"
+  },
+  "any": {
+   "backend": "cpu",
+   "uma": false,
+   "tiers_gib": [32, 64, 96, 128, 192],
+   "usable_model": "ram_gib - 8",
+   "detection": "always available"
+  }
+ },
+ "stub_backends": ["vulkan", "intel-xe", "qualcomm", "tenstorrent"],
+ "fit_rule": "weights_gib + draft_gib + context_cap * kv_bytes_per_token / 2^30 + overhead_gib + extra_gib <= usable_gib; within 5% of the ceiling is estimated-tight",
+ "kv_bytes_per_token": {
+  "deepseek-v4-flash": {"f16": 7066, "basis": "analytic 6.9 KiB/token; the historical 4096 B admission constant in scripts/21_serve_llamacpp.sh is known-undersized and never used for estimation"},
+  "qwen3.8-27b": {"f16": 65536, "q8_0": 32768, "basis": "~66 GB KV committed at 1M ctx f16 (results/qwen38-gates/trackc-1m-np4-2026-08-19/)"},
+  "laguna-s-2.1": {"f16": 54067, "basis": "52.8 KiB/token measured (README Laguna row)"},
+  "glm-5.2": {"f16": 179712, "basis": "175.5 KiB/token (results/glm52-gates/source-audit-2026-08-15.md)"}
+ },
+ "engine_pins": {
+  "llamacpp-base-32e789fd": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"], "note": "DSV4 baseline pin; the portable DSV4 engine"},
+  "llamacpp-fusion-0dc74e33": {"backends": ["cuda"], "note": "fused DSV4 hyper-connection ops are CUDA-only ggml ops; Metal/ROCm use the base pin and record decode_baseline: pre-fusion"},
+  "llamacpp-qwen38-9d77fa17": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"]},
+  "llamacpp-laguna-06f8cebd": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"], "note": "poolside fork; Metal/HIP builds have no known fork CI - verify on hardware"},
+  "ds4-baa88902": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"], "note": "Makefile already multi-target (Darwin default = Metal, strix-halo, cpu). Pin predates upstream dd157bd (native sm_121 for cuda-spark); a pin bump is a separate owner evaluation"},
+  "sglang-image": {"backends": ["cuda"], "note": "Docker/CUDA only"},
+  "glm52-local-patches": {"backends": [], "note": "patches/*.patch apply to ds4_cuda.cu only; GLM-5.2 is spark-only by definition"}
+ },
+ "unsupported_cells": [
+  {"model": "glm-5.2", "cells": "every cell except spark-128", "reason": "repo-locally patched ds4 CUDA binary (patches/); no portable engine exists"},
+  {"model": "deepseek-v4-flash", "cells": "all tiers under 96 GiB on every backend", "reason": "smallest artifact is 80.8 GiB (ds4 IQ2XXS); DSV4 fits nothing below ~96 GiB at any existing quant"},
+  {"model": "laguna-s-2.1", "cells": "UMA tiers under 96 GiB; dgpu with min_system_ram < 128", "reason": "weights are 68.4 GiB + 2.1 GiB draft", "needs_new_artifact": "UD-Q3_K_XL (~51 GiB) would open the 64 GiB tiers; evaluation deferred"},
+  {"model": "qwen3.8-27b", "cells": "mac-16, mac-24, strix-32", "reason": "Q4_K_M weights (16.6 GiB, +0.86 mmproj) exceed usable memory at these tiers even at 16K context (mac-24: ~20.6 GiB fit vs 16 GiB usable; strix-32: vs 18 GiB)", "needs_new_artifact": "IQ3_XXS/Q3_K_S ~11-12.5 GiB still tight; IQ2_M ~9.5 GiB feasible with a quality caveat - new fetch target for scripts/12_fetch_gguf.sh + configs/pins/"},
+  {"model": "laguna-s-2.1", "cells": "mac-96", "reason": "68.35 GiB weights + 1.65 GiB KV (32K) + 3 GiB overhead = ~73 GiB against 72 GiB usable at the default wired limit", "note": "feasible only under the raised_wired_limit mode (~86 GiB usable) - verify on hardware before authoring a profile"}
+ ]
+}

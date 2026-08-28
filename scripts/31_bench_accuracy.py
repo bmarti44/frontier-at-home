@@ -209,6 +209,14 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         help="JSON build/weights manifest file(s); required for holdout runs",
     )
+    parser.add_argument(
+        "--profile-id",
+        help=(
+            "declarative profile identity (docs/PROFILE-SCHEMA.md), e.g. "
+            "qwen3.8-27b/cuda-spark-128g; folded into the config digest when "
+            "given"
+        ),
+    )
     args = parser.parse_args()
     if (
         args.reasoning_effort is not None
@@ -443,6 +451,17 @@ def derive_config_digest(
         "request_timeout_s": args.request_timeout,
         "harness_manifest_line": load_harness_manifest_line(),
     }
+    # Same contract logic as thinking_mode: a named profile is a measurement
+    # identity, and a rerun under a profile intentionally gets a new digest.
+    # The key is added only when --profile-id is given so every profile-less
+    # invocation keeps producing byte-identical payloads to the frozen
+    # pre-profile digests' schema; digests frozen before this field existed
+    # remain valid because no consumer recomputes them. Note the stack label,
+    # not the profile id, remains the ledger key: same-host knob tweaks must
+    # NOT move the label (the rowset guard exists to block exactly that
+    # re-spend), while different hardware tiers carry different labels.
+    if args.profile_id is not None:
+        digest_payload["profile_id"] = args.profile_id
     digest = hashlib.sha256(canonical_json(digest_payload)).hexdigest()
     return digest, digest_payload, evidence_records
 

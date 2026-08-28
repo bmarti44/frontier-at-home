@@ -1,0 +1,53 @@
+{
+ "schema_version": 1,
+ "alias": "qwen38",
+ "mechanism": "systemd-run",
+ "binary": "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server",
+ "argv": [
+  "--model",
+  "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+  "-ngl",
+  "99",
+  "-fa",
+  "on",
+  "--no-mmap",
+  "-c",
+  "32768",
+  "--mmproj",
+  "/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf",
+  "--parallel",
+  "1",
+  "--host",
+  "127.0.0.1",
+  "--port",
+  "8013",
+  "--alias",
+  "qwen3.8-27b",
+  "--spec-type",
+  "draft-mtp",
+  "--spec-draft-n-max",
+  "8",
+  "--spec-draft-p-min",
+  "0.6",
+  "--chat-template-kwargs",
+  "{\"reasoning_effort\":\"low\"}",
+  "--cache-reuse",
+  "256"
+ ],
+ "env": {},
+ "systemd": {
+  "unit": "qwen38-engine",
+  "properties": {
+   "Type": "exec",
+   "User": "bmarti44",
+   "MemoryHigh": "45G",
+   "MemoryMax": "50G",
+   "MemorySwapMax": "0",
+   "OOMPolicy": "kill",
+   "KillMode": "control-group",
+   "Delegate": "no"
+  },
+  "server_log": "/home/dsv4/ds4-project/engine-switch/qwen38.server.log",
+  "flock": "/run/lock/frontier-at-home/inference.lock"
+ }
+}

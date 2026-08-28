@@ -120,22 +120,224 @@ clean_curl() {
         /usr/bin/curl --disable "$@"
 }
 
+# Declarative profile sources (docs/PROFILE-SCHEMA.md). Launch argv, env,
+# and containment properties render from these validated profiles; the
+# per-alias binary/model/draft paths stay in the readonly variables above so
+# the ENGINE_SWITCH_TESTING fixture harness keeps working unchanged.
+readonly PROFILE_DSV4=configs/profiles/deepseek-v4-flash/cuda-spark-128g-1m-fast.json
+readonly PROFILE_GLM52=configs/profiles/glm-5.2/cuda-spark-128g.json
+readonly PROFILE_QWEN38=configs/profiles/qwen3.8-27b/cuda-spark-128g.json
+readonly PROFILE_QWEN38_1M=configs/profiles/qwen3.8-27b/cuda-spark-128g-1m.json
+readonly PROFILE_LAGUNA=configs/profiles/laguna-s-2.1/cuda-spark-128g.json
+
+profile_path_for() {
+    case "$1" in
+        dsv4) printf '%s\n' "$PROFILE_DSV4" ;;
+        glm52) printf '%s\n' "$PROFILE_GLM52" ;;
+        qwen38) printf '%s\n' "$PROFILE_QWEN38" ;;
+        qwen38-1m) printf '%s\n' "$PROFILE_QWEN38_1M" ;;
+        laguna) printf '%s\n' "$PROFILE_LAGUNA" ;;
+        *) die "no profile for alias $1" ;;
+    esac
+}
+
+# Emit one NUL-delimited field list from a validated profile.
+# Fields: args | env | properties | unit | log_name
+profile_field() {
+    local alias=$1 field=$2 relpath
+    relpath=$(profile_path_for "$alias")
+    clean_python - "$REPO" "$relpath" "$field" "$alias" <<'PY'
+import sys
+repo, relpath, field, alias = sys.argv[1:]
+sys.path.insert(0, repo + "/scripts/lib")
+import profile_resolver
+parts = relpath.split("/")
+model_slug, name = parts[-2], parts[-1]
+profile = profile_resolver.load_profile(model_slug, name)
+if profile.get("switch_alias") != alias:
+    raise SystemExit(f"profile {relpath} does not carry switch_alias {alias}")
+launch = profile["launch"]
+out = sys.stdout
+if field == "args":
+    for token in launch.get("args", []):
+        out.write(token + "\0")
+elif field == "env":
+    for key, value in (launch.get("env") or {}).items():
+        out.write(f"{key}={value}\0")
+elif field == "properties":
+    containment = profile["containment"]
+    properties = {
+        "Type": "exec",
+        "User": launch["user"],
+        "MemoryHigh": containment["memory_high"],
+        "MemoryMax": containment["memory_max"],
+        "MemorySwapMax": containment["memory_swap_max"],
+        "OOMPolicy": containment["oom_policy"],
+        "KillMode": containment["kill_mode"],
+        "Delegate": "no",
+    }
+    properties.update(containment.get("extra_properties", {}))
+    for key, value in properties.items():
+        out.write(f"{key}={value}\0")
+elif field == "unit":
+    out.write(profile["containment"]["unit"] + "\0")
+elif field == "log_name":
+    out.write(launch["log_name"] + "\0")
+else:
+    raise SystemExit(f"unknown field {field}")
+PY
+}
+
+# Fill an array from one NUL-delimited profile field, failing closed on any
+# render error (a process substitution would swallow the exit status).
+read_profile_array() {
+    local -n out_ref=$1
+    local alias=$2 field=$3 buffer
+    buffer=$(mktemp) || die 'cannot create profile render buffer'
+    if ! profile_field "$alias" "$field" >"$buffer"; then
+        rm -f -- "$buffer"
+        die "profile render failed for $alias $field"
+    fi
+    out_ref=()
+    local token
+    while IFS= read -r -d '' token; do
+        out_ref+=("$token")
+    done <"$buffer"
+    rm -f -- "$buffer"
+}
+
+# Substitute launch placeholders in an array in place. Any placeholder left
+# unresolved fails closed; JSON-literal tokens (chat-template kwargs) pass
+# through untouched because they never match a bare {placeholder} token.
+subst_placeholders() {
+    local -n tokens_ref=$1
+    shift
+    local -a pairs=("$@")
+    local index token pair key
+    for index in "${!tokens_ref[@]}"; do
+        token=${tokens_ref[$index]}
+        for pair in "${pairs[@]}"; do
+            key=${pair%%=*}
+            token=${token//"{$key}"/${pair#*=}}
+        done
+        if [[ $token =~ ^\{[a-z_]+\}$ ]]; then
+            die "unresolved launch placeholder $token"
+        fi
+        tokens_ref[$index]=$token
+    done
+}
+
+launch_systemd_profile() {
+    local alias=$1 binary=$2 model=$3 mmproj=$4 draft=$5
+    local -a argv props property_args subs
+    local unit log_name pair
+    read_profile_array argv "$alias" args
+    (( ${#argv[@]} > 0 )) || die "$alias profile rendered an empty argv"
+    subs=("model=$model" "port=$PORT")
+    [[ -z $mmproj ]] || subs+=("mmproj=$mmproj")
+    [[ -z $draft ]] || subs+=("draft_model=$draft")
+    subst_placeholders argv "${subs[@]}"
+    read_profile_array props "$alias" properties
+    (( ${#props[@]} > 0 )) || die "$alias profile rendered no containment properties"
+    unit=$(profile_field "$alias" unit | tr -d '\0') || die "$alias unit render failed"
+    log_name=$(profile_field "$alias" log_name | tr -d '\0') || die "$alias log render failed"
+    property_args=()
+    for pair in "${props[@]}"; do
+        property_args+=(--property "$pair")
+    done
+    systemd-run --unit="$unit" --collect --quiet \
+        "${property_args[@]}" \
+        --property "StandardOutput=append:$STATE/$log_name.server.log" \
+        --property "StandardError=append:$STATE/$log_name.server.log" \
+        /usr/bin/flock --nonblock --no-fork \
+        /run/lock/frontier-at-home/inference.lock \
+        "$binary" "${argv[@]}"
+}
+
+render_snapshot() {
+    local alias=$1
+    case "$alias" in
+        dsv4)
+            local -a env_pairs
+            read_profile_array env_pairs dsv4 env
+            subst_placeholders env_pairs "port=$PORT" "repo=$REPO"
+            clean_python - dsv4 "$REPO/scripts/21_serve_llamacpp.sh" \
+                "${env_pairs[@]}" <<'PY'
+import json, sys
+alias, delegate, *pairs = sys.argv[1:]
+print(json.dumps({"alias": alias, "mechanism": "delegated-launcher",
+                  "runuser": "dsv4", "delegate": delegate,
+                  "env": dict(pair.split("=", 1) for pair in pairs)},
+                 indent=1))
+PY
+            ;;
+        glm52)
+            local -a env_pairs argv
+            read_profile_array env_pairs glm52 env
+            read_profile_array argv glm52 args
+            subst_placeholders argv "model=$GGUF" "port=$PORT"
+            clean_python - glm52 "$BINARY" "${#env_pairs[@]}" \
+                "${env_pairs[@]}" "${argv[@]}" <<'PY'
+import json, sys
+alias, binary, count, *rest = sys.argv[1:]
+count = int(count)
+print(json.dumps({"alias": alias, "mechanism": "setsid-memwatch",
+                  "binary": binary,
+                  "env": dict(pair.split("=", 1) for pair in rest[:count]),
+                  "argv": rest[count:]}, indent=1))
+PY
+            ;;
+        qwen38|qwen38-1m|laguna)
+            local binary model mmproj draft unit log_name
+            case "$alias" in
+                laguna)
+                    binary=$LAGUNA_BINARY model=$LAGUNA_MODEL
+                    mmproj= draft=$LAGUNA_DRAFT
+                    ;;
+                *)
+                    binary=$QWEN_BINARY model=$QWEN_MODEL
+                    mmproj=$QWEN_MMPROJ draft=
+                    ;;
+            esac
+            local -a argv props subs
+            read_profile_array argv "$alias" args
+            subs=("model=$model" "port=$PORT")
+            [[ -z $mmproj ]] || subs+=("mmproj=$mmproj")
+            [[ -z $draft ]] || subs+=("draft_model=$draft")
+            subst_placeholders argv "${subs[@]}"
+            read_profile_array props "$alias" properties
+            unit=$(profile_field "$alias" unit | tr -d '\0')
+            log_name=$(profile_field "$alias" log_name | tr -d '\0')
+            clean_python - "$alias" "$binary" "$unit" \
+                "$STATE/$log_name.server.log" "${#props[@]}" \
+                "${props[@]}" "${argv[@]}" <<'PY'
+import json, sys
+alias, binary, unit, server_log, count, *rest = sys.argv[1:]
+count = int(count)
+print(json.dumps({"alias": alias, "mechanism": "systemd-run",
+                  "binary": binary, "env": {}, "argv": rest[count:],
+                  "systemd": {"unit": unit,
+                              "properties": dict(
+                                  pair.split("=", 1) for pair in rest[:count]),
+                              "server_log": server_log,
+                              "flock": "/run/lock/frontier-at-home/inference.lock"}},
+                 indent=1))
+PY
+            ;;
+        *) die "no profile for alias $alias" ;;
+    esac
+}
+
 dsv4_launcher() {
+    # The tuned env map renders from PROFILE_DSV4 (the 1M+fast profile);
+    # scripts/tests/test_profile_conformance.py pins its values.
+    local -a launcher_env
+    read_profile_array launcher_env dsv4 env
+    (( ${#launcher_env[@]} > 0 )) || die 'dsv4 profile rendered an empty environment'
+    subst_placeholders launcher_env "port=$PORT" "repo=$REPO"
     install -d -o root -g dsv4 -m 1770 /run/dsv4
     /usr/sbin/runuser -u dsv4 -- env -i \
-        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-        HOME=/home/dsv4 USER=dsv4 LOGNAME=dsv4 LANG=C.UTF-8 \
-        DSV4_PORT="$PORT" \
-        DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server \
-        DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json \
-        DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=8 \
-        DSV4_MEM_FLOOR_GIB=8 DSV4_WATCHDOG_FLOOR_GIB=8 \
-        DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=12 \
-        DSV4_ALLOW_RETRY_AFTER_FAILED_START=1 \
-        DSV4_UBATCH=2048 DSV4_BATCH=2048 DSV4_UBATCH_LARGE=1 \
-        CTX=1048576 DSV4_PARALLEL=2 DSV4_NO_MMAP=1 \
-        DSV4_SPEC_TYPE=none \
-        DSV4_VERIFY_WEIGHTS=full \
+        "${launcher_env[@]}" \
         "$REPO/scripts/21_serve_llamacpp.sh" "$@"
 }
 
@@ -712,18 +914,14 @@ start_glm52() {
         wait "$memwatch_pid" 2>/dev/null || true
         die "GLM memory watchdog failed to initialize"
     fi
-    setsid env -i HOME=/home/dsv4 LANG=C.UTF-8 \
-        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-        DS4_CUDA_EXPERT_CACHE_GB=94 \
-        DS4_CUDA_EXPERT_CACHE_PIN=1 \
-        DS4_CUDA_EXPERT_CACHE_SLRU=1 \
-        DS4_CUDA_FETCH_THREADS=6 \
-        DS4_CUDA_STABLE_MODEL_REMAP=1 \
-        DS4_CUDA_MOE_NO_ATOMIC_DOWN=1 \
-        DS4_CUDA_EXPERT_DIRECT_SLOT=1 \
-        "$BINARY" --cuda -m "$GGUF" -c 32768 \
-        --host 127.0.0.1 --port "$PORT" --ssd-streaming \
-        --ssd-streaming-cache-experts 40GB \
+    local -a glm_env glm_argv
+    read_profile_array glm_env glm52 env
+    read_profile_array glm_argv glm52 args
+    (( ${#glm_env[@]} > 0 )) || die 'GLM profile rendered an empty environment'
+    (( ${#glm_argv[@]} > 0 )) || die 'GLM profile rendered an empty argv'
+    subst_placeholders glm_argv "model=$GGUF" "port=$PORT"
+    setsid env -i "${glm_env[@]}" \
+        "$BINARY" "${glm_argv[@]}" \
         >"$STATE/glm52.server.log" 2>&1 9>&- &
     pid=$!
     identity=
@@ -796,70 +994,15 @@ PY
 }
 
 launch_qwen38() {
-    systemd-run --unit=qwen38-engine --collect --quiet \
-        --property Type=exec \
-        --property User=bmarti44 \
-        --property MemoryHigh=45G \
-        --property MemoryMax=50G \
-        --property MemorySwapMax=0 \
-        --property OOMPolicy=kill \
-        --property KillMode=control-group \
-        --property Delegate=no \
-        --property "StandardOutput=append:$STATE/qwen38.server.log" \
-        --property "StandardError=append:$STATE/qwen38.server.log" \
-        /usr/bin/flock --nonblock --no-fork \
-        /run/lock/frontier-at-home/inference.lock \
-        "$QWEN_BINARY" --model "$QWEN_MODEL" -ngl 99 -fa on \
-        --no-mmap -c 32768 --mmproj "$QWEN_MMPROJ" --parallel 1 \
-        --host 127.0.0.1 --port "$PORT" --alias qwen3.8-27b \
-        --spec-type draft-mtp --spec-draft-n-max 8 --spec-draft-p-min 0.6 \
-        --chat-template-kwargs '{"reasoning_effort":"low"}' \
-        --cache-reuse 256
+    launch_systemd_profile qwen38 "$QWEN_BINARY" "$QWEN_MODEL" "$QWEN_MMPROJ" ""
 }
 
 launch_qwen38-1m() {
-    systemd-run --unit=qwen38-engine --collect --quiet \
-        --property Type=exec \
-        --property User=bmarti44 \
-        --property MemoryHigh=88G \
-        --property MemoryMax=95G \
-        --property MemorySwapMax=0 \
-        --property OOMPolicy=kill \
-        --property KillMode=control-group \
-        --property Delegate=no \
-        --property "StandardOutput=append:$STATE/qwen38-1m.server.log" \
-        --property "StandardError=append:$STATE/qwen38-1m.server.log" \
-        /usr/bin/flock --nonblock --no-fork \
-        /run/lock/frontier-at-home/inference.lock \
-        "$QWEN_BINARY" --model "$QWEN_MODEL" -ngl 99 -fa on \
-        --no-mmap -c 1048576 --mmproj "$QWEN_MMPROJ" --parallel 4 \
-        --host 127.0.0.1 --port "$PORT" --alias qwen3.8-27b \
-        --spec-type draft-mtp --spec-draft-n-max 8 --spec-draft-p-min 0.6 \
-        --chat-template-kwargs '{"reasoning_effort":"low"}' \
-        --cache-reuse 256
+    launch_systemd_profile qwen38-1m "$QWEN_BINARY" "$QWEN_MODEL" "$QWEN_MMPROJ" ""
 }
 
 launch_laguna() {
-    systemd-run --unit=laguna-engine --collect --quiet \
-        --property Type=exec \
-        --property User=bmarti44 \
-        --property MemoryHigh=88G \
-        --property MemoryMax=95G \
-        --property MemorySwapMax=0 \
-        --property OOMPolicy=kill \
-        --property KillMode=control-group \
-        --property Delegate=no \
-        --property NoNewPrivileges=yes \
-        --property "StandardOutput=append:$STATE/laguna.server.log" \
-        --property "StandardError=append:$STATE/laguna.server.log" \
-        /usr/bin/flock --nonblock --no-fork \
-        /run/lock/frontier-at-home/inference.lock \
-        "$LAGUNA_BINARY" --model "$LAGUNA_MODEL" -ngl 99 -fa on \
-        --no-mmap -c 393216 -md "$LAGUNA_DRAFT" --parallel 4 \
-        --host 127.0.0.1 --port "$PORT" --alias laguna-s-2.1 \
-        --spec-type draft-dflash --spec-draft-n-max 4 --jinja \
-        --chat-template-kwargs '{"enable_thinking":true}' \
-        --cache-reuse 256
+    launch_systemd_profile laguna "$LAGUNA_BINARY" "$LAGUNA_MODEL" "" "$LAGUNA_DRAFT"
 }
 
 cleanup_laguna_killed_unit() {
@@ -1686,6 +1829,17 @@ fi
 
 if [[ -n ${ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT:-} ]]; then
     return 0
+fi
+
+if [[ ${1:-} == render ]]; then
+    # Test-only: print the fully-assembled launch snapshot for one alias so
+    # the conformance suite can compare it against the captured fixtures.
+    # Read-only; takes no lock and touches no state.
+    [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]] ||
+        die 'render is a test-only verb (set ENGINE_SWITCH_TESTING=1)'
+    [[ -n ${2:-} ]] || die 'usage: render <alias>'
+    render_snapshot "$2"
+    exit 0
 fi
 
 command=${1:-status}

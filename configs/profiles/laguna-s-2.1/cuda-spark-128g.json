@@ -1,0 +1,67 @@
+{
+ "schema_version": 4,
+ "profile_id": "laguna-s-2.1/cuda-spark-128g",
+ "model": "laguna-s-2.1",
+ "backend": "cuda",
+ "hardware_class": "spark",
+ "ram_tier_gib": 128,
+ "purpose": "Laguna S 2.1 production profile: four 96K slots (4x98304 = 393216 total), UD-Q4_K_XL weights, f16 KV, DFlash n4, thinking enabled",
+ "status": {
+  "state": "qualified",
+  "decision": "qualified_switchable_engine_not_default_owner_2026-08-21",
+  "qualified_at": "2026-08-22",
+  "evidence": "results/laguna-gates/g5-final-2026-08-21/"
+ },
+ "engine": "llamacpp-laguna",
+ "artifact_roles": {"model": "udq4kxl", "draft_model": "dflash-bf16"},
+ "launch": {
+  "mechanism": "systemd-run",
+  "user": "bmarti44",
+  "log_name": "laguna",
+  "env": {},
+  "diagnostics_unset": [],
+  "args": [
+   "--model", "{model}",
+   "-ngl", "99",
+   "-fa", "on",
+   "--no-mmap",
+   "-c", "393216",
+   "-md", "{draft_model}",
+   "--parallel", "4",
+   "--host", "127.0.0.1",
+   "--port", "{port}",
+   "--alias", "laguna-s-2.1",
+   "--spec-type", "draft-dflash",
+   "--spec-draft-n-max", "4",
+   "--jinja",
+   "--chat-template-kwargs", "{\"enable_thinking\":true}",
+   "--cache-reuse", "256"
+  ]
+ },
+ "containment": {
+  "unit": "laguna-engine",
+  "memory_high": "88G",
+  "memory_max": "95G",
+  "memory_swap_max": "0",
+  "oom_policy": "kill",
+  "kill_mode": "control-group",
+  "extra_properties": {"NoNewPrivileges": "yes"}
+ },
+ "safety": {
+  "kill_floor_gib": 8,
+  "minimum_start_gib": 100,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 54067,
+  "overhead_gib": 10.0,
+  "extra_gib": 0,
+  "floor_gib": 8,
+  "basis": "kv 52.8 KiB/token measured (README Laguna row); 524288 ctx breached the 8 GiB floor, 393216 qualified"
+ },
+ "context_cap": 393216,
+ "port_role": "production",
+ "bench": {"stack_label": "laguna-udq4-dflash-n4-np4"},
+ "switch_alias": "laguna"
+}

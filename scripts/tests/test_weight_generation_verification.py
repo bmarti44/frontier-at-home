@@ -33,13 +33,27 @@ MANIFEST = ROOT / "weights" / "unsloth-ud-q2_k_xl" / "manifest.json"
 
 class WeightGenerationVerificationTests(unittest.TestCase):
     def test_switcher_forces_full_weight_verification(self):
-        source = SWITCH.read_text(encoding="utf-8")
-        self.assertIn(
-            "DSV4_VERIFY_WEIGHTS=full",
-            source,
-            "the production switcher must not inherit the size-only default: "
+        # The switcher's launcher env now renders from the declarative dsv4
+        # profile (docs/PROFILE-SCHEMA.md); the profile must carry the
+        # override, and the switcher must launch from that profile.
+        import json
+
+        profile = json.loads(
+            (ROOT / "configs/profiles/deepseek-v4-flash/"
+             "cuda-spark-128g-1m-fast.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            profile["launch"]["env"].get("DSV4_VERIFY_WEIGHTS"),
+            "full",
+            "the production profile must not inherit the size-only default: "
             "shards 2 and 3 are byte-identical in size across the 0731 boundary, "
             "so a mixed-generation weight set passes a size check",
+        )
+        source = SWITCH.read_text(encoding="utf-8")
+        self.assertIn(
+            "configs/profiles/deepseek-v4-flash/cuda-spark-128g-1m-fast.json",
+            source,
+            "the switcher must render its dsv4 launcher env from the profile",
         )
 
     def test_full_verification_is_inside_the_launcher_env_whitelist(self):
@@ -50,12 +64,11 @@ class WeightGenerationVerificationTests(unittest.TestCase):
         self.assertIsNotNone(match, "dsv4_launcher() not found")
         body = match.group(1)
         self.assertIn("env -i", body)
-        self.assertIn(
-            "DSV4_VERIFY_WEIGHTS=full",
-            body,
-            "env -i clears the environment, so setting the variable anywhere "
-            "outside this whitelist does not reach the launcher",
-        )
+        # env -i clears the environment; the whitelist that reaches the
+        # launcher is the rendered profile env array, so the launcher must
+        # pass exactly that array and nothing else.
+        self.assertIn('read_profile_array launcher_env dsv4 env', body)
+        self.assertIn('"${launcher_env[@]}"', body)
 
     def test_launcher_still_accepts_only_size_or_full(self):
         source = LAUNCHER.read_text(encoding="utf-8")

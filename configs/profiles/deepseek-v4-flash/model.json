@@ -1,0 +1,43 @@
+{
+ "schema_version": 1,
+ "model": "deepseek-v4-flash",
+ "identity_manifest": "configs/dsv4-profile.json",
+ "artifacts": {
+  "udq2kxl": {
+   "kind": "gguf-sharded",
+   "path": "{model_root}/unsloth-ud-q2_k_xl/DeepSeek-V4-Flash-UD-Q2_K_XL-00001-of-00003.gguf",
+   "weights_manifest": "weights/unsloth-ud-q2_k_xl/manifest.json",
+   "weights_gib": 90.2
+  },
+  "iq2xxs-ds4": {
+   "kind": "gguf",
+   "weights_manifest": "configs/pins/ds4-weights.json",
+   "weights_gib": 80.8,
+   "note": "ds4-engine IQ2XXS mix (+MTP 3.55 GiB, +DSpark drafter 6.49 GiB)"
+  }
+ },
+ "engines": {
+  "llamacpp-fusion": {
+   "build_manifest": "configs/build-manifests/llamacpp-fusion.json",
+   "binary_path": "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server",
+   "binary_sha256": null,
+   "note": "digest verified at launch by scripts/21_serve_llamacpp.sh against DSV4_BUILD_MANIFEST; CUDA-only fusion pin 0dc74e33"
+  },
+  "llamacpp-base": {
+   "build_manifest": "configs/build-manifests/llamacpp.json",
+   "binary_path": "{cache_root}/llamacpp-32e789fd/src/build/bin/llama-server",
+   "binary_sha256": null,
+   "note": "base pin 32e789fd; the portable engine for Metal/ROCm/CPU (pre-fusion decode)"
+  }
+ },
+ "backend_support": {
+  "cuda": {"supported": true},
+  "apple-silicon": {"supported": true, "note": "llamacpp-base pin only (fusion ops are CUDA-only); >= 96 GiB unified memory required by weights"},
+  "rocm": {"supported": true, "note": "llamacpp-base or ds4 strix-halo target; >= 128 GiB class"},
+  "cpu": {"supported": true, "note": "13B-active MoE; slow but runnable at >= 128 GiB"},
+  "vulkan": {"supported": false, "reason": "no profile authored; schema supports it"},
+  "intel-xe": {"supported": false, "reason": "no profile authored; schema supports it"},
+  "qualcomm": {"supported": false, "reason": "no profile authored; schema supports it"},
+  "tenstorrent": {"supported": false, "reason": "no profile authored; schema supports it"}
+ }
+}

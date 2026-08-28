@@ -1,0 +1,30 @@
+{
+ "schema_version": 1,
+ "alias": "dsv4",
+ "mechanism": "delegated-launcher",
+ "runuser": "dsv4",
+ "delegate": "/home/bmarti44/spark-deepseek-v4-flash/scripts/21_serve_llamacpp.sh",
+ "env": {
+  "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+  "HOME": "/home/dsv4",
+  "USER": "dsv4",
+  "LOGNAME": "dsv4",
+  "LANG": "C.UTF-8",
+  "DSV4_PORT": "8013",
+  "DSV4_SERVER_BINARY": "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server",
+  "DSV4_BUILD_MANIFEST": "/home/bmarti44/spark-deepseek-v4-flash/configs/build-manifests/llamacpp-fusion.json",
+  "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB": "8",
+  "DSV4_MEM_FLOOR_GIB": "8",
+  "DSV4_WATCHDOG_FLOOR_GIB": "8",
+  "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB": "12",
+  "DSV4_ALLOW_RETRY_AFTER_FAILED_START": "1",
+  "DSV4_UBATCH": "2048",
+  "DSV4_BATCH": "2048",
+  "DSV4_UBATCH_LARGE": "1",
+  "CTX": "1048576",
+  "DSV4_PARALLEL": "2",
+  "DSV4_NO_MMAP": "1",
+  "DSV4_SPEC_TYPE": "none",
+  "DSV4_VERIFY_WEIGHTS": "full"
+ }
+}

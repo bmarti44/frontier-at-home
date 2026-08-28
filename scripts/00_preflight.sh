@@ -135,6 +135,16 @@ if gpu_processes=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/
 fi
 add_check "gpu_compute_processes" "none" "$gpu_processes" "$gpu_processes_pass"
 
+lock_hostname=$(lock_value "host.hostname" || true)
+actual_hostname=$(hostname -s 2>/dev/null || uname -n)
+if [[ -n $lock_hostname && $actual_hostname != "$lock_hostname" ]]; then
+    # A community host is described, not gated: the versions.lock equality
+    # assertions apply only to the reference Spark. Spark-only paths
+    # (scripts/52_engine_switch.sh, GLM-5.2) still hard-require lock
+    # equality on the lock host itself. See docs/PROFILE-SCHEMA.md.
+    add_check "host_lock" "hostname ${lock_hostname}" \
+        "not-applicable (community host ${actual_hostname})" true
+else
 expected_driver=$(lock_value "host.driver" || true)
 actual_driver="unavailable"
 driver_pass=false
@@ -153,6 +163,7 @@ if [[ -n $expected_kernel && $actual_kernel == "$expected_kernel" ]]; then
     kernel_pass=true
 fi
 add_check "kernel_version" "${expected_kernel:-unavailable from lock file}" "${actual_kernel:-unavailable}" "$kernel_pass"
+fi
 
 ollama_status=$(systemctl is-active ollama.service 2>/dev/null || true)
 ollama_status=${ollama_status:-unknown}

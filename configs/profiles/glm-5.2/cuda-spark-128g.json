@@ -1,0 +1,64 @@
+{
+ "schema_version": 4,
+ "profile_id": "glm-5.2/cuda-spark-128g",
+ "model": "glm-5.2",
+ "backend": "cuda",
+ "hardware_class": "spark",
+ "ram_tier_gib": 128,
+ "purpose": "Production switch profile for the owner-accepted GLM-5.2 full-model Q4-dense candidate",
+ "status": {
+  "state": "qualified",
+  "decision": "owner_accepted_working_candidate",
+  "evidence": "results/glm52-gates/fullq4-candidate-2026-08-17/summary.md"
+ },
+ "engine": "ds4-glm52-patched",
+ "artifact_roles": {"model": "full-denseq40"},
+ "launch": {
+  "mechanism": "setsid-memwatch",
+  "log_name": "glm52",
+  "env": {
+   "HOME": "/home/dsv4",
+   "LANG": "C.UTF-8",
+   "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+   "DS4_CUDA_EXPERT_CACHE_GB": "94",
+   "DS4_CUDA_EXPERT_CACHE_PIN": "1",
+   "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
+   "DS4_CUDA_FETCH_THREADS": "6",
+   "DS4_CUDA_STABLE_MODEL_REMAP": "1",
+   "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
+   "DS4_CUDA_EXPERT_DIRECT_SLOT": "1"
+  },
+  "diagnostics_unset": [
+   "DS4_DECODE_STAGE_TIMING",
+   "DS4_TOKEN_TIMING",
+   "DS4_TOKEN_TIMING_LOG"
+  ],
+  "args": [
+   "--cuda",
+   "-m", "{model}",
+   "-c", "32768",
+   "--host", "127.0.0.1",
+   "--port", "{port}",
+   "--ssd-streaming",
+   "--ssd-streaming-cache-experts", "40GB"
+  ]
+ },
+ "safety": {
+  "kill_floor_gib": 18,
+  "minimum_start_gib": 110,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 179712,
+  "overhead_gib": 88.0,
+  "extra_gib": 0,
+  "floor_gib": 18,
+  "resident_weights_gib": 0.0,
+  "basis": "kv 175.5 KiB/token; overhead dominated by DS4_CUDA_EXPERT_CACHE_GB=94 decimal GB (~87.5 GiB host arena, results/glm52-gates/source-audit-2026-08-15.md); weights stream from SSD, not resident"
+ },
+ "context_cap": 32768,
+ "port_role": "production",
+ "bench": {"stack_label": "glm-5.2-cuda-spark-128g"},
+ "switch_alias": "glm52"
+}

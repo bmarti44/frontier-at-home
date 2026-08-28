@@ -33,8 +33,11 @@ class BackendRegistryTests(unittest.TestCase):
         )
 
     def test_registry_parses_and_has_current_schema(self) -> None:
-        self.assertEqual(self.registry["schema_version"], 1)
-        self.assertEqual(set(self.registry), {"schema_version", "backends"})
+        self.assertEqual(self.registry["schema_version"], 2)
+        self.assertEqual(
+            set(self.registry), {"schema_version", "contract", "backends"}
+        )
+        self.assertEqual(self.registry["contract"], "docs/BACKEND-CONTRACT.md")
         self.assertIsInstance(self.backends, dict)
 
     def test_backend_keys_exactly_match_catalog_claim_backends(self) -> None:
@@ -54,8 +57,8 @@ class BackendRegistryTests(unittest.TestCase):
             self.assertIsInstance(backend["implemented"], bool)
             self.assertIsInstance(backend["platform"], str)
             self.assertTrue(backend["platform"])
-            self.assertIsInstance(backend["serve_scripts"], dict)
-            for model, relative in backend["serve_scripts"].items():
+            self.assertIsInstance(backend.get("serve_scripts", {}), dict)
+            for model, relative in backend.get("serve_scripts", {}).items():
                 with self.subTest(backend=backend_name, model=model):
                     self.assertFalse(Path(relative).is_absolute())
                     self.assertIn(relative, tracked)
@@ -77,7 +80,7 @@ class BackendRegistryTests(unittest.TestCase):
         for name, backend in self.backends.items():
             if not backend["implemented"]:
                 with self.subTest(backend=name):
-                    self.assertEqual(backend["serve_scripts"], {})
+                    self.assertEqual(backend.get("serve_scripts", {}), {})
 
     def test_dispatcher_prints_registered_command_without_executing(self) -> None:
         result = self.run_dispatcher(
@@ -117,8 +120,32 @@ class BackendRegistryTests(unittest.TestCase):
             "--print-command", "status",
         )
         self.assertEqual(result.returncode, 4)
-        self.assertIn("configs/backends.json", result.stderr)
-        self.assertIn("scripts/90_scaffold_model.sh", result.stderr)
+        self.assertIn("configs/profiles/", result.stderr)
+        self.assertIn("scripts/92_resolve_profile.py list", result.stderr)
+
+    def test_dispatcher_routes_profile_models_through_generic_launcher(self) -> None:
+        result = self.run_dispatcher(
+            "--model", "glm-5.2", "--backend", "cuda",
+            "--print-command", "status",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.strip(),
+            "scripts/93_profile_serve.sh --profile glm-5.2/cuda-spark-128g.json"
+            " status",
+        )
+
+    def test_dispatcher_prefers_legacy_serve_scripts_for_dev_ports(self) -> None:
+        # qwen3.8-27b has committed profiles, but the qwen38 legacy key must
+        # keep routing to the dev-port lifecycle unchanged.
+        result = self.run_dispatcher(
+            "--model", "qwen38", "--backend", "cuda",
+            "--print-command", "start",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.strip(), "scripts/22_serve_qwen38.sh start"
+        )
 
 
 if __name__ == "__main__":

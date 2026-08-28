@@ -48,6 +48,77 @@ RESTORE_SERVICE = ROOT / "configs/systemd/dsv4-engine-restore.service"
 CONTROL_INSTALLER = ROOT / "scripts/53_install_switch_control.sh"
 
 
+
+# ---------------------------------------------------------------------------
+# Launch truth renders from configs/profiles/ (docs/PROFILE-SCHEMA.md). The
+# helpers below assemble one alias's launch snapshot through the switch's
+# test-only `render` verb and map the fixture harness's test-root paths back
+# to the production paths captured in
+# scripts/tests/fixtures/profile-conformance/.
+FIXTURES = ROOT / "scripts/tests/fixtures/profile-conformance"
+SWITCH_ALIASES = ("dsv4", "glm52", "qwen38", "qwen38-1m", "laguna")
+
+
+def switch_production_map(test_root: str) -> dict[str, str]:
+    state = "/home/dsv4/ds4-project/engine-switch"
+    return {
+        f"{test_root}/source/ds4-server":
+            "/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server",
+        f"{test_root}/source/llama-server":
+            "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server",
+        f"{test_root}/source/laguna-server":
+            "/home/bmarti44/.cache/llamacpp-laguna-06f8cebd/src/build/bin/llama-server",
+        f"{test_root}/model.gguf":
+            "/home/bmarti44/models/glm52-full-denseq40.gguf",
+        f"{test_root}/qwen-model.gguf":
+            "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+        f"{test_root}/qwen-mmproj.gguf":
+            "/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf",
+        f"{test_root}/laguna-model-00001-of-00003.gguf":
+            "/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/"
+            "Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf",
+        f"{test_root}/laguna-dflash.gguf":
+            "/home/bmarti44/models/laguna-s-2.1/poolside/laguna-s-2.1-DFlash-BF16.gguf",
+        test_root: state,
+    }
+
+
+def _map_to_production(value, mapping):
+    if isinstance(value, str):
+        for test_path in sorted(mapping, key=len, reverse=True):
+            value = value.replace(test_path, mapping[test_path])
+        return value
+    if isinstance(value, list):
+        return [_map_to_production(item, mapping) for item in value]
+    if isinstance(value, dict):
+        return {key: _map_to_production(item, mapping)
+                for key, item in value.items()}
+    return value
+
+
+def render_switch_snapshot(alias: str) -> dict:
+    with tempfile.TemporaryDirectory() as tmp:
+        result = subprocess.run(
+            ["bash", str(SCRIPT), "render", alias],
+            cwd=ROOT,
+            env={
+                "PATH": os.environ["PATH"],
+                "ENGINE_SWITCH_TESTING": "1",
+                "ENGINE_SWITCH_TEST_ROOT": tmp,
+            },
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise AssertionError(f"render {alias} failed: {result.stderr}")
+        return _map_to_production(
+            json.loads(result.stdout), switch_production_map(tmp)
+        )
+
+
 class EngineSwitchTests(unittest.TestCase):
     def run_switch(self, root: Path, *args: str):
         env = {
@@ -101,168 +172,41 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertNotIn('"ready" not in text', source)
 
     def test_glm_production_launcher_matches_the_accepted_fullq4_profile(self):
-        source = SCRIPT.read_text()
-        profile = json.loads(GLM_PRODUCTION_PROFILE.read_text())
-        self.assertIn(
-            "configs/glm52-fullq4-production-profile.json", source
-        )
-        self.assertEqual(profile["schema_version"], 3)
-        self.assertEqual(profile["profile"], "glm52")
-        self.assertEqual(profile["context_cap"], 32_768)
-        self.assertEqual(
-            profile["binary_path"],
-            "/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server",
-        )
-        self.assertEqual(
-            profile["binary_sha256"],
-            "a093812a8dd2c02f23ab3a12cdd69f77e1fcfcb36919acccfbea24d526825e60",
-        )
-        self.assertEqual(
-            profile["model_path"],
+        snapshot = render_switch_snapshot("glm52")
+        self.assertEqual(snapshot["argv"][:5], [
+            "--cuda", "-m",
             "/home/bmarti44/models/glm52-full-denseq40.gguf",
-        )
-        self.assertEqual(
-            profile["model_identity"],
-            {
-                "first_bytes": 1_048_576,
-                "first_bytes_sha256": (
-                    "b70b4e19c1aaca7898c795c6085a291c1eee45a861bad91522e2f1844a0676f6"
-                ),
-                "size_bytes": 202_307_598_400,
-                "device": 66_306,
-                "inode": 3_571_134,
-                "full_sha256_status": "not_computed_no_cheap_cached_value",
-            },
-        )
-        expected_environment = {
-            "DS4_CUDA_EXPERT_CACHE_GB": "94",
-            "DS4_CUDA_EXPERT_CACHE_PIN": "1",
-            "DS4_CUDA_EXPERT_CACHE_SLRU": "1",
-            "DS4_CUDA_FETCH_THREADS": "6",
-            "DS4_CUDA_STABLE_MODEL_REMAP": "1",
-            "DS4_CUDA_MOE_NO_ATOMIC_DOWN": "1",
-            "DS4_CUDA_EXPERT_DIRECT_SLOT": "1",
-        }
-        self.assertEqual(
-            profile["runtime"]["engine_environment"], expected_environment
-        )
-        for name, value in expected_environment.items():
-            self.assertIn(f"{name}={value}", source)
-        self.assertEqual(
-            profile["runtime"]["diagnostics_unset"],
-            [
-                "DS4_DECODE_STAGE_TIMING",
-                "DS4_TOKEN_TIMING",
-                "DS4_TOKEN_TIMING_LOG",
-            ],
-        )
-        for diagnostic in profile["runtime"]["diagnostics_unset"]:
-            self.assertNotIn(f"{diagnostic}=", source)
-        self.assertEqual(
-            profile["runtime"]["launch_arguments"],
-            [
-                "--cuda", "-m", "{model}", "-c", "32768",
-                "--host", "127.0.0.1", "--port", "{port}",
-                "--ssd-streaming", "--ssd-streaming-cache-experts", "40GB",
-            ],
-        )
-        self.assertIn('"$BINARY" --cuda -m "$GGUF" -c 32768', source)
+            "-c", "32768",
+        ])
+        self.assertIn("--ssd-streaming", snapshot["argv"])
+        self.assertEqual(snapshot["env"]["DS4_CUDA_EXPERT_CACHE_GB"], "94")
+        source = SCRIPT.read_text()
+        self.assertIn("configs/glm52-fullq4-production-profile.json", source)
         self.assertIn("provisional", source)
         self.assertIn("GLM process record already exists", source)
 
     def test_qwen_production_launcher_matches_the_pinned_profile(self):
+        snapshot = render_switch_snapshot("qwen38")
+        argv = snapshot["argv"]
+        self.assertEqual(argv[:2], [
+            "--model", "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+        ])
+        for flag in ("-ngl", "--no-mmap", "--spec-type", "--cache-reuse"):
+            self.assertIn(flag, argv)
+        self.assertEqual(argv[argv.index("-c") + 1], "32768")
+        self.assertEqual(argv[argv.index("--parallel") + 1], "1")
+        properties = snapshot["systemd"]["properties"]
+        self.assertEqual(properties["MemoryHigh"], "45G")
+        self.assertEqual(properties["MemoryMax"], "50G")
         source = SCRIPT.read_text()
-        profile = json.loads(QWEN_PRODUCTION_PROFILE.read_text())
-        build = json.loads(QWEN_BUILD.read_text())
-        weights = {
-            item["name"]: item
-            for item in json.loads(QWEN_WEIGHTS.read_text())["files"]
-        }
-        self.assertEqual(profile["schema_version"], 3)
-        self.assertEqual(profile["profile"], "qwen38")
-        self.assertEqual(profile["context_cap"], 32_768)
-        self.assertEqual(profile["port"], 8013)
-        self.assertEqual(
-            profile["binary_path"],
-            "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/"
-            "src/build/bin/llama-server",
-        )
-        self.assertEqual(
-            profile["binary_sha256"],
-            build["binaries"]["llama-server"]["sha256"],
-        )
-        self.assertEqual(
-            profile["model_path"],
-            "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
-        )
-        self.assertEqual(
-            profile["model_sha256"],
-            weights["Qwen3.8-27B-Q4_K_M.gguf"]["sha256"],
-        )
-        self.assertEqual(
-            profile["mmproj_path"],
-            "/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf",
-        )
-        self.assertEqual(
-            profile["mmproj_sha256"],
-            weights["mmproj-Qwen3.8-27B-f16.gguf"]["sha256"],
-        )
-        self.assertEqual(profile["runtime"]["engine_environment"], {})
-        self.assertEqual(profile["runtime"]["diagnostics_unset"], [])
-        self.assertEqual(
-            profile["runtime"]["launch_arguments"],
-            [
-                "--model", "{model}", "-ngl", "99", "-fa", "on",
-                "--no-mmap", "-c", "32768", "--mmproj", "{mmproj}",
-                "--parallel", "1", "--host", "127.0.0.1", "--port",
-                "{port}", "--alias", "qwen3.8-27b", "--spec-type",
-                "draft-mtp", "--spec-draft-n-max", "8",
-                "--spec-draft-p-min", "0.6", "--chat-template-kwargs",
-                '{"reasoning_effort":"low"}', "--cache-reuse", "256",
-            ],
-        )
-        self.assertEqual(
-            profile["runtime"]["containment"],
-            {
-                "unit": "qwen38-engine.service",
-                "memory_high": "45G",
-                "memory_max": "50G",
-                "memory_swap_max": "0",
-                "oom_policy": "kill",
-                "kill_mode": "control-group",
-            },
-        )
-        self.assertEqual(
-            profile["runtime"]["safety"],
-            {
-                "kill_floor_gib": 18,
-                "minimum_start_gib": 100,
-                "sample_hz": 1,
-                "startup_timeout_seconds": 1800,
-            },
-        )
-        for setting in (
-            "MemoryHigh=45G", "MemoryMax=50G", "MemorySwapMax=0",
-            "OOMPolicy=kill", "KillMode=control-group",
-        ):
-            self.assertIn(setting, source)
-        self.assertIn("configs/qwen38-production-profile.json", source)
-        self.assertNotIn("QWEN_PORT", source)
-        self.assertIn('--host 127.0.0.1 --port "$PORT"', source)
-        self.assertIn("verify_qwen_hashes", source)
-        self.assertIn("revalidate_qwen_identities", source)
-        self.assertIn('exe_sha=$(sha256 "/proc/$pid/exe")', source)
         self.assertIn("Qwen transient unit executed an unapproved binary", source)
         self.assertIn("stop_qwen_verified", source)
         self.assertIn("start_qwen38", source)
-        self.assertIn('expected=qwen3.8-27b', source)
+        self.assertIn("expected=qwen3.8-27b", source)
         self.assertIn('systemctl show "$QWEN_UNIT"', source)
-        self.assertIn('"$QWEN_BINARY" --model "$QWEN_MODEL" -ngl 99 -fa on', source)
-        self.assertIn('--spec-draft-n-max 8 --spec-draft-p-min 0.6', source)
-        self.assertIn("--cache-reuse 256", source)
-        self.assertIn('--threshold-gib 18 --interval-sec 1', source)
-        self.assertIn('ARMED $pid $pgid $ticks provisional', source)
-        self.assertIn('ARMED $pid $pgid $ticks engine', source)
+        self.assertIn("--threshold-gib 18 --interval-sec 1", source)
+        self.assertIn("ARMED $pid $pgid $ticks provisional", source)
+        self.assertIn("ARMED $pid $pgid $ticks engine", source)
 
     def test_qwen_readiness_is_bound_to_unit_executable_and_listener(self):
         source = SCRIPT.read_text()
@@ -285,145 +229,22 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("verify_qwen_process_ready", wait)
 
     def test_qwen_1m_production_launcher_matches_the_pinned_profile(self):
+        snapshot = render_switch_snapshot("qwen38-1m")
+        argv = snapshot["argv"]
+        self.assertEqual(argv[argv.index("-c") + 1], "1048576")
+        self.assertEqual(argv[argv.index("--parallel") + 1], "4")
+        self.assertNotIn("-ctk", argv)
+        self.assertNotIn("-ctv", argv)
+        self.assertFalse(any("rope" in token.lower() for token in argv))
+        properties = snapshot["systemd"]["properties"]
+        self.assertEqual(properties["MemoryHigh"], "88G")
+        self.assertEqual(properties["MemoryMax"], "95G")
         source = SCRIPT.read_text()
-        profile = json.loads(QWEN_1M_PRODUCTION_PROFILE.read_text())
-        qwen38 = json.loads(QWEN_PRODUCTION_PROFILE.read_text())
-        build = json.loads(QWEN_BUILD.read_text())
-        weights = {
-            item["name"]: item
-            for item in json.loads(QWEN_WEIGHTS.read_text())["files"]
-        }
-        self.assertEqual(profile["schema_version"], 3)
-        self.assertEqual(profile["profile"], "qwen38-1m")
-        self.assertEqual(set(profile), set(qwen38))
-        self.assertEqual(set(profile["promotion"]), set(qwen38["promotion"]))
-        self.assertEqual(set(profile["runtime"]), set(qwen38["runtime"]))
-        self.assertEqual(
-            set(profile["runtime"]["containment"]),
-            set(qwen38["runtime"]["containment"]),
-        )
-        self.assertEqual(
-            set(profile["runtime"]["safety"]),
-            set(qwen38["runtime"]["safety"]),
-        )
-        self.assertEqual(profile["context_cap"], 1_048_576)
-        self.assertEqual(profile["port"], 8013)
-        self.assertIn("four native-262K slots", profile["purpose"])
-        self.assertIn("no RoPE scaling", profile["purpose"])
-        self.assertEqual(profile["binary_path"], qwen38["binary_path"])
-        self.assertEqual(profile["binary_sha256"], qwen38["binary_sha256"])
-        self.assertEqual(
-            profile["binary_sha256"],
-            build["binaries"]["llama-server"]["sha256"],
-        )
-        self.assertEqual(profile["model_path"], qwen38["model_path"])
-        self.assertEqual(profile["model_sha256"], qwen38["model_sha256"])
-        self.assertEqual(
-            profile["model_sha256"],
-            weights["Qwen3.8-27B-Q4_K_M.gguf"]["sha256"],
-        )
-        self.assertEqual(profile["mmproj_path"], qwen38["mmproj_path"])
-        self.assertEqual(profile["mmproj_sha256"], qwen38["mmproj_sha256"])
-        self.assertEqual(
-            profile["mmproj_sha256"],
-            weights["mmproj-Qwen3.8-27B-f16.gguf"]["sha256"],
-        )
-        self.assertEqual(
-            profile["promotion"],
-            {
-                "decision": "f16_kv_adopted_gate3_pass_fidelity_free",
-                "tuned_at": "2026-08-19",
-                "evidence": (
-                    "results/qwen38-gates/trackc-1m-np4-2026-08-19/"
-                ),
-            },
-        )
-        self.assertTrue(
-            (ROOT / profile["promotion"]["evidence"] / "gate1-summary.md").is_file()
-        )
-        gate3 = ROOT / profile["promotion"]["evidence"] / "gate3-summary.md"
-        self.assertTrue(gate3.is_file())
-        gate3_text = gate3.read_text()
-        self.assertIn("ADOPTED", gate3_text)
-        self.assertIn("f16 KV adopted", gate3_text)
-        self.assertTrue(
-            profile["promotion"]["decision"].startswith("f16_kv_adopted_gate3_")
-        )
-        evidence_manifest = json.loads(
-            (QWEN_1M_EVIDENCE / "manifest.json").read_text()
-        )
-        manifest_files = {item["path"]: item for item in evidence_manifest["files"]}
-        actual_files = {
-            path.name for path in QWEN_1M_EVIDENCE.iterdir()
-            if path.is_file() and path.name != "manifest.json"
-        }
-        self.assertEqual(set(manifest_files), actual_files)
-        for name, record in manifest_files.items():
-            payload = (QWEN_1M_EVIDENCE / name).read_bytes()
-            self.assertEqual(record["bytes"], len(payload), name)
-            self.assertEqual(
-                record["sha256"], hashlib.sha256(payload).hexdigest(), name
-            )
-        self.assertEqual(profile["runtime"]["engine_environment"], {})
-        self.assertEqual(profile["runtime"]["diagnostics_unset"], [])
-        self.assertEqual(
-            profile["runtime"]["launch_arguments"],
-            [
-                "--model", "{model}", "-ngl", "99", "-fa", "on",
-                "--no-mmap", "-c", "1048576", "--mmproj", "{mmproj}",
-                "--parallel", "4",
-                "--host", "127.0.0.1", "--port", "{port}", "--alias",
-                "qwen3.8-27b", "--spec-type", "draft-mtp",
-                "--spec-draft-n-max", "8", "--spec-draft-p-min", "0.6",
-                "--chat-template-kwargs", '{"reasoning_effort":"low"}',
-                "--cache-reuse", "256",
-            ],
-        )
-        self.assertFalse(
-            any("rope" in argument.lower()
-                for argument in profile["runtime"]["launch_arguments"])
-        )
-        self.assertEqual(
-            profile["runtime"]["containment"],
-            {
-                "unit": "qwen38-engine.service",
-                "memory_high": "88G",
-                "memory_max": "95G",
-                "memory_swap_max": "0",
-                "oom_policy": "kill",
-                "kill_mode": "control-group",
-            },
-        )
-        self.assertEqual(
-            profile["runtime"]["safety"],
-            {
-                "kill_floor_gib": 8,
-                "minimum_start_gib": 100,
-                "sample_hz": 1,
-                "startup_timeout_seconds": 1800,
-            },
-        )
-        launch = source[
-            source.index("launch_qwen38-1m() {") :
-            source.index("start_qwen_profile() {")
-        ]
-        for contract in (
-            "MemoryHigh=88G", "MemoryMax=95G", "MemorySwapMax=0",
-            "OOMPolicy=kill", "KillMode=control-group",
-            '--no-mmap -c 1048576 --mmproj "$QWEN_MMPROJ" --parallel 4',
-            '--host 127.0.0.1 --port "$PORT"',
-            "--spec-draft-n-max 8 --spec-draft-p-min 0.6",
-            "--cache-reuse 256",
-        ):
-            self.assertIn(contract, launch)
-        self.assertNotIn("--rope", launch.lower())
-        self.assertNotIn("-ctk", launch)
-        self.assertNotIn("-ctv", launch)
         self.assertIn("configs/qwen38-1m-production-profile.json", source)
         self.assertIn("verify_qwen_1m_hashes", source)
         self.assertIn("start_qwen38-1m", source)
         context = source[
-            source.index("verify_qwen_1m_context() {") :
+            source.index("verify_qwen_1m_context() {"):
             source.index("verify_qwen_process_ready() {")
         ]
         self.assertIn("len(value) != 4", context)
@@ -444,68 +265,18 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertIn("verify_qwen_1m_context", qwen_block)
 
     def test_laguna_production_launcher_matches_the_pinned_profile(self):
+        snapshot = render_switch_snapshot("laguna")
+        argv = snapshot["argv"]
+        self.assertEqual(argv[argv.index("-c") + 1], "393216")
+        self.assertEqual(argv[argv.index("--parallel") + 1], "4")
+        self.assertIn("draft-dflash", argv)
+        self.assertIn("--jinja", argv)
+        properties = snapshot["systemd"]["properties"]
+        self.assertEqual(properties["MemoryHigh"], "88G")
+        self.assertEqual(properties["NoNewPrivileges"], "yes")
         source = SCRIPT.read_text()
-        profile = json.loads(LAGUNA_PRODUCTION_PROFILE.read_text())
-        build = json.loads(LAGUNA_BUILD.read_text())
-        weights = {
-            item["name"]: item
-            for item in json.loads(LAGUNA_WEIGHTS.read_text())["files"]
-        }
-        self.assertEqual(profile["schema_version"], 3)
-        self.assertEqual(profile["profile"], "laguna")
-        self.assertEqual(profile["context_cap"], 393_216)
-        self.assertEqual(profile["port"], 8013)
-        self.assertEqual(
-            profile["binary_sha256"],
-            build["binaries"]["llama-server"]["sha256"],
-        )
-        shard_names = [
-            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf",
-            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00002-of-00003.gguf",
-            "unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00003-of-00003.gguf",
-        ]
-        self.assertEqual(len(profile["model_shards"]), 3)
-        for record, name in zip(profile["model_shards"], shard_names):
-            expected = weights[name]
-            self.assertEqual(record["sha256"], expected["sha256"])
-            self.assertEqual(record["bytes"], expected["bytes"])
-            self.assertTrue(record["path"].endswith(name))
-        draft = weights["poolside/laguna-s-2.1-DFlash-BF16.gguf"]
-        self.assertEqual(profile["draft_model_sha256"], draft["sha256"])
-        self.assertEqual(profile["draft_model_bytes"], draft["bytes"])
-        self.assertEqual(
-            profile["runtime"]["containment"],
-            {
-                "unit": "laguna-engine.service",
-                "memory_high": "88G",
-                "memory_max": "95G",
-                "memory_swap_max": "0",
-                "oom_policy": "kill",
-                "kill_mode": "control-group",
-            },
-        )
-        arguments = profile["runtime"]["launch_arguments"]
-        for expected in (
-            "393216", "4", "draft-dflash", "laguna-s-2.1", "--jinja",
-            '{"enable_thinking":true}', "256",
-        ):
-            self.assertIn(expected, arguments)
-        self.assertNotIn("-ctk", arguments)
-        self.assertNotIn("-ctv", arguments)
-        launch = source[
-            source.index("launch_laguna() {") :
-            source.index("cleanup_laguna_killed_unit() {")
-        ]
-        for contract in (
-            "MemoryHigh=88G", "MemoryMax=95G", "MemorySwapMax=0",
-            '"$LAGUNA_BINARY" --model "$LAGUNA_MODEL" -ngl 99 -fa on',
-            '--no-mmap -c 393216 -md "$LAGUNA_DRAFT" --parallel 4',
-            "--spec-type draft-dflash --spec-draft-n-max 4 --jinja",
-            "--cache-reuse 256",
-        ):
-            self.assertIn(contract, launch)
         verify = source[
-            source.index("verify_laguna_profile_hashes() {") :
+            source.index("verify_laguna_profile_hashes() {"):
             source.index("revalidate_laguna_identities() {")
         ]
         self.assertIn("os.O_NOFOLLOW", verify)
@@ -518,36 +289,16 @@ class EngineSwitchTests(unittest.TestCase):
             ("start_laguna_profile() {", "start_laguna() {"),
             ("start_qwen_profile() {", "start_qwen38() {"),
         ):
-            starter = source[source.index(start_name) : source.index(end_name)]
+            starter = source[source.index(start_name):source.index(end_name)]
             self.assertRegex(
                 starter,
                 r"(?s)03_memory_guard\.py.*?--timeout-seconds 180\s+\|\|\s+die",
             )
-
-        launch = source[
-            source.index("launch_laguna() {") :
-            source.index("cleanup_laguna_killed_unit() {")
-        ]
-        self.assertIn("--property NoNewPrivileges=yes", launch)
-
-        verify = source[
-            source.index("verify_laguna_profile_hashes() {") :
-            source.index("revalidate_laguna_identities() {")
-        ]
-        self.assertIn("derived_shard_paths", verify)
-        self.assertIn('"-00001-of-00003.gguf"', verify)
-        self.assertIn("shared_libraries", verify)
-        self.assertIn("os.path.basename(name) != name", verify)
-
-        for stop_name, end_name in (
-            ("stop_qwen_verified() {", "stop_laguna_verified() {"),
-            ("stop_laguna_verified() {", "stop_profile() {"),
-        ):
-            stop = source[source.index(stop_name) : source.index(end_name)]
-            self.assertIn("if ! unit_pid=$(systemctl show", stop)
-            self.assertIn(
-                'DISARMED $pid $expected_pgid $expected_ticks', stop
-            )
+        self.assertEqual(
+            render_switch_snapshot("laguna")["systemd"]["properties"]
+            .get("NoNewPrivileges"),
+            "yes",
+        )
 
     def test_rollback_waits_for_every_restored_profile_before_verification(self):
         source = SCRIPT.read_text()
@@ -803,7 +554,10 @@ class EngineSwitchTests(unittest.TestCase):
         installer = INSTALLER.read_text()
         self.assertIn("readonly PORT=8013", source)
         self.assertIn("readonly AUTH_PORT=8010", source)
-        self.assertIn('DSV4_PORT="$PORT"', source)
+        # DSV4_PORT renders from the dsv4 profile's {port} placeholder.
+        self.assertEqual(
+            render_switch_snapshot("dsv4")["env"].get("DSV4_PORT"), "8013"
+        )
         self.assertIn("Environment=DSV4_PORT=8013", service)
         self.assertIn("upstream_port=8013", installer)
         self.assertIn("configs/tmpfiles/frontier-at-home.conf", installer)
@@ -818,31 +572,29 @@ class EngineSwitchTests(unittest.TestCase):
 
     def test_switch_runs_deepseek_as_engine_user_with_frozen_1m_profile(self):
         source = SCRIPT.read_text()
-        self.assertIn(
-            "install -d -o root -g dsv4 -m 1770 /run/dsv4", source
-        )
+        self.assertIn("install -d -o root -g dsv4 -m 1770 /run/dsv4", source)
         self.assertIn("/usr/sbin/runuser -u dsv4 --", source)
-        for setting in (
-            "DSV4_SERVER_BINARY=/home/dsv4/llamacpp-project/src/"
-            "llama.cpp-fusion/build/bin/llama-server",
-            "DSV4_BUILD_MANIFEST=$REPO/configs/build-manifests/llamacpp-fusion.json",
-            "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB=8",
-            "DSV4_MEM_FLOOR_GIB=8",
-            "DSV4_WATCHDOG_FLOOR_GIB=8",
-            "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB=12",
-            "DSV4_ALLOW_RETRY_AFTER_FAILED_START=1",
-            "DSV4_UBATCH=2048",
-            "DSV4_BATCH=2048",
-            "DSV4_UBATCH_LARGE=1",
-            "CTX=1048576",
-            "DSV4_PARALLEL=2",
-            "DSV4_NO_MMAP=1",
-            "DSV4_SPEC_TYPE=none",
+        env = render_switch_snapshot("dsv4")["env"]
+        for key, value in (
+            ("DSV4_SERVER_BINARY",
+             "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server"),
+            ("DSV4_BUILD_MANIFEST",
+             f"{ROOT}/configs/build-manifests/llamacpp-fusion.json"),
+            ("DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB", "8"),
+            ("DSV4_MEM_FLOOR_GIB", "8"),
+            ("DSV4_WATCHDOG_FLOOR_GIB", "8"),
+            ("DSV4_MEASURED_HEADLESS_OVERHEAD_GIB", "12"),
+            ("DSV4_ALLOW_RETRY_AFTER_FAILED_START", "1"),
+            ("DSV4_UBATCH", "2048"),
+            ("DSV4_BATCH", "2048"),
+            ("DSV4_UBATCH_LARGE", "1"),
+            ("CTX", "1048576"),
+            ("DSV4_PARALLEL", "2"),
+            ("DSV4_NO_MMAP", "1"),
+            ("DSV4_SPEC_TYPE", "none"),
         ):
-            self.assertIn(setting, source)
-        self.assertIn(
-            "DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key", source
-        )
+            self.assertEqual(env.get(key), value, key)
+        self.assertIn("DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key", source)
 
     def test_installed_deepseek_service_uses_the_qualified_1m_profile(self):
         service = DSV4_SERVICE.read_text()

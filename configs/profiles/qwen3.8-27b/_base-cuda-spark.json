@@ -1,0 +1,22 @@
+{
+ "partial": true,
+ "model": "qwen3.8-27b",
+ "backend": "cuda",
+ "hardware_class": "spark",
+ "ram_tier_gib": 128,
+ "engine": "llamacpp-qwen38",
+ "artifact_roles": {"model": "q4km", "mmproj": "mmproj-f16"},
+ "launch": {
+  "mechanism": "systemd-run",
+  "user": "bmarti44",
+  "env": {},
+  "diagnostics_unset": []
+ },
+ "containment": {
+  "unit": "qwen38-engine",
+  "memory_swap_max": "0",
+  "oom_policy": "kill",
+  "kill_mode": "control-group"
+ },
+ "port_role": "production"
+}

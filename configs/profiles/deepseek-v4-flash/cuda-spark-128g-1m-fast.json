@@ -1,0 +1,63 @@
+{
+ "schema_version": 4,
+ "profile_id": "deepseek-v4-flash/cuda-spark-128g-1m-fast",
+ "model": "deepseek-v4-flash",
+ "backend": "cuda",
+ "hardware_class": "spark",
+ "ram_tier_gib": 128,
+ "purpose": "The 1M+fast production profile: million-token context with the measured fast-prefill buffers (ggerganov's canonical DGX Spark config, ~434 tok/s prefill vs ~208 at ub=256). Two 512k slots protect the agent conversation cache from utility-call eviction; a single request is therefore capped at 512k tokens. The context-scaled compute buffers at CTX=1M/ub=2048 leave a measured steady state of ~9.8 GiB free (memwatch BREACH 2026-08-01), so the owner accepted lowering the watchdog floor to 8 GiB - a deliberately thinner crash barrier. The 12 GiB overhead charge is the measured non-weight, non-KV footprint (~11.3 GiB) at this exact configuration.",
+ "status": {
+  "state": "qualified",
+  "decision": "owner_accepted_1m_fast_floor8",
+  "evidence": "docs/speed-tuning-2026-07-23.md"
+ },
+ "engine": "llamacpp-fusion",
+ "artifact_roles": {"model": "udq2kxl"},
+ "launch": {
+  "mechanism": "delegated-launcher",
+  "runuser": "dsv4",
+  "delegate": "{repo}/scripts/21_serve_llamacpp.sh",
+  "env": {
+   "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+   "HOME": "/home/dsv4",
+   "USER": "dsv4",
+   "LOGNAME": "dsv4",
+   "LANG": "C.UTF-8",
+   "DSV4_PORT": "{port}",
+   "DSV4_SERVER_BINARY": "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server",
+   "DSV4_BUILD_MANIFEST": "{repo}/configs/build-manifests/llamacpp-fusion.json",
+   "DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB": "8",
+   "DSV4_MEM_FLOOR_GIB": "8",
+   "DSV4_WATCHDOG_FLOOR_GIB": "8",
+   "DSV4_MEASURED_HEADLESS_OVERHEAD_GIB": "12",
+   "DSV4_ALLOW_RETRY_AFTER_FAILED_START": "1",
+   "DSV4_UBATCH": "2048",
+   "DSV4_BATCH": "2048",
+   "DSV4_UBATCH_LARGE": "1",
+   "CTX": "1048576",
+   "DSV4_PARALLEL": "2",
+   "DSV4_NO_MMAP": "1",
+   "DSV4_SPEC_TYPE": "none",
+   "DSV4_VERIFY_WEIGHTS": "full"
+  },
+  "diagnostics_unset": []
+ },
+ "safety": {
+  "kill_floor_gib": 8,
+  "minimum_start_gib": 100,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800,
+  "note": "enforced inside scripts/21_serve_llamacpp.sh via the env above; the delegate owns admission, watchdog, and weights verification"
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 7066,
+  "overhead_gib": 12.0,
+  "extra_gib": 0,
+  "floor_gib": 8,
+  "basis": "kv 6.9 KiB/token analytic (docs/bigctx plan; the delegate's historical 4096 B/token admission constant is known-undersized and is not used for estimation); overhead 12 GiB measured at CTX=1M/ub=2048"
+ },
+ "context_cap": 1048576,
+ "port_role": "production",
+ "bench": {"stack_label": "llamacpp-udq2kxl"},
+ "switch_alias": "dsv4"
+}

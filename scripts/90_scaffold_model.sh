@@ -95,7 +95,7 @@ name = sys.argv[2]
 try:
     with path.open(encoding="utf-8") as stream:
         registry = json.load(stream)
-    if registry.get("schema_version") != 1 or type(registry.get("backends")) is not dict:
+    if registry.get("schema_version") != 2 or type(registry.get("backends")) is not dict:
         raise ValueError("unsupported registry schema")
     entry = registry["backends"].get(name)
     if type(entry) is not dict or type(entry.get("implemented")) is not bool:
@@ -202,10 +202,12 @@ Scaffold complete. Remaining integration checklist:
       verification/MANIFEST.sha256.
   [ ] Add narrowly scoped scripts/lint_secrets.sh allowlist entries likely needed
       for results/${slug}-gates/ paths and weights/${slug}/manifest.json.
-  [ ] Add the ${slug} case to scripts/52_engine_switch.sh.
-  [ ] Add and validate the ${slug} profile JSON.
-  [ ] Register scripts/${serve_name} under backend "${backend}" in
-      configs/backends.json.
+  [ ] Author configs/profiles/${slug}/model.json and a
+      ${backend}-<class|tier>.json profile per docs/PROFILE-SCHEMA.md, then
+      validate with scripts/92_resolve_profile.py check.
+  [ ] If the model becomes a production switch target, give its profile a
+      switch_alias and a conformance fixture (see
+      scripts/tests/test_profile_render_conformance.py).
   [ ] Download politeness: push branches BEFORE starting weight downloads; fetch
       only the primary quant, and defer ladder quants until a gate needs them.
 EOF

@@ -1,0 +1,66 @@
+{
+ "schema_version": 4,
+ "profile_id": "laguna-s-2.1/cpu-128g",
+ "model": "laguna-s-2.1",
+ "backend": "cpu",
+ "hardware_class": "any",
+ "ram_tier_gib": 128,
+ "status": {
+  "state": "estimated",
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "engine": "llamacpp-laguna-portable",
+ "artifact_roles": {
+  "model": "udq4kxl"
+ },
+ "launch": {
+  "mechanism": "setsid-watchdog-portable",
+  "log_name": "cpu-128g",
+  "env": {},
+  "diagnostics_unset": [],
+  "args": [
+   "--model",
+   "{model}",
+   "-ngl",
+   "99",
+   "-fa",
+   "on",
+   "-c",
+   "131072",
+   "--parallel",
+   "1",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--alias",
+   "laguna-s-2.1",
+   "--jinja",
+   "--chat-template-kwargs",
+   "{\"enable_thinking\":true}",
+   "--cache-reuse",
+   "256"
+  ]
+ },
+ "safety": {
+  "kill_floor_gib": 8,
+  "minimum_start_gib": 78,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 54067,
+  "overhead_gib": 3.0,
+  "extra_gib": 0,
+  "floor_gib": 8,
+  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+ },
+ "context_cap": 131072,
+ "port_role": "production",
+ "bench": {
+  "stack_label": "laguna-s-2.1-cpu-any-128g"
+ },
+ "verify_on_hardware": [
+  "cpu-throughput (8B-active MoE: usable but slow)"
+ ]
+}

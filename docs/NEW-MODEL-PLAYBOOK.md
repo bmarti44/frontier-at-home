@@ -90,11 +90,15 @@ reviewer ceremony for new-model work. Distilled from the GLM-5.2 effort.
 
 ## 4. Profile and serving
 
-1. Create a profile config binding: binary SHA-256, model digest, context
-   cap, and the exact environment allowlist. Profiles are campaign-specific
-   JSON (see `configs/glm52-lossless-plateau-profile.json` for a worked
-   example) — copy an existing one and adapt; there is no generic schema, and
-   runtime-config byte-comparison is implemented per-harness, not globally.
+1. Create a declarative profile under `configs/profiles/<catalog-slug>/`
+   per `docs/PROFILE-SCHEMA.md`: a shared `model.json` (artifact digests,
+   engines, backend support) plus one `<backend>-<class|tier>.json` per
+   (backend, RAM tier), carrying the launch mechanism, argv/env templates,
+   containment, safety floors, and memory model. Validate with
+   `scripts/92_resolve_profile.py check`; profiles for hardware this repo
+   cannot test ship as `status: estimated` and are promoted per
+   `docs/QUALIFY-OFFHOST.md`. Rendered profiles are byte-compared to the
+   production fixtures by `scripts/tests/test_profile_render_conformance.py`.
 2. Serve on 127.0.0.1 only; poll `/v1/models` for readiness. Production
    promotion additionally requires `scripts/52_engine_switch.sh` support for
    the new engine (it currently recognizes only `dsv4`/`glm52`) and the

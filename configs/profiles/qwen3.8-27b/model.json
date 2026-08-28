@@ -1,0 +1,51 @@
+{
+ "schema_version": 1,
+ "model": "qwen3.8-27b",
+ "artifacts": {
+  "q4km": {
+   "kind": "gguf",
+   "path": "{model_root}/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+   "sha256": "e103abf9d914d1d7b2f2592f055f2759a71195c350a01c135f71aaae86bca52b",
+   "weights_gib": 16.6
+  },
+  "q6k": {
+   "kind": "gguf",
+   "path": "{model_root}/qwen3.8-27b/Qwen3.8-27B-Q6_K.gguf",
+   "weights_gib": 21.9
+  },
+  "q8": {
+   "kind": "gguf",
+   "path": "{model_root}/qwen3.8-27b/Qwen3.8-27B-Q8_0.gguf",
+   "weights_gib": 27.1
+  },
+  "mmproj-f16": {
+   "kind": "mmproj",
+   "path": "{model_root}/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf",
+   "sha256": "cb0a71fe9b84af2552fc6260acf8e9773a29d115c683aba01c72a7ac537b212b",
+   "weights_gib": 0.86
+  }
+ },
+ "engines": {
+  "llamacpp-qwen38": {
+   "build_manifest": "configs/build-manifests/llamacpp-qwen38-9d77fa17.json",
+   "binary_path": "{cache_root}/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server",
+   "binary_sha256": "bcef273b987786cd5d51e2f95a5b7d58ea70d3026b3733d67cdd8139331da7e9"
+  },
+  "llamacpp-qwen38-portable": {
+   "build_manifest": null,
+   "binary_path": "{cache_root}/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server",
+   "binary_sha256": null,
+   "note": "same pin built with scripts/12_build_qwen38_llamacpp.sh --host-class <class>; digest and class-suffixed build manifest are pinned at qualification (docs/QUALIFY-OFFHOST.md)"
+  }
+ },
+ "backend_support": {
+  "cuda": {"supported": true},
+  "apple-silicon": {"supported": true, "note": "upstream llama.cpp Metal; MTP draft behavior verify-on-hardware"},
+  "rocm": {"supported": true, "note": "llama.cpp HIP build, verify-on-hardware"},
+  "cpu": {"supported": true, "note": "dense 27B; expect low single-digit tok/s"},
+  "vulkan": {"supported": false, "reason": "no profile authored; schema supports it"},
+  "intel-xe": {"supported": false, "reason": "no profile authored; schema supports it"},
+  "qualcomm": {"supported": false, "reason": "no profile authored; schema supports it"},
+  "tenstorrent": {"supported": false, "reason": "no profile authored; schema supports it"}
+ }
+}

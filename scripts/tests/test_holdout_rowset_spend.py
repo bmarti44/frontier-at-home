@@ -73,6 +73,39 @@ class HoldoutRowsetTests(unittest.TestCase):
         c = self.module.holdout_rowset_digest("gsm8k", "holdout", rows, mutated)
         self.assertNotEqual(a, c, "a different draw must produce a different digest")
 
+    def test_profile_id_extends_the_digest_only_when_given(self):
+        """--profile-id is a measurement identity (docs/PROFILE-SCHEMA.md).
+
+        Profile-less invocations must keep producing payloads with the exact
+        pre-profile key set so frozen digests stay reproducible in schema;
+        a named profile adds the key and therefore mints a new digest.
+        """
+        import argparse
+        module = self.module
+        base_kwargs = dict(
+            config_evidence=None,
+            stack_label="stack",
+            suite="gsm8k",
+            split="holdout",
+            extra_body=None,
+            max_tokens=16384,
+            thinking_mode="chat",
+            encoder="deepseek",
+            reasoning_effort=None,
+            request_timeout=600,
+            profile_id=None,
+        )
+        digest, payload, _ = module.derive_config_digest(
+            argparse.Namespace(**base_kwargs)
+        )
+        self.assertIsNone(digest)
+        self.assertIsNone(payload)
+        # With config evidence absent we cannot build a full payload here;
+        # assert the payload key contract at the source level instead.
+        source = SCRIPT.read_text()
+        self.assertIn('if args.profile_id is not None:', source)
+        self.assertIn('digest_payload["profile_id"] = args.profile_id', source)
+
     def test_ledger_entry_carries_the_rowset_digest(self):
         # The ledger row is what an auditor reads; the digest has to be in it.
         module = self.module

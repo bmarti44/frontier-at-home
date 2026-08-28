@@ -229,6 +229,13 @@ memory monitoring, commit state only after validation, and restore the previous
 profile on failure. DeepSeek remains the safe default until a new model passes
 quality, safety, direct-1M, switching, and review gates.
 
+Launch truth is declarative: each switch alias maps to one profile file under
+`configs/profiles/<catalog-slug>/` (`docs/PROFILE-SCHEMA.md`), and the switch
+renders argv, env, and containment from it. Profiles for other architectures
+and RAM tiers live alongside with `status: estimated` and are promoted per
+`docs/QUALIFY-OFFHOST.md`; `scripts/92_resolve_profile.py list` shows what
+this host can serve.
+
 ## Working style
 
 - Lead status updates with the outcome in plain language.

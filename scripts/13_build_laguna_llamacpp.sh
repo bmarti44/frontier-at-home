@@ -25,14 +25,8 @@ die() {
     exit 1
 }
 
-if (( $# > 1 )); then
-    usage >&2
-    exit 2
-fi
 case ${1:-} in
-    '') ;;
     -h|--help) usage; exit 0 ;;
-    *) usage >&2; exit 2 ;;
 esac
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P) \
@@ -40,17 +34,35 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P) \
 REPO_ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd -P) \
     || die 'cannot resolve repository root'
 MANIFEST=$REPO_ROOT/configs/build-manifests/llamacpp-laguna-06f8cebd.json
+die_env() { die "$@"; }
+die_build() { die "$@"; }
+# shellcheck source=lib/build_host_class.sh
+source "$SCRIPT_DIR/lib/build_host_class.sh"
+build_host_class_parse "$@"
+(( ${#BUILD_HOST_CLASS_ARGS[@]} == 0 )) || { usage >&2; exit 2; }
+if [[ $BUILD_HOST_CLASS != cuda-spark ]]; then
+    # The committed manifest records the Spark CUDA build; other host
+    # classes write a class-suffixed manifest and never overwrite it.
+    # Metal/HIP builds of the poolside fork are verify-on-hardware
+    # (configs/hardware-matrix.json engine_pins).
+    MANIFEST=$REPO_ROOT/configs/build-manifests/llamacpp-laguna-06f8cebd-$BUILD_HOST_CLASS.json
+fi
 
 for command_name in awk cmake flock git python3 uname; do
     command -v "$command_name" >/dev/null 2>&1 \
         || die "required command not found: $command_name"
 done
 
-cmake_flags=(
-    -DGGML_CUDA=ON
-    -DCMAKE_CUDA_ARCHITECTURES=121
-    -DCMAKE_BUILD_TYPE=Release
-)
+if [[ $BUILD_HOST_CLASS == cuda-spark ]]; then
+    cmake_flags=(
+        -DGGML_CUDA=ON
+        -DCMAKE_CUDA_ARCHITECTURES=121
+        -DCMAKE_BUILD_TYPE=Release
+    )
+else
+    mapfile -t accelerator_flags < <(build_host_class_cmake_flags)
+    cmake_flags=("${accelerator_flags[@]}" -DCMAKE_BUILD_TYPE=Release)
+fi
 
 mkdir -p -- "$CACHE_ROOT"
 if [[ -e $CACHE_ROOT/build.lock ]]; then
@@ -111,7 +123,7 @@ try:
         and bool(libraries)
         and all(
             pathlib.Path(name).name == name
-            and name.endswith(".so")
+            and name.endswith((".so", ".dylib"))
             and entry["sha256"] == digest(binary_directory / name)
             for name, entry in libraries.items()
         )
@@ -140,12 +152,18 @@ then
     exit 0
 fi
 
-[[ $(uname -m) == aarch64 ]] || die 'this build requires aarch64'
-[[ -x /usr/local/cuda/bin/nvcc ]] || die 'CUDA nvcc is missing: /usr/local/cuda/bin/nvcc'
-nvcc_version=$(/usr/local/cuda/bin/nvcc --version) || die 'nvcc --version failed'
-[[ $nvcc_version =~ release[[:space:]]13\.0 ]] \
-    || die 'this build requires CUDA toolkit release 13.0'
+if [[ $BUILD_HOST_CLASS == cuda-spark ]]; then
+    [[ $(uname -m) == aarch64 ]] || die 'this build requires aarch64'
+    [[ -x /usr/local/cuda/bin/nvcc ]] || die 'CUDA nvcc is missing: /usr/local/cuda/bin/nvcc'
+    nvcc_version=$(/usr/local/cuda/bin/nvcc --version) || die 'nvcc --version failed'
+    [[ $nvcc_version =~ release[[:space:]]13\.0 ]] \
+        || die 'this build requires CUDA toolkit release 13.0'
+else
+    build_host_class_require_platform
+    nvcc_version="n/a"
+fi
 
+if [[ -r /proc/meminfo ]]; then
 available_kib=$(awk '$1 == "MemAvailable:" {print $2; found=1; exit} END {if (!found) exit 1}' /proc/meminfo) \
     || die 'cannot read MemAvailable'
 (( available_kib >= 11 * 1048576 )) ||
@@ -168,6 +186,11 @@ if (( available_kib < 110 * 1048576 )); then
         || die 'resident-production build requires numeric memory.max and memory.swap.max=0'
     (( memory_max <= 11 * 1024 * 1024 * 1024 )) \
         || die 'resident-production build requires memory.max no greater than 11 GiB'
+fi
+else
+    # No procfs (macOS): the build-memory gate is Linux-only; the serve-time
+    # watchdog remains the real guard (docs/BACKEND-CONTRACT.md section 3).
+    available_kib=0
 fi
 
 printf '[1/6] Preparing isolated Laguna llama.cpp source cache: %s\n' "$SOURCE_DIR" >&2
@@ -244,7 +267,8 @@ mkdir -p -- "$(dirname -- "$MANIFEST")"
 manifest_tmp=$MANIFEST.tmp.$$
 python3 - "$manifest_tmp" "$MANIFEST" "$LLAMACPP_REPOSITORY" \
     "$LLAMACPP_BRANCH" "$LLAMACPP_COMMIT" "$SOURCE_DIR" "$BUILD_DIR" \
-    "$SERVER_BINARY" "$CLI_BINARY" "${cmake_flags[@]}" <<'PY'
+    "$SERVER_BINARY" "$CLI_BINARY" "${cmake_flags[@]}" "$BUILD_HOST_CLASS" "$(build_host_class_backend)" \
+    <<'PY'
 import hashlib
 import json
 import os
@@ -264,6 +288,8 @@ import sys
     cli_name,
     *cmake_flags,
 ) = sys.argv[1:]
+host_class = cmake_flags.pop(-2)
+backend = cmake_flags.pop(-1)
 
 
 def digest(path):
@@ -276,8 +302,9 @@ def digest(path):
 
 build = pathlib.Path(build_name)
 libraries = {}
-for path in sorted((build / "bin").glob("*.so")):
-    libraries[path.name] = {"sha256": digest(path)}
+for suffix in ("*.so", "*.dylib"):
+    for path in sorted((build / "bin").glob(suffix)):
+        libraries[path.name] = {"sha256": digest(path)}
 if not libraries:
     raise SystemExit("build produced no shared libraries to record")
 
@@ -297,6 +324,8 @@ manifest = {
         "--target", "llama-server", "llama-cli",
     ]),
     "jobs": 2,
+    "backend": backend,
+    "host_class": host_class,
     "binaries": {
         "llama-server": {"path": server_name, "sha256": digest(server_name)},
         "llama-cli": {"path": cli_name, "sha256": digest(cli_name)},

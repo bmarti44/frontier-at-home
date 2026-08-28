@@ -76,6 +76,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=16.0,
         help="minimum projected free memory in GiB (default: 16.0)",
     )
+    parser.add_argument(
+        "--mem-available-gib",
+        type=nonnegative_float,
+        default=None,
+        help=(
+            "override the live MemAvailable reading in GiB; used for static "
+            "profile-tier estimation and on hosts without /proc/meminfo "
+            "(default: read procfs)"
+        ),
+    )
     parser.add_argument("--out", default="-", metavar="PATH", help="JSON output path (default: stdout)")
     return parser
 
@@ -122,7 +132,10 @@ def main() -> int:
     else:
         weights_gib = args.weights_gib
 
-    mem_available_now_gib = read_mem_available_gib()
+    if args.mem_available_gib is not None:
+        mem_available_now_gib = args.mem_available_gib
+    else:
+        mem_available_now_gib = read_mem_available_gib()
     kv_cache_gib = args.ctx * args.kv_bytes_per_token / BYTES_PER_GIB
     projected_free_gib = mem_available_now_gib - (
         weights_gib + kv_cache_gib + args.overhead_gib + args.extra_gib
