@@ -1,0 +1,95 @@
+{
+  "index": 87,
+  "task_id": "HumanEval/87",
+  "rendered_prompt_sha256": "8de3ecf44a0ece8d4e372c37aa51439548bd77398c179f009834d5b5d1ea34fb",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    result = []\n    for row_idx, row in enumerate(lst):\n        for col_idx, val in enumerate(row):\n            if val == x:\n                result.append((row_idx, col_idx))\n    # Sort by row ascending, then by column descending\n    result.sort(key=lambda coord: (coord[0], -coord[1]))\n    return result\nOkay, let's see. I need to write a function called get_row that takes a list of lists (lst) and an integer x. The goal is to find all occurrences of x in the list and return their coordinates as tuples. The coordinates should be sorted first by row in ascending order, and within the same row, by column in descending order.\n\nHmm, so first, I need to iterate through each row and each element in the row. For each element that equals x, I record its position as (row index, column index). Then, after collecting all these coordinates, I have to sort them. The sorting is a bit tricky because the primary key is the row number, which should be in ascending order. But for the same row, the columns should be in descending order. \n\nWait, how do I sort them properly? Let's think. Normally, when you sort tuples in Python, it sorts by the first element, then the second. So if I have two coordinates (1,4) and (1,0), when sorted normally, they would be (1,0) then (1,4). But the problem wants the columns in descending order for the same row. So for row 1, the columns should be 4 first, then 0. So the sort key needs to be (row, -column). That way, when sorted, the row is ascending, and the column is descending because we take the negative.\n\nSo the plan is:\n\n1. Initialize an empty list to collect the coordinates.\n2. Loop over each row with their indices. For each row, loop over each element with their column indices.\n3. If the element is equal to x, append the (row_idx, col_idx) tuple to the list.\n4. After collecting all, sort the list using a key that sorts by row ascending and column descending.\n5. Return the sorted list.\n\nLet me test this logic against the examples.\n\nFirst example:\nInput:\n[\n  [1,2,3,4,5,6],\n  [1,2,3,4,1,6],\n  [1,2,3,4,5,1]\n]\nx = 1\n\nLooking for 1s. The first row has 1 at (0,0). The second row has 1 at (1,0) and (1,4). The third row has 1 at (2,0) and (2,5). So the coordinates are (0,0), (1,0), (1,4), (2,0), (2,5). Wait, but the expected output is [(0, 0), (1, 4), (1, 0), (2, 5), (2, 0)]. Oh right, because within the same row, columns are sorted descending. So for row 1, the columns are 4 and 0. So sorted descending would be 4 first, then 0. Similarly for row 2, columns 5 and 0, so 5 first. So the sorted list should be ordered as (0,0), (1,4), (1,0), (2,5), (2,0). Which matches the example.\n\nSo the sorting key (row, -col) would work. Let's see: when we sort the list of coordinates, each coordinate is a tuple. The key for each is (row, -col). So when sorted, the rows are in order, and within the same row, the columns are sorted in reverse order.\n\nAnother example: get_row([], 1) should return empty list. That's straightforward.\n\nThird example: [[], [1], [1, 2, 3]], x=3. The 3 is at (2,2). So the output is [(2,2)]. Correct.\n\nSo the code should work. Now, let's code this.\n\nWait, in Python, when you sort, the default is to sort by the elements of the tuple. So if I have a list of tuples, and I want to sort them first by the first element (row) ascending, then by the second element (column) descending, I can use a custom key. The key for each element (row, col) would be (row, -col). Then, when sorted, the rows are in order, and for same rows, the columns are in reverse order.\n\nYes. So the code would be:\n\ndef get_row(lst, x):\n    result = []\n    for row_idx, row in enumerate(lst):\n        for col_idx, val in enumerate(row):\n            if val == x:\n                result.append( (row_idx, col_idx) )\n    # Sort by row ascending, then column descending\n    result.sort( key=lambda coord: (coord[0], -coord[1]) )\n    return result\n\nThat should do it. Let me check the first example again. The coordinates collected would be (0,0), (1,0), (1,4), (2,0), (2,5). Then sorted with the key. Let's see:\n\nThe list before sorting is [(0,0), (1,0), (1,4), (2,0), (2,5)]. Applying the sort key:\n\nEach element's key is (row, -col). So:\n\n(0,0) → (0, 0)\n(1,0) → (1, 0)\n(1,4) → (1, -4)\n(2,0) → (2, 0)\n(2,5) → (2, -5)\n\nWhen sorted, the order of keys would be:\n\n(0,0) comes first.\n\nThen for row 1: (1, -4) and (1, 0). Since -4 is less than 0, (1, -4) comes before (1, 0). Wait, no. Wait, when you sort, the keys are compared. So (1, -4) is compared to (1, 0). The first elements are equal (1), so compare the second elements. -4 is less than 0, so (1, -4) comes before (1, 0). So the sorted order for row 1 would be (1,4) first, then (1,0). Which is correct.\n\nSimilarly for row 2: (2, -5) and (2, 0). -5 is less than 0, so (2,5) comes before (2,0). So the sorted list would be [(0,0), (1,4), (1,0), (2,5), (2,0)], which matches the example.\n\nLooks good. So this code should work.\nSure, here's the Python function that solves the problem as described:\n\n```python\ndef get_row(lst, x):\n    result = []\n    for row_idx, row in enumerate(lst):\n        for col_idx, val in enumerate(row):\n            if val == x:\n                result.append((row_idx, col_idx))\n    # Sort by row ascending, then column descending\n    result.sort(key=lambda coord: (coord[0], -coord[1]))\n    return result\n```\n\n### Explanation:\n1. **Initialization**: An empty list `result` is created to store the coordinates of occurrences of `x`.\n2. **Iteration**: We loop through each row using `enumerate` to get both the row index and the row itself. For each row, we again use `enumerate` to get the column index and the value at that position.\n3. **Check and Collect**: If the value at the current position matches `x`, we append a tuple `(row_idx, col_idx)` to `result`.\n4. **Sorting**: The list of coordinates is sorted using a custom key. The key is a tuple `(row, -col)`, which ensures that:\n   - Coordinates are sorted by row in ascending order.\n   - Within the same row, coordinates are sorted by column in descending order (achieved by negating the column index).\n5. **Return**: The sorted list of coordinates is returned.\n\nThis approach efficiently collects and sorts the coordinates in the required order, ensuring correctness and clarity.",
+  "finish_reason": "stop",
+  "expected": "    coords = [(i, j) for i in range(len(lst)) for j in range(len(lst[i])) if lst[i][j] == x]\n    return sorted(sorted(coords, key=lambda x: x[1], reverse=True), key=lambda x: x[0])\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 53.877551537996624
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    result = []\n    for row_idx, row in enumerate(lst):\n        for col_idx, val in enumerate(row):\n            if val == x:\n                result.append((row_idx, col_idx))\n    # Sort by row ascending, then by column descending\n    result.sort(key=lambda coord: (coord[0], -coord[1]))\n    return result\nOkay, let's see. I need to write a function called get_row that takes a list of lists (lst) and an integer x. The goal is to find all occurrences of x in the list and return their coordinates as tuples. The coordinates should be sorted first by row in ascending order, and within the same row, by column in descending order.\n\nHmm, so first, I need to iterate through each row and each element in the row. For each element that equals x, I record its position as (row index, column index). Then, after collecting all these coordinates, I have to sort them. The sorting is a bit tricky because the primary key is the row number, which should be in ascending order. But for the same row, the columns should be in descending order. \n\nWait, how do I sort them properly? Let's think. Normally, when you sort tuples in Python, it sorts by the first element, then the second. So if I have two coordinates (1,4) and (1,0), when sorted normally, they would be (1,0) then (1,4). But the problem wants the columns in descending order for the same row. So for row 1, the columns should be 4 first, then 0. So the sort key needs to be (row, -column). That way, when sorted, the row is ascending, and the column is descending because we take the negative.\n\nSo the plan is:\n\n1. Initialize an empty list to collect the coordinates.\n2. Loop over each row with their indices. For each row, loop over each element with their column indices.\n3. If the element is equal to x, append the (row_idx, col_idx) tuple to the list.\n4. After collecting all, sort the list using a key that sorts by row ascending and column descending.\n5. Return the sorted list.\n\nLet me test this logic against the examples.\n\nFirst example:\nInput:\n[\n  [1,2,3,4,5,6],\n  [1,2,3,4,1,6],\n  [1,2,3,4,5,1]\n]\nx = 1\n\nLooking for 1s. The first row has 1 at (0,0). The second row has 1 at (1,0) and (1,4). The third row has 1 at (2,0) and (2,5). So the coordinates are (0,0), (1,0), (1,4), (2,0), (2,5). Wait, but the expected output is [(0, 0), (1, 4), (1, 0), (2, 5), (2, 0)]. Oh right, because within the same row, columns are sorted descending. So for row 1, the columns are 4 and 0. So sorted descending would be 4 first, then 0. Similarly for row 2, columns 5 and 0, so 5 first. So the sorted list should be ordered as (0,0), (1,4), (1,0), (2,5), (2,0). Which matches the example.\n\nSo the sorting key (row, -col) would work. Let's see: when we sort the list of coordinates, each coordinate is a tuple. The key for each is (row, -col). So when sorted, the rows are in order, and within the same row, the columns are sorted in reverse order.\n\nAnother example: get_row([], 1) should return empty list. That's straightforward.\n\nThird example: [[], [1], [1, 2, 3]], x=3. The 3 is at (2,2). So the output is [(2,2)]. Correct.\n\nSo the code should work. Now, let's code this.\n\nWait, in Python, when you sort, the default is to sort by the elements of the tuple. So if I have a list of tuples, and I want to sort them first by the first element (row) ascending, then by the second element (column) descending, I can use a custom key. The key for each element (row, col) would be (row, -col). Then, when sorted, the rows are in order, and for same rows, the columns are in reverse order.\n\nYes. So the code would be:\n\ndef get_row(lst, x):\n    result = []\n    for row_idx, row in enumerate(lst):\n        for col_idx, val in enumerate(row):\n            if val == x:\n                result.append( (row_idx, col_idx) )\n    # Sort by row ascending, then column descending\n    result.sort( key=lambda coord: (coord[0], -coord[1]) )\n    return result\n\nThat should do it. Let me check the first example again. The coordinates collected would be (0,0), (1,0), (1,4), (2,0), (2,5). Then sorted with the key. Let's see:\n\nThe list before sorting is [(0,0), (1,0), (1,4), (2,0), (2,5)]. Applying the sort key:\n\nEach element's key is (row, -col). So:\n\n(0,0) → (0, 0)\n(1,0) → (1, 0)\n(1,4) → (1, -4)\n(2,0) → (2, 0)\n(2,5) → (2, -5)\n\nWhen sorted, the order of keys would be:\n\n(0,0) comes first.\n\nThen for row 1: (1, -4) and (1, 0). Since -4 is less than 0, (1, -4) comes before (1, 0). Wait, no. Wait, when you sort, the keys are compared. So (1, -4) is compared to (1, 0). The first elements are equal (1), so compare the second elements. -4 is less than 0, so (1, -4) comes before (1, 0). So the sorted order for row 1 would be (1,4) first, then (1,0). Which is correct.\n\nSimilarly for row 2: (2, -5) and (2, 0). -5 is less than 0, so (2,5) comes before (2,0). So the sorted list would be [(0,0), (1,4), (1,0), (2,5), (2,0)], which matches the example.\n\nLooks good. So this code should work.\nSure, here's the Python function that solves the problem as described:\n\n```python\ndef get_row(lst, x):\n    result = []\n    for row_idx, row in enumerate(lst):\n        for col_idx, val in enumerate(row):\n            if val == x:\n                result.append((row_idx, col_idx))\n    # Sort by row ascending, then column descending\n    result.sort(key=lambda coord: (coord[0], -coord[1]))\n    return result\n```\n\n### Explanation:\n1. **Initialization**: An empty list `result` is created to store the coordinates of occurrences of `x`.\n2. **Iteration**: We loop through each row using `enumerate` to get both the row index and the row itself. For each row, we again use `enumerate` to get the column index and the value at that position.\n3. **Check and Collect**: If the value at the current position matches `x`, we append a tuple `(row_idx, col_idx)` to `result`.\n4. **Sorting**: The list of coordinates is sorted using a custom key. The key is a tuple `(row, -col)`, which ensures that:\n   - Coordinates are sorted by row in ascending order.\n   - Within the same row, coordinates are sorted by column in descending order (achieved by negating the column index).\n5. **Return**: The sorted list of coordinates is returned.\n\nThis approach efficiently collects and sorts the coordinates in the required order, ensuring correctness and clarity.",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787374351,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 1845,
+      "prompt_tokens": 274,
+      "total_tokens": 2119,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-K1Q4YP2wA5CmNYcK6ImBcR3lpEi7Hq91",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 274,
+      "prompt_ms": 630.639,
+      "prompt_per_token_ms": 2.301602189781022,
+      "prompt_per_second": 434.47994811611716,
+      "predicted_n": 1845,
+      "predicted_ms": 52962.951,
+      "predicted_per_token_ms": 28.70620650406504,
+      "predicted_per_second": 34.835672204141346,
+      "draft_n": 2236,
+      "draft_n_accepted": 1285
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00087:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "index": 1299,
+  "task_id": 1299,
+  "rendered_prompt_sha256": "1082e845f5d01a218abf7946afc9ac1a4bf8c13d5f8c7235e007c517cefef69c",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Janet's total spending:\n- Ice cream: $3.50\n- Movie tickets: 2 × $7.50 = $15.00\n- Bracelet: $8.50\n\nTotal spent = $3.50 + $15.00 + $8.50 = $27.00\n\nMoney left = $40.00 - $27.00 = $13.00\n\nAnswer: 13",
+  "finish_reason": "stop",
+  "expected": "13",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8182005789713003
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Janet's total spending:\n- Ice cream: $3.50\n- Movie tickets: 2 × $7.50 = $15.00\n- Bracelet: $8.50\n\nTotal spent = $3.50 + $15.00 + $8.50 = $27.00\n\nMoney left = $40.00 - $27.00 = $13.00\n\nAnswer: 13",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331514,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 108,
+      "prompt_tokens": 129,
+      "total_tokens": 237,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-v2NvOn5RNFZYBOP2xBoj9n7SocCpySQF",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 129,
+      "prompt_ms": 516.642,
+      "prompt_per_token_ms": 4.004976744186047,
+      "prompt_per_second": 249.68934000720031,
+      "predicted_n": 108,
+      "predicted_ms": 2281.26,
+      "predicted_per_token_ms": 21.12277777777778,
+      "predicted_per_second": 47.342258225717366,
+      "draft_n": 100,
+      "draft_n_accepted": 82
+    }
+  },
+  "used_fallback": false
+}

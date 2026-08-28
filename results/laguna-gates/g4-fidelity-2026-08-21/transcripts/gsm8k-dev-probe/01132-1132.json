@@ -1,0 +1,61 @@
+{
+  "index": 1132,
+  "task_id": 1132,
+  "rendered_prompt_sha256": "8fae87fa7e2c8b9efc92fade2460e3e637f3126cfcffe02f980792e5fbadc56f",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Valerie earns $5000, which is half of her brother's salary, so her brother earns $10,000. Combined, Valerie and her brother earn $15,000. Their mother earns twice that amount: $30,000. Adding all three salaries together: $5000 + $10,000 + $30,000 = $45,000.\n\nAnswer: 45000",
+  "finish_reason": "stop",
+  "expected": "45000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.164951289014425
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Valerie earns $5000, which is half of her brother's salary, so her brother earns $10,000. Combined, Valerie and her brother earn $15,000. Their mother earns twice that amount: $30,000. Adding all three salaries together: $5000 + $10,000 + $30,000 = $45,000.\n\nAnswer: 45000",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330746,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 108,
+      "prompt_tokens": 110,
+      "total_tokens": 218,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-OXTiWKNzCPJaHYzZ6NOJNNPcvuyJWd34",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 110,
+      "prompt_ms": 486.33,
+      "prompt_per_token_ms": 4.421181818181818,
+      "prompt_per_second": 226.18386692163762,
+      "predicted_n": 108,
+      "predicted_ms": 2647.598,
+      "predicted_per_token_ms": 24.514796296296296,
+      "predicted_per_second": 40.79169118574647,
+      "draft_n": 116,
+      "draft_n_accepted": 78
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>Valerie earns $5000 per month, 1/2 of what her brother earns. If their mother earns twice their combined salary, what's the total amount of money they all have together?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

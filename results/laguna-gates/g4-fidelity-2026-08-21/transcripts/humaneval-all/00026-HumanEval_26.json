@@ -1,0 +1,96 @@
+{
+  "index": 26,
+  "task_id": "HumanEval/26",
+  "rendered_prompt_sha256": "7823eea9be9599563c786fa16e792f3da2482016607d75ee06ca40b2d33c7dca",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    # Count occurrences of each number\n    counts = {}\n    for num in numbers:\n        counts[num] = counts.get(num, 0) + 1\n    \n    # Build result list with only numbers that appear exactly once\n    result = []\n    for num in numbers:\n        if counts[num] == 1:\n            result.append(num)\n    \n    return result\n```\n\nThe code is already correct and handles the requirements. The function:\n1. Counts occurrences of each number using a dictionary\n2. Iterates through the original list to preserve order\n3. Only includes numbers that appear exactly once\n\nThe time complexity is O(n) and space complexity is O(n), which is optimal for this problem.\n\nThe implementation is clean, readable, and follows Python best practices. No changes needed.\n\nThe function correctly handles edge cases like empty lists and lists where all elements are duplicates. The order preservation is maintained by iterating through the original list rather than the dictionary.\n\nI'll provide the same code as the solution since it's already optimal.\n\n```python\nfrom typing import List\n\ndef remove_duplicates(numbers: List[int]) -> List[int]:\n    \"\"\" From a list of integers, remove all elements that occur more than once.\n    Keep order of elements left the same as in the input.\n    >>> remove_duplicates([1, 2, 3, 2, 4])\n    [1, 3, 4]\n    \"\"\"\n    counts = {}\n    for num in numbers:\n        counts[num] = counts.get(num, 0) + 1\n    \n    result = []\n    for num in numbers:\n        if counts[num] == 1:\n            result.append(num)\n    \n    return result\n```",
+  "finish_reason": "stop",
+  "expected": "    import collections\n    c = collections.Counter(numbers)\n    return [n for n in numbers if c[n] <= 1]\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.533782408980187
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # Count occurrences of each number\n    counts = {}\n    for num in numbers:\n        counts[num] = counts.get(num, 0) + 1\n    \n    # Build result list with only numbers that appear exactly once\n    result = []\n    for num in numbers:\n        if counts[num] == 1:\n            result.append(num)\n    \n    return result\n```\n\nThe code is already correct and handles the requirements. The function:\n1. Counts occurrences of each number using a dictionary\n2. Iterates through the original list to preserve order\n3. Only includes numbers that appear exactly once\n\nThe time complexity is O(n) and space complexity is O(n), which is optimal for this problem.\n\nThe implementation is clean, readable, and follows Python best practices. No changes needed.\n\nThe function correctly handles edge cases like empty lists and lists where all elements are duplicates. The order preservation is maintained by iterating through the original list rather than the dictionary.\n\nI'll provide the same code as the solution since it's already optimal.\n\n```python\nfrom typing import List\n\ndef remove_duplicates(numbers: List[int]) -> List[int]:\n    \"\"\" From a list of integers, remove all elements that occur more than once.\n    Keep order of elements left the same as in the input.\n    >>> remove_duplicates([1, 2, 3, 2, 4])\n    [1, 3, 4]\n    \"\"\"\n    counts = {}\n    for num in numbers:\n        counts[num] = counts.get(num, 0) + 1\n    \n    result = []\n    for num in numbers:\n        if counts[num] == 1:\n            result.append(num)\n    \n    return result\n```",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787365665,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 381,
+      "prompt_tokens": 85,
+      "total_tokens": 466,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-dy1WkLk4SAROLkqFWWM7fVeM0uhYVth3",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 85,
+      "prompt_ms": 418.385,
+      "prompt_per_token_ms": 4.922176470588235,
+      "prompt_per_second": 203.16215925523142,
+      "predicted_n": 381,
+      "predicted_ms": 10059.299,
+      "predicted_per_token_ms": 26.402359580052497,
+      "predicted_per_second": 37.87540264982679,
+      "draft_n": 424,
+      "draft_n_accepted": 274
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00026:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "from typing import List\n\n\ndef remove_duplicates(numbers: List[int]) -> List[int]:\n    \"\"\" From a list of integers, remove all elements that occur more than once.\n    Keep order of elements left the same as in the input.\n    >>> remove_duplicates([1, 2, 3, 2, 4])\n    [1, 3, 4]\n    \"\"\"\n"
+}

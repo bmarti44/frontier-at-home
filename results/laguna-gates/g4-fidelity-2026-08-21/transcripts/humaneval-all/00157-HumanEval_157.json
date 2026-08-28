@@ -1,0 +1,95 @@
+{
+  "index": 157,
+  "task_id": "HumanEval/157",
+  "rendered_prompt_sha256": "badc999ecbcb5e6dd1dbb3d1c1b89f9b624e434dd4afebf241d035353b2b0a79",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    # your code here\n    pass\n```\n\nOkay, I need to write a function that checks if three given sides form a right-angled triangle. Hmm, right-angled triangles follow the Pythagorean theorem, right? So the sum of the squares of the two shorter sides should equal the square of the longest side. \n\nFirst, I should figure out which of the three sides is the longest. Because the hypotenuse is the longest side in a right-angled triangle. So maybe I should sort the sides to find the largest one. Let's see.\n\nWait, the function takes a, b, c as inputs. So I can sort them to get the order. Let's say I sort them in ascending order. Then the third one would be the largest. Then check if a² + b² equals c², where c is the largest.\n\nWait, but what if the sides are not in order? Like, maybe the user passes them in any order. So sorting is necessary.\n\nSo the steps would be:\n\n1. Sort the three numbers to find the largest.\n2. Check if the sum of squares of the two smaller ones equals the square of the largest.\n\nBut also, I need to make sure that the three sides can form a triangle in the first place. Wait, the problem says \"given the lengths of the three sides of a triangle\". Oh, right, so maybe we don't have to check if they form a valid triangle. Because the problem states that they are the sides of a triangle. So we can assume that the inputs are valid triangle sides. So we don't have to check the triangle inequality here.\n\nSo the main thing is to apply the Pythagorean theorem.\n\nSo let's think about the code. Let's sort the three numbers. Let's say we have a list like sides = sorted([a, b, c]). Then the largest is sides[2]. Then check if sides[0]^2 + sides[1]^2 == sides[2]^2.\n\nYes, that should work.\n\nWait, but what about floating point precision issues? Like if the numbers are not integers? But the problem examples use integers, but the function parameters could be any numbers. However, since the problem says to return True or False, maybe we can just do exact comparison. But in practice, with floating points, there might be precision errors. But perhaps the problem expects us to do exact comparison. Let's see the examples. The first example is 3,4,5 which works. The second is 1,2,3. Let's see: 1² + 2² = 1 +4 =5, which is not equal to 3²=9. So returns False. So the code would work for those.\n\nSo the code steps:\n\ndef right_angle_triangle(a, b, c):\n    sides = sorted([a, b, c])\n    return sides[0]**2 + sides[1]**2 == sides[2]**2\n\nWait, that's simple enough. Let me test some cases.\n\nTest case 1: 3,4,5. sorted is [3,4,5]. 9 +16 =25, which equals 25. So returns True. Correct.\n\nTest case 2: 1,2,3. sorted [1,2,3]. 1+4=5 vs 9. Not equal. Returns False. Correct.\n\nAnother test case: 5,3,4. Same as first case. sorted gives same result. So works.\n\nWhat about a triangle with sides 5,5,5? That's equilateral. 5² +5² = 50, which is not equal to 5²=25. So returns False. Correct.\n\nWhat about a triangle with sides 6,8,10? That's a right triangle. 36 +64 =100. So returns True.\n\nWhat about a non-right triangle, like 2,2,3. sorted [2,2,3]. 4 +4 =8 vs 9. Not equal. So returns False.\n\nHmm, seems to handle all cases. So this code should work.\n\nWait, but what if the sides are zero or negative? But the problem says \"lengths of the three sides of a triangle\", so they must be positive. So we don't have to handle that.\n\nTherefore, the code should be as simple as that.\n```python\ndef right_angle_triangle(a, b, c):\n    sides = sorted([a, b, c])\n    return sides[0]**2 + sides[1]**2 == sides[2]**2\n```\n\nWait, but what if the sides are not in the correct order? Like, what if the largest is not the third element after sorting? No, sorted() will arrange them in ascending order, so the third element is definitely the largest. So the code is correct.\n\nYes, I think that's the solution.</think>```python\ndef right_angle_triangle(a, b, c):\n    sides = sorted([a, b, c])\n    return sides[0]**2 + sides[1]**2 == sides[2]**2\n```",
+  "finish_reason": "stop",
+  "expected": "    return a*a == b*b + c*c or b*b == a*a + c*c or c*c == a*a + b*b\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 35.57816581299994
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # your code here\n    pass\n```\n\nOkay, I need to write a function that checks if three given sides form a right-angled triangle. Hmm, right-angled triangles follow the Pythagorean theorem, right? So the sum of the squares of the two shorter sides should equal the square of the longest side. \n\nFirst, I should figure out which of the three sides is the longest. Because the hypotenuse is the longest side in a right-angled triangle. So maybe I should sort the sides to find the largest one. Let's see.\n\nWait, the function takes a, b, c as inputs. So I can sort them to get the order. Let's say I sort them in ascending order. Then the third one would be the largest. Then check if a² + b² equals c², where c is the largest.\n\nWait, but what if the sides are not in order? Like, maybe the user passes them in any order. So sorting is necessary.\n\nSo the steps would be:\n\n1. Sort the three numbers to find the largest.\n2. Check if the sum of squares of the two smaller ones equals the square of the largest.\n\nBut also, I need to make sure that the three sides can form a triangle in the first place. Wait, the problem says \"given the lengths of the three sides of a triangle\". Oh, right, so maybe we don't have to check if they form a valid triangle. Because the problem states that they are the sides of a triangle. So we can assume that the inputs are valid triangle sides. So we don't have to check the triangle inequality here.\n\nSo the main thing is to apply the Pythagorean theorem.\n\nSo let's think about the code. Let's sort the three numbers. Let's say we have a list like sides = sorted([a, b, c]). Then the largest is sides[2]. Then check if sides[0]^2 + sides[1]^2 == sides[2]^2.\n\nYes, that should work.\n\nWait, but what about floating point precision issues? Like if the numbers are not integers? But the problem examples use integers, but the function parameters could be any numbers. However, since the problem says to return True or False, maybe we can just do exact comparison. But in practice, with floating points, there might be precision errors. But perhaps the problem expects us to do exact comparison. Let's see the examples. The first example is 3,4,5 which works. The second is 1,2,3. Let's see: 1² + 2² = 1 +4 =5, which is not equal to 3²=9. So returns False. So the code would work for those.\n\nSo the code steps:\n\ndef right_angle_triangle(a, b, c):\n    sides = sorted([a, b, c])\n    return sides[0]**2 + sides[1]**2 == sides[2]**2\n\nWait, that's simple enough. Let me test some cases.\n\nTest case 1: 3,4,5. sorted is [3,4,5]. 9 +16 =25, which equals 25. So returns True. Correct.\n\nTest case 2: 1,2,3. sorted [1,2,3]. 1+4=5 vs 9. Not equal. Returns False. Correct.\n\nAnother test case: 5,3,4. Same as first case. sorted gives same result. So works.\n\nWhat about a triangle with sides 5,5,5? That's equilateral. 5² +5² = 50, which is not equal to 5²=25. So returns False. Correct.\n\nWhat about a triangle with sides 6,8,10? That's a right triangle. 36 +64 =100. So returns True.\n\nWhat about a non-right triangle, like 2,2,3. sorted [2,2,3]. 4 +4 =8 vs 9. Not equal. So returns False.\n\nHmm, seems to handle all cases. So this code should work.\n\nWait, but what if the sides are zero or negative? But the problem says \"lengths of the three sides of a triangle\", so they must be positive. So we don't have to handle that.\n\nTherefore, the code should be as simple as that.\n```python\ndef right_angle_triangle(a, b, c):\n    sides = sorted([a, b, c])\n    return sides[0]**2 + sides[1]**2 == sides[2]**2\n```\n\nWait, but what if the sides are not in the correct order? Like, what if the largest is not the third element after sorting? No, sorted() will arrange them in ascending order, so the third element is definitely the largest. So the code is correct.\n\nYes, I think that's the solution.</think>```python\ndef right_angle_triangle(a, b, c):\n    sides = sorted([a, b, c])\n    return sides[0]**2 + sides[1]**2 == sides[2]**2\n```",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787387673,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 1094,
+      "prompt_tokens": 110,
+      "total_tokens": 1204,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-wMfdWECcyfgnC9sLectnPPWodm1hIkbG",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 110,
+      "prompt_ms": 455.352,
+      "prompt_per_token_ms": 4.139563636363636,
+      "prompt_per_second": 241.57135578629283,
+      "predicted_n": 1094,
+      "predicted_ms": 35069.135,
+      "predicted_per_token_ms": 32.05588208409507,
+      "predicted_per_second": 31.195522786632743,
+      "draft_n": 1512,
+      "draft_n_accepted": 715
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00157:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 35, in <module>\n    check(right_angle_triangle)\n  File \"/case/main.py\", line 19, in check\n    assert candidate(3, 4, 5) == True, \"This prints if this assert fails 1 (good for debugging!)\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: This prints if this assert fails 1 (good for debugging!)\n"
+  }
+}

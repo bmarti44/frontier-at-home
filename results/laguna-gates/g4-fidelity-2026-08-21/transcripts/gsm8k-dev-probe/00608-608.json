@@ -1,0 +1,60 @@
+{
+  "index": 608,
+  "task_id": 608,
+  "rendered_prompt_sha256": "068c9de1e2bd5f7af9666ed094c7d4b5294eaacf011cbd7fe0d2996add4ed4d5",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "The user is asking a math problem. Need to compute total cost after 30% discount on shirt and shorts, then subtract from $50.\n\nShirt $25, shorts $35. Total before discount = 60. 30% off = 0.30*60 = 18. Discounted total = 42. Sales tax included? \"Assuming that sales tax is included\" means no additional tax. So cost = 42. Money left = 50 - 42 = 8.\n\nNeed respond with final numeric answer on its own line.</think>Answer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.435236834047828
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "The user is asking a math problem. Need to compute total cost after 30% discount on shirt and shorts, then subtract from $50.\n\nShirt $25, shorts $35. Total before discount = 60. 30% off = 0.30*60 = 18. Discounted total = 42. Sales tax included? \"Assuming that sales tax is included\" means no additional tax. So cost = 42. Money left = 50 - 42 = 8.\n\nNeed respond with final numeric answer on its own line.</think>Answer: 8",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330732,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 141,
+      "total_tokens": 275,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-cnawr8ZR5XxiHnWi1LPveT6y2gAS4Kfg",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 141,
+      "prompt_ms": 493.561,
+      "prompt_per_token_ms": 3.500432624113475,
+      "prompt_per_second": 285.6789738249173,
+      "predicted_n": 134,
+      "predicted_ms": 4920.499,
+      "predicted_per_token_ms": 36.720141791044774,
+      "predicted_per_second": 27.233010310539644,
+      "draft_n": 216,
+      "draft_n_accepted": 79
+    }
+  },
+  "used_fallback": false
+}

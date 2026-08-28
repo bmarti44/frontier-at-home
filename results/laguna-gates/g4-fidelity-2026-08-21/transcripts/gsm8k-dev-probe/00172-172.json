@@ -1,0 +1,61 @@
+{
+  "index": 172,
+  "task_id": 172,
+  "rendered_prompt_sha256": "ed7a50197840e05b06d616140745eec5249175f48d7aec10f7bcd385b003cda7",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Answer: 40",
+  "finish_reason": "stop",
+  "expected": "51",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='40' expected='51'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.8911181690054946
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Answer: 40",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330965,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 7,
+      "prompt_tokens": 136,
+      "total_tokens": 143,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-ID9l5Tc4ctANdibdS0gQoPwdyStaDw9a",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 136,
+      "prompt_ms": 487.164,
+      "prompt_per_token_ms": 3.5820882352941177,
+      "prompt_per_second": 279.16676930150834,
+      "predicted_n": 7,
+      "predicted_ms": 381.215,
+      "predicted_per_token_ms": 54.45928571428571,
+      "predicted_per_second": 18.362341460855426,
+      "draft_n": 16,
+      "draft_n_accepted": 2
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>There are four birds at the Caboose. Sally Two is three years older than Granny Red. Granny Red is two times as old as Sally Four. If Sally Four is the same age as Sally Thirtytwo, and Sally Thirtytwo is 8 years old, what's the total age of the four birds?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

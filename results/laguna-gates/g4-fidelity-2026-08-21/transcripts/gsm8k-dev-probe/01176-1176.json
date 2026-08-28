@@ -1,0 +1,60 @@
+{
+  "index": 1176,
+  "task_id": 1176,
+  "rendered_prompt_sha256": "f259aa420406f3a391117305b1587b2fcddc571d7524fb037554b9fdcbd1e765",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The teacher starts with a 5-inch piece of chalk. On Monday, he uses 45% of it:\n\n\\[\n5 \\times 0.45 = 2.25 \\text{ inches used}\n\\]\n\nRemaining chalk after Monday:\n\n\\[\n5 - 2.25 = 2.75 \\text{ inches}\n\\]\n\nFrom Tuesday onward, he uses 20% of the remaining chalk each day. We need to determine how many days until the chalk is less than 2 inches.\n\n**Tuesday:**\n\\[\n2.75 \\times 0.8 = 2.2 \\text{ inches remaining}\n\\]\n\n**Wednesday:**\n\\[\n2.2 \\times 0.8 = 1.76 \\text{ inches remaining}\n\\]\n\nSince 1.76 inches is less than 2 inches, the chalk must be recycled after Wednesday. Therefore, the teacher has 2 days (Tuesday and Wednesday) before he needs to recycle the chalk.\n\n\\[\n\\boxed{2}\n\\]",
+  "finish_reason": "stop",
+  "expected": "2",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.062655004032422
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The teacher starts with a 5-inch piece of chalk. On Monday, he uses 45% of it:\n\n\\[\n5 \\times 0.45 = 2.25 \\text{ inches used}\n\\]\n\nRemaining chalk after Monday:\n\n\\[\n5 - 2.25 = 2.75 \\text{ inches}\n\\]\n\nFrom Tuesday onward, he uses 20% of the remaining chalk each day. We need to determine how many days until the chalk is less than 2 inches.\n\n**Tuesday:**\n\\[\n2.75 \\times 0.8 = 2.2 \\text{ inches remaining}\n\\]\n\n**Wednesday:**\n\\[\n2.2 \\times 0.8 = 1.76 \\text{ inches remaining}\n\\]\n\nSince 1.76 inches is less than 2 inches, the chalk must be recycled after Wednesday. Therefore, the teacher has 2 days (Tuesday and Wednesday) before he needs to recycle the chalk.\n\n\\[\n\\boxed{2}\n\\]",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331003,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 230,
+      "prompt_tokens": 216,
+      "total_tokens": 446,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-Mx5mb1Kl832SgafM8ftw88LIkYvBTuYa",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 216,
+      "prompt_ms": 665.712,
+      "prompt_per_token_ms": 3.082,
+      "prompt_per_second": 324.4646333549643,
+      "predicted_n": 230,
+      "predicted_ms": 5369.89,
+      "predicted_per_token_ms": 23.347347826086956,
+      "predicted_per_second": 42.831417403336005,
+      "draft_n": 232,
+      "draft_n_accepted": 171
+    }
+  },
+  "used_fallback": true
+}

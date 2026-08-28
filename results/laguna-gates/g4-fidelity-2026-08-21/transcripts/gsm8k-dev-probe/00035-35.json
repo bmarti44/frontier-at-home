@@ -1,0 +1,60 @@
+{
+  "index": 35,
+  "task_id": 35,
+  "rendered_prompt_sha256": "147f8bf89781088ab8349160b0cfc5bd65bc10a25caa54071cd22844850a4ceb",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Mike scores 4 points in the first 20 minutes. In the second 20 minutes, he scores 25% more:  \n\\( 4 \\times 1.25 = 5 \\) points.  \n\nTotal points: \\( 4 + 5 = 9 \\).  \n\nAnswer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.084505067963619
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Mike scores 4 points in the first 20 minutes. In the second 20 minutes, he scores 25% more:  \n\\( 4 \\times 1.25 = 5 \\) points.  \n\nTotal points: \\( 4 + 5 = 9 \\).  \n\nAnswer: 9",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331165,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 70,
+      "prompt_tokens": 120,
+      "total_tokens": 190,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-ZhCeCpoXaUp4m7ZgTn33DOgv6qZaD18B",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 120,
+      "prompt_ms": 505.808,
+      "prompt_per_token_ms": 4.215066666666667,
+      "prompt_per_second": 237.2441717015152,
+      "predicted_n": 70,
+      "predicted_ms": 1550.88,
+      "predicted_per_token_ms": 22.155428571428573,
+      "predicted_per_second": 45.135664912823685,
+      "draft_n": 68,
+      "draft_n_accepted": 52
+    }
+  },
+  "used_fallback": false
+}

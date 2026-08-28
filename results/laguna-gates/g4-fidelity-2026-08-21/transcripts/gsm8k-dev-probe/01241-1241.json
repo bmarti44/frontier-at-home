@@ -1,0 +1,60 @@
+{
+  "index": 1241,
+  "task_id": 1241,
+  "rendered_prompt_sha256": "dc3fac0487abe2c15fde523db5aec385e8269a8bcc9b960149398baeec441660",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Rose bought 5 dozen eggs at $2.40 per dozen:\n- Cost = 5 × $2.40 = $12.00\n\nShe has 5 × 12 = 60 eggs total.\n\nSelling price is $1 for 3 eggs:\n- Number of 3-egg groups = 60 ÷ 3 = 20\n- Revenue = 20 × $1 = $20.00\n\nProfit = Revenue - Cost = $20.00 - $12.00 = $8.00\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.734485302004032
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Rose bought 5 dozen eggs at $2.40 per dozen:\n- Cost = 5 × $2.40 = $12.00\n\nShe has 5 × 12 = 60 eggs total.\n\nSelling price is $1 for 3 eggs:\n- Number of 3-egg groups = 60 ÷ 3 = 20\n- Revenue = 20 × $1 = $20.00\n\nProfit = Revenue - Cost = $20.00 - $12.00 = $8.00\n\nAnswer: 8",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331128,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 132,
+      "prompt_tokens": 103,
+      "total_tokens": 235,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-U8SLPMxwD94aY8OvqT825A2gtdlODShG",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 103,
+      "prompt_ms": 467.264,
+      "prompt_per_token_ms": 4.536543689320388,
+      "prompt_per_second": 220.43213258457746,
+      "predicted_n": 132,
+      "predicted_ms": 3235.612,
+      "predicted_per_token_ms": 24.512212121212123,
+      "predicted_per_second": 40.79599160838815,
+      "draft_n": 144,
+      "draft_n_accepted": 95
+    }
+  },
+  "used_fallback": false
+}

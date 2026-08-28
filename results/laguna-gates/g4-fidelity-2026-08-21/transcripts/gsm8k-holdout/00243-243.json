@@ -1,0 +1,61 @@
+{
+  "index": 243,
+  "task_id": 243,
+  "rendered_prompt_sha256": "325f3a78e3c95eedb0c3358782e9b90a32297b2e20e4256903f5299fd93bfd0f",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Jason uses 15 minutes daily for calls with his boss over 30 days:  \n15 × 30 = 450 minutes.  \n\nAdding 300 extra minutes:  \n450 + 300 = 750 total minutes used.  \n\nSubtracting from his 1000-minute plan:  \n1000 − 750 = 250 minutes remaining.  \n\nAnswer: 250",
+  "finish_reason": "stop",
+  "expected": "250",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.070598290010821
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Jason uses 15 minutes daily for calls with his boss over 30 days:  \n15 × 30 = 450 minutes.  \n\nAdding 300 extra minutes:  \n450 + 300 = 750 total minutes used.  \n\nSubtracting from his 1000-minute plan:  \n1000 − 750 = 250 minutes remaining.  \n\nAnswer: 250",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331556,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 104,
+      "prompt_tokens": 131,
+      "total_tokens": 235,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-5pc0gWIbTqmudsO46riCWgHUgWNWV2W8",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 131,
+      "prompt_ms": 525.037,
+      "prompt_per_token_ms": 4.007916030534352,
+      "prompt_per_second": 249.50622527555197,
+      "predicted_n": 104,
+      "predicted_ms": 2496.728,
+      "predicted_per_token_ms": 24.007,
+      "predicted_per_second": 41.654517432415545,
+      "draft_n": 108,
+      "draft_n_accepted": 76
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>Jason has a phone plan of 1000 minutes per month. Every day he has a 15-minute call with his boss, and he's had 300 extra minutes of call this month to other people. How many minutes does Jason have left if this month has 30 days?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

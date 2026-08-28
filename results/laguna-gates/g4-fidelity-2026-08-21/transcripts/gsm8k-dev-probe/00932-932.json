@@ -1,0 +1,60 @@
+{
+  "index": 932,
+  "task_id": 932,
+  "rendered_prompt_sha256": "86dbcf1319963365129522a7479470a3f0789f559a7a8ff868c27cbb741418f2",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Maria invited 4 friends, so there are 5 people total (Maria + 4 friends).\n\n- Initial balloons:\n  - Each friend gets 2: 4 × 2 = 8\n  - Maria has 1\n  - Total initial: 8 + 1 = 9\n\n- Mom gives 3 more to each person:\n  - 5 people × 3 = 15\n\n- Total balloons: 9 + 15 = 24\n\nAnswer: 24",
+  "finish_reason": "stop",
+  "expected": "24",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.9291766390088014
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Maria invited 4 friends, so there are 5 people total (Maria + 4 friends).\n\n- Initial balloons:\n  - Each friend gets 2: 4 × 2 = 8\n  - Maria has 1\n  - Total initial: 8 + 1 = 9\n\n- Mom gives 3 more to each person:\n  - 5 people × 3 = 15\n\n- Total balloons: 9 + 15 = 24\n\nAnswer: 24",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331196,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 110,
+      "prompt_tokens": 136,
+      "total_tokens": 246,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-ROJbq69eBxgw85FvH1eAcC39nrsG5lQq",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 136,
+      "prompt_ms": 480.71,
+      "prompt_per_token_ms": 3.5346323529411765,
+      "prompt_per_second": 282.9148551101496,
+      "predicted_n": 110,
+      "predicted_ms": 2429.261,
+      "predicted_per_token_ms": 22.08419090909091,
+      "predicted_per_second": 45.28126043269949,
+      "draft_n": 104,
+      "draft_n_accepted": 83
+    }
+  },
+  "used_fallback": false
+}

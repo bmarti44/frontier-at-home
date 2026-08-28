@@ -1,0 +1,60 @@
+{
+  "index": 410,
+  "task_id": 410,
+  "rendered_prompt_sha256": "abe44addd43121e52d7d7b6b0855160206e40ced39387ab0f2e9d9e7a49c015c",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Sally's purchases:\n- Taffy: Buy 1 pound at $3, get 1 pound 1/2 off. For 2 pounds: $3 + ($3 × 0.5) = $3 + $1.50 = $4.50\n- Seashells: $1.50\n- Magnets: 4 × $0.25 = $1.00\n\nTotal spent: $4.50 + $1.50 + $1.00 = $7.00\n\nMoney left: $10.00 - $7.00 = $3.00\n\nAnswer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.6399052309570834
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Sally's purchases:\n- Taffy: Buy 1 pound at $3, get 1 pound 1/2 off. For 2 pounds: $3 + ($3 × 0.5) = $3 + $1.50 = $4.50\n- Seashells: $1.50\n- Magnets: 4 × $0.25 = $1.00\n\nTotal spent: $4.50 + $1.50 + $1.00 = $7.00\n\nMoney left: $10.00 - $7.00 = $3.00\n\nAnswer: 3",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331506,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 147,
+      "prompt_tokens": 174,
+      "total_tokens": 321,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-5325EdF8kwib0Oa91TBVpNJnC8qKQkvM",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 174,
+      "prompt_ms": 536.553,
+      "prompt_per_token_ms": 3.083637931034483,
+      "prompt_per_second": 324.2922879939167,
+      "predicted_n": 147,
+      "predicted_ms": 3080.377,
+      "predicted_per_token_ms": 20.954945578231293,
+      "predicted_per_second": 47.721431500105346,
+      "draft_n": 136,
+      "draft_n_accepted": 112
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,59 @@
+{
+  "index": 257,
+  "task_id": 329,
+  "rendered_prompt_sha256": "af1369f56d0732748302ed4095febe0f211ccf4739ff2d5c48decaa418e270e8",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "Okay, let's see. Adams Manufacturing Company had a fire loss of $45,000. They have two insurance policies: one with Acme Insurance for $50,000 and another with Safe Way Insurance for $30,000. The question is asking how much each insurance company will pay towards the loss.\n\nHmm, I remember that when there are multiple insurance policies covering the same property, the payment is usually prorated based on the proportion of each policy's coverage relative to the total coverage. So first, I need to calculate the total amount of insurance they have. That would be $50,000 (Acme) plus $30,000 (Safe Way), which equals $80,000 total coverage.\n\nNow, the loss is $45,000. Since the total coverage is $80,000, which is more than the loss, each insurance company will pay a portion of the loss proportional to their policy amount. The formula for each company's share is (Policy Amount / Total Coverage) * Loss Amount.\n\nLet me calculate Acme's share first. Their policy is $50,000 out of $80,000 total. So that's 50,000 divided by 80,000. Let me do that division: 50,000 ÷ 80,000 = 0.625. Then multiply that by the loss of $45,000. 0.625 * 45,000. Let me compute that. 0.625 times 45,000. Well, 0.6 times 45,000 is 27,000, and 0.025 times 45,000 is 1,125. Adding those together gives 27,000 + 1,125 = $28,125. So Acme would pay $28,125.\n\nThen Safe Way's share is the remaining amount. Since the total loss is $45,000, subtracting Acme's $28,125 gives $45,000 - $28,125 = $16,875. Alternatively, I can calculate it using their proportion: 30,000 / 80,000 = 0.375. 0.375 * 45,000 = $16,875. Either way, same result.\n\nLooking at the options, option D says Acme - $28,125 and Safe Way - $16,875. That matches my calculations. Let me double-check to make sure I didn't mix up the numbers. Acme has the larger policy, so they should pay more. Since $28k is more than $16k, that makes sense. The total of both payments is $28,125 + $16,875 = $45,000, which matches the loss amount. So that checks out. I don't see any mistakes here. The answer must be D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 18.96496939996723
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Okay, let's see. Adams Manufacturing Company had a fire loss of $45,000. They have two insurance policies: one with Acme Insurance for $50,000 and another with Safe Way Insurance for $30,000. The question is asking how much each insurance company will pay towards the loss.\n\nHmm, I remember that when there are multiple insurance policies covering the same property, the payment is usually prorated based on the proportion of each policy's coverage relative to the total coverage. So first, I need to calculate the total amount of insurance they have. That would be $50,000 (Acme) plus $30,000 (Safe Way), which equals $80,000 total coverage.\n\nNow, the loss is $45,000. Since the total coverage is $80,000, which is more than the loss, each insurance company will pay a portion of the loss proportional to their policy amount. The formula for each company's share is (Policy Amount / Total Coverage) * Loss Amount.\n\nLet me calculate Acme's share first. Their policy is $50,000 out of $80,000 total. So that's 50,000 divided by 80,000. Let me do that division: 50,000 ÷ 80,000 = 0.625. Then multiply that by the loss of $45,000. 0.625 * 45,000. Let me compute that. 0.625 times 45,000. Well, 0.6 times 45,000 is 27,000, and 0.025 times 45,000 is 1,125. Adding those together gives 27,000 + 1,125 = $28,125. So Acme would pay $28,125.\n\nThen Safe Way's share is the remaining amount. Since the total loss is $45,000, subtracting Acme's $28,125 gives $45,000 - $28,125 = $16,875. Alternatively, I can calculate it using their proportion: 30,000 / 80,000 = 0.375. 0.375 * 45,000 = $16,875. Either way, same result.\n\nLooking at the options, option D says Acme - $28,125 and Safe Way - $16,875. That matches my calculations. Let me double-check to make sure I didn't mix up the numbers. Acme has the larger policy, so they should pay more. Since $28k is more than $16k, that makes sense. The total of both payments is $28,125 + $16,875 = $45,000, which matches the loss amount. So that checks out. I don't see any mistakes here. The answer must be D.</think>Answer: D",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787337623,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 704,
+      "prompt_tokens": 379,
+      "total_tokens": 1083,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-kjDWKWVOWMMHFEdog8IrpxK2sywj3h5L",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 379,
+      "prompt_ms": 797.753,
+      "prompt_per_token_ms": 2.1048891820580478,
+      "prompt_per_second": 475.0843932896523,
+      "predicted_n": 704,
+      "predicted_ms": 18093.652,
+      "predicted_per_token_ms": 25.701210227272725,
+      "predicted_per_second": 38.90867360552751,
+      "draft_n": 784,
+      "draft_n_accepted": 507
+    }
+  }
+}

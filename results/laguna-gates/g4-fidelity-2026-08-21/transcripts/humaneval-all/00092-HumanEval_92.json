@@ -1,0 +1,95 @@
+{
+  "index": 92,
+  "task_id": "HumanEval/92",
+  "rendered_prompt_sha256": "1d19b808783c5f57c39df1de99cec4193d4b59538aa48ed22d6ca85c727a51e2",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    if isinstance(x, int) and isinstance(y, int) and isinstance(z, int):\n        if x == y + z or y == x + z or z == x + y:\n            return True\n        else:\n            return False\n    else:\n        return False\n\nOkay, let's see. I need to create a function called any_int that takes three numbers and returns True if one of them is the sum of the other two, but only if all are integers. Otherwise, return False. Hmm.\n\nFirst, I should check if all three inputs are integers. Because if any of them is not an integer, like a float, then we immediately return False. So how do I check if a number is an integer in Python? Oh right, using isinstance(). So for each of x, y, z, I need to verify they are instances of int. Wait, but what about numbers like 5.0? Because 5.0 is a float, not an int. So even if the value is a whole number but stored as a float, it's still not considered an integer here. So the check has to be strictly for int type.\n\nSo first step: check if all three are integers. If not, return False.\n\nThen, once we know they are all integers, check if any one of them is the sum of the other two. So for example, x equals y + z, or y equals x + z, or z equals x + y. If any of those conditions is true, return True. Otherwise, return False.\n\nLet me think about the examples given. \n\nFirst example: any_int(5, 2, 7). All are integers. 5 is 2 + 3? Wait, 2 +7 is 9, no. Wait 5 +2 is 7? Oh right, 5 +2 =7. So z is 7, which is x + y. So that's why it returns True.\n\nSecond example: 3,2,2. All integers. Let's see: 3 vs 2+2 (4) no. 2 vs 3+2 (5) no. 2 vs 3+2 (5) no. So returns False.\n\nThird example: 3, -2, 1. All integers. 3 is -2 +1? That's -1, no. -2 is 3 +1? 4, no. 1 is 3 + (-2) which is 1. So yes, so returns True.\n\nFourth example: 3.6, -2.2, 2. Since 3.6 is a float, so returns False.\n\nSo the logic seems right.\n\nNow, coding this. The function structure would be:\n\ndef any_int(x, y, z):\n    # check if all are integers\n    if not (isinstance(x, int) and isinstance(y, int) and isinstance(z, int)):\n        return False\n    # now check the sum conditions\n    if x == y + z or y == x + z or z == x + y:\n        return True\n    else:\n        return False\n\nWait, but in Python, the order of operations here. The first condition checks if all are integers. If not, return False. Then, check the sum conditions.\n\nAlternatively, could combine the checks. But the above should work.\n\nWait, but what about negative numbers? Like the third example. Let me see. 3, -2, 1. So z is 1, which is 3 + (-2) =1. So yes. So the code would catch that.\n\nAnother test case: any_int(0,0,0). All integers. Then 0 is 0+0, so returns True. That's correct.\n\nWhat about any_int(1, 2, 3). 1+2=3, so returns True.\n\nEdge case: any_int(0, 1, -1). 0 is 1 + (-1) → yes. So returns True.\n\nWhat if two numbers sum to the third but in different order? Like 7,5,2. 5+2=7, so yes.\n\nSo the code should handle all these.\n\nWait, but what about if two numbers are the same and the third is zero? Like 2,2,0. Then 2 = 2 +0 → yes. So returns True.\n\nHmm, that's correct.\n\nAnother case: any_int(1, 3, 4). 1+3=4 → yes. So returns True.\n\nSo the code seems to handle all these.\n\nNow, what about if one of the numbers is a float but the others are integers? Like any_int(5, 2, 7.0). Then since 7.0 is a float, the first check would fail, so returns False. Even though 5+2=7.0, but since 7.0 is not an integer type, it's rejected.\n\nYes, that's correct per the problem statement.\n\nSo the code should be correct.\nTo solve this problem, we need to determine if one of the three given numbers is equal to the sum of the other two, while ensuring all numbers are integers. If any of the numbers is not an integer, the result should be false.\n\n### Approach\n1. **Check for Integer Types**: First, verify that all three input numbers are integers. This is done using the `isinstance()` function to check each number against the `int` type.\n2. **Check Sum Conditions**: If all numbers are integers, then check if any one of the numbers is the sum of the other two. This can be done by checking three conditions:\n   - The first number is the sum of the second and third.\n   - The second number is the sum of the first and third.\n   - The third number is the sum of the first and second.\n3. **Return Result**: If any of the sum conditions are met, return `True`. Otherwise, return `False`.\n\n### Solution Code\n```python\ndef any_int(x, y, z):\n    '''\n    Create a function that takes 3 numbers.\n    Returns true if one of the numbers is equal to the sum of the other two, and all numbers are integers.\n    Returns false in any other cases.\n    \n    Examples\n    any_int(5, 2, 7) ➞ True\n    \n    any_int(3, 2, 2) ➞ False\n\n    any_int(3, -2, 1) ➞ True\n    \n    any_int(3.6, -2.2, 2) ➞ False\n    '''\n    if not (isinstance(x, int) and isinstance(y, int) and isinstance(z, int)):\n        return False\n    if x == y + z or y == x + z or z == x + y:\n        return True\n    else:\n        return False\n```\n\n### Explanation\n- **Integer Check**: The function first checks if all inputs are integers using `isinstance()`. If any input is not an integer, it immediately returns `False`.\n- **Sum Check**: If all inputs are integers, the function then checks if any one of the numbers is the sum of the other two. This is done using three conditional checks combined with logical OR operations.\n- **Return Values**: The function returns `True` if any of the sum conditions are satisfied, otherwise it returns `False`.\n\nThis approach efficiently ensures that only valid integer inputs are considered and correctly identifies if any number is the sum of the other two, adhering to the problem constraints.",
+  "finish_reason": "stop",
+  "expected": "    \n    if isinstance(x,int) and isinstance(y,int) and isinstance(z,int):\n        if (x+y==z) or (x+z==y) or (y+z==x):\n            return True\n        return False\n    return False\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 46.83917409699643
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if isinstance(x, int) and isinstance(y, int) and isinstance(z, int):\n        if x == y + z or y == x + z or z == x + y:\n            return True\n        else:\n            return False\n    else:\n        return False\n\nOkay, let's see. I need to create a function called any_int that takes three numbers and returns True if one of them is the sum of the other two, but only if all are integers. Otherwise, return False. Hmm.\n\nFirst, I should check if all three inputs are integers. Because if any of them is not an integer, like a float, then we immediately return False. So how do I check if a number is an integer in Python? Oh right, using isinstance(). So for each of x, y, z, I need to verify they are instances of int. Wait, but what about numbers like 5.0? Because 5.0 is a float, not an int. So even if the value is a whole number but stored as a float, it's still not considered an integer here. So the check has to be strictly for int type.\n\nSo first step: check if all three are integers. If not, return False.\n\nThen, once we know they are all integers, check if any one of them is the sum of the other two. So for example, x equals y + z, or y equals x + z, or z equals x + y. If any of those conditions is true, return True. Otherwise, return False.\n\nLet me think about the examples given. \n\nFirst example: any_int(5, 2, 7). All are integers. 5 is 2 + 3? Wait, 2 +7 is 9, no. Wait 5 +2 is 7? Oh right, 5 +2 =7. So z is 7, which is x + y. So that's why it returns True.\n\nSecond example: 3,2,2. All integers. Let's see: 3 vs 2+2 (4) no. 2 vs 3+2 (5) no. 2 vs 3+2 (5) no. So returns False.\n\nThird example: 3, -2, 1. All integers. 3 is -2 +1? That's -1, no. -2 is 3 +1? 4, no. 1 is 3 + (-2) which is 1. So yes, so returns True.\n\nFourth example: 3.6, -2.2, 2. Since 3.6 is a float, so returns False.\n\nSo the logic seems right.\n\nNow, coding this. The function structure would be:\n\ndef any_int(x, y, z):\n    # check if all are integers\n    if not (isinstance(x, int) and isinstance(y, int) and isinstance(z, int)):\n        return False\n    # now check the sum conditions\n    if x == y + z or y == x + z or z == x + y:\n        return True\n    else:\n        return False\n\nWait, but in Python, the order of operations here. The first condition checks if all are integers. If not, return False. Then, check the sum conditions.\n\nAlternatively, could combine the checks. But the above should work.\n\nWait, but what about negative numbers? Like the third example. Let me see. 3, -2, 1. So z is 1, which is 3 + (-2) =1. So yes. So the code would catch that.\n\nAnother test case: any_int(0,0,0). All integers. Then 0 is 0+0, so returns True. That's correct.\n\nWhat about any_int(1, 2, 3). 1+2=3, so returns True.\n\nEdge case: any_int(0, 1, -1). 0 is 1 + (-1) → yes. So returns True.\n\nWhat if two numbers sum to the third but in different order? Like 7,5,2. 5+2=7, so yes.\n\nSo the code should handle all these.\n\nWait, but what about if two numbers are the same and the third is zero? Like 2,2,0. Then 2 = 2 +0 → yes. So returns True.\n\nHmm, that's correct.\n\nAnother case: any_int(1, 3, 4). 1+3=4 → yes. So returns True.\n\nSo the code seems to handle all these.\n\nNow, what about if one of the numbers is a float but the others are integers? Like any_int(5, 2, 7.0). Then since 7.0 is a float, the first check would fail, so returns False. Even though 5+2=7.0, but since 7.0 is not an integer type, it's rejected.\n\nYes, that's correct per the problem statement.\n\nSo the code should be correct.\nTo solve this problem, we need to determine if one of the three given numbers is equal to the sum of the other two, while ensuring all numbers are integers. If any of the numbers is not an integer, the result should be false.\n\n### Approach\n1. **Check for Integer Types**: First, verify that all three input numbers are integers. This is done using the `isinstance()` function to check each number against the `int` type.\n2. **Check Sum Conditions**: If all numbers are integers, then check if any one of the numbers is the sum of the other two. This can be done by checking three conditions:\n   - The first number is the sum of the second and third.\n   - The second number is the sum of the first and third.\n   - The third number is the sum of the first and second.\n3. **Return Result**: If any of the sum conditions are met, return `True`. Otherwise, return `False`.\n\n### Solution Code\n```python\ndef any_int(x, y, z):\n    '''\n    Create a function that takes 3 numbers.\n    Returns true if one of the numbers is equal to the sum of the other two, and all numbers are integers.\n    Returns false in any other cases.\n    \n    Examples\n    any_int(5, 2, 7) ➞ True\n    \n    any_int(3, 2, 2) ➞ False\n\n    any_int(3, -2, 1) ➞ True\n    \n    any_int(3.6, -2.2, 2) ➞ False\n    '''\n    if not (isinstance(x, int) and isinstance(y, int) and isinstance(z, int)):\n        return False\n    if x == y + z or y == x + z or z == x + y:\n        return True\n    else:\n        return False\n```\n\n### Explanation\n- **Integer Check**: The function first checks if all inputs are integers using `isinstance()`. If any input is not an integer, it immediately returns `False`.\n- **Sum Check**: If all inputs are integers, the function then checks if any one of the numbers is the sum of the other two. This is done using three conditional checks combined with logical OR operations.\n- **Return Values**: The function returns `True` if any of the sum conditions are satisfied, otherwise it returns `False`.\n\nThis approach efficiently ensures that only valid integer inputs are considered and correctly identifies if any number is the sum of the other two, adhering to the problem constraints.",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787375568,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 1641,
+      "prompt_tokens": 144,
+      "total_tokens": 1785,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-uWWha6hrhcMWM0KJhrn6Lv8ChPzRRqhb",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 144,
+      "prompt_ms": 455.128,
+      "prompt_per_token_ms": 3.160611111111111,
+      "prompt_per_second": 316.3945087975251,
+      "predicted_n": 1641,
+      "predicted_ms": 46277.295,
+      "predicted_per_token_ms": 28.20066727605119,
+      "predicted_per_second": 35.460153840020254,
+      "draft_n": 1976,
+      "draft_n_accepted": 1146
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00092:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

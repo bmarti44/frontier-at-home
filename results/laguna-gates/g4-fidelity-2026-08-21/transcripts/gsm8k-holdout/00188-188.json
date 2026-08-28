@@ -1,0 +1,61 @@
+{
+  "index": 188,
+  "task_id": 188,
+  "rendered_prompt_sha256": "a55709b8b83347c31692dadae4713a75dc374a471dfca65938e3efcc06db356f",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Let \\(n\\) be the number of bags.\n\n- Cost per bag: \\(20 + 2 = \\$22\\)\n- Total cost: \\(22n\\)\n- Revenue from selling: \\(30n\\)\n- Profit: \\(30n - 22n = 8n\\)\n\nGiven profit is \\$400:\n\n\\[\n8n = 400 \\implies n = 50\n\\]\n\nAnswer: 50",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.966209666978102
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Let \\(n\\) be the number of bags.\n\n- Cost per bag: \\(20 + 2 = \\$22\\)\n- Total cost: \\(22n\\)\n- Revenue from selling: \\(30n\\)\n- Profit: \\(30n - 22n = 8n\\)\n\nGiven profit is \\$400:\n\n\\[\n8n = 400 \\implies n = 50\n\\]\n\nAnswer: 50",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331834,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 102,
+      "prompt_tokens": 136,
+      "total_tokens": 238,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-UUisD4X5MBDrBsjTD5pbNwFslSR2cMmx",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 136,
+      "prompt_ms": 483.637,
+      "prompt_per_token_ms": 3.5561544117647057,
+      "prompt_per_second": 281.20263751532656,
+      "predicted_n": 102,
+      "predicted_ms": 2469.149,
+      "predicted_per_token_ms": 24.207343137254902,
+      "predicted_per_second": 41.30977919923018,
+      "draft_n": 108,
+      "draft_n_accepted": 74
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>A trader buys some bags of wheat from a farmer at a rate of $20 per bag. If it costs $2 to transport each bag from the farm to the warehouse, and the trader made a total profit of $400 after selling all the bags at a rate of $30 each, how many bags did he sell?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

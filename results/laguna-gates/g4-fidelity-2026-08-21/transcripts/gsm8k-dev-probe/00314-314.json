@@ -1,0 +1,60 @@
+{
+  "index": 314,
+  "task_id": 314,
+  "rendered_prompt_sha256": "38342ba4a4932f25505fc079ee7e5fd900ee18d20a66a91cd958c5b9dd18d489",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "Let me define variables. Let D be the number of defense players. Offense is 2D. Special teams is D/2. Total is D + 2D + D/2 = 105.\n\nSo 3D + D/2 = 105. That's (6D + D)/2 = 105, so 7D/2 = 105, 7D = 210, D = 30.\n\nAnswer: 30</think>Let D represent the number of defense players.\n\n- Offense: 2D\n- Special teams: D/2\n- Total: D + 2D + D/2 = 105\n\nCombining terms: 3D + D/2 = 105  \nMultiply through by 2: 6D + D = 210  \n7D = 210  \nD = 30\n\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.9810058629955165
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "Let me define variables. Let D be the number of defense players. Offense is 2D. Special teams is D/2. Total is D + 2D + D/2 = 105.\n\nSo 3D + D/2 = 105. That's (6D + D)/2 = 105, so 7D/2 = 105, 7D = 210, D = 30.\n\nAnswer: 30</think>Let D represent the number of defense players.\n\n- Offense: 2D\n- Special teams: D/2\n- Total: D + 2D + D/2 = 105\n\nCombining terms: 3D + D/2 = 105  \nMultiply through by 2: 6D + D = 210  \n7D = 210  \nD = 30\n\nAnswer: 30",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331173,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 209,
+      "prompt_tokens": 121,
+      "total_tokens": 330,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-0Y4JTm5jsjYDt4ZX3G9PF9DJYOZJ1ozk",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 121,
+      "prompt_ms": 516.465,
+      "prompt_per_token_ms": 4.268305785123967,
+      "prompt_per_second": 234.2849951109949,
+      "predicted_n": 209,
+      "predicted_ms": 5448.274,
+      "predicted_per_token_ms": 26.068296650717706,
+      "predicted_per_second": 38.36077260431469,
+      "draft_n": 236,
+      "draft_n_accepted": 149
+    }
+  },
+  "used_fallback": false
+}

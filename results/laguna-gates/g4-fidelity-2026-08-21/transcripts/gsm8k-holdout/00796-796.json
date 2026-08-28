@@ -1,0 +1,60 @@
+{
+  "index": 796,
+  "task_id": 796,
+  "rendered_prompt_sha256": "3143207356d39785abe079ed671281f2d135e0e97c91c0b0aff1125d12a6ad6d",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The company starts with 200 employees and hires 20 new employees each month.\n\n- Month 1: 200 + 20 = 220 employees\n- Month 2: 220 + 20 = 240 employees\n- Month 3: 240 + 20 = 260 employees\n\nTotal employees over three months: 220 + 240 + 260 = 720\n\nEach employee is paid $4000 per month.\n\nTotal amount paid = 720 × $4000 = $2,880,000\n\nAnswer: 2880000",
+  "finish_reason": "stop",
+  "expected": "2880000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.868684583052527
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The company starts with 200 employees and hires 20 new employees each month.\n\n- Month 1: 200 + 20 = 220 employees\n- Month 2: 220 + 20 = 240 employees\n- Month 3: 240 + 20 = 260 employees\n\nTotal employees over three months: 220 + 240 + 260 = 720\n\nEach employee is paid $4000 per month.\n\nTotal amount paid = 720 × $4000 = $2,880,000\n\nAnswer: 2880000",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331796,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 157,
+      "prompt_tokens": 130,
+      "total_tokens": 287,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-m1OFHum5afy6w6YXL4cb4UBaoEGlgc31",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 130,
+      "prompt_ms": 529.673,
+      "prompt_per_token_ms": 4.074407692307692,
+      "prompt_per_second": 245.4344472910645,
+      "predicted_n": 157,
+      "predicted_ms": 3307.404,
+      "predicted_per_token_ms": 21.066267515923567,
+      "predicted_per_second": 47.46925383170608,
+      "draft_n": 144,
+      "draft_n_accepted": 120
+    }
+  },
+  "used_fallback": false
+}

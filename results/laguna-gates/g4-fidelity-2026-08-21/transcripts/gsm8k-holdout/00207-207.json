@@ -1,0 +1,60 @@
+{
+  "index": 207,
+  "task_id": 207,
+  "rendered_prompt_sha256": "05fa757b1048fef5e2f5bac13c468e9f703f711bab6f72f8c541f0e34dfd3fed",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Each candied apple weighs half of a chocolate bar: 40g / 2 = 20g.\n\nTotal weight of chocolate bars: 25 × 40g = 1000g  \nTotal weight of candied apples: 80 × 20g = 1600g  \n\nCombined weight: 1000g + 1600g = 2600g\n\nAnswer: 2600",
+  "finish_reason": "stop",
+  "expected": "2600",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.9276217669830658
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Each candied apple weighs half of a chocolate bar: 40g / 2 = 20g.\n\nTotal weight of chocolate bars: 25 × 40g = 1000g  \nTotal weight of candied apples: 80 × 20g = 1600g  \n\nCombined weight: 1000g + 1600g = 2600g\n\nAnswer: 2600",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331598,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 105,
+      "prompt_tokens": 124,
+      "total_tokens": 229,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-PIgzrKBLcujjXWFwBfdPI0tZf1ndD7KA",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 124,
+      "prompt_ms": 517.969,
+      "prompt_per_token_ms": 4.17716935483871,
+      "prompt_per_second": 239.39656620376894,
+      "predicted_n": 105,
+      "predicted_ms": 2393.186,
+      "predicted_per_token_ms": 22.79224761904762,
+      "predicted_per_second": 43.87456720873346,
+      "draft_n": 104,
+      "draft_n_accepted": 78
+    }
+  },
+  "used_fallback": false
+}

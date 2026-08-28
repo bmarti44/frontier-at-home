@@ -1,0 +1,95 @@
+{
+  "index": 80,
+  "task_id": "HumanEval/80",
+  "rendered_prompt_sha256": "f6df53687ee0d5e99ab8d7b0e23ccaa81bf7bb578c1789277336f0016d402ac0",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        if s[i] == s[i+1] or s[i] == s[i+2] or s[i+1] == s[i+2]:\n            return False\n    return True\nOkay, let's see. I need to write a function called is_happy that checks if a string is happy. The definition says a string is happy if its length is at least 3 and every three consecutive letters are distinct. Hmm, right. So first, the string has to be at least 3 characters long. If it's shorter than that, return False immediately.\n\nThen, for every set of three consecutive characters, all three must be different. So for example, in the string \"abcd\", the first three are 'a', 'b', 'c' which are all different. Then the next triplet is 'b', 'c', 'd' which are also all different. So that's why it returns True.\n\nBut for \"aabb\", let's see. The first three are 'a', 'a', 'b'. Here, the first two are the same, so that triplet is invalid. So the function should return False.\n\nWait, the problem says every 3 consecutive letters must be distinct. So for each triplet of consecutive characters, all three must be different. So for each i from 0 to len(s)-3, check s[i], s[i+1], s[i+2]. If any of those triplets has duplicates, then the whole string is not happy.\n\nSo the approach is: first check the length. If less than 3, return False. Then loop through each possible triplet. For each triplet, check if all three are distinct. If any triplet fails, return False. If all pass, return True.\n\nLet me think about how to implement this. The loop would run from i=0 to i = len(s) - 3. Wait, the number of triplets is len(s) - 2. Because for a string of length n, the first triplet starts at 0, then 1, up to n-3. So the loop should be for i in range(len(s) - 2). Because len(s) - 2 gives the number of triplets. For example, if the string is length 3, then len(s)-2 is 1, so i runs from 0 to 0. That's correct.\n\nIn each iteration, check the three characters at positions i, i+1, i+2. So for each triplet, check if s[i] != s[i+1], s[i] != s[i+2], and s[i+1] != s[i+2]. If any of those are equal, then return False.\n\nAlternatively, maybe a more concise way is to check if the set of the three characters has length 3. Because a set automatically removes duplicates. So if the set of the three has size 3, then they are all distinct. So for each triplet, if len(set(s[i:i+3])) < 3, then return False.\n\nHmm, that might be a cleaner way. Let me see. For example, in the triplet 'aab', the set would be {'a', 'b'}, which has length 2, so that's bad. So using the set approach could simplify the code.\n\nSo the code could be written as:\n\ndef is_happy(s):\n    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        triplet = s[i:i+3]\n        if len(set(triplet)) != 3:\n            return False\n    return True\n\nWait, but in Python, slicing s[i:i+3] gives the substring starting at i and of length 3. So that's exactly the triplet. Then converting to a set and checking the length. That should work.\n\nLet me test this logic against the examples given.\n\nFirst example: is_happy('a') => length 1, returns False. Correct.\n\nis_happy('aa') => length 2, returns False. Correct.\n\nis_happy('abcd') => length 4. The triplets are 'abc' and 'bcd'. Both have 3 distinct characters. So returns True. Correct.\n\nis_happy('aabb') => length 4. The first triplet is 'aab', which has set size 2. So returns False. Correct.\n\nis_happy('adb') => length 3. The triplet is 'adb', set size 3. So returns True. Correct.\n\nis_happy('xyy') => length 3. The triplet is 'xyy', set size 2. So returns False. Correct.\n\nSo this approach seems to handle all the test cases.\n\nWait, but what about a longer string where one triplet is okay but another isn't? Like 'abcdxey' or something. Let's see. Suppose the string is 'abca'. The first triplet is 'abc' (okay), the next is 'bca' (okay). So returns True. But if the string is 'abcb', then the first triplet is 'abc' (okay), the next is 'bcb' which has 'b' and 'c' and 'b' again. The set would be {'b','c'}, so size 2. So returns False. Correct.\n\nAnother test case: 'abba' (length 4). The first triplet is 'abb' (set size 2), so returns False. Correct.\n\nSo the code should work.\n\nWait, but in the original code I thought of earlier, the first approach was checking each pair in the triplet. Let me see if there's any difference between the two approaches.\n\nThe original code I thought of was:\n\nfor i in range(len(s) - 2):\n    if s[i] == s[i+1] or s[i] == s[i+2] or s[i+1] == s[i+2]:\n        return False\n\nWhich is equivalent to checking if any two of the three are equal. The set approach is equivalent because if any two are equal, the set size will be less than 3. So both approaches are the same.\n\nSo either way works. The set approach is perhaps more concise and easier to read.\n\nTherefore, the code should be as written above.\n\nWait, but in Python, the slice s[i:i+3] when i is at the end? Let's see. For example, if the string is length 3, then i can be 0. s[0:3] is the entire string. That's correct. For a string of length 4, i can be 0 and 1. s[0:3] and s[1:4], which are the two triplets. Correct.\n\nSo the code should handle all cases.\n\nTherefore, the function is correct.\ndef is_happy(s):\n    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        triplet = s[i:i+3]\n        if len(set(triplet)) != 3:\n            return False\n    return True\n\n```python\ndef is_happy(s):\n    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        triplet = s[i:i+3]\n        if len(set(triplet)) != 3:\n            return False\n    return True\n```",
+  "finish_reason": "stop",
+  "expected": "    if len(s) < 3:\n      return False\n\n    for i in range(len(s) - 2):\n      \n      if s[i] == s[i+1] or s[i+1] == s[i+2] or s[i] == s[i+2]:\n        return False\n    return True\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 47.772409986006096
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        if s[i] == s[i+1] or s[i] == s[i+2] or s[i+1] == s[i+2]:\n            return False\n    return True\nOkay, let's see. I need to write a function called is_happy that checks if a string is happy. The definition says a string is happy if its length is at least 3 and every three consecutive letters are distinct. Hmm, right. So first, the string has to be at least 3 characters long. If it's shorter than that, return False immediately.\n\nThen, for every set of three consecutive characters, all three must be different. So for example, in the string \"abcd\", the first three are 'a', 'b', 'c' which are all different. Then the next triplet is 'b', 'c', 'd' which are also all different. So that's why it returns True.\n\nBut for \"aabb\", let's see. The first three are 'a', 'a', 'b'. Here, the first two are the same, so that triplet is invalid. So the function should return False.\n\nWait, the problem says every 3 consecutive letters must be distinct. So for each triplet of consecutive characters, all three must be different. So for each i from 0 to len(s)-3, check s[i], s[i+1], s[i+2]. If any of those triplets has duplicates, then the whole string is not happy.\n\nSo the approach is: first check the length. If less than 3, return False. Then loop through each possible triplet. For each triplet, check if all three are distinct. If any triplet fails, return False. If all pass, return True.\n\nLet me think about how to implement this. The loop would run from i=0 to i = len(s) - 3. Wait, the number of triplets is len(s) - 2. Because for a string of length n, the first triplet starts at 0, then 1, up to n-3. So the loop should be for i in range(len(s) - 2). Because len(s) - 2 gives the number of triplets. For example, if the string is length 3, then len(s)-2 is 1, so i runs from 0 to 0. That's correct.\n\nIn each iteration, check the three characters at positions i, i+1, i+2. So for each triplet, check if s[i] != s[i+1], s[i] != s[i+2], and s[i+1] != s[i+2]. If any of those are equal, then return False.\n\nAlternatively, maybe a more concise way is to check if the set of the three characters has length 3. Because a set automatically removes duplicates. So if the set of the three has size 3, then they are all distinct. So for each triplet, if len(set(s[i:i+3])) < 3, then return False.\n\nHmm, that might be a cleaner way. Let me see. For example, in the triplet 'aab', the set would be {'a', 'b'}, which has length 2, so that's bad. So using the set approach could simplify the code.\n\nSo the code could be written as:\n\ndef is_happy(s):\n    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        triplet = s[i:i+3]\n        if len(set(triplet)) != 3:\n            return False\n    return True\n\nWait, but in Python, slicing s[i:i+3] gives the substring starting at i and of length 3. So that's exactly the triplet. Then converting to a set and checking the length. That should work.\n\nLet me test this logic against the examples given.\n\nFirst example: is_happy('a') => length 1, returns False. Correct.\n\nis_happy('aa') => length 2, returns False. Correct.\n\nis_happy('abcd') => length 4. The triplets are 'abc' and 'bcd'. Both have 3 distinct characters. So returns True. Correct.\n\nis_happy('aabb') => length 4. The first triplet is 'aab', which has set size 2. So returns False. Correct.\n\nis_happy('adb') => length 3. The triplet is 'adb', set size 3. So returns True. Correct.\n\nis_happy('xyy') => length 3. The triplet is 'xyy', set size 2. So returns False. Correct.\n\nSo this approach seems to handle all the test cases.\n\nWait, but what about a longer string where one triplet is okay but another isn't? Like 'abcdxey' or something. Let's see. Suppose the string is 'abca'. The first triplet is 'abc' (okay), the next is 'bca' (okay). So returns True. But if the string is 'abcb', then the first triplet is 'abc' (okay), the next is 'bcb' which has 'b' and 'c' and 'b' again. The set would be {'b','c'}, so size 2. So returns False. Correct.\n\nAnother test case: 'abba' (length 4). The first triplet is 'abb' (set size 2), so returns False. Correct.\n\nSo the code should work.\n\nWait, but in the original code I thought of earlier, the first approach was checking each pair in the triplet. Let me see if there's any difference between the two approaches.\n\nThe original code I thought of was:\n\nfor i in range(len(s) - 2):\n    if s[i] == s[i+1] or s[i] == s[i+2] or s[i+1] == s[i+2]:\n        return False\n\nWhich is equivalent to checking if any two of the three are equal. The set approach is equivalent because if any two are equal, the set size will be less than 3. So both approaches are the same.\n\nSo either way works. The set approach is perhaps more concise and easier to read.\n\nTherefore, the code should be as written above.\n\nWait, but in Python, the slice s[i:i+3] when i is at the end? Let's see. For example, if the string is length 3, then i can be 0. s[0:3] is the entire string. That's correct. For a string of length 4, i can be 0 and 1. s[0:3] and s[1:4], which are the two triplets. Correct.\n\nSo the code should handle all cases.\n\nTherefore, the function is correct.\ndef is_happy(s):\n    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        triplet = s[i:i+3]\n        if len(set(triplet)) != 3:\n            return False\n    return True\n\n```python\ndef is_happy(s):\n    if len(s) < 3:\n        return False\n    for i in range(len(s) - 2):\n        triplet = s[i:i+3]\n        if len(set(triplet)) != 3:\n            return False\n    return True\n```",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787372975,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 1600,
+      "prompt_tokens": 123,
+      "total_tokens": 1723,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-W0ou9LLMdrsntiW5aarqBM2MRSvx8Z10",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 123,
+      "prompt_ms": 487.824,
+      "prompt_per_token_ms": 3.966048780487805,
+      "prompt_per_second": 252.14011610744856,
+      "predicted_n": 1600,
+      "predicted_ms": 47246.828,
+      "predicted_per_token_ms": 29.5292675,
+      "predicted_per_second": 33.864707277280075,
+      "draft_n": 2020,
+      "draft_n_accepted": 1094
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00080:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

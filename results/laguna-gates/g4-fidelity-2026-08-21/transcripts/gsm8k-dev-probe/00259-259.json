@@ -1,0 +1,60 @@
+{
+  "index": 259,
+  "task_id": 259,
+  "rendered_prompt_sha256": "cf72706a972fc8855d095a8699af9fe85f813e34a573917010103db4abafcafe",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Andrea has 52 apples. Since Andrea has 8 more apples than Jamal, Jamal has $52 - 8 = 44$ apples.\n\nLet $B$ be the number of bananas Jamal has. Jamal has 4 more bananas than apples, so $B = 44 + 4 = 48$.\n\nAndrea has half as many bananas as Jamal, so Andrea has $\\frac{48}{2} = 24$ bananas.\n\nTotal fruits:\n- Andrea: $52 + 24 = 76$\n- Jamal: $44 + 48 = 92$\n\nCombined total: $76 + 92 = 168$\n\nAnswer: 168",
+  "finish_reason": "stop",
+  "expected": "168",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.131274044979364
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Andrea has 52 apples. Since Andrea has 8 more apples than Jamal, Jamal has $52 - 8 = 44$ apples.\n\nLet $B$ be the number of bananas Jamal has. Jamal has 4 more bananas than apples, so $B = 44 + 4 = 48$.\n\nAndrea has half as many bananas as Jamal, so Andrea has $\\frac{48}{2} = 24$ bananas.\n\nTotal fruits:\n- Andrea: $52 + 24 = 76$\n- Jamal: $44 + 48 = 92$\n\nCombined total: $76 + 92 = 168$\n\nAnswer: 168",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331044,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 165,
+      "prompt_tokens": 109,
+      "total_tokens": 274,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-PS4nppr1XuMSxSqKB3NQ96mgywAxNWL9",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 109,
+      "prompt_ms": 477.7,
+      "prompt_per_token_ms": 4.3825688073394495,
+      "prompt_per_second": 228.1766799246389,
+      "predicted_n": 165,
+      "predicted_ms": 3627.67,
+      "predicted_per_token_ms": 21.98587878787879,
+      "predicted_per_second": 45.483740252007486,
+      "draft_n": 156,
+      "draft_n_accepted": 125
+    }
+  },
+  "used_fallback": false
+}

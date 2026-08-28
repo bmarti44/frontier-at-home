@@ -1,0 +1,60 @@
+{
+  "index": 1293,
+  "task_id": 1293,
+  "rendered_prompt_sha256": "21729cb69fa21d4e5326f2e0b9d12703ffebf51b946f23f4c1ed8cfed8349a01",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "The problem states a company produces 5000 chocolate bars per day and sells each for $2. We need to find the total revenue for two weeks.\n\nFirst, calculate the number of days in two weeks: 14 days.\n\nDaily revenue is 5000 bars * $2 = $10,000.\n\nTotal revenue over 14 days: $10,000 * 14 = $140,000.\n\nDouble-checking: 5000 * 14 = 70,000 bars. 70,000 * $2 = $140,000. Correct.\n\nAnswer: 140000",
+  "finish_reason": "stop",
+  "expected": "140000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.3775890480028465
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "The problem states a company produces 5000 chocolate bars per day and sells each for $2. We need to find the total revenue for two weeks.\n\nFirst, calculate the number of days in two weeks: 14 days.\n\nDaily revenue is 5000 bars * $2 = $10,000.\n\nTotal revenue over 14 days: $10,000 * 14 = $140,000.\n\nDouble-checking: 5000 * 14 = 70,000 bars. 70,000 * $2 = $140,000. Correct.\n\nAnswer: 140000",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331576,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 158,
+      "prompt_tokens": 117,
+      "total_tokens": 275,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-L0ZkQ9DEsjplAf1CmtK2IbEf6rdgYR5X",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 117,
+      "prompt_ms": 501.568,
+      "prompt_per_token_ms": 4.286905982905982,
+      "prompt_per_second": 233.2684700778359,
+      "predicted_n": 158,
+      "predicted_ms": 3853.794,
+      "predicted_per_token_ms": 24.391101265822783,
+      "predicted_per_second": 40.998558822812015,
+      "draft_n": 168,
+      "draft_n_accepted": 115
+    }
+  },
+  "used_fallback": false
+}

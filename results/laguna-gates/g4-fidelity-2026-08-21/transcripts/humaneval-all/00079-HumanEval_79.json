@@ -1,0 +1,95 @@
+{
+  "index": 79,
+  "task_id": "HumanEval/79",
+  "rendered_prompt_sha256": "642ae5cf366d95e0595e3e2941597956baa6029b29ead988dd25754fbafa26c3",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    binary = bin(decimal)[2:]\n    return \"db\" + binary + \"db\"\n\ndef binary_to_decimal(binary):\n    \"\"\"You will be given a string of binary numbers, but it will have 'db' at the beginning and\n    at the end. Your task is to remove the 'db' characters and convert the binary number to\n    its decimal equivalent.\n\n    Examples:\n    binary_to_decimal(\"db1111db\")   # returns 15\n    binary_to_decimal(\"db100000db\") # returns 32\n    \"\"\"\n    binary = binary[2:-2]\n    return int(binary, 2)\n\ndef test_decimal_to_binary():\n    assert decimal_to_binary(15) == \"db1111db\"\n    assert decimal_to_binary(32) == \"db100000db\"\n    assert decimal_to_binary(0) == \"db0db\"\n    assert decimal_to_binary(1) == \"db1db\"\n    assert decimal_to_binary(2) == \"db10db\"\n\ndef test_binary_to_decimal():\n    assert binary_to_decimal(\"db1111db\") == 15\n    assert binary_to_decimal(\"db100000db\") == 32\n    assert binary_to_decimal(\"db0db\") == 0\n    assert binary_to_decimal(\"db1db\") == 1\n    assert binary_to_decimal(\"db10db\") == 2\n\nif __name__ == \"__main__\":\n    test_decimal_to_binary()\n    test_binary_to_decimal()\n    print(\"All tests passed!\")\nOkay, let's see. I need to write two functions: decimal_to_binary and binary_to_decimal. The first one converts a decimal number to a binary string with 'db' at the start and end. The second one does the reverse, taking that formatted string and converting it back to decimal.\n\nStarting with decimal_to_binary. The examples show that for 15, it returns \"db1111db\". So the binary of 15 is 1111, which makes sense. The function needs to take the decimal number, convert it to binary without the '0b' prefix, then add 'db' at both ends.\n\nWait, how do I convert a decimal to binary in Python? Oh right, using bin() function. But bin(15) gives '0b1111', so I need to slice off the first two characters. So binary = bin(decimal)[2:]. Then concatenate 'db' + binary + 'db'. That should work.\n\nTesting edge cases: what if the input is 0? bin(0) is '0b0', so slicing gives '0', so the result is 'db0db'. That's covered in the test cases. Similarly for 1, which is '1' in binary, so 'db1db'.\n\nNow for binary_to_decimal. The input is a string like \"db1111db\". Need to remove the 'db' at the start and end. So take the string from index 2 to -2. Then convert that binary string to decimal using int(binary_str, 2).\n\nWait, how to slice? If the string is \"db1111db\", then [2:-2] would take from index 2 (the first '1') up to but not including the last two characters (the 'db'). So that should give '1111', which is correct. Then int('1111', 2) is 15. That works.\n\nEdge cases again: for \"db0db\", slicing gives '0', which converts to 0. For \"db1db\", it's '1' which is 1. All the test cases should pass.\n\nI need to make sure that the functions handle these cases. Let me think about possible errors. What if the input to binary_to_decimal doesn't have 'db' at both ends? Well, according to the problem statement, the input will have those, so we don't need to handle invalid inputs. So the code should be straightforward.\n\nSo putting it all together:\n\nFor decimal_to_binary:\ndef decimal_to_binary(decimal):\n    binary = bin(decimal)[2:]\n    return \"db\" + binary + \"db\"\n\nFor binary_to_decimal:\ndef binary_to_decimal(binary):\n    binary_str = binary[2:-2]\n    return int(binary_str, 2)\n\nThen the test functions check the examples and edge cases. The tests look correct. Let me run through them mentally.\n\nTest decimal_to_binary(15) gives \"db1111db\" which matches. 32 is 100000 in binary, so \"db100000db\". 0 is \"db0db\", etc. All tests should pass.\n\nSame for binary_to_decimal. The tests check the same examples. So the code should work.\n```python\ndef decimal_to_binary(decimal):\n    binary = bin(decimal)[2:]\n    return \"db\" + binary + \"db\"\n\ndef binary_to_decimal(binary):\n    binary_str = binary[2:-2]\n    return int(binary_str, 2)\n\ndef test_decimal_to_binary():\n    assert decimal_to_binary(15) == \"db1111db\"\n    assert decimal_to_binary(32) == \"db100000db\"\n    assert decimal_to_binary(0) == \"db0db\"\n    assert decimal_to_binary(1) == \"db1db\"\n    assert decimal_to_binary(2) == \"db10db\"\n\ndef test_binary_to_decimal():\n    assert binary_to_decimal(\"db1111db\") == 15\n    assert binary_to_decimal(\"db100000db\") == 32\n    assert binary_to_decimal(\"db0db\") == 0\n    assert binary_to_decimal(\"db1db\") == 1\n    assert binary_to_decimal(\"db10db\") == 2\n\nif __name__ == \"__main__\":\n    test_decimal_to_binary()\n    test_binary_to_decimal()\n    print(\"All tests passed!\")\n```",
+  "finish_reason": "stop",
+  "expected": "    return \"db\" + bin(decimal)[2:] + \"db\"\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 37.86126163502922
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    binary = bin(decimal)[2:]\n    return \"db\" + binary + \"db\"\n\ndef binary_to_decimal(binary):\n    \"\"\"You will be given a string of binary numbers, but it will have 'db' at the beginning and\n    at the end. Your task is to remove the 'db' characters and convert the binary number to\n    its decimal equivalent.\n\n    Examples:\n    binary_to_decimal(\"db1111db\")   # returns 15\n    binary_to_decimal(\"db100000db\") # returns 32\n    \"\"\"\n    binary = binary[2:-2]\n    return int(binary, 2)\n\ndef test_decimal_to_binary():\n    assert decimal_to_binary(15) == \"db1111db\"\n    assert decimal_to_binary(32) == \"db100000db\"\n    assert decimal_to_binary(0) == \"db0db\"\n    assert decimal_to_binary(1) == \"db1db\"\n    assert decimal_to_binary(2) == \"db10db\"\n\ndef test_binary_to_decimal():\n    assert binary_to_decimal(\"db1111db\") == 15\n    assert binary_to_decimal(\"db100000db\") == 32\n    assert binary_to_decimal(\"db0db\") == 0\n    assert binary_to_decimal(\"db1db\") == 1\n    assert binary_to_decimal(\"db10db\") == 2\n\nif __name__ == \"__main__\":\n    test_decimal_to_binary()\n    test_binary_to_decimal()\n    print(\"All tests passed!\")\nOkay, let's see. I need to write two functions: decimal_to_binary and binary_to_decimal. The first one converts a decimal number to a binary string with 'db' at the start and end. The second one does the reverse, taking that formatted string and converting it back to decimal.\n\nStarting with decimal_to_binary. The examples show that for 15, it returns \"db1111db\". So the binary of 15 is 1111, which makes sense. The function needs to take the decimal number, convert it to binary without the '0b' prefix, then add 'db' at both ends.\n\nWait, how do I convert a decimal to binary in Python? Oh right, using bin() function. But bin(15) gives '0b1111', so I need to slice off the first two characters. So binary = bin(decimal)[2:]. Then concatenate 'db' + binary + 'db'. That should work.\n\nTesting edge cases: what if the input is 0? bin(0) is '0b0', so slicing gives '0', so the result is 'db0db'. That's covered in the test cases. Similarly for 1, which is '1' in binary, so 'db1db'.\n\nNow for binary_to_decimal. The input is a string like \"db1111db\". Need to remove the 'db' at the start and end. So take the string from index 2 to -2. Then convert that binary string to decimal using int(binary_str, 2).\n\nWait, how to slice? If the string is \"db1111db\", then [2:-2] would take from index 2 (the first '1') up to but not including the last two characters (the 'db'). So that should give '1111', which is correct. Then int('1111', 2) is 15. That works.\n\nEdge cases again: for \"db0db\", slicing gives '0', which converts to 0. For \"db1db\", it's '1' which is 1. All the test cases should pass.\n\nI need to make sure that the functions handle these cases. Let me think about possible errors. What if the input to binary_to_decimal doesn't have 'db' at both ends? Well, according to the problem statement, the input will have those, so we don't need to handle invalid inputs. So the code should be straightforward.\n\nSo putting it all together:\n\nFor decimal_to_binary:\ndef decimal_to_binary(decimal):\n    binary = bin(decimal)[2:]\n    return \"db\" + binary + \"db\"\n\nFor binary_to_decimal:\ndef binary_to_decimal(binary):\n    binary_str = binary[2:-2]\n    return int(binary_str, 2)\n\nThen the test functions check the examples and edge cases. The tests look correct. Let me run through them mentally.\n\nTest decimal_to_binary(15) gives \"db1111db\" which matches. 32 is 100000 in binary, so \"db100000db\". 0 is \"db0db\", etc. All tests should pass.\n\nSame for binary_to_decimal. The tests check the same examples. So the code should work.\n```python\ndef decimal_to_binary(decimal):\n    binary = bin(decimal)[2:]\n    return \"db\" + binary + \"db\"\n\ndef binary_to_decimal(binary):\n    binary_str = binary[2:-2]\n    return int(binary_str, 2)\n\ndef test_decimal_to_binary():\n    assert decimal_to_binary(15) == \"db1111db\"\n    assert decimal_to_binary(32) == \"db100000db\"\n    assert decimal_to_binary(0) == \"db0db\"\n    assert decimal_to_binary(1) == \"db1db\"\n    assert decimal_to_binary(2) == \"db10db\"\n\ndef test_binary_to_decimal():\n    assert binary_to_decimal(\"db1111db\") == 15\n    assert binary_to_decimal(\"db100000db\") == 32\n    assert binary_to_decimal(\"db0db\") == 0\n    assert binary_to_decimal(\"db1db\") == 1\n    assert binary_to_decimal(\"db10db\") == 2\n\nif __name__ == \"__main__\":\n    test_decimal_to_binary()\n    test_binary_to_decimal()\n    print(\"All tests passed!\")\n```",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787372927,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 1340,
+      "prompt_tokens": 151,
+      "total_tokens": 1491,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-EB3KxIiZlaFYq4iOE9wd4oS6PvQYbi9B",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 151,
+      "prompt_ms": 490.532,
+      "prompt_per_token_ms": 3.248556291390728,
+      "prompt_per_second": 307.82905090799375,
+      "predicted_n": 1340,
+      "predicted_ms": 37310.215,
+      "predicted_per_token_ms": 27.843444029850744,
+      "predicted_per_second": 35.915097246156314,
+      "draft_n": 1560,
+      "draft_n_accepted": 949
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00079:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "All tests passed!\n",
+    "stderr": ""
+  }
+}

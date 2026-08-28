@@ -1,0 +1,60 @@
+{
+  "index": 999,
+  "task_id": 999,
+  "rendered_prompt_sha256": "7d874eb7b1de457d41e273d933bd1c1fb12b3747f7c9407bcd99b70bf579993d",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Each kid gets 1 part, each adult gets 2 parts. Total parts = 4×1 + 2×2 = 8. Each adult gets 2/8 = 25%.\n\nAnswer: 25",
+  "finish_reason": "stop",
+  "expected": "25",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.040815536980517
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Each kid gets 1 part, each adult gets 2 parts. Total parts = 4×1 + 2×2 = 8. Each adult gets 2/8 = 25%.\n\nAnswer: 25",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331720,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 50,
+      "prompt_tokens": 115,
+      "total_tokens": 165,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-MqBL6W1HptCNQDVXofMKTC3lUakUGt63",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 115,
+      "prompt_ms": 485.891,
+      "prompt_per_token_ms": 4.2251391304347825,
+      "prompt_per_second": 236.67859663998715,
+      "predicted_n": 50,
+      "predicted_ms": 1533.906,
+      "predicted_per_token_ms": 30.67812,
+      "predicted_per_second": 32.596521559991295,
+      "draft_n": 68,
+      "draft_n_accepted": 32
+    }
+  },
+  "used_fallback": false
+}

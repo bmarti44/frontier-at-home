@@ -1,0 +1,61 @@
+{
+  "index": 875,
+  "task_id": 875,
+  "rendered_prompt_sha256": "901470cc090ba9fa1ee282a1d13ed70c1bee93dbaa8c7072657bb68438c36c23",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Paul initially has 52 marbles. After receiving 28 more from his friend, he has:\n\n52 + 28 = 80 marbles.\n\nHe then loses 1/4 of his marbles:  \n1/4 of 80 = 20 marbles lost.\n\nSubtracting the lost marbles:  \n80 - 20 = 60 marbles remaining.\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.448108264943585
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Paul initially has 52 marbles. After receiving 28 more from his friend, he has:\n\n52 + 28 = 80 marbles.\n\nHe then loses 1/4 of his marbles:  \n1/4 of 80 = 20 marbles lost.\n\nSubtracting the lost marbles:  \n80 - 20 = 60 marbles remaining.\n\nAnswer: 60",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331819,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 91,
+      "prompt_tokens": 104,
+      "total_tokens": 195,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-dKctUIWLtuZlyAFJBUezpcLVUOgUM3HZ",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 104,
+      "prompt_ms": 472.656,
+      "prompt_per_token_ms": 4.544769230769231,
+      "prompt_per_second": 220.03317423242274,
+      "predicted_n": 91,
+      "predicted_ms": 1952.777,
+      "predicted_per_token_ms": 21.459087912087913,
+      "predicted_per_second": 46.60030305559723,
+      "draft_n": 84,
+      "draft_n_accepted": 69
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>Paul has 52 marbles. His friend gave him 28 marbles. Then, he lost 1/4 of his marbles. How many marbles does Paul have left?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

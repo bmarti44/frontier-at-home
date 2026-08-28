@@ -1,0 +1,61 @@
+{
+  "index": 238,
+  "task_id": 238,
+  "rendered_prompt_sha256": "f82f4b8d192f4409b16ceab1cb36878fdb6517914a54f1f6e1e67ac8d76309e9",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Jessa is 20 years old.\n\nJoan is five years older than Jessa:\n20 + 5 = 25 years old.\n\nMary is two years younger than Joan:\n25 - 2 = 23 years old.\n\nThe sum of their ages is:\n20 + 25 + 23 = 68.\n\nAnswer: 68",
+  "finish_reason": "stop",
+  "expected": "68",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.4538956609903835
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Jessa is 20 years old.\n\nJoan is five years older than Jessa:\n20 + 5 = 25 years old.\n\nMary is two years younger than Joan:\n25 - 2 = 23 years old.\n\nThe sum of their ages is:\n20 + 25 + 23 = 68.\n\nAnswer: 68",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330756,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 87,
+      "prompt_tokens": 107,
+      "total_tokens": 194,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-Xe6mDkJN7tfaD0cP1cQTWXunPGpCR9s9",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 107,
+      "prompt_ms": 471.17,
+      "prompt_per_token_ms": 4.4034579439252335,
+      "prompt_per_second": 227.094254727593,
+      "predicted_n": 87,
+      "predicted_ms": 1956.694,
+      "predicted_per_token_ms": 22.490735632183906,
+      "predicted_per_second": 44.462751968371144,
+      "draft_n": 84,
+      "draft_n_accepted": 65
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>Mary is two years younger than Joan, who is five years older than Jessa. If Jessa is 20 years old, what is the sum of the ages of the three girls?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

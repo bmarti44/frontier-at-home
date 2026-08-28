@@ -1,0 +1,60 @@
+{
+  "index": 303,
+  "task_id": 303,
+  "rendered_prompt_sha256": "245279a8f4ee36fc7936b7c1928030497057a596558d405fb4727b3543dfc52b",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>To determine how much money Elise earned in the second year, we analyze the information provided:\n\n- **Total books**: 250  \n- **Books sold this year**: 45  \n- **Books sold in the first year**: Twice the number sold this year = $ 2 \\times 45 = 90 $  \n- **Unsold books**: 50  \n\nAdding up the books sold and unsold:  \n$ 90 \\text{ (Year 1)} + 45 \\text{ (Year 3)} + 50 \\text{ (Unsold)} = 185 $  \n\nThus, the number of books sold in the second year is:  \n$ 250 - 185 = 65 $  \n\nEach book sells for $20, so the total amount earned in the second year is:  \n$ 65 \\times 20 = 1300 $  \n\nAnswer: 1300",
+  "finish_reason": "stop",
+  "expected": "1300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.189879140001722
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>To determine how much money Elise earned in the second year, we analyze the information provided:\n\n- **Total books**: 250  \n- **Books sold this year**: 45  \n- **Books sold in the first year**: Twice the number sold this year = $ 2 \\times 45 = 90 $  \n- **Unsold books**: 50  \n\nAdding up the books sold and unsold:  \n$ 90 \\text{ (Year 1)} + 45 \\text{ (Year 3)} + 50 \\text{ (Unsold)} = 185 $  \n\nThus, the number of books sold in the second year is:  \n$ 250 - 185 = 65 $  \n\nEach book sells for $20, so the total amount earned in the second year is:  \n$ 65 \\times 20 = 1300 $  \n\nAnswer: 1300",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331150,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 219,
+      "prompt_tokens": 150,
+      "total_tokens": 369,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-XwKe2ptt2C2YtQxfEaVwWpiTqFHg8MiX",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 150,
+      "prompt_ms": 509.737,
+      "prompt_per_token_ms": 3.3982466666666666,
+      "prompt_per_second": 294.2693977482506,
+      "predicted_n": 219,
+      "predicted_ms": 5658.623,
+      "predicted_per_token_ms": 25.83846118721461,
+      "predicted_per_second": 38.70199516737553,
+      "draft_n": 244,
+      "draft_n_accepted": 157
+    }
+  },
+  "used_fallback": false
+}

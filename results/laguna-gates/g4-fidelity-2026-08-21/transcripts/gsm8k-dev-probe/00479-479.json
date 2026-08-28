@@ -1,0 +1,60 @@
+{
+  "index": 479,
+  "task_id": 479,
+  "rendered_prompt_sha256": "09cfd62c1254a846853e96391c4b2d076ec2390bfde20e4d49a98e7b3aae9d69",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The plane tickets cost $5000 each, so for two people:  \n$5000 × 2 = $10,000  \n\nThe hotel's normal price is $1500 per day, but it is 20% more expensive during the busy weekend:  \n$1500 × 1.20 = $1800 per day  \n\nFor a 3-day stay:  \n$1800 × 3 = $5400  \n\nTotal trip cost:  \n$10,000 (tickets) + $5400 (hotel) = $15,400  \n\nAnswer: 15400",
+  "finish_reason": "stop",
+  "expected": "15400",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.9075813879608177
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The plane tickets cost $5000 each, so for two people:  \n$5000 × 2 = $10,000  \n\nThe hotel's normal price is $1500 per day, but it is 20% more expensive during the busy weekend:  \n$1500 × 1.20 = $1800 per day  \n\nFor a 3-day stay:  \n$1800 × 3 = $5400  \n\nTotal trip cost:  \n$10,000 (tickets) + $5400 (hotel) = $15,400  \n\nAnswer: 15400",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330790,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 157,
+      "prompt_tokens": 139,
+      "total_tokens": 296,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-bHqwdQ709X4i0pzKQsbgnXcarT4VlRCy",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 139,
+      "prompt_ms": 491.109,
+      "prompt_per_token_ms": 3.5331582733812947,
+      "prompt_per_second": 283.03289086536796,
+      "predicted_n": 157,
+      "predicted_ms": 3393.776,
+      "predicted_per_token_ms": 21.6164076433121,
+      "predicted_per_second": 46.261155715639454,
+      "draft_n": 148,
+      "draft_n_accepted": 119
+    }
+  },
+  "used_fallback": false
+}

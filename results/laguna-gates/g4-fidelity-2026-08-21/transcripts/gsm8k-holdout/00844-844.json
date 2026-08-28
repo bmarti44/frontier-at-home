@@ -1,0 +1,60 @@
+{
+  "index": 844,
+  "task_id": 844,
+  "rendered_prompt_sha256": "efcc39f65b9157952b5b7ef35413f2eb899db085eb0ff588a2b06aa2a62e3881",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Jack collected 60 dishes, and since Jack collected twice as many dishes as socks, Jack has 30 socks. Peter has twice as many socks as Jack, so Peter has 60 socks. Peter has half as many dishes as Jack, so Peter has 30 dishes. \n\nTotal socks: 30 (Jack) + 60 (Peter) = 90  \nTotal dishes: 60 (Jack) + 30 (Peter) = 90  \nCombined total: 90 + 90 = 180  \n\nAnswer: 180",
+  "finish_reason": "stop",
+  "expected": "180",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.4417551779770292
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Jack collected 60 dishes, and since Jack collected twice as many dishes as socks, Jack has 30 socks. Peter has twice as many socks as Jack, so Peter has 60 socks. Peter has half as many dishes as Jack, so Peter has 30 dishes. \n\nTotal socks: 30 (Jack) + 60 (Peter) = 90  \nTotal dishes: 60 (Jack) + 30 (Peter) = 90  \nCombined total: 90 + 90 = 180  \n\nAnswer: 180",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331724,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 130,
+      "prompt_tokens": 117,
+      "total_tokens": 247,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-YPsaFKvZXYHWANnyqJRCBoqXqvnJwwKT",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 117,
+      "prompt_ms": 511.328,
+      "prompt_per_token_ms": 4.370324786324786,
+      "prompt_per_second": 228.81594592903187,
+      "predicted_n": 130,
+      "predicted_ms": 2914.838,
+      "predicted_per_token_ms": 22.42183076923077,
+      "predicted_per_second": 44.5993911153896,
+      "draft_n": 124,
+      "draft_n_accepted": 98
+    }
+  },
+  "used_fallback": false
+}

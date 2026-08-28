@@ -1,0 +1,60 @@
+{
+  "index": 591,
+  "task_id": 591,
+  "rendered_prompt_sha256": "efc30f71bb9d3822fa784bee13c52d3956b9d1b0a380adb56eeeb33219b49062",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The Affenpinscher weighs 10 pounds. The Dachshund weighs twice that: 10 × 2 = 20 pounds. The Papillon weighs one-fourth of the Dachshund's weight: 20 ÷ 4 = 5 pounds. The Mastiff weighs 44 times the Papillon's weight: 5 × 44 = 220 pounds.\n\nAnswer: 220",
+  "finish_reason": "stop",
+  "expected": "220",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.726929538010154
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The Affenpinscher weighs 10 pounds. The Dachshund weighs twice that: 10 × 2 = 20 pounds. The Papillon weighs one-fourth of the Dachshund's weight: 20 ÷ 4 = 5 pounds. The Mastiff weighs 44 times the Papillon's weight: 5 × 44 = 220 pounds.\n\nAnswer: 220",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331651,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 95,
+      "prompt_tokens": 190,
+      "total_tokens": 285,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-QfNASD3PIJaJyeiAVHbO4BNqNRPOkXuD",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 190,
+      "prompt_ms": 547.886,
+      "prompt_per_token_ms": 2.883610526315789,
+      "prompt_per_second": 346.78747038617524,
+      "predicted_n": 95,
+      "predicted_ms": 2163.521,
+      "predicted_per_token_ms": 22.773905263157896,
+      "predicted_per_second": 43.90990427178659,
+      "draft_n": 92,
+      "draft_n_accepted": 71
+    }
+  },
+  "used_fallback": false
+}

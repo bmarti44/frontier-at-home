@@ -1,0 +1,60 @@
+{
+  "index": 439,
+  "task_id": 439,
+  "rendered_prompt_sha256": "35c48206db8e1c55313021d5837eadeed6282e45009fcf690df5b578ecd29fd6",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Wayne's drive takes 4 minutes. Bernadette's drive takes 4 times as long:  \n4 × 4 = **16 minutes**.\n\nBernadette wants to arrive 5 minutes before Wayne. If Wayne leaves at time \\( T \\), he arrives at \\( T + 4 \\). Bernadette must arrive at \\( T + 4 - 5 = T - 1 \\). To arrive at \\( T - 1 \\), she needs to leave at \\( (T - 1) - 16 = T - 17 \\). Thus, Bernadette should leave **17 minutes earlier** than Wayne.\n\nAnswer: 17",
+  "finish_reason": "stop",
+  "expected": "17",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.340295168978628
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Wayne's drive takes 4 minutes. Bernadette's drive takes 4 times as long:  \n4 × 4 = **16 minutes**.\n\nBernadette wants to arrive 5 minutes before Wayne. If Wayne leaves at time \\( T \\), he arrives at \\( T + 4 \\). Bernadette must arrive at \\( T + 4 - 5 = T - 1 \\). To arrive at \\( T - 1 \\), she needs to leave at \\( (T - 1) - 16 = T - 17 \\). Thus, Bernadette should leave **17 minutes earlier** than Wayne.\n\nAnswer: 17",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331661,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 138,
+      "prompt_tokens": 177,
+      "total_tokens": 315,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-66veypun4xNa5lygD5WZntxrlhR3RZd8",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 177,
+      "prompt_ms": 539.069,
+      "prompt_per_token_ms": 3.0455875706214686,
+      "prompt_per_second": 328.3438669261264,
+      "predicted_n": 138,
+      "predicted_ms": 3786.225,
+      "predicted_per_token_ms": 27.43641304347826,
+      "predicted_per_second": 36.44791315888517,
+      "draft_n": 164,
+      "draft_n_accepted": 96
+    }
+  },
+  "used_fallback": false
+}

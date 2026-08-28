@@ -1,0 +1,60 @@
+{
+  "index": 1005,
+  "task_id": 1005,
+  "rendered_prompt_sha256": "f395452247df81b0209472cf6b4ab76e167af068e814bd20f2baea9f3422dcb8",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The number of female porcupines is (3/5) × 50 = 30.\n\nEach female gives birth to 4 babies per month, so 30 × 4 = 120 babies per month.\n\nOver a year (12 months), that's 120 × 12 = 1440 new babies.\n\nTotal porcupines after a year = 50 + 1440 = 1490.\n\nAnswer: 1490",
+  "finish_reason": "stop",
+  "expected": "1490",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.223569496010896
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The number of female porcupines is (3/5) × 50 = 30.\n\nEach female gives birth to 4 babies per month, so 30 × 4 = 120 babies per month.\n\nOver a year (12 months), that's 120 × 12 = 1440 new babies.\n\nTotal porcupines after a year = 50 + 1440 = 1490.\n\nAnswer: 1490",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330801,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 113,
+      "prompt_tokens": 127,
+      "total_tokens": 240,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-wmEDHQ18FVMVNTLcVBOFaWaWBjK0n8J4",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 127,
+      "prompt_ms": 519.179,
+      "prompt_per_token_ms": 4.088023622047244,
+      "prompt_per_second": 244.61698181166804,
+      "predicted_n": 113,
+      "predicted_ms": 2672.371,
+      "predicted_per_token_ms": 23.649300884955753,
+      "predicted_per_second": 42.28454806611806,
+      "draft_n": 116,
+      "draft_n_accepted": 83
+    }
+  },
+  "used_fallback": false
+}

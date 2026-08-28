@@ -1,0 +1,60 @@
+{
+  "index": 32,
+  "task_id": 32,
+  "rendered_prompt_sha256": "699afe764a097d1a2903ebb9a72fc7a49f90e6f7fb65450c1da3c4c3b88345e3",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>John spends 0.5 hours per day per dog. For 10 dogs, that's 0.5 * 10 = 5 hours daily. Over a week (7 days), he spends 5 * 7 = 35 hours.\n\nAnswer: 35",
+  "finish_reason": "stop",
+  "expected": "35",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.1208666440215893
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>John spends 0.5 hours per day per dog. For 10 dogs, that's 0.5 * 10 = 5 hours daily. Over a week (7 days), he spends 5 * 7 = 35 hours.\n\nAnswer: 35",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331938,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 62,
+      "prompt_tokens": 109,
+      "total_tokens": 171,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-yhNB8A60J1E9qBDRwj40IFNu4Yh9FzlM",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 109,
+      "prompt_ms": 474.494,
+      "prompt_per_token_ms": 4.353155963302752,
+      "prompt_per_second": 229.71839475314755,
+      "predicted_n": 62,
+      "predicted_ms": 1569.46,
+      "predicted_per_token_ms": 25.313870967741938,
+      "predicted_per_second": 39.50403323436086,
+      "draft_n": 68,
+      "draft_n_accepted": 44
+    }
+  },
+  "used_fallback": false
+}

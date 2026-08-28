@@ -1,0 +1,60 @@
+{
+  "index": 622,
+  "task_id": 622,
+  "rendered_prompt_sha256": "958a3e474354f099ac785d611f38e2ede4c621f3ce9d233673b267c05c780843",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Jim starts with 20 pieces of gum.\n\n**At school:**  \n- School day = 8 hours  \n- Chews 1 piece every 2 hours → 8 ÷ 2 = 4 pieces  \n\n**On the way home:**  \n- Chews 1 piece  \n\n**After dinner:**  \n- Chews 1 piece  \n\nTotal chewed: 4 + 1 + 1 = **6 pieces**  \nRemaining: 20 − 6 = **14 pieces**\n\n**Gives half to sister:**  \n- 14 ÷ 2 = 7 pieces given away  \n- Remaining: 14 − 7 = **7 pieces**\n\nAnswer: 7",
+  "finish_reason": "stop",
+  "expected": "7",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.741744919971097
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Jim starts with 20 pieces of gum.\n\n**At school:**  \n- School day = 8 hours  \n- Chews 1 piece every 2 hours → 8 ÷ 2 = 4 pieces  \n\n**On the way home:**  \n- Chews 1 piece  \n\n**After dinner:**  \n- Chews 1 piece  \n\nTotal chewed: 4 + 1 + 1 = **6 pieces**  \nRemaining: 20 − 6 = **14 pieces**\n\n**Gives half to sister:**  \n- 14 ÷ 2 = 7 pieces given away  \n- Remaining: 14 − 7 = **7 pieces**\n\nAnswer: 7",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331608,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 157,
+      "prompt_tokens": 165,
+      "total_tokens": 322,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-oqfity0SRGFoiO3z9agtRwdhwY5Spfp2",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 165,
+      "prompt_ms": 521.142,
+      "prompt_per_token_ms": 3.158436363636364,
+      "prompt_per_second": 316.612362849281,
+      "predicted_n": 157,
+      "predicted_ms": 4202.748,
+      "predicted_per_token_ms": 26.76909554140127,
+      "predicted_per_second": 37.35651054976411,
+      "draft_n": 180,
+      "draft_n_accepted": 111
+    }
+  },
+  "used_fallback": false
+}

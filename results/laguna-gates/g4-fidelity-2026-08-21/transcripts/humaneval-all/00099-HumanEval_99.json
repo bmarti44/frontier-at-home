@@ -1,0 +1,95 @@
+{
+  "index": 99,
+  "task_id": "HumanEval/99",
+  "rendered_prompt_sha256": "53ad185333496f1faa011070d323b24af3e23506e32f52ced0b3c0f9867d2719",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    import math\n    num = float(value)\n    if num >= 0:\n        return math.floor(num + 0.5)\n    else:\n        return math.ceil(num - 0.5)\ntranslate to python3 :\nOkay, let's see. I need to write a Python function called closest_integer that takes a string value representing a number and returns the closest integer. If the number is exactly halfway between two integers, it should round away from zero. Hmm.\n\nFirst, I should parse the input string into a float. Oh right, the examples show that \"10\" becomes 10, so converting to float is straightforward. Then, the tricky part is the rounding. Normally, Python's round function rounds to the nearest even number when the number is exactly halfway. But here, the requirement is to round away from zero in such cases. So for 14.5, it should go to 15, and -14.5 to -15.\n\nWait, how do I handle that? Let me think. For positive numbers, if the decimal part is 0.5 or higher, we round up. For negative numbers, if the decimal part is 0.5 or lower (since it's negative), we round down (which is away from zero). Wait, maybe I can use math.floor and math.ceil with some adjustment.\n\nAlternatively, maybe I can check if the number is exactly halfway. Like, if the fractional part is 0.5, then round away from zero. Otherwise, round normally. But how to detect that?\n\nAnother approach: For a number x, the closest integer is floor(x + 0.5) if x is positive, and ceil(x - 0.5) if x is negative. Wait, let me test this.\n\nTake 14.5: 14.5 + 0.5 = 15.0, floor is 15. Correct. For -14.5: -14.5 - 0.5 = -15.0, ceil is -15. Correct. What about 15.3? 15.3 + 0.5 = 15.8, floor is 15. Correct. For 14.4: 14.4 + 0.5 = 14.9, floor is 14. Correct. For -14.4: -14.4 -0.5 = -14.9, ceil is -14. Wait, but -14.4 is closer to -14 than -15. So that's correct. What about -14.6? -14.6 -0.5 = -15.1, ceil is -15. Which is correct because -14.6 is closer to -15.\n\nSo this approach seems to work. So the formula would be:\n\nif num >= 0:\n    return math.floor(num + 0.5)\nelse:\n    return math.ceil(num - 0.5)\n\nYes, that should handle all cases. Let me test some examples.\n\nTest case 1: \"10\" → 10.0 → floor(10.0 + 0.5) = floor(10.5) = 10. Correct.\n\nTest case 2: \"15.3\" → 15.3 + 0.5 = 15.8 → floor is 15. Correct.\n\nTest case 3: \"14.5\" → 14.5 + 0.5 = 15.0 → floor 15. Correct.\n\nTest case 4: \"-14.5\" → -14.5 -0.5 = -15.0 → ceil is -15. Correct.\n\nAnother test: \"2.5\" → 3. \"3.5\" → 4. \"-2.5\" → -3. All correct.\n\nWhat about numbers that are not halfway? Like \"14.4999\" → 14.4999 + 0.5 = 14.9999 → floor 14. Correct. \"14.5001\" → 15.0001 → floor 15. Correct.\n\nSo this logic should work. Now, implement this in Python.\n\nImport math, convert the input string to float. Then check if it's positive or negative. Apply the formula. Return the integer.\n\nWait, but math.floor and math.ceil return floats? No, in Python 3, math.floor returns an integer? Wait no, math.floor(10.5) returns 10.0 as a float. Wait, no, actually, in Python 3, math.floor returns an integer? Let me check. Wait, no. Wait, math.floor(10.5) returns 10.0 as a float. Wait, no, actually, in Python 3, math.floor returns an integer? Let me think. Wait, no. Let me check:\n\nWait, in Python 3, math.floor(10.5) returns 10.0 as a float. Wait, no, actually, no. Wait, no, math.floor returns a float if the input is a float. Wait, let me check. For example:\n\nimport math\nprint(math.floor(10.5))  # outputs 10.0\nprint(type(math.floor(10.5)))  # <class 'float'>\n\nWait, but the function is supposed to return an integer. So I need to cast it to int. Because the examples show that closest_integer(\"10\") returns 10, which is an integer. So in the code, after computing math.floor(num + 0.5), I should convert it to int.\n\nWait, but math.floor returns a float. So for example, math.floor(10.5) is 10.0. So converting to int would give 10. So in the code, return int(math.floor(...)).\n\nWait, but in the code I wrote earlier, the return statements are math.floor(...) and math.ceil(...). So those would return floats. But the examples expect integers. So I need to cast them to int.\n\nSo the code should be:\n\nimport math\n\ndef closest_integer(value):\n    num = float(value)\n    if num >= 0:\n        return int(math.floor(num + 0.5))\n    else:\n        return int(math.ceil(num - 0.5))\n\nWait, but math.ceil(-15.0) is -15.0, which when cast to int is -15. Correct.\n\nYes, that should work. Let me test the examples again.\n\nclosest_integer(\"10\") → 10.0 → floor(10.5) is 10.0 → int(10.0) is 10. Correct.\n\nclosest_integer(\"15.3\") → 15.3 + 0.5 = 15.8 → floor is 15.0 → 15. Correct.\n\nclosest_integer(\"14.5\") → 15.0 → 15. Correct.\n\nclosest_integer(\"-14.5\") → -14.5 -0.5 = -15.0 → ceil is -15.0 → -15. Correct.\n\nAnother test: \"2.5\" → 3.0 → 3. \"-2.5\" → -3.0 → -3. Correct.\n\nWhat about \"0.5\"? It should round to 1. Because 0.5 is equidistant between 0 and 1, so round away from zero. So 0.5 → 1. Let's see: 0.5 + 0.5 = 1.0 → floor is 1.0 → 1. Correct.\n\nWhat about \"-0.5\"? It should round to -1. Let's see: -0.5 -0.5 = -1.0 → ceil is -1.0 → -1. Correct.\n\nAnother case: \"1.4999999999999999\" → which is 1.5? No, 1.4999999999999999 is actually 1.5 in float? Wait, no. Let me think. 1.4999999999999999 is very close to 1.5 but less. So adding 0.5 would be 1.9999999999999999, floor is 1. So returns 1. Correct.\n\nSo this logic should handle all cases. Therefore, the code should be as written.\nHere is the Python3 code implementing the solution:\n\n```python\nimport math\n\ndef closest_integer(value):\n    num = float(value)\n    if num >= 0:\n        return int(math.floor(num + 0.5))\n    else:\n        return int(math.ceil(num - 0.5))\n```\n\nThis code first converts the input string to a float. Depending on whether the number is non-negative or negative, it adjusts the value by adding or subtracting 0.5 and then uses `math.floor` or `math.ceil` to round to the nearest integer, ensuring that halfway cases are rounded away from zero. The result is then cast to an integer to match the expected output type.",
+  "finish_reason": "stop",
+  "expected": "    from math import floor, ceil\n\n    if value.count('.') == 1:\n        # remove trailing zeros\n        while (value[-1] == '0'):\n            value = value[:-1]\n\n    num = float(value)\n    if value[-2:] == '.5':\n        if num > 0:\n            res = ceil(num)\n        else:\n            res = floor(num)\n    elif len(value) > 0:\n        res = int(round(num))\n    else:\n        res = 0\n\n    return res\n\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 59.97970770194661
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    import math\n    num = float(value)\n    if num >= 0:\n        return math.floor(num + 0.5)\n    else:\n        return math.ceil(num - 0.5)\ntranslate to python3 :\nOkay, let's see. I need to write a Python function called closest_integer that takes a string value representing a number and returns the closest integer. If the number is exactly halfway between two integers, it should round away from zero. Hmm.\n\nFirst, I should parse the input string into a float. Oh right, the examples show that \"10\" becomes 10, so converting to float is straightforward. Then, the tricky part is the rounding. Normally, Python's round function rounds to the nearest even number when the number is exactly halfway. But here, the requirement is to round away from zero in such cases. So for 14.5, it should go to 15, and -14.5 to -15.\n\nWait, how do I handle that? Let me think. For positive numbers, if the decimal part is 0.5 or higher, we round up. For negative numbers, if the decimal part is 0.5 or lower (since it's negative), we round down (which is away from zero). Wait, maybe I can use math.floor and math.ceil with some adjustment.\n\nAlternatively, maybe I can check if the number is exactly halfway. Like, if the fractional part is 0.5, then round away from zero. Otherwise, round normally. But how to detect that?\n\nAnother approach: For a number x, the closest integer is floor(x + 0.5) if x is positive, and ceil(x - 0.5) if x is negative. Wait, let me test this.\n\nTake 14.5: 14.5 + 0.5 = 15.0, floor is 15. Correct. For -14.5: -14.5 - 0.5 = -15.0, ceil is -15. Correct. What about 15.3? 15.3 + 0.5 = 15.8, floor is 15. Correct. For 14.4: 14.4 + 0.5 = 14.9, floor is 14. Correct. For -14.4: -14.4 -0.5 = -14.9, ceil is -14. Wait, but -14.4 is closer to -14 than -15. So that's correct. What about -14.6? -14.6 -0.5 = -15.1, ceil is -15. Which is correct because -14.6 is closer to -15.\n\nSo this approach seems to work. So the formula would be:\n\nif num >= 0:\n    return math.floor(num + 0.5)\nelse:\n    return math.ceil(num - 0.5)\n\nYes, that should handle all cases. Let me test some examples.\n\nTest case 1: \"10\" → 10.0 → floor(10.0 + 0.5) = floor(10.5) = 10. Correct.\n\nTest case 2: \"15.3\" → 15.3 + 0.5 = 15.8 → floor is 15. Correct.\n\nTest case 3: \"14.5\" → 14.5 + 0.5 = 15.0 → floor 15. Correct.\n\nTest case 4: \"-14.5\" → -14.5 -0.5 = -15.0 → ceil is -15. Correct.\n\nAnother test: \"2.5\" → 3. \"3.5\" → 4. \"-2.5\" → -3. All correct.\n\nWhat about numbers that are not halfway? Like \"14.4999\" → 14.4999 + 0.5 = 14.9999 → floor 14. Correct. \"14.5001\" → 15.0001 → floor 15. Correct.\n\nSo this logic should work. Now, implement this in Python.\n\nImport math, convert the input string to float. Then check if it's positive or negative. Apply the formula. Return the integer.\n\nWait, but math.floor and math.ceil return floats? No, in Python 3, math.floor returns an integer? Wait no, math.floor(10.5) returns 10.0 as a float. Wait, no, actually, in Python 3, math.floor returns an integer? Let me check. Wait, no. Wait, math.floor(10.5) returns 10.0 as a float. Wait, no, actually, in Python 3, math.floor returns an integer? Let me think. Wait, no. Let me check:\n\nWait, in Python 3, math.floor(10.5) returns 10.0 as a float. Wait, no, actually, no. Wait, no, math.floor returns a float if the input is a float. Wait, let me check. For example:\n\nimport math\nprint(math.floor(10.5))  # outputs 10.0\nprint(type(math.floor(10.5)))  # <class 'float'>\n\nWait, but the function is supposed to return an integer. So I need to cast it to int. Because the examples show that closest_integer(\"10\") returns 10, which is an integer. So in the code, after computing math.floor(num + 0.5), I should convert it to int.\n\nWait, but math.floor returns a float. So for example, math.floor(10.5) is 10.0. So converting to int would give 10. So in the code, return int(math.floor(...)).\n\nWait, but in the code I wrote earlier, the return statements are math.floor(...) and math.ceil(...). So those would return floats. But the examples expect integers. So I need to cast them to int.\n\nSo the code should be:\n\nimport math\n\ndef closest_integer(value):\n    num = float(value)\n    if num >= 0:\n        return int(math.floor(num + 0.5))\n    else:\n        return int(math.ceil(num - 0.5))\n\nWait, but math.ceil(-15.0) is -15.0, which when cast to int is -15. Correct.\n\nYes, that should work. Let me test the examples again.\n\nclosest_integer(\"10\") → 10.0 → floor(10.5) is 10.0 → int(10.0) is 10. Correct.\n\nclosest_integer(\"15.3\") → 15.3 + 0.5 = 15.8 → floor is 15.0 → 15. Correct.\n\nclosest_integer(\"14.5\") → 15.0 → 15. Correct.\n\nclosest_integer(\"-14.5\") → -14.5 -0.5 = -15.0 → ceil is -15.0 → -15. Correct.\n\nAnother test: \"2.5\" → 3.0 → 3. \"-2.5\" → -3.0 → -3. Correct.\n\nWhat about \"0.5\"? It should round to 1. Because 0.5 is equidistant between 0 and 1, so round away from zero. So 0.5 → 1. Let's see: 0.5 + 0.5 = 1.0 → floor is 1.0 → 1. Correct.\n\nWhat about \"-0.5\"? It should round to -1. Let's see: -0.5 -0.5 = -1.0 → ceil is -1.0 → -1. Correct.\n\nAnother case: \"1.4999999999999999\" → which is 1.5? No, 1.4999999999999999 is actually 1.5 in float? Wait, no. Let me think. 1.4999999999999999 is very close to 1.5 but less. So adding 0.5 would be 1.9999999999999999, floor is 1. So returns 1. Correct.\n\nSo this logic should handle all cases. Therefore, the code should be as written.\nHere is the Python3 code implementing the solution:\n\n```python\nimport math\n\ndef closest_integer(value):\n    num = float(value)\n    if num >= 0:\n        return int(math.floor(num + 0.5))\n    else:\n        return int(math.ceil(num - 0.5))\n```\n\nThis code first converts the input string to a float. Depending on whether the number is non-negative or negative, it adjusts the value by adding or subtracting 0.5 and then uses `math.floor` or `math.ceil` to round to the nearest integer, ensuring that halfway cases are rounded away from zero. The result is then cast to an integer to match the expected output type.",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787377246,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 2068,
+      "prompt_tokens": 162,
+      "total_tokens": 2230,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-9LHwFPsC4nMkBWNlD2OfFMhHkyfF6jyx",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 162,
+      "prompt_ms": 493.957,
+      "prompt_per_token_ms": 3.049117283950617,
+      "prompt_per_second": 327.9637701257397,
+      "predicted_n": 2068,
+      "predicted_ms": 59179.681,
+      "predicted_per_token_ms": 28.616867021276594,
+      "predicted_per_second": 34.94442628036471,
+      "draft_n": 2508,
+      "draft_n_accepted": 1440
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00099:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "index": 1188,
+  "task_id": 1188,
+  "rendered_prompt_sha256": "dea62f6775aa0dea854c47769086cab70bdf011c62d18f1f6f64bab8ba57c2db",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Answer: 18",
+  "finish_reason": "stop",
+  "expected": "24",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='18' expected='24'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.7762067239964381
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Answer: 18",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331685,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 7,
+      "prompt_tokens": 104,
+      "total_tokens": 111,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-1nEWmrvYBDJDGI5yEA4aMupGfwYDsuQc",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 104,
+      "prompt_ms": 477.449,
+      "prompt_per_token_ms": 4.590855769230769,
+      "prompt_per_second": 217.82431212548354,
+      "predicted_n": 7,
+      "predicted_ms": 286.618,
+      "predicted_per_token_ms": 40.94542857142857,
+      "predicted_per_second": 24.42275083909594,
+      "draft_n": 12,
+      "draft_n_accepted": 3
+    }
+  },
+  "used_fallback": false
+}

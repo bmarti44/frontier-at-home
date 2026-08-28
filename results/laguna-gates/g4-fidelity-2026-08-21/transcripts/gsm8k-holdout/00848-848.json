@@ -1,0 +1,61 @@
+{
+  "index": 848,
+  "task_id": 848,
+  "rendered_prompt_sha256": "6ad19d23adf9f20e690e53e1f69898ecc8d73bbfeb16379dffebe77979fbf8f7",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>To solve the problem:\n\n1. **White shirts with no collars**:  \n   Total white shirts = 40  \n   Half have collars, so \\( \\frac{40}{2} = 20 \\) have collars.  \n   Shirts without collars = \\( 40 - 20 = 20 \\).\n\n2. **Floral shirts with no buttons**:  \n   Total floral shirts = 50  \n   20 have buttons, so shirts without buttons = \\( 50 - 20 = 30 \\).\n\n3. **Difference**:  \n   Floral shirts without buttons (30) - White shirts without collars (20) = \\( 30 - 20 = 10 \\).\n\nAnswer: 10",
+  "finish_reason": "stop",
+  "expected": "10",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.776619614975061
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>To solve the problem:\n\n1. **White shirts with no collars**:  \n   Total white shirts = 40  \n   Half have collars, so \\( \\frac{40}{2} = 20 \\) have collars.  \n   Shirts without collars = \\( 40 - 20 = 20 \\).\n\n2. **Floral shirts with no buttons**:  \n   Total floral shirts = 50  \n   20 have buttons, so shirts without buttons = \\( 50 - 20 = 30 \\).\n\n3. **Difference**:  \n   Floral shirts without buttons (30) - White shirts without collars (20) = \\( 30 - 20 = 10 \\).\n\nAnswer: 10",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331603,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 124,
+      "total_tokens": 298,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-3XudlriT9ogrM5o0LjhBiAcKLbjsZRt6",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 124,
+      "prompt_ms": 521.139,
+      "prompt_per_token_ms": 4.202733870967742,
+      "prompt_per_second": 237.94035756295347,
+      "predicted_n": 174,
+      "predicted_ms": 4237.42,
+      "predicted_per_token_ms": 24.352988505747128,
+      "predicted_per_second": 41.06272212808737,
+      "draft_n": 180,
+      "draft_n_accepted": 128
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>A clothing store has 40 white shirts and 50 floral shirts. Half of the white shirts have collars, and 20 of the floral shirts have buttons. How many more floral shirts with no buttons are there than white shirts with no collars?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

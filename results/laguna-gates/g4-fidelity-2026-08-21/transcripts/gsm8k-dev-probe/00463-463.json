@@ -1,0 +1,61 @@
+{
+  "index": 463,
+  "task_id": 463,
+  "rendered_prompt_sha256": "fba935a69845d5ad9e42bd25d286913ccbf36818f7c993f8b4122d4a35c9103a",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The tip is 1/5 of the $15 order, which is $3. Adding the tip to the original cost gives $15 + $3 = $18.\n\nAnswer: 18",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5975139499641955
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The tip is 1/5 of the $15 order, which is $3. Adding the tip to the original cost gives $15 + $3 = $18.\n\nAnswer: 18",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330748,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 46,
+      "prompt_tokens": 111,
+      "total_tokens": 157,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-DCJnWLiJ0bOzoNsv72IZxcnOaDQ56YVy",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 111,
+      "prompt_ms": 483.381,
+      "prompt_per_token_ms": 4.354783783783784,
+      "prompt_per_second": 229.632525895722,
+      "predicted_n": 46,
+      "predicted_ms": 1091.887,
+      "predicted_per_token_ms": 23.73667391304348,
+      "predicted_per_second": 42.12890161710873,
+      "draft_n": 48,
+      "draft_n_accepted": 33
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>Ashley's pizza delivery costs $15. What is the total amount that Ashley should give the delivery man if she wants to give a tip that is equal to 1/5 of the amount she ordered?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

@@ -1,0 +1,61 @@
+{
+  "index": 706,
+  "task_id": 706,
+  "rendered_prompt_sha256": "58b7ca793b534d94e04d418af26dd487ee718dad1dc4d8ded6a6944e278397ab",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Answer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.801288635993842
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Answer: 9",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331159,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 6,
+      "prompt_tokens": 136,
+      "total_tokens": 142,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-4JYWG3acxnciaoLoU7zDY32SVSsJb6yX",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 136,
+      "prompt_ms": 491.042,
+      "prompt_per_token_ms": 3.61060294117647,
+      "prompt_per_second": 276.9620521258874,
+      "predicted_n": 6,
+      "predicted_ms": 285.627,
+      "predicted_per_token_ms": 47.6045,
+      "predicted_per_second": 21.006417460534195,
+      "draft_n": 12,
+      "draft_n_accepted": 2
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>The local firefighters are doing a “fill the boot” fundraiser. Their goal is to raise $6300. After the first 3 hours, they have raised $2100.  For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

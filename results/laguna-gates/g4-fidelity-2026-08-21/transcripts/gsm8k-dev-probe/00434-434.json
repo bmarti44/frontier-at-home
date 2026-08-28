@@ -1,0 +1,60 @@
+{
+  "index": 434,
+  "task_id": 434,
+  "rendered_prompt_sha256": "3a44ba3954071f5d7f6cc417f2ce2cf7d995a501956ae9dbe2fde1fc93655370",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>George spent $5 and had 1% left, so he spent $5 × 0.99 = $4.95.\n\nHe bought 3 bags of chips at 40 cents each: 3 × $0.40 = $1.20.\n\nRemaining money for candy bars: $4.95 − $1.20 = $3.75.\n\nEach candy bar costs 75 cents ($0.75), so:\n$3.75 ÷ $0.75 = 5 candy bars.\n\nAnswer: 5",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.2361268200329505
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>George spent $5 and had 1% left, so he spent $5 × 0.99 = $4.95.\n\nHe bought 3 bags of chips at 40 cents each: 3 × $0.40 = $1.20.\n\nRemaining money for candy bars: $4.95 − $1.20 = $3.75.\n\nEach candy bar costs 75 cents ($0.75), so:\n$3.75 ÷ $0.75 = 5 candy bars.\n\nAnswer: 5",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331158,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 126,
+      "prompt_tokens": 116,
+      "total_tokens": 242,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-j6Q82cNN6SYRlZPKknlQcWZYM5pUWlHf",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 116,
+      "prompt_ms": 501.233,
+      "prompt_per_token_ms": 4.320974137931034,
+      "prompt_per_second": 231.42929535764804,
+      "predicted_n": 126,
+      "predicted_ms": 2716.724,
+      "predicted_per_token_ms": 21.56130158730159,
+      "predicted_per_second": 46.37938929387011,
+      "draft_n": 120,
+      "draft_n_accepted": 95
+    }
+  },
+  "used_fallback": false
+}

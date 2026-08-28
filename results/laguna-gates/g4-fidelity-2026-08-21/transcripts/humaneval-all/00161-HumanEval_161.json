@@ -1,0 +1,95 @@
+{
+  "index": 161,
+  "task_id": "HumanEval/161",
+  "rendered_prompt_sha256": "fa29d7f413a74f20646e32cd02cb87cdd6766bf4f81745a92db8bcd19d9734d2",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    # Check if the string contains any letters\n    has_letters = any(c.isalpha() for c in s)\n    \n    if not has_letters:\n        # If no letters, reverse the string\n        return s[::-1]\n    else:\n        # Reverse the case of each letter, keep others as is\n        return ''.join(c.swapcase() if c.isalpha() else c for c in s)\nOkay, let's see. I need to solve this problem where I have to process a string based on certain conditions. The function is called solve, and it takes a string s as input. The task is to reverse the case of each letter if there are any letters in the string. But if there are no letters at all, then I should reverse the entire string. Hmm, right.\n\nFirst, I need to understand the examples given. Let's look at them again. \n\nThe first example is solve(\"1234\") which returns \"4321\". Since there are no letters here, the entire string is reversed. That makes sense. The second example is solve(\"ab\") which becomes \"AB\". So each letter's case is reversed. The third example is \"#a@C\" turning into \"#A@c\". So the 'a' becomes 'A', the 'C' becomes 'c', and the other characters stay the same. \n\nSo the plan is: first check if the string has any letters. If it does, then for each character in the string, if it's a letter, swap its case; otherwise, leave it as is. If there are no letters, reverse the entire string.\n\nHow do I check if the string has any letters? Well, I can loop through each character and check if any of them isalpha(). Alternatively, using the any() function with a generator expression. Like any(c.isalpha() for c in s). That should return True if there's at least one letter.\n\nOnce I determine that there are letters, then I need to process each character. For each character in the string, if it's a letter, swap the case. The swapcase() method does exactly that. So for each character, if it's alpha, apply swapcase, else leave it. So building a new string by iterating over each character and applying that.\n\nIf there are no letters, then reverse the string. Reversing can be done with slicing [::-1].\n\nWait, but what about the order of operations? Let me think. The steps are:\n\n1. Check if the string contains any letters.\n2. If yes: process each character, swapping case for letters.\n3. If no: reverse the entire string.\n\nSo the code structure would be something like:\n\ndef solve(s):\n    has_letters = any(c.isalpha() for c in s)\n    if not has_letters:\n        return s[::-1]\n    else:\n        return ''.join([c.swapcase() if c.isalpha() else c for c in s])\n\nWait, but in Python, the swapcase() method already handles the case swapping. So for each character, if it's a letter, swapcase() will do the job. So the list comprehension can be written as c.swapcase() if c.isalpha() else c. But actually, even if the character is not a letter, applying swapcase() would leave it unchanged. Wait, no. Let me check. For example, '1'.swapcase() is still '1', right? Because numbers and symbols don't have case. So maybe I can just do c.swapcase() for all characters, but only if there are letters. Wait, but the problem says \"if s[i] is a letter, reverse its case... otherwise keep it as it is.\" So for non-letters, we leave them as is. But using swapcase() on non-letters would leave them as is. So maybe the code can be simplified to just ''.join(c.swapcase() for c in s) when there are letters. Because for non-letters, swapcase() does nothing. Let me test that.\n\nTesting 'a' becomes 'A', 'C' becomes 'c', '1' stays '1', '#' stays '#'. So yes, using swapcase() on all characters would work. So the code can be written as:\n\nif has_letters:\n    return s.swapcase()\nelse:\n    return s[::-1]\n\nWait, wait! Wait a second. Because the swapcase() method does exactly that. So if the string has letters, then just return s.swapcase(). Because that would swap all letters' cases and leave others as is. Oh right! So that's a much simpler way. So the code can be simplified.\n\nSo the code would be:\n\ndef solve(s):\n    if any(c.isalpha() for c in s):\n        return s.swapcase()\n    else:\n        return s[::-1]\n\nWait, that's even better. Let me check the examples again.\n\nFirst example: \"1234\" has no letters, so reverse to \"4321\". Correct.\n\nSecond example: \"ab\" has letters, so swapcase gives \"AB\". Correct.\n\nThird example: \"#a@C\" has letters, so swapcase would turn 'a' to 'A', 'C' to 'c', others stay. So \"#A@c\". Correct.\n\nSo this code should work. That's much simpler than the initial approach. So why did I think of using a list comprehension? Because I thought maybe swapcase() might not work for some cases, but no, it does. So this is the correct approach.\n\nTherefore, the code is straightforward. The key is to check if there's any letter. If yes, swapcase the entire string. If not, reverse it.\n\nI think that's all. Let me think of edge cases. What about an empty string? Well, according to the problem statement, if there are no letters, reverse the string. An empty string reversed is still empty. So that's handled.\n\nAnother case: a string with a mix of letters and non-letters. Like \"a1b2\". Then swapcase would turn into \"A1B2\".\n\nAnother case: all letters. Like \"Hello\", becomes \"hELLO\".\n\nWhat about uppercase letters? Like \"AbC\", becomes \"aBc\".\n\nYes, that's correct.\n\nSo the code should handle all these cases.\ndef solve(s):\n    if any(c.isalpha() for c in s):\n        return s.swapcase()\n    else:\n        return s[::-1]\n```python\ndef solve(s):\n    if any(c.isalpha() for c in s):\n        return s.swapcase()\n    else:\n        return s[::-1]\n```python\ndef solve(s):\n    if any(c.isalpha() for c in s):\n        return s.swapcase()\n    else:\n        return s[::-1]\n```",
+  "finish_reason": "stop",
+  "expected": "    flg = 0\n    idx = 0\n    new_str = list(s)\n    for i in s:\n        if i.isalpha():\n            new_str[idx] = i.swapcase()\n            flg = 1\n        idx += 1\n    s = \"\"\n    for i in new_str:\n        s += i\n    if flg == 0:\n        return s[len(s)::-1]\n    return s\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 46.4780893229763
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    # Check if the string contains any letters\n    has_letters = any(c.isalpha() for c in s)\n    \n    if not has_letters:\n        # If no letters, reverse the string\n        return s[::-1]\n    else:\n        # Reverse the case of each letter, keep others as is\n        return ''.join(c.swapcase() if c.isalpha() else c for c in s)\nOkay, let's see. I need to solve this problem where I have to process a string based on certain conditions. The function is called solve, and it takes a string s as input. The task is to reverse the case of each letter if there are any letters in the string. But if there are no letters at all, then I should reverse the entire string. Hmm, right.\n\nFirst, I need to understand the examples given. Let's look at them again. \n\nThe first example is solve(\"1234\") which returns \"4321\". Since there are no letters here, the entire string is reversed. That makes sense. The second example is solve(\"ab\") which becomes \"AB\". So each letter's case is reversed. The third example is \"#a@C\" turning into \"#A@c\". So the 'a' becomes 'A', the 'C' becomes 'c', and the other characters stay the same. \n\nSo the plan is: first check if the string has any letters. If it does, then for each character in the string, if it's a letter, swap its case; otherwise, leave it as is. If there are no letters, reverse the entire string.\n\nHow do I check if the string has any letters? Well, I can loop through each character and check if any of them isalpha(). Alternatively, using the any() function with a generator expression. Like any(c.isalpha() for c in s). That should return True if there's at least one letter.\n\nOnce I determine that there are letters, then I need to process each character. For each character in the string, if it's a letter, swap the case. The swapcase() method does exactly that. So for each character, if it's alpha, apply swapcase, else leave it. So building a new string by iterating over each character and applying that.\n\nIf there are no letters, then reverse the string. Reversing can be done with slicing [::-1].\n\nWait, but what about the order of operations? Let me think. The steps are:\n\n1. Check if the string contains any letters.\n2. If yes: process each character, swapping case for letters.\n3. If no: reverse the entire string.\n\nSo the code structure would be something like:\n\ndef solve(s):\n    has_letters = any(c.isalpha() for c in s)\n    if not has_letters:\n        return s[::-1]\n    else:\n        return ''.join([c.swapcase() if c.isalpha() else c for c in s])\n\nWait, but in Python, the swapcase() method already handles the case swapping. So for each character, if it's a letter, swapcase() will do the job. So the list comprehension can be written as c.swapcase() if c.isalpha() else c. But actually, even if the character is not a letter, applying swapcase() would leave it unchanged. Wait, no. Let me check. For example, '1'.swapcase() is still '1', right? Because numbers and symbols don't have case. So maybe I can just do c.swapcase() for all characters, but only if there are letters. Wait, but the problem says \"if s[i] is a letter, reverse its case... otherwise keep it as it is.\" So for non-letters, we leave them as is. But using swapcase() on non-letters would leave them as is. So maybe the code can be simplified to just ''.join(c.swapcase() for c in s) when there are letters. Because for non-letters, swapcase() does nothing. Let me test that.\n\nTesting 'a' becomes 'A', 'C' becomes 'c', '1' stays '1', '#' stays '#'. So yes, using swapcase() on all characters would work. So the code can be written as:\n\nif has_letters:\n    return s.swapcase()\nelse:\n    return s[::-1]\n\nWait, wait! Wait a second. Because the swapcase() method does exactly that. So if the string has letters, then just return s.swapcase(). Because that would swap all letters' cases and leave others as is. Oh right! So that's a much simpler way. So the code can be simplified.\n\nSo the code would be:\n\ndef solve(s):\n    if any(c.isalpha() for c in s):\n        return s.swapcase()\n    else:\n        return s[::-1]\n\nWait, that's even better. Let me check the examples again.\n\nFirst example: \"1234\" has no letters, so reverse to \"4321\". Correct.\n\nSecond example: \"ab\" has letters, so swapcase gives \"AB\". Correct.\n\nThird example: \"#a@C\" has letters, so swapcase would turn 'a' to 'A', 'C' to 'c', others stay. So \"#A@c\". Correct.\n\nSo this code should work. That's much simpler than the initial approach. So why did I think of using a list comprehension? Because I thought maybe swapcase() might not work for some cases, but no, it does. So this is the correct approach.\n\nTherefore, the code is straightforward. The key is to check if there's any letter. If yes, swapcase the entire string. If not, reverse it.\n\nI think that's all. Let me think of edge cases. What about an empty string? Well, according to the problem statement, if there are no letters, reverse the string. An empty string reversed is still empty. So that's handled.\n\nAnother case: a string with a mix of letters and non-letters. Like \"a1b2\". Then swapcase would turn into \"A1B2\".\n\nAnother case: all letters. Like \"Hello\", becomes \"hELLO\".\n\nWhat about uppercase letters? Like \"AbC\", becomes \"aBc\".\n\nYes, that's correct.\n\nSo the code should handle all these cases.\ndef solve(s):\n    if any(c.isalpha() for c in s):\n        return s.swapcase()\n    else:\n        return s[::-1]\n```python\ndef solve(s):\n    if any(c.isalpha() for c in s):\n        return s.swapcase()\n    else:\n        return s[::-1]\n```python\ndef solve(s):\n    if any(c.isalpha() for c in s):\n        return s.swapcase()\n    else:\n        return s[::-1]\n```",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787388179,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 1475,
+      "prompt_tokens": 116,
+      "total_tokens": 1591,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-EK6C8xEBoH0CE8av3IuMf9TeoLN6D4pp",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 116,
+      "prompt_ms": 467.656,
+      "prompt_per_token_ms": 4.03151724137931,
+      "prompt_per_second": 248.04557195887574,
+      "predicted_n": 1475,
+      "predicted_ms": 45705.955,
+      "predicted_per_token_ms": 30.987088135593222,
+      "predicted_per_second": 32.27150597772216,
+      "draft_n": 1936,
+      "draft_n_accepted": 990
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00161:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

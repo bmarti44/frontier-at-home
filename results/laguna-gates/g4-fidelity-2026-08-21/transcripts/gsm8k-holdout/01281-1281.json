@@ -1,0 +1,60 @@
+{
+  "index": 1281,
+  "task_id": 1281,
+  "rendered_prompt_sha256": "137aaa99050cac791d9c155a651e7ae633a420982bd0e85f72318ac9ec1c9829",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Dexter's five pigs each eat 4 pounds of feed twice a day, so each pig consumes 8 pounds daily. For all five pigs, that's 5 × 8 = 40 pounds per day. Over a week (7 days), they eat 40 × 7 = 280 pounds. Subtracting this from the 300 pounds ordered: 300 − 280 = 20 pounds remaining.\n\nAnswer: 20",
+  "finish_reason": "stop",
+  "expected": "20",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.9886725649703294
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Dexter's five pigs each eat 4 pounds of feed twice a day, so each pig consumes 8 pounds daily. For all five pigs, that's 5 × 8 = 40 pounds per day. Over a week (7 days), they eat 40 × 7 = 280 pounds. Subtracting this from the 300 pounds ordered: 300 − 280 = 20 pounds remaining.\n\nAnswer: 20",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331781,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 102,
+      "prompt_tokens": 109,
+      "total_tokens": 211,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-9fZV7GanYDbPCedFGNQf2wGjLIw8J5pP",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 109,
+      "prompt_ms": 478.315,
+      "prompt_per_token_ms": 4.388211009174312,
+      "prompt_per_second": 227.88329866301498,
+      "predicted_n": 102,
+      "predicted_ms": 2487.301,
+      "predicted_per_token_ms": 24.385303921568628,
+      "predicted_per_second": 41.00830579009135,
+      "draft_n": 108,
+      "draft_n_accepted": 74
+    }
+  },
+  "used_fallback": false
+}

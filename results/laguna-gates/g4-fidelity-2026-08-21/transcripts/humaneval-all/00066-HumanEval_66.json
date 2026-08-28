@@ -1,0 +1,95 @@
+{
+  "index": 66,
+  "task_id": "HumanEval/66",
+  "rendered_prompt_sha256": "26e089859958a11b71b028884c146d360f5e2c079a59aeb4275b43b1f5f3e9ae",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    return sum(ord(c) for c in s if c.isupper())\n```\n\nOkay, let's see. I need to write a function called digitSum that takes a string and returns the sum of the ASCII codes of the uppercase characters. Hmm. So first, I should think about how to iterate through each character in the string. For each character, I need to check if it's uppercase. If it is, add its ASCII value to a total sum.\n\nWait, right. So the steps are: loop through each character in the input string. For each character, check if it's uppercase using the isupper() method. If it is, then get its ASCII code with ord() and add that to the sum. Then return the total sum.\n\nLet me think about the examples. Like the first example, empty string returns 0, which makes sense because there are no characters. The second example \"abAB\" has 'A' and 'B' as uppercase. Their ASCII codes are 65 and 66, so 65 + 66 = 131. That matches the example. Another example, \"abcCd\" has 'C' which is 67, so the sum is 67. Yep.\n\nSo the code structure would be something like:\n\ndef digitSum(s):\n    total = 0\n    for c in s:\n        if c.isupper():\n            total += ord(c)\n    return total\n\nAlternatively, using a generator expression with sum, which is more concise. Like sum(ord(c) for c in s if c.isupper()). That should work too. Oh right, the user's code example already uses that. So the function can be written in one line.\n\nWait, but I need to make sure that the function is correctly named and returns the sum. Let me check the examples again. For \"aAaaaXa\", the uppercase letters are A, A, X. Wait, let's see: the string is \"aAaaaXa\". Breaking it down:\n\nIndices 0:a (lower), 1:A (upper), 2:a (lower), 3:a (lower), 4:a (lower), 5:X (upper), 6:a (lower). So uppercase are A (65), X (88). Wait, but the example says the sum is 153. Let me calculate 65 + 88 = 153. Oh right, so that's correct. So the code would capture those.\n\nSo the code seems correct. The key points are checking each character's case and summing their ASCII values. I think that's all. So the function should work as intended.\n```python\ndef digitSum(s):\n    return sum(ord(c) for c in s if c.isupper())\n```",
+  "finish_reason": "stop",
+  "expected": "    if s == \"\": return 0\n    return sum(ord(char) if char.isupper() else 0 for char in s)\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 18.901914183981717
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    return sum(ord(c) for c in s if c.isupper())\n```\n\nOkay, let's see. I need to write a function called digitSum that takes a string and returns the sum of the ASCII codes of the uppercase characters. Hmm. So first, I should think about how to iterate through each character in the string. For each character, I need to check if it's uppercase. If it is, add its ASCII value to a total sum.\n\nWait, right. So the steps are: loop through each character in the input string. For each character, check if it's uppercase using the isupper() method. If it is, then get its ASCII code with ord() and add that to the sum. Then return the total sum.\n\nLet me think about the examples. Like the first example, empty string returns 0, which makes sense because there are no characters. The second example \"abAB\" has 'A' and 'B' as uppercase. Their ASCII codes are 65 and 66, so 65 + 66 = 131. That matches the example. Another example, \"abcCd\" has 'C' which is 67, so the sum is 67. Yep.\n\nSo the code structure would be something like:\n\ndef digitSum(s):\n    total = 0\n    for c in s:\n        if c.isupper():\n            total += ord(c)\n    return total\n\nAlternatively, using a generator expression with sum, which is more concise. Like sum(ord(c) for c in s if c.isupper()). That should work too. Oh right, the user's code example already uses that. So the function can be written in one line.\n\nWait, but I need to make sure that the function is correctly named and returns the sum. Let me check the examples again. For \"aAaaaXa\", the uppercase letters are A, A, X. Wait, let's see: the string is \"aAaaaXa\". Breaking it down:\n\nIndices 0:a (lower), 1:A (upper), 2:a (lower), 3:a (lower), 4:a (lower), 5:X (upper), 6:a (lower). So uppercase are A (65), X (88). Wait, but the example says the sum is 153. Let me calculate 65 + 88 = 153. Oh right, so that's correct. So the code would capture those.\n\nSo the code seems correct. The key points are checking each character's case and summing their ASCII values. I think that's all. So the function should work as intended.\n```python\ndef digitSum(s):\n    return sum(ord(c) for c in s if c.isupper())\n```",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787371066,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 589,
+      "prompt_tokens": 119,
+      "total_tokens": 708,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-5UyCFbTx9WOfExas0dFGNvpPNBJAIQ0V",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 119,
+      "prompt_ms": 484.094,
+      "prompt_per_token_ms": 4.068016806722689,
+      "prompt_per_second": 245.82002668903147,
+      "predicted_n": 589,
+      "predicted_ms": 18350.881,
+      "predicted_per_token_ms": 31.155994906621395,
+      "predicted_per_second": 32.09655165874597,
+      "draft_n": 784,
+      "draft_n_accepted": 392
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00066:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

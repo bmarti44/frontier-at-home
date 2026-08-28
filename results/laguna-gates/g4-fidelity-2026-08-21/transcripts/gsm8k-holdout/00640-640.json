@@ -1,0 +1,60 @@
+{
+  "index": 640,
+  "task_id": 640,
+  "rendered_prompt_sha256": "84c4d8858fd1c914264a40c1fb3cadf50f34884322d56047830aa5ec2343f7be",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The total cost is calculated as follows:\n\n- Base price: $30,000\n- King cab upgrade: $7,500\n- Leather seats: $7,500 / 3 = $2,500\n- Running boards: $2,500 - $500 = $2,000\n- Upgraded exterior light package: $1,500\n\nAdding these together:\n$30,000 + $7,500 + $2,500 + $2,000 + $1,500 = $43,500\n\nAnswer: 43500",
+  "finish_reason": "stop",
+  "expected": "43,500",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.004997201031074
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The total cost is calculated as follows:\n\n- Base price: $30,000\n- King cab upgrade: $7,500\n- Leather seats: $7,500 / 3 = $2,500\n- Running boards: $2,500 - $500 = $2,000\n- Upgraded exterior light package: $1,500\n\nAdding these together:\n$30,000 + $7,500 + $2,500 + $2,000 + $1,500 = $43,500\n\nAnswer: 43500",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331829,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 150,
+      "prompt_tokens": 205,
+      "total_tokens": 355,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-EVRxWcpIAO2YgTxnVXbhJ3rlDIiZNuTS",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 205,
+      "prompt_ms": 639.359,
+      "prompt_per_token_ms": 3.1188243902439026,
+      "prompt_per_second": 320.63363462467873,
+      "predicted_n": 150,
+      "predicted_ms": 3339.369,
+      "predicted_per_token_ms": 22.26246,
+      "predicted_per_second": 44.91866577188684,
+      "draft_n": 144,
+      "draft_n_accepted": 113
+    }
+  },
+  "used_fallback": false
+}

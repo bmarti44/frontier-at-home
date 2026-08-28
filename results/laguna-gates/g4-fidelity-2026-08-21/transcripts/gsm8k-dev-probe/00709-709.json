@@ -1,0 +1,60 @@
+{
+  "index": 709,
+  "task_id": 709,
+  "rendered_prompt_sha256": "373def2bb7a15ea05d29edc99f7218f9f6ecac5a2d927c240b4d90b8143e6503",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The chocolate ice cream rate is 100 quarts / 2 hours = 50 quarts per hour.\nThe vanilla ice cream rate is 50 quarts / 4 hours = 12.5 quarts per hour.\n\nIn 48 hours:\n- Chocolate: 50 × 48 = 2400 quarts\n- Vanilla: 12.5 × 48 = 600 quarts\n\nTotal: 2400 + 600 = 3000 quarts\n\nAnswer: 3000",
+  "finish_reason": "stop",
+  "expected": "3000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.241139153018594
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The chocolate ice cream rate is 100 quarts / 2 hours = 50 quarts per hour.\nThe vanilla ice cream rate is 50 quarts / 4 hours = 12.5 quarts per hour.\n\nIn 48 hours:\n- Chocolate: 50 × 48 = 2400 quarts\n- Vanilla: 12.5 × 48 = 600 quarts\n\nTotal: 2400 + 600 = 3000 quarts\n\nAnswer: 3000",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331106,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 122,
+      "prompt_tokens": 118,
+      "total_tokens": 240,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-GA1Obd8JJysuQxSLePIOXeJ0NcAml41z",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 118,
+      "prompt_ms": 507.805,
+      "prompt_per_token_ms": 4.30343220338983,
+      "prompt_per_second": 232.37266273471116,
+      "predicted_n": 122,
+      "predicted_ms": 2687.199,
+      "predicted_per_token_ms": 22.02622131147541,
+      "predicted_per_second": 45.40043368578211,
+      "draft_n": 116,
+      "draft_n_accepted": 92
+    }
+  },
+  "used_fallback": false
+}

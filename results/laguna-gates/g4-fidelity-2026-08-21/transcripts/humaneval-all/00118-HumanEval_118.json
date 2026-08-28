@@ -1,0 +1,95 @@
+{
+  "index": 118,
+  "task_id": "HumanEval/118",
+  "rendered_prompt_sha256": "0eec1170b109fb6d89c6ef7ccf3407439aa820f170e9377d84d5fef4a8da296d",
+  "rendering": "raw",
+  "encoder": "laguna",
+  "completion": "    vowels = \"aeiouAEIOU\"\n    n = len(word)\n    if n < 3:\n        return \"\"\n    for i in range(n - 2, 0, -1):\n        if word[i] in vowels:\n            if word[i - 1] not in vowels and word[i + 1] not in vowels:\n                return word[i]\n    return \"\"\n    ```python\n    def get_closest_vowel(word):\n        vowels = \"aeiouAEIOU\"\n        n = len(word)\n        if n < 3:\n            return \"\"\n        for i in range(n - 2, 0, -1):\n            if word[i] in vowels:\n                if word[i - 1] not in vowels and word[i + 1] not in vowels:\n                    return word[i]\n        return \"\"\n    ```\n\n    Wait, but in the example \"yogurt\", the correct answer is \"u\". Let me check the code.\n\n    The word \"yogurt\" is y o u g u r t. Let's index from 0 to 6.\n\n    The loop starts at i = n-2 = 5 (since n=7). So i=5 is 'r', which is consonant. Then i=4 is 'u', which is vowel. Check if i-1 (3) is consonant (g) and i+1 (5) is consonant (r). Yes. So returns 'u'. Correct.\n\n    Another example: \"FULL\" is F U L L. n=4. Loop starts at i=2 (n-2=2). i=2 is 'L', consonant. Then i=1 is 'U', vowel. Check i-1 (0) is 'F' consonant, i+1 (2) is 'L' consonant. So returns 'U'. Correct.\n\n    \"quick\" is q u i c k. n=5. Loop starts at i=3 (n-2=3). i=3 is 'c', consonant. i=2 is 'i', vowel. Check i-1 (1) is 'u' which is vowel. So condition fails. Then i=1 is 'u', vowel. Check i-1 (0) is 'q' consonant, i+1 (2) is 'i' vowel. So condition fails. So returns \"\". Correct.\n\n    \"ab\" has length 2, returns \"\". Correct.\n\n    So the code seems to work. But wait, the problem says \"closest vowel that stands between two consonants from the right side of the word\". So we need to find the rightmost vowel that is between two consonants. The code iterates from the end towards the start, checking each vowel. The first such vowel found is the rightmost one. So the code is correct.\n\n    But wait, the loop starts at n-2. Let me think: for a word of length n, the indices are 0 to n-1. The last character is at n-1, which is excluded (since vowels at the end don't count). The second last is n-2. But the loop starts at i = n-2 and goes down to 1. Wait, the range is range(n-2, 0, -1). So for n=7, it's 5,4,3,2,1. So i starts at 5 (second last character), then 4, etc., down to 1. So the first character (i=0) is not checked. But the problem says vowels in the beginning don't count. So the first character is excluded. So the code is correct.\n\n    So the code seems correct. But let me think about edge cases.\n\n    Test case: \"abc\". n=3. Loop starts at i=1. word[1] is 'b', consonant. So no. Then i=0 is not checked. So returns \"\". But wait, the middle character is 'b', which is consonant. So no vowel between two consonants. Correct.\n\n    Another test case: \"abba\". n=4. Loop starts at i=2 (n-2=2). word[2] is 'b', consonant. i=1 is 'b', consonant. So no vowels found. Returns \"\".\n\n    Another test case: \"ababa\". n=5. Loop starts at i=3. word[3] is 'b', consonant. i=2 is 'a', vowel. Check i-1 (1) is 'b' consonant, i+1 (3) is 'b' consonant. So returns 'a'. Correct.\n\n    So the code seems to handle these cases.\n    ```python\n    def get_closest_vowel(word):\n        vowels = \"aeiouAEIOU\"\n        n = len(word)\n        if n < 3:\n            return \"\"\n        for i in range(n - 2, 0, -1):\n            if word[i] in vowels:\n                if word[i - 1] not in vowels and word[i + 1] not in vowels:\n                    return word[i]\n        return \"\"\n    ```",
+  "finish_reason": "stop",
+  "expected": "    if len(word) < 3:\n        return \"\"\n\n    vowels = {\"a\", \"e\", \"i\", \"o\", \"u\", \"A\", \"E\", 'O', 'U', 'I'}\n    for i in range(len(word)-2, 0, -1):\n        if word[i] in vowels:\n            if (word[i+1] not in vowels) and (word[i-1] not in vowels):\n                return word[i]\n    return \"\"\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 31.718393556016963
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "    vowels = \"aeiouAEIOU\"\n    n = len(word)\n    if n < 3:\n        return \"\"\n    for i in range(n - 2, 0, -1):\n        if word[i] in vowels:\n            if word[i - 1] not in vowels and word[i + 1] not in vowels:\n                return word[i]\n    return \"\"\n    ```python\n    def get_closest_vowel(word):\n        vowels = \"aeiouAEIOU\"\n        n = len(word)\n        if n < 3:\n            return \"\"\n        for i in range(n - 2, 0, -1):\n            if word[i] in vowels:\n                if word[i - 1] not in vowels and word[i + 1] not in vowels:\n                    return word[i]\n        return \"\"\n    ```\n\n    Wait, but in the example \"yogurt\", the correct answer is \"u\". Let me check the code.\n\n    The word \"yogurt\" is y o u g u r t. Let's index from 0 to 6.\n\n    The loop starts at i = n-2 = 5 (since n=7). So i=5 is 'r', which is consonant. Then i=4 is 'u', which is vowel. Check if i-1 (3) is consonant (g) and i+1 (5) is consonant (r). Yes. So returns 'u'. Correct.\n\n    Another example: \"FULL\" is F U L L. n=4. Loop starts at i=2 (n-2=2). i=2 is 'L', consonant. Then i=1 is 'U', vowel. Check i-1 (0) is 'F' consonant, i+1 (2) is 'L' consonant. So returns 'U'. Correct.\n\n    \"quick\" is q u i c k. n=5. Loop starts at i=3 (n-2=3). i=3 is 'c', consonant. i=2 is 'i', vowel. Check i-1 (1) is 'u' which is vowel. So condition fails. Then i=1 is 'u', vowel. Check i-1 (0) is 'q' consonant, i+1 (2) is 'i' vowel. So condition fails. So returns \"\". Correct.\n\n    \"ab\" has length 2, returns \"\". Correct.\n\n    So the code seems to work. But wait, the problem says \"closest vowel that stands between two consonants from the right side of the word\". So we need to find the rightmost vowel that is between two consonants. The code iterates from the end towards the start, checking each vowel. The first such vowel found is the rightmost one. So the code is correct.\n\n    But wait, the loop starts at n-2. Let me think: for a word of length n, the indices are 0 to n-1. The last character is at n-1, which is excluded (since vowels at the end don't count). The second last is n-2. But the loop starts at i = n-2 and goes down to 1. Wait, the range is range(n-2, 0, -1). So for n=7, it's 5,4,3,2,1. So i starts at 5 (second last character), then 4, etc., down to 1. So the first character (i=0) is not checked. But the problem says vowels in the beginning don't count. So the first character is excluded. So the code is correct.\n\n    So the code seems correct. But let me think about edge cases.\n\n    Test case: \"abc\". n=3. Loop starts at i=1. word[1] is 'b', consonant. So no. Then i=0 is not checked. So returns \"\". But wait, the middle character is 'b', which is consonant. So no vowel between two consonants. Correct.\n\n    Another test case: \"abba\". n=4. Loop starts at i=2 (n-2=2). word[2] is 'b', consonant. i=1 is 'b', consonant. So no vowels found. Returns \"\".\n\n    Another test case: \"ababa\". n=5. Loop starts at i=3. word[3] is 'b', consonant. i=2 is 'a', vowel. Check i-1 (1) is 'b' consonant, i+1 (3) is 'b' consonant. So returns 'a'. Correct.\n\n    So the code seems to handle these cases.\n    ```python\n    def get_closest_vowel(word):\n        vowels = \"aeiouAEIOU\"\n        n = len(word)\n        if n < 3:\n            return \"\"\n        for i in range(n - 2, 0, -1):\n            if word[i] in vowels:\n                if word[i - 1] not in vowels and word[i + 1] not in vowels:\n                    return word[i]\n        return \"\"\n    ```",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787380608,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 1100,
+      "prompt_tokens": 150,
+      "total_tokens": 1250,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-T6ZdvEUzgUh3HxqOg1UlINjLWUvDHE4E",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 150,
+      "prompt_ms": 486.123,
+      "prompt_per_token_ms": 3.24082,
+      "prompt_per_second": 308.5638819804864,
+      "predicted_n": 1100,
+      "predicted_ms": 31170.005,
+      "predicted_per_token_ms": 28.336368181818184,
+      "predicted_per_second": 35.290337617847676,
+      "draft_n": 1320,
+      "draft_n_accepted": 769
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-cic35wpo/case-00118:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

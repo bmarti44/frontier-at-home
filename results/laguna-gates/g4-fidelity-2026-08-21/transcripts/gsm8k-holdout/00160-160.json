@@ -1,0 +1,60 @@
+{
+  "index": 160,
+  "task_id": 160,
+  "rendered_prompt_sha256": "200075167a4409fcdb19023f17ee7b3d99bc0e08696f400fd3d3c9aad09dc191",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The tank's water depth on Wednesday is calculated as follows:\n\n- Monday: 17 feet  \n- Tuesday: 17 + 7 = 24 feet  \n- Wednesday: (2/3) × 24 = 16 feet  \n\nAnswer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.925516110030003
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The tank's water depth on Wednesday is calculated as follows:\n\n- Monday: 17 feet  \n- Tuesday: 17 + 7 = 24 feet  \n- Wednesday: (2/3) × 24 = 16 feet  \n\nAnswer: 16",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331768,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 64,
+      "prompt_tokens": 122,
+      "total_tokens": 186,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-FyAaP466CP1WPQ5g6TZIYYmPhl682ce3",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 122,
+      "prompt_ms": 512.614,
+      "prompt_per_token_ms": 4.201754098360656,
+      "prompt_per_second": 237.99584092514056,
+      "predicted_n": 64,
+      "predicted_ms": 1392.743,
+      "predicted_per_token_ms": 21.761609375,
+      "predicted_per_second": 45.952483695843384,
+      "draft_n": 60,
+      "draft_n_accepted": 48
+    }
+  },
+  "used_fallback": false
+}

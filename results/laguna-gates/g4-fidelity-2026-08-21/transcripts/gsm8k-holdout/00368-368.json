@@ -1,0 +1,60 @@
+{
+  "index": 368,
+  "task_id": 368,
+  "rendered_prompt_sha256": "800de009cd2724b32585ae28d686b5c3f6bab8003de46895f3c14c5f830f8b8c",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Erin now has 14 points. Sara has 8 points. Since Erin now has three times as many points as Sara, we check: 3 × 8 = 24. However, Erin currently has 14 points, which contradicts the \"three times\" condition. This suggests a misinterpretation. Re-reading: \"After scoring 14 points, Erin now has three times more points than Sara, who scored 8.\" Here, \"three times more\" likely means Erin's total is 3 × Sara's points. Sara has 8, so Erin now has 3 × 8 = 24 points. Erin scored 14 points to reach 24, so before scoring, she had 24 − 14 = 10 points.\n\nAnswer: 10",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='10' expected='18'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.559571770019829
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Erin now has 14 points. Sara has 8 points. Since Erin now has three times as many points as Sara, we check: 3 × 8 = 24. However, Erin currently has 14 points, which contradicts the \"three times\" condition. This suggests a misinterpretation. Re-reading: \"After scoring 14 points, Erin now has three times more points than Sara, who scored 8.\" Here, \"three times more\" likely means Erin's total is 3 × Sara's points. Sara has 8, so Erin now has 3 × 8 = 24 points. Erin scored 14 points to reach 24, so before scoring, she had 24 − 14 = 10 points.\n\nAnswer: 10",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331522,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 175,
+      "prompt_tokens": 100,
+      "total_tokens": 275,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-ZjUqgIpMs8wJLB8f8PMrJXyeg9d0lsNt",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 100,
+      "prompt_ms": 451.825,
+      "prompt_per_token_ms": 4.51825,
+      "prompt_per_second": 221.32462789796935,
+      "predicted_n": 175,
+      "predicted_ms": 5089.347,
+      "predicted_per_token_ms": 29.081982857142854,
+      "predicted_per_second": 34.385550837857984,
+      "draft_n": 220,
+      "draft_n_accepted": 119
+    }
+  },
+  "used_fallback": false
+}

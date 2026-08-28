@@ -1,0 +1,60 @@
+{
+  "index": 113,
+  "task_id": 113,
+  "rendered_prompt_sha256": "678ee6dd542476adb2b487e4bd189dca5953ab7db53359f5a2417d99fb4bec70",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Ryan plants 2 flowers a day for 15 days, totaling 2 × 15 = 30 flowers. Subtracting the 5 that did not grow: 30 − 5 = 25.\n\nAnswer: 25",
+  "finish_reason": "stop",
+  "expected": "25",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.9769760289927945
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Ryan plants 2 flowers a day for 15 days, totaling 2 × 15 = 30 flowers. Subtracting the 5 that did not grow: 30 − 5 = 25.\n\nAnswer: 25",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331715,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 54,
+      "prompt_tokens": 98,
+      "total_tokens": 152,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-hLp0hOg0T5FIPpatZkzhLCKEqwja3MKl",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 98,
+      "prompt_ms": 448.579,
+      "prompt_per_token_ms": 4.577336734693878,
+      "prompt_per_second": 218.46765006832686,
+      "predicted_n": 54,
+      "predicted_ms": 1495.875,
+      "predicted_per_token_ms": 27.70138888888889,
+      "predicted_per_second": 36.09927300075206,
+      "draft_n": 64,
+      "draft_n_accepted": 37
+    }
+  },
+  "used_fallback": false
+}

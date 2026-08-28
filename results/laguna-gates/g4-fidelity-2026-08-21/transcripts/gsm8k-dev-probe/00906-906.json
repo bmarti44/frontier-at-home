@@ -1,0 +1,61 @@
+{
+  "index": 906,
+  "task_id": 906,
+  "rendered_prompt_sha256": "73fc0661f8e3cb89dc6c7d9c9e20db0d7fbe7ad7d15e459030e53a2fcf9e16d8",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Tim starts with 7 blue and 9 red shoe boxes. He uses 3 blue boxes, leaving **4 blue**. For red boxes, he uses \\( \\frac{1}{3} \\times 9 = 3 \\), leaving **6 red**. Total remaining boxes: \\( 4 + 6 = 10 \\).\n\nAnswer: 10",
+  "finish_reason": "stop",
+  "expected": "10",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.388800202985294
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Tim starts with 7 blue and 9 red shoe boxes. He uses 3 blue boxes, leaving **4 blue**. For red boxes, he uses \\( \\frac{1}{3} \\times 9 = 3 \\), leaving **6 red**. Total remaining boxes: \\( 4 + 6 = 10 \\).\n\nAnswer: 10",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330720,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 75,
+      "prompt_tokens": 123,
+      "total_tokens": 198,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-R3v3kb9vwkT5b9EGKuCNCUGlZ7gRdrHr",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 123,
+      "prompt_ms": 518.612,
+      "prompt_per_token_ms": 4.216357723577236,
+      "prompt_per_second": 237.17152707611856,
+      "predicted_n": 75,
+      "predicted_ms": 1848.447,
+      "predicted_per_token_ms": 24.64596,
+      "predicted_per_second": 40.574601273393284,
+      "draft_n": 80,
+      "draft_n_accepted": 54
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>Tim has a box with 7 blue shoe boxes and 9 red shoe boxes. If he uses 3 blue shoeboxes and 1/3 red of his shoeboxes to go fishing, how many red and blue shoe boxes are left in Tim's box?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

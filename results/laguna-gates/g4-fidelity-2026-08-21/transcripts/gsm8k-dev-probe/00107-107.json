@@ -1,0 +1,60 @@
+{
+  "index": 107,
+  "task_id": 107,
+  "rendered_prompt_sha256": "f8b9dfdfd70456caf0c9764678d7119cad00faa0177c8f7683a21b6b0bccfb03",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>To determine how many 30-minute episodes Frankie watched on Wednesday, we calculate the total TV time for each day and subtract from the total 7 hours (420 minutes):\n\n- **Monday**: 1 hour = 60 minutes  \n- **Tuesday**: 1 hour = 60 minutes  \n- **Wednesday**: \\( x \\times 30 \\) minutes (unknown)  \n- **Thursday**: 1 hour + 30 minutes = 90 minutes  \n- **Friday**: 2 hours = 120 minutes  \n\nAdding these:  \n\\[\n60 + 60 + 30x + 90 + 120 = 330 + 30x\n\\]  \n\nSet equal to 420 minutes:  \n\\[\n330 + 30x = 420 \\implies 30x = 90 \\implies x = 3\n\\]  \n\n**Answer: 3**",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.364730484958272
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>To determine how many 30-minute episodes Frankie watched on Wednesday, we calculate the total TV time for each day and subtract from the total 7 hours (420 minutes):\n\n- **Monday**: 1 hour = 60 minutes  \n- **Tuesday**: 1 hour = 60 minutes  \n- **Wednesday**: \\( x \\times 30 \\) minutes (unknown)  \n- **Thursday**: 1 hour + 30 minutes = 90 minutes  \n- **Friday**: 2 hours = 120 minutes  \n\nAdding these:  \n\\[\n60 + 60 + 30x + 90 + 120 = 330 + 30x\n\\]  \n\nSet equal to 420 minutes:  \n\\[\n330 + 30x = 420 \\implies 30x = 90 \\implies x = 3\n\\]  \n\n**Answer: 3**",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331138,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 214,
+      "prompt_tokens": 183,
+      "total_tokens": 397,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-cHon1QZqw9nDxiIhVEJrDP463aMIUFCW",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 183,
+      "prompt_ms": 539.099,
+      "prompt_per_token_ms": 2.945896174863388,
+      "prompt_per_second": 339.4552763036103,
+      "predicted_n": 214,
+      "predicted_ms": 4796.058,
+      "predicted_per_token_ms": 22.41148598130841,
+      "predicted_per_second": 44.619977489846875,
+      "draft_n": 208,
+      "draft_n_accepted": 161
+    }
+  },
+  "used_fallback": false
+}

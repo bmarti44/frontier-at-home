@@ -1,0 +1,61 @@
+{
+  "index": 480,
+  "task_id": 480,
+  "rendered_prompt_sha256": "941edcb86f71735edd2de54259c03dfd42349b52abdf8395ec580e468919bc28",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Jasper has 2 tubes of blue paint (half of Ben's 4) and 9 tubes of yellow paint (three times Ben's 3). \n\nTotal tubes = 2 + 9 = 11\n\nAnswer: 11",
+  "finish_reason": "stop",
+  "expected": "11",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.8324667880078778
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Jasper has 2 tubes of blue paint (half of Ben's 4) and 9 tubes of yellow paint (three times Ben's 3). \n\nTotal tubes = 2 + 9 = 11\n\nAnswer: 11",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330803,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 54,
+      "prompt_tokens": 117,
+      "total_tokens": 171,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-Iys7p3DZzpmdQNYJaD0PHB7BxHDHssou",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 117,
+      "prompt_ms": 502.677,
+      "prompt_per_token_ms": 4.296384615384616,
+      "prompt_per_second": 232.75383596225805,
+      "predicted_n": 54,
+      "predicted_ms": 1309.625,
+      "predicted_per_token_ms": 24.252314814814813,
+      "predicted_per_second": 41.23317743628902,
+      "draft_n": 56,
+      "draft_n_accepted": 39
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>Ben has 4 tubes of blue paint and 3 tubes of yellow paint. Jasper has half as many tubes of blue paint as Ben, and three times as many tubes of yellow paint as Ben. How many tubes of paint does Jasper have?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

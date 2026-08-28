@@ -1,0 +1,60 @@
+{
+  "index": 289,
+  "task_id": 289,
+  "rendered_prompt_sha256": "21c12e7f99912133cd9f0889f9a4046ca4fe05a693e72f5f4c9a69c5d5da4ecb",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The fast car's time is 480/60 = 8 hours. The slow car's speed is 30 mph. Time = 480/30 = 16 hours.\n\nAnswer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.7228692509816028
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The fast car's time is 480/60 = 8 hours. The slow car's speed is 30 mph. Time = 480/30 = 16 hours.\n\nAnswer: 16",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330727,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 52,
+      "prompt_tokens": 129,
+      "total_tokens": 181,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-pQubWIBzzi5i8Hp0SfFfkUpBWXaLMdX5",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 129,
+      "prompt_ms": 519.677,
+      "prompt_per_token_ms": 4.028503875968992,
+      "prompt_per_second": 248.231112787366,
+      "predicted_n": 52,
+      "predicted_ms": 1188.064,
+      "predicted_per_token_ms": 22.847384615384616,
+      "predicted_per_second": 43.768685862041096,
+      "draft_n": 52,
+      "draft_n_accepted": 38
+    }
+  },
+  "used_fallback": false
+}

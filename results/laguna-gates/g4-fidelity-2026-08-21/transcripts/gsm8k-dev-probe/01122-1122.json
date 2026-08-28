@@ -1,0 +1,60 @@
+{
+  "index": 1122,
+  "task_id": 1122,
+  "rendered_prompt_sha256": "e29aab21fb4fa2c09cac41581a0f70e385e134cad26bed3a32831966a8fa2545",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>The 2 workers who produce 6 toys/hour make 12 toys/hour total.  \nThe other 2 workers who produce 4 toys/hour make 8 toys/hour total.  \nLet the fifth worker’s rate be \\(x\\) toys/hour.\n\nIn a 10-hour shift, the total production is:\n\\[\n(12 + 8 + x) \\times 10 = 200 + 10x\n\\]\n\nThey still need 20 more toys, so they produced:\n\\[\n400 - 20 = 380\n\\]\n\nSet up the equation:\n\\[\n200 + 10x = 380\n\\]\n\\[\n10x = 180\n\\]\n\\[\nx = 18\n\\]\n\nAnswer: 18",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.279092727985699
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>The 2 workers who produce 6 toys/hour make 12 toys/hour total.  \nThe other 2 workers who produce 4 toys/hour make 8 toys/hour total.  \nLet the fifth worker’s rate be \\(x\\) toys/hour.\n\nIn a 10-hour shift, the total production is:\n\\[\n(12 + 8 + x) \\times 10 = 200 + 10x\n\\]\n\nThey still need 20 more toys, so they produced:\n\\[\n400 - 20 = 380\n\\]\n\nSet up the equation:\n\\[\n200 + 10x = 380\n\\]\n\\[\n10x = 180\n\\]\n\\[\nx = 18\n\\]\n\nAnswer: 18",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330798,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 182,
+      "prompt_tokens": 164,
+      "total_tokens": 346,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-zpllwfYUUClGg5TxHQv3KwpY1AWqp98O",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 164,
+      "prompt_ms": 567.657,
+      "prompt_per_token_ms": 3.4613231707317076,
+      "prompt_per_second": 288.90685748612276,
+      "predicted_n": 182,
+      "predicted_ms": 4689.462,
+      "predicted_per_token_ms": 25.766274725274727,
+      "predicted_per_second": 38.810422176360525,
+      "draft_n": 204,
+      "draft_n_accepted": 130
+    }
+  },
+  "used_fallback": false
+}

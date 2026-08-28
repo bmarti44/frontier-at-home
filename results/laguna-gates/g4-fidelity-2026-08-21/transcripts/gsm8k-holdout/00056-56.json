@@ -1,0 +1,61 @@
+{
+  "index": 56,
+  "task_id": 56,
+  "rendered_prompt_sha256": "9e0c665877d1da7128d35a2fd99ea1ac74d616fc2a7eab05647b6b8e9798faaf",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Peter spends $7 (ticket) + $7 (popcorn) = $14 per movie visit. With $42, he can go $42 ÷ $14 = 3 times.\n\nAnswer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5261542809894308
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Peter spends $7 (ticket) + $7 (popcorn) = $14 per movie visit. With $42, he can go $42 ÷ $14 = 3 times.\n\nAnswer: 3",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331557,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 49,
+      "prompt_tokens": 113,
+      "total_tokens": 162,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-mALvPzOuBJIjb1t1uJCbkpgSt9LWGXNO",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 113,
+      "prompt_ms": 479.152,
+      "prompt_per_token_ms": 4.240283185840708,
+      "prompt_per_second": 235.83330550639462,
+      "predicted_n": 49,
+      "predicted_ms": 1023.334,
+      "predicted_per_token_ms": 20.884367346938774,
+      "predicted_per_second": 47.88270496240719,
+      "draft_n": 44,
+      "draft_n_accepted": 37
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<system>You are a helpful, conversationally-fluent assistant made by Poolside. You are here to be helpful to users through natural language conversations.</system>\n<user>Peter plans to go to the movies this week. He always gets a ticket for $7 and popcorn for $7. If he has 42 dollars for the week, how many times can he go to the movies?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number></user>\n<assistant><think>"
+}

@@ -1,0 +1,60 @@
+{
+  "index": 1014,
+  "task_id": 1014,
+  "rendered_prompt_sha256": "470101d528ead792224b34b1d32b78fd20a271178040aac7530610c49b96547e",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Jamaar has spent:\n- 3 peaches × $0.50 = $1.50\n- 4 pears × $0.50 = $2.00\n- 2 kiwis × $1.00 = $2.00\n- 5 apples × $0.75 = $3.75\n\nTotal spent: $1.50 + $2.00 + $2.00 + $3.75 = $9.25\n\nRemaining money: $10.00 - $9.25 = $0.75\n\nPlums cost $0.25 each, so he can buy: $0.75 ÷ $0.25 = 3 plums\n\nAnswer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.047475714003667
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Jamaar has spent:\n- 3 peaches × $0.50 = $1.50\n- 4 pears × $0.50 = $2.00\n- 2 kiwis × $1.00 = $2.00\n- 5 apples × $0.75 = $3.75\n\nTotal spent: $1.50 + $2.00 + $2.00 + $3.75 = $9.25\n\nRemaining money: $10.00 - $9.25 = $0.75\n\nPlums cost $0.25 each, so he can buy: $0.75 ÷ $0.25 = 3 plums\n\nAnswer: 3",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331951,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 172,
+      "prompt_tokens": 160,
+      "total_tokens": 332,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-fndDqZO6ICJeqYsC7sScUGuXJBa3cnkf",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 160,
+      "prompt_ms": 512.1,
+      "prompt_per_token_ms": 3.200625,
+      "prompt_per_second": 312.4389767623511,
+      "predicted_n": 172,
+      "predicted_ms": 3515.239,
+      "predicted_per_token_ms": 20.43743604651163,
+      "predicted_per_second": 48.92981672085454,
+      "draft_n": 152,
+      "draft_n_accepted": 133
+    }
+  },
+  "used_fallback": false
+}

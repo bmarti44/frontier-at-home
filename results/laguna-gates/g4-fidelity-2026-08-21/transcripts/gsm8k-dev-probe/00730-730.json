@@ -1,0 +1,60 @@
+{
+  "index": 730,
+  "task_id": 730,
+  "rendered_prompt_sha256": "7df5b1158df506b43f3d20073615f6f34822305ea77618fe12660f0e6f6550f9",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Parker needs 4 pieces/day × 30 days = 120 pieces total.\n\n120 pieces ÷ 15 pieces/pack = 8 packs.\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6967130040284246
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Parker needs 4 pieces/day × 30 days = 120 pieces total.\n\n120 pieces ÷ 15 pieces/pack = 8 packs.\n\nAnswer: 8",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787330757,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 43,
+      "prompt_tokens": 113,
+      "total_tokens": 156,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-88QqNP30D1pi9sJiN32EAPMgurrjgHtQ",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 113,
+      "prompt_ms": 475.334,
+      "prompt_per_token_ms": 4.206495575221239,
+      "prompt_per_second": 237.72757681966783,
+      "predicted_n": 43,
+      "predicted_ms": 1200.92,
+      "predicted_per_token_ms": 27.928372093023256,
+      "predicted_per_second": 35.80588215701295,
+      "draft_n": 52,
+      "draft_n_accepted": 29
+    }
+  },
+  "used_fallback": false
+}

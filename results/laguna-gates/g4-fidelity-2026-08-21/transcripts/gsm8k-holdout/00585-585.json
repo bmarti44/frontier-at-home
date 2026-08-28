@@ -1,0 +1,60 @@
+{
+  "index": 585,
+  "task_id": 585,
+  "rendered_prompt_sha256": "7bd0588cf1449c4a456e17ef66239486e09a367925aca3c0a5803124218cf0cd",
+  "rendering": "official-encoder-laguna-thinking-effort-max",
+  "encoder": "laguna",
+  "completion": "</think>Jill's total hours: 2 (Saturday) + 1 (Sunday) = 3 hours  \nJohn's Saturday hours: 2 × 2 = 4 hours  \nJohn's Sunday hours: 3 × 1 = 3 hours  \nJohn's total hours: 4 + 3 = 7 hours  \n\nJill's earnings: 3 × $10 = $30  \nJohn's earnings: 7 × $10 = $70  \nDifference: $70 − $30 = $40  \n\nAnswer: 40",
+  "finish_reason": "stop",
+  "expected": "40",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "ud-q4",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.33392632601317
+  },
+  "response": {
+    "choices": [
+      {
+        "text": "</think>Jill's total hours: 2 (Saturday) + 1 (Sunday) = 3 hours  \nJohn's Saturday hours: 2 × 2 = 4 hours  \nJohn's Sunday hours: 3 × 1 = 3 hours  \nJohn's total hours: 4 + 3 = 7 hours  \n\nJill's earnings: 3 × $10 = $30  \nJohn's earnings: 7 × $10 = $70  \nDifference: $70 − $30 = $40  \n\nAnswer: 40",
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "created": 1787331772,
+    "model": "ud-q4",
+    "system_fingerprint": "b10010-06f8cebd7",
+    "object": "text_completion",
+    "usage": {
+      "completion_tokens": 126,
+      "prompt_tokens": 137,
+      "total_tokens": 263,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    },
+    "id": "chatcmpl-OYqn5EpNMu5oF6sNEO28ediEXxC5vvGG",
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 137,
+      "prompt_ms": 491.344,
+      "prompt_per_token_ms": 3.5864525547445254,
+      "prompt_per_second": 278.827053958123,
+      "predicted_n": 126,
+      "predicted_ms": 2820.843,
+      "predicted_per_token_ms": 22.387642857142858,
+      "predicted_per_second": 44.66749833294515,
+      "draft_n": 120,
+      "draft_n_accepted": 95
+    }
+  },
+  "used_fallback": false
+}
