@@ -1,8 +1,9 @@
 # GLM-5.3-Flash / CUDA qualification campaign
 
 Status: REAL MODEL SERVING — authenticated text, tool calls, and four concurrent
-short requests passed in development attempt 008. Full context, paired fidelity,
-media, and production switching remain pending; GLM remains optional and the
+short requests passed, and image/four-image/16-frame video smokes passed in
+development attempt 012. Full context, paired fidelity and production switching
+remain pending; GLM remains optional and the
 recorded Qwen default is unchanged.
 
 The model-free build, cache, attention, convolution/indexer, and loader work is
@@ -10,8 +11,9 @@ preserved in the evidence archive. Real weights are downloaded, checked against
 the local inventory at launch, and loaded successfully. See [STATUS.md](STATUS.md)
 for the latest actual serving result; the acceptance formulas below are unchanged.
 
-Next: the bounded media retry uses the working 128-token prefill configuration,
-then direct aggregate-context and remaining qualification gates. Do not repeat
+Next: direct aggregate-context processing on four overlapping full prompts,
+then the remaining qualification gates. The working media startup uses bounded
+native dummy inputs while retaining real media settings. Do not repeat
 already frozen component reviews or add more startup guard infrastructure.
 
 Target: one ARM64 DGX Spark, 1,048,576 aggregate context tokens in four

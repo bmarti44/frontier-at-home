@@ -3,28 +3,28 @@
 **GLM is now serving text, tools, images and video locally.** The
 [basic serving checks passed](server-bringup-012/README.md): authenticated chat,
 unauthenticated rejection, correct tool arguments, four overlapping text requests,
-one image, four images in order, and a16-frame video. Media fixtures were224x224;
+one image, four images in order, and a 16-frame video. Media fixtures were 224x224;
 larger inputs remain unqualified. The externally sampled memory low point through
-this live snapshot was18.473777770996094GiB, with cgroup swap0.
+this live snapshot was 18.473777770996094 GiB, with cgroup swap 0.
 
 Use `python3 scripts/47_run_glm53_dev.py --start` for the verified optional
 settings; [the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and
-the2.5-hour development timeout. Current endpoint: localhost:8015, model
+the 2.5-hour development timeout. Current endpoint: localhost:8015, model
 `glm-5.3-flash`; run directory:
 `/home/bmarti44/.cache/glm53-flash/server-bringup-012`.
 
-Qwen remains the recorded default. The launch configures1,048,576 aggregate
-tokens across four262,144-token slots. Full-context processing, paired fidelity,
+Qwen remains the recorded default. The launch configures 1,048,576 aggregate
+tokens across four 262,144-token slots. Full-context processing, paired fidelity,
 production switching and lifecycle qualification remain pending. Production
 admission is closed. Performance is **not yet measured**.
 
-The media startup fix uses native dummy options: at most16 video frames and
-512x512 throwaway warm-up images. Real media resolution and request limits are
+The media startup fix uses native dummy options: at most 16 video frames and
+512×512 throwaway warm-up images. Real media resolution and request limits are
 unchanged. Earlier failed attempts and genuine regressions remain preserved;
 focused source review found no verified high/critical issue. No new token-path
 diagnostic or runtime patch was needed for this fix.
 
-[Weight preparation completed](model-weights-001/README.md):84,696,019,172 tensor
+[Weight preparation completed](model-weights-001/README.md): 84,696,019,172 tensor
 bytes with no new local quantization. Main source shards passed whole-source
 hash checks; selected dense ranges were read twice and compared, with complete
 dense-source hashes remaining metadata only. Every launch verifies the final
