@@ -1,27 +1,33 @@
 # GLM-5.3-Flash CUDA status
 
 **GLM is now serving text, tools, images and video locally.** The
-[basic serving checks passed](server-bringup-012/README.md): authenticated chat,
+[restored serving checks passed](server-bringup-016-restore/README.md): authenticated chat,
 unauthenticated rejection, correct tool arguments, four overlapping text requests,
 one image, four images in order, and a 16-frame video. Media fixtures were 224x224;
 larger inputs remain unqualified. The externally sampled memory low point through
-this live snapshot was 18.473777770996094 GiB, with cgroup swap 0.
+this live snapshot was 18.62453842163086 GiB, with cgroup swap 0.
 
 Use `python3 scripts/47_run_glm53_dev.py --start` for the verified optional
 settings; [the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and
 the 2.5-hour development timeout. Current endpoint: localhost:8015, model
 `glm-5.3-flash`; run directory:
-`/home/bmarti44/.cache/glm53-flash/server-bringup-015-context`.
-Session 015 returned a correct authenticated answer and admitted four
-250,128-token requests using the corrected bounded-memory scorer. No completed
-full-context result is claimed. The previous context client was safely canceled
-after a memory-scaling defect was verified; all partial data and its genuine RED
-are preserved in [context-direct-002](context-direct-002/README.md). The model
-then shut down cleanly. All 17 scorer tests and both focused reviews pass.
+`/home/bmarti44/.cache/glm53-flash/server-bringup-016-restore`.
+Session 016 restores the working settings and passed chat, tools, four
+overlapping requests, one image, four images and a 16-frame video. The separate four-slot context run **failed**:
+all four 250,128-token requests returned server errors after a CUDA illegal
+memory access and Xid31. No request completed. Raw evidence is preserved in
+[context-direct-003](context-direct-003/README.md). The engine exited and host
+memory recovered without a reboot. Restoring basic serving does not resolve
+this long-context defect. Further stress testing is deferred to keep the usable
+server available.
+
+The earlier client memory-scaling correction remains valid: all 17 scorer tests
+and both focused reviews pass. Its interrupted attempt remains preserved in
+[context-direct-002](context-direct-002/README.md).
 
 Qwen remains the recorded default. The launch configures 1,048,576 aggregate
-tokens across four 262,144-token slots. Full-context processing, paired fidelity,
-production switching and lifecycle qualification remain pending. Production
+tokens across four 262,144-token slots. Full-context processing has failed; paired fidelity, production switching and
+lifecycle qualification remain pending. Production
 admission is closed. Performance is **not yet measured**.
 
 The [native probability diagnostic](native-logprobs-001/README.md) passed exact

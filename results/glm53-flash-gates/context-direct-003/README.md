@@ -2,7 +2,7 @@
 
 All four 250,128-token requests were admitted. During prefill the engine raised
 CUDA illegal memory access; the kernel journal recorded Xid31 and all four
-streams returned an HTTP500 error payload. No request completed. The fixed
+HTTP 200 streams carried server-error payloads with code 500. No request completed. The fixed
 scorer rejected the error rows; it did not manufacture a capability result.
 
 The asynchronous error surfaced during a CPU synchronization in FLA KDA chunk

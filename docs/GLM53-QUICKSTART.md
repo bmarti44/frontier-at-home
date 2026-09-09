@@ -2,16 +2,17 @@
 
 GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`.
 The model name is `glm-5.3-flash`. Qwen remains the recorded default.
-The latest launch is
-`/home/bmarti44/.cache/glm53-flash/server-bringup-015-context`; its private key is
-in `api-key` within that directory. It returned a correct authenticated answer
-and is undergoing the full four-slot context check with a bounded-memory recorder. The earlier session 012
-passed text, tool-call, four concurrent-request, single-image, four-image and
-16-frame video checks with 224x224 media inputs.
+The latest restored launch is
+`/home/bmarti44/.cache/glm53-flash/server-bringup-016-restore`; its private key is
+in `api-key` within that directory. This restored session passed authenticated
+chat, tool-call, four concurrent-request, single-image, four-image and 16-frame
+video checks with 224x224 media inputs. [Raw serving evidence](../results/glm53-flash-gates/server-bringup-016-restore/README.md)
+is preserved.
 
 The requested capacity is **four slots of 262,144 tokens each**, totaling
-1,048,576 tokens. Configuration and short answers do not establish that all
-four slots can process their maximum inputs; that test remains separate.
+1,048,576 tokens. The separate full-context test **failed with a CUDA memory
+access error**. The restored server supports basic use; this restart does not
+resolve that long-context failure.
 
 Start the optional local server from the repository (the launcher now defaults
 to the settings that passed the text/tool/media checks):
