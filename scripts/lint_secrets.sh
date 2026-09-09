@@ -316,10 +316,11 @@ if w7_cache_pass_raw:
         "generated_text_sha256",
         "logit_sequence_sha256",
     })
-if display_path == "results/glm53-flash-gates/model-layout-001/raw.jsonl":
-    allowlist.update({"header_sha256", "shard_sha256_expected"})
-if display_path == "results/glm53-flash-gates/model-layout-001/manifest.json":
-    allowlist.add("overlay_sha256")
+glm53_layout_fields = {
+    "results/glm53-flash-gates/model-layout-001/raw.jsonl": {"header_sha256", "shard_sha256_expected"},
+    "results/glm53-flash-gates/model-layout-001/manifest.json": {"overlay_sha256"},
+}.get(display_path, set())
+allowlist.update(glm53_layout_fields)
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -352,6 +353,9 @@ def walk(value, path, allowed_string=False):
     if isinstance(value, dict):
         for key, item in value.items():
             item_path = child_path(path, key)
+            if key in glm53_layout_fields and (not isinstance(item, str) or not hex64.fullmatch(item)):
+                findings.append((item_path, str(item)))
+                continue
             if w7_cache_pass_raw and key == "text" and isinstance(item, str):
                 stripped = re.sub(
                     r"(?<![A-Za-z0-9_-])(?:stream_sha256|candidate_binary_sha256|memory_guard_sha256|"
