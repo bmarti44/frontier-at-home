@@ -1,31 +1,37 @@
 # GLM-5.3-Flash CUDA status
 
-Current priority, owner correction 2026-09-09: simplify and obtain a real model
-response. Additional indexer cache-guard work is deferred. Weight preparation
-completed: 84,696,019,172 tensor bytes, with no new quantization. Selected
-main-model shards passed full source hashes; dense ranges were read twice and
-compared, and their whole-shard digests remain metadata only.
+**GLM is now serving text and tools locally.** The
+[basic serving checks passed](server-bringup-008/README.md): authenticated chat,
+rejection of unauthenticated requests, a valid tool call, and four overlapping
+client requests with correct completed answers. The lowest externally sampled
+available memory was 20.100811004638672 GiB through that snapshot; cgroup swap
+remained zero. This is a live-server snapshot, not a completed lifecycle or
+production qualification result.
 
-The [real-shard InstantTensor smoke](real-loader-smoke-001/README.md) passed:
-1,280 tensors agreed after GPU transfer. The existing AIO loader supplies
-persistent pinned staging; no replacement loader is needed.
-The first seven full-media startup attempts are preserved as failures. The
-selected weights load, but the complete server has not served a response yet.
-The attempts identified excessive media warm-up, expandable virtual-address
-reservations, unreleased warm-up memory, native prebuilt-cache selection, and
-optional autotuning allocations. The small startup cleanup has no verified
-high/critical finding in focused review. Native attention loading and the
-release sampling build have passed their preparation checks.
+Use `python3 scripts/47_run_glm53_dev.py --start` for the same working settings;
+[the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and the
+2.5-hour development timeout. The current endpoint is localhost:8015, model
+`glm-5.3-flash`. The current run directory is
+`/home/bmarti44/.cache/glm53-flash/server-bringup-008`.
 
-The immediate retry uses text/tools mode, 128-token prefill chunks, prepared
-kernels and native default tactics, retaining four 262,144-token slots and the
-explicit cache budget. Images/video remain pending a fit within the memory
-floor. This follows the owner's request to get a usable model running first.
+Qwen remains the recorded default. The working launch configures **1,048,576
+aggregate tokens across four 262,144-token slots**. Full-context processing has
+not yet been tested. Images/video are disabled in this first usable text/tools
+launch; the seven full-media startup failures remain preserved. Production
+admission is closed and performance is **not yet measured**.
 
-`scripts/47_run_glm53_dev.py` starts a separate authenticated local endpoint
-under the existing inference lock, cgroup and memory watchdog. This is model
-bring-up, not context or performance qualification. Qwen remains the recorded
-default. Production admission remains closed.
+The simple working setup uses 128-token prefill chunks, the standard CUDA
+allocator, one-time cleanup of unused warm-up memory, prepared FlashInfer
+libraries and default attention tactics without autotuning. The focused startup
+cleanup review found no verified high/critical issue. Additional indexer
+cache-guard work remains deferred per the owner's simplification instruction.
+
+[Weight preparation completed](model-weights-001/README.md): 84,696,019,172 tensor
+bytes with no new local quantization. Main source shards passed whole-source
+hash checks; selected dense ranges were read twice and compared, with complete
+dense-source hashes remaining metadata only. Every launch verifies the final
+local model/tokenizer inventory. The earlier
+[real-shard loader smoke](real-loader-smoke-001/README.md) also passed.
 
 The component history below describes earlier model-free work.
 
