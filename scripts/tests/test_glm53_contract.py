@@ -44,6 +44,18 @@ class Glm53ProfileContract(unittest.TestCase):
         self.assertEqual(p["safety"]["minimum_start_gib"], 110)
         self.assertGreaterEqual(p["safety"]["kill_floor_gib"], 18)
 
+    def test_runtime_semantics_are_explicit_and_media_policy_is_selected(self):
+        argv = self.profile()["launch"]["args"]
+        for flag, value in (("--kv-cache-dtype", "fp8"),
+                            ("--tool-call-parser", "glm47"),
+                            ("--reasoning-parser", "glm45"),
+                            ("--middleware", "glm53_runtime_policy.MediaPolicyMiddleware")):
+            with self.subTest(flag=flag):
+                self.assertIn(flag, argv)
+                self.assertEqual(argv[argv.index(flag) + 1], value)
+        self.assertIn("--enable-auto-tool-choice", argv)
+        self.assertIn("--no-enable-prefix-caching", argv)
+
     def test_render_rejects_mismatched_topology(self):
         p = self.profile()
         p["serving"]["request_context_cap"] = 1048576
