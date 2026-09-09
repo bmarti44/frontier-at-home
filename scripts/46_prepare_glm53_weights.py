@@ -187,7 +187,7 @@ def main():
                 if record['upstream_sha256']!=entry['lfs']['sha256'] or record['selected_sha256']!=selected_digest(sink.fileno(),segments):
                     raise ValueError('resumed selected bytes differ from receipt')
                 print(json.dumps({'event':'resumed','pack':label,'file':filename}),flush=True);return
-            started=time.time();url=f"https://huggingface.co/{api['id']}/resolve/{api['sha']}/{filename}?full_verified_download=1"
+            started=time.time();url=f"https://huggingface.co/{api['id']}/resolve/{api['sha']}/{filename}?full_verified_download=1&request={time.time_ns()}"
             print(json.dumps({'event':'start','pack':label,'file':filename,'time_unix':started}),flush=True)
             ranges=None
             if label=='dense':written,ranges=download_dense_ranges(url,sink.fileno(),segments,entry['size'])
