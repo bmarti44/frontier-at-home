@@ -157,10 +157,12 @@ external whole-host floor remains mandatory.
 
 Convolution preparation001 completed all eight cases and host checks, retained
 as [NO_RESULT](conv-preflight-001/README.md) because kernels were generated after
-freeze. The separate sealed replay candidate1 passed both reviews at campaign44;
-235 scoped CPU tests pass. Its contained confirmation is next.
+freeze. The separate [sealed replay001](conv-replay-001/README.md) passed all eight
+cases with unchanged compiled inputs, full host/identity/cleanup checks and no
+new runtime artifacts. Both reviews closed at campaign44; 235 scoped CPU tests
+pass. The independent execution review confirmed the narrow kernel result.
 
-Next: finish convolution and indexer workspace probes. Do not multiply fresh-process RSS by
+Next: finish indexer and vision workspace probes. Do not multiply fresh-process RSS by
 layer count or add it blindly to CUDA allocations. The synthetic input was
 freshly generated, so these runs do not establish cold checkpoint I/O behavior.
 
@@ -175,8 +177,8 @@ probes failed and are preserved; requested mount properties are not evidence
 of enforcement on this host.
 
 The three clean builds, runtime inventory, bounded native checks and cache
-allocation are complete. Finish remaining convolution/indexer
-kernels and the measured full workspace envelope before downloading weights.
+allocation are complete. Convolution preparation and sealed confirmation are
+complete. Finish remaining indexer kernels and the measured full workspace envelope before downloading weights.
 Resolve existing plugin environment reads and diagnostic overhead before any
 production qualification. Complete the Python-specific monitored lifecycle,
 measured memory envelope, artifact identity, 100-case paired fidelity,
