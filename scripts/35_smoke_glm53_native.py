@@ -36,8 +36,8 @@ class RequiredChecks:
         return unittest.TestCase().assertRaisesRegex(exception, match)
 
 
-def load_functions(path, names, namespace):
-    """Execute exact function bodies, dropping only pytest collection decorators.
+def load_functions(path, names, namespace, *, linear_fixture_bindings=0):
+    """Keep upstream assertions, with an explicitly counted fixture setup adapter.
 
     No upstream module initialization, optional-import fallback, test discovery,
     or bytecode write is involved. The complete input file is hashed separately.
@@ -54,7 +54,28 @@ def load_functions(path, names, namespace):
     found.update(target.id for node in selected if isinstance(node, ast.Assign) for target in node.targets if isinstance(target, ast.Name))
     if found != set(names):
         raise ValueError("upstream smoke fixture names changed")
-    exec(compile(ast.Module(body=selected, type_ignores=[]), str(path), "exec", optimize=0), namespace)
+    tree = ast.Module(body=selected, type_ignores=[])
+    if type(linear_fixture_bindings) is not int or linear_fixture_bindings < 0:
+        raise ValueError("invalid linear fixture binding count")
+    if linear_fixture_bindings:
+        pattern = ast.dump(ast.parse("layer = torch.nn.Module()").body[0])
+
+        class BindFixtureMethod(ast.NodeTransformer):
+            count = 0
+
+            def visit_Assign(self, node):
+                if ast.dump(node) != pattern:
+                    return node
+                self.count += 1
+                binding = ast.parse("layer.quant_method = method").body[0]
+                return [node, ast.copy_location(binding, node)]
+
+        adapter = BindFixtureMethod()
+        tree = adapter.visit(tree)
+        if adapter.count != linear_fixture_bindings:
+            raise ValueError("upstream linear fixture setup changed")
+        ast.fix_missing_locations(tree)
+    exec(compile(tree, str(path), "exec", optimize=0), namespace)
 
 
 def fixture_seed(public_seed, check_id):
@@ -88,6 +109,7 @@ def main():
                 "binary_sha256": sha256_file(Path(sys.executable).resolve()),
                 "test_hashes": {name: sha256_file(path) for name, path in files.items()},
                 "seed": args.seed, "seed_use": "check order and per-check global Torch RNG; upstream local fixture seeds retained",
+                "fixture_adapter": "three bare layer fixtures bind quant_method as vLLM LinearBase does; native implementations and acceptance assertions unchanged",
                 "start_unix": time.time(), "expected_checks": 14}
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     completed = []
@@ -115,7 +137,7 @@ def main():
             dense = {"MCG_MARKER", "MUL1_MARKER", "K", "IN_FEATURES", "SHARDS", "_signs", "_rand_trellis",
                      "_reference_weight", "_patch_tp", "_run_layer", "test_exl3_linear_basic",
                      "test_exl3_linear_mixed_mul1", "test_exl3_linear_tp_slicing"}
-            load_functions(files["test_exl3_linear.py"], dense, namespace)
+            load_functions(files["test_exl3_linear.py"], dense, namespace, linear_fixture_bindings=3)
             load_functions(files["test_native_moe_contract.py"],
                            {"test_native_moe_clipping_width_and_graph_parity", "test_native_moe_rejects_unsafe_calls_before_launch"}, namespace)
             checks = [(name, namespace[name], ()) for name in
