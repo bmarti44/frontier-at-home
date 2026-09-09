@@ -45,7 +45,7 @@ class HostEvidenceTests(unittest.TestCase):
                        "binary_sha256": "a" * 64, "seccomp_filters": 1 if index < 3 else 2,
                        "terminal_exec_filter_verified": index == 3, **({"completion_verified": True} if index == 3 else {})}
                       for index, delta in enumerate((-0.1, 0.25, 0.75, 1.1))]
-        identities.append({"event": "cleanup", "time_unix": self.base + 1.2, "monotonic_ns": 3300000000, "live_process_group_after": []})
+        identities.append({"event": "cleanup", "time_unix": self.base + 1.2, "monotonic_ns": 3200000000, "live_process_group_after": []})
         self.write_rows(identities)
         write_json(self.root / "identity/summary.json", {"verdict": "PASS", "qualification": "Python_probe_identity_only", "identity_samples": 4,
                    "probe_exit_code": 0, "live_process_group_after": [], "failure": None, "raw_sha256": digest(self.root / "identity/raw.jsonl")})
@@ -116,6 +116,28 @@ class HostEvidenceTests(unittest.TestCase):
     def test_counterfeit_cleanup_or_containment_rejects(self):
         path = self.root / "unit-after.json"; value = json.loads(path.read_text()); value["stdout"] = value["stdout"].replace("MainPID=0", "MainPID=55555"); write_json(path, value)
         with self.assertRaisesRegex(ValueError, "cleanup"): score_host_observations(self.root, self.expected)
+
+    def test_actual_unit_must_enforce_group_kill_and_zero_swap(self):
+        path = self.root / "unit-live.json"; original = json.loads(path.read_text())
+        for old, new in (("OOMPolicy=kill", "OOMPolicy=continue"), ("KillMode=control-group", "KillMode=process"), ("MemorySwapMax=0", "MemorySwapMax=4096")):
+            value = dict(original); value["stdout"] = value["stdout"].replace(old, new); write_json(path, value)
+            with self.assertRaisesRegex(ValueError, "containment"): score_host_observations(self.root, self.expected)
+
+    def test_sampling_gap_and_missing_rows_reject(self):
+        path = self.root / "samples.log"; original = path.read_text()
+        for text in (original.splitlines()[0] + "\n", original.replace("22:13:20.500000", "22:13:25.500000")):
+            path.write_text(text); self.seal()
+            with self.assertRaisesRegex(ValueError, "coverage"): score_host_observations(self.root, self.expected)
+
+    def test_cgroup_path_must_be_gone_after_exit(self):
+        path = self.root / "cgroup-after.json"; value = json.loads(path.read_text()); value["exists"] = True; write_json(path, value)
+        with self.assertRaisesRegex(ValueError, "cleanup"): score_host_observations(self.root, self.expected)
+
+    def test_probe_seed_and_environment_remain_frozen(self):
+        path = self.root / "identity/manifest.json"; original = json.loads(path.read_text())
+        for key, value in (("argv", original["argv"][:-1] + ["2"]), ("environment_sha256", "e" * 64)):
+            changed = dict(original); changed[key] = value; write_json(path, changed)
+            with self.assertRaisesRegex(ValueError, "identity"): score_host_observations(self.root, self.expected)
 
     def test_whole_system_swap_delta_rejects(self):
         path = self.root / "swap-after.json"; value = json.loads(path.read_text()); value["text"] = "pswpin 10\npswpout 21\n"; write_json(path, value)
