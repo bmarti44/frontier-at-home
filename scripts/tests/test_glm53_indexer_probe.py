@@ -126,5 +126,27 @@ class IndexerProbeTests(unittest.TestCase):
         self.assertIn('scripts/lib/glm53_indexer_fixture.py',runner.CODE_FILES)
         self.assertIn('configs/decision-specs/glm53-indexer-preflight.json',runner.CODE_FILES)
 
+    def test_actual_staged_ape_satisfies_upstream_kernel_precondition(self):
+        import ast
+        import numpy as np
+        import torch
+        tree=ast.parse(Path(self.api.__file__).read_text())
+        expressions=[node for node in ast.walk(tree) if isinstance(node,ast.Call) and isinstance(node.func,ast.Name)
+                     and node.func.id=='stage' and node.args and isinstance(node.args[0],ast.Constant) and node.args[0].value=='ape']
+        self.assertEqual(len(expressions),1)
+        def stage(name,array,dtype=None):
+            value=torch.from_numpy(array)
+            return value.view(dtype) if dtype is not None else value
+        ape=eval(compile(ast.Expression(expressions[0]),'<actual probe APE input>','eval'),{'stage':stage,'np':np,'torch':torch})
+        source=Path('/home/bmarti44/.cache/glm53-flash/build-source-005/vllm/vllm/models/glm5next/nvidia/ops/kpool_compress.py')
+        function=next(node for node in ast.parse(source.read_text()).body if isinstance(node,ast.FunctionDef) and node.name=='kpool_compress_and_write_cache')
+        namespace={'torch':torch,'INDEX_HEAD_DIM':128}
+        exec(compile(ast.Module(body=[function],type_ignores=[]),str(source),'exec'),namespace)
+        # The actual upstream zero-pool CPU path executes its dtype assertions,
+        # then returns before any Triton/CUDA launch.
+        namespace['kpool_compress_and_write_cache'](torch.empty((1,64,132),dtype=torch.uint8),
+            torch.empty((0,4,128),dtype=torch.bfloat16),torch.empty((0,4,128),dtype=torch.bfloat16),
+            ape,torch.empty(0,dtype=torch.int64),pool_size=4,head_dim=128)
+
 
 if __name__=='__main__': unittest.main()
