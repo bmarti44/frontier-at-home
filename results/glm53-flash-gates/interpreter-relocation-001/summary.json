@@ -1,0 +1,15 @@
+{
+  "verdict": "PASS",
+  "qualification": "interpreter_relocation_only",
+  "model_loaded": false,
+  "gpu_used": false,
+  "full_serving_dependencies": false,
+  "service_uid_tested": false,
+  "checks": [
+    "SSL, sqlite, ctypes imports",
+    "isolated sys.path inside copied prefix",
+    "actual spawned child retains -I -B",
+    "child uses copied prefix"
+  ],
+  "limitation": "sysconfig LIBDIR still records the source installation; full native loader and runtime relocation remain pending."
+}

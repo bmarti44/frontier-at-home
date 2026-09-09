@@ -76,6 +76,13 @@ Dependency attempts are retained individually:
   file but exited before the wrapper's process-group observation. The failed
   wrapper result is not a successful contained attempt.
 
+A copied standalone CPython prefix passed native standard-library imports
+and an actual spawned-child isolation check (`interpreter-relocation-001`).
+Both processes retained `-I -B` and paths within the copied prefix. This used
+a synthetic probe package, not serving dependencies or the dsv4 service.
+Static sysconfig LIBDIR still names the original installation; native loader
+auditing remains required.
+
 ## Model metadata audit
 
 `model-layout-001` independently hashes both complete indexes and validates
