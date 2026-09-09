@@ -12,7 +12,7 @@ import unittest
 from unittest import mock
 
 from test_glm53_sealed_cache import SealedCacheContract
-from glm53_runtime_jit import sealed_cache_class
+from glm53_runtime_jit import sealed_native_loader
 
 cc = importlib.import_module("triton.compiler.compiler")
 rb = importlib.import_module("triton.runtime.build")
@@ -56,9 +56,10 @@ class ActualSourceContract(unittest.TestCase):
         cache = self.factory()(self.key)
         with (mock.patch.object(rb, "get_cache_manager", return_value=cache),
               mock.patch.object(rb, "_load_module_from_path", side_effect=ImportError("unloadable sealed helper")),
+              mock.patch.object(rb, "compile_module_from_src", sealed_native_loader(rb)),
               mock.patch.object(rb, "_build", side_effect=AssertionError("compiler entered")) as compiler):
             # The serving adapter must preserve ImportError instead of trying
-            # native compilation. This is genuine RED on unchanged Triton.
+            # native compilation. The original fallback RED is preserved.
             with self.assertRaisesRegex(ImportError, "unloadable"):
                 rb.compile_module_from_src("synthetic source", "helper")
             compiler.assert_not_called()

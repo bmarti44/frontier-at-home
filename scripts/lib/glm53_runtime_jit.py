@@ -5,10 +5,29 @@ serving gate also needs guards for native-load fallback, DeepGEMM, CuTe and
 other compilation paths. Cache roots must be immutable to the model process.
 """
 from pathlib import Path
+import hashlib
 import re
 import stat
+import sysconfig
 
 from glm53_contract import strict_json, verify_inventory
+
+
+def sealed_native_loader(build_module):
+    """Select a loader without Triton's native-compiler fallback at startup.
+
+    The caller must first install the sealed cache class. Keep the original
+    source/platform cache-key formula so prebuilt helper modules are reusable.
+    Errors loading a frozen native artifact propagate without recompilation.
+    """
+    def load(src, name, library_dirs=None, include_dirs=None, libraries=None, ccflags=None):
+        key = hashlib.sha256((src + build_module.platform_key()).encode("utf-8")).hexdigest()
+        cache = build_module.get_cache_manager(key)
+        path = cache.get_file(name + sysconfig.get_config_var("EXT_SUFFIX"))
+        if path is None:
+            raise ValueError("unsealed native cache miss")
+        return build_module._load_module_from_path(name, path)
+    return load
 
 
 def _identity(value):
