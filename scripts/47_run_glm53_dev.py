@@ -61,6 +61,7 @@ def main():
     parser.add_argument('--skip-mm-profiling',action='store_true',help='Skip automatic media warm-up while retaining media support')
     parser.add_argument('--prefill-batch',type=int,choices=(128,256,512,1024,2048),default=2048,help='Prompt chunk size; does not change context or slot count')
     parser.add_argument('--standard-cuda-allocator',action='store_true',help='Avoid expandable virtual reservations under the existing address-space limit')
+    parser.add_argument('--release-warmup-cache',action='store_true',help='Release unused startup allocations before reserving the full KV cache')
     args=parser.parse_args()
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
@@ -72,6 +73,8 @@ def main():
             raise ValueError('model inventory mismatch')
     output.mkdir(parents=True,exist_ok=False); (output/'lib').mkdir(); (output/'state').mkdir()
     shutil.copyfile(ROOT/'scripts/lib/glm53_runtime_policy.py',output/'lib/glm53_runtime_policy.py')
+    if args.release_warmup_cache:
+        shutil.copyfile(ROOT/'scripts/lib/glm53_worker.py',output/'lib/glm53_worker.py')
     shutil.copyfile(ROOT/'scripts/38_guard_glm53_probe.py',output/'guard.py')
     shutil.copyfile(__file__,output/'server.py')
     reuse_prepared_kernels(output/'state')
@@ -82,6 +85,7 @@ def main():
     arguments[arguments.index('--max-num-batched-tokens')+1]=str(args.prefill_batch)
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
                 '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320']
+    if args.release_warmup_cache:arguments+=['--worker-cls','glm53_worker.WarmupCleanupWorker']
     if args.text_only:arguments+=['--language-model-only']
     if args.skip_mm_profiling:arguments+=['--skip-mm-profiling']
     state=output/'state'
@@ -99,6 +103,7 @@ def main():
     if args.standard_cuda_allocator:environment['PYTORCH_CUDA_ALLOC_CONF']='expandable_segments:False'
     launch={'scope':'development bring-up; no model qualification or performance claim',
         'start_unix':time.time(),'arguments':arguments,'environment':environment,
+        'worker_source':{'sha256':sha(output/'lib/glm53_worker.py')} if args.release_warmup_cache else None,
         'model_inventory':{'sha256':sha(model/'inventory.json')},
         'python':{'sha256':sha(RUNTIME/'bin/python3')},
         'source':{'sha256':sha(output/'server.py')},'profile':profile['profile_id'],
