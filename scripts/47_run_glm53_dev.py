@@ -104,7 +104,7 @@ def main():
     arguments=[value.replace('{model}',str(model)).replace('{port}',str(args.port)) for value in profile['launch']['args'][4:]]
     arguments[arguments.index('--max-num-batched-tokens')+1]=str(args.prefill_batch)
     if not args.text_only:
-        arguments[arguments.index('--limit-mm-per-prompt')+1]='{"image":4,"video":{"count":1,"num_frames":16}}'
+        arguments[arguments.index('--limit-mm-per-prompt')+1]='{"image":{"count":4,"width":512,"height":512},"video":{"count":1,"num_frames":16,"width":512,"height":512}}'
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
                 '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320',
                 '--mm-processor-cache-gb','0']
