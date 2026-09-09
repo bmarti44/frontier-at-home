@@ -54,10 +54,18 @@ def load_functions(path, names, namespace):
     found.update(target.id for node in selected if isinstance(node, ast.Assign) for target in node.targets if isinstance(target, ast.Name))
     if found != set(names):
         raise ValueError("upstream smoke fixture names changed")
-    exec(compile(ast.Module(body=selected, type_ignores=[]), str(path), "exec"), namespace)
+    exec(compile(ast.Module(body=selected, type_ignores=[]), str(path), "exec", optimize=0), namespace)
+
+
+def fixture_seed(public_seed, check_id):
+    """Bind global fixture RNG to the frozen seed and check, independent of order."""
+    payload = json.dumps([public_seed, check_id], separators=(",", ":")).encode()
+    return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big") % (2**63)
 
 
 def main():
+    if sys.flags.optimize:
+        raise SystemExit("optimized Python is forbidden: required assertions must remain active")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--prepared", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -79,7 +87,7 @@ def main():
                 "source_revision": revision, "scorer_sha256": sha256_file(Path(__file__)),
                 "binary_sha256": sha256_file(Path(sys.executable).resolve()),
                 "test_hashes": {name: sha256_file(path) for name, path in files.items()},
-                "seed": args.seed, "seed_use": "check order only; upstream fixture seeds retained",
+                "seed": args.seed, "seed_use": "check order and per-check global Torch RNG; upstream local fixture seeds retained",
                 "start_unix": time.time(), "expected_checks": 14}
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     completed = []
@@ -121,7 +129,10 @@ def main():
             random.Random(args.seed).shuffle(checks)
             record({"check_order": [name for name, _, _ in checks]})
             for name, function, arguments in checks:
-                record({"check_id": name, "event": "start"})
+                rng_seed = fixture_seed(args.seed, name)
+                torch.manual_seed(rng_seed)
+                torch.cuda.manual_seed_all(rng_seed)
+                record({"check_id": name, "event": "start", "global_torch_seed": rng_seed})
                 with contextlib.redirect_stdout(log):
                     function(*arguments)
                 torch.cuda.synchronize()
