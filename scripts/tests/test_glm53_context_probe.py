@@ -1,5 +1,5 @@
 """Synthetic scorer mutations only; none of these rows are model evidence."""
-import importlib.util,json,subprocess,sys,tempfile,unittest
+import importlib.util,json,subprocess,sys,tempfile,tracemalloc,unittest
 from pathlib import Path
 from unittest.mock import patch
 PATH=Path(__file__).resolve().parents[1]/'48_probe_glm53_context.py'
@@ -26,6 +26,24 @@ class ContextEvidenceTests(unittest.TestCase):
   except (AssertionError,KeyError,ValueError):return
   self.assertEqual(result['verdict'],'FAIL')
  def test_valid_synthetic_control(self):self.assertEqual(self.score()['verdict'],'PASS')
+ def test_metrics_scoring_memory_does_not_scale_with_log_length(self):
+  def peak():
+   tracemalloc.start()
+   try:
+    self.assertEqual(self.score()['verdict'],'PASS')
+    return tracemalloc.get_traced_memory()[1]
+   finally:tracemalloc.stop()
+  baseline=peak();p=self.out/'metrics.jsonl'
+  def sample(a,b,running,padding=''):
+   return json.dumps({'start_ns':a,'end_ns':b,'text':f'vllm:num_preemptions_total 0\nvllm:num_requests_running {running}\nvllm:num_requests_waiting 0\n'+padding})+'\n'
+  with p.open('w') as f:
+   f.write(sample(10,20,0))
+   for i in range(1000):f.write(sample(500+2*i,501+2*i,4,'#'+('x'*16384)+'\n'))
+   f.write(sample(4000,4010,0))
+  self.assertLess(peak()-baseline,5*1024*1024,'scoring retained a growing metrics log in memory')
+ def test_invalid_trailing_metrics_cannot_be_ignored(self):
+  with (self.out/'metrics.jsonl').open('a') as f:f.write('{"error":"late malformed sample"}\n')
+  self.reject()
  def test_repeated_terminal_cannot_manufacture_overlap(self):
   rows=self.rows();r=json.loads(json.dumps(rows[3]));r['monotonic_ns']=211;rows.insert(3,r);self.save(0,rows);self.reject()
  def test_missing_metrics_baseline_and_end(self):
