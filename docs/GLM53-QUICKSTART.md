@@ -3,9 +3,9 @@
 GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`.
 The model name is `glm-5.3-flash`. Qwen remains the recorded default.
 The latest launch is
-`/home/bmarti44/.cache/glm53-flash/server-bringup-014-context`; its private key is
+`/home/bmarti44/.cache/glm53-flash/server-bringup-015-context`; its private key is
 in `api-key` within that directory. It returned a correct authenticated answer
-and is undergoing the full four-slot context check. The earlier session 012
+and is undergoing the full four-slot context check with a bounded-memory recorder. The earlier session 012
 passed text, tool-call, four concurrent-request, single-image, four-image and
 16-frame video checks with 224x224 media inputs.
 

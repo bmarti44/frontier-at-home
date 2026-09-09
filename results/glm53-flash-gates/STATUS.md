@@ -11,18 +11,27 @@ Use `python3 scripts/47_run_glm53_dev.py --start` for the verified optional
 settings; [the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and
 the 2.5-hour development timeout. Current endpoint: localhost:8015, model
 `glm-5.3-flash`; run directory:
-`/home/bmarti44/.cache/glm53-flash/server-bringup-014-context`.
-Session 014 returned a correct authenticated answer and admitted all four
-250,128-token requests for the direct aggregate-context check. No completed
-full-context result is claimed yet. Session 013 was stopped by the memory
-watchdog during offline test preparation, before any large request was sent;
-that attempt is preserved as NO_RESULT. Session 014 prepares inputs before
-loading the model.
+`/home/bmarti44/.cache/glm53-flash/server-bringup-015-context`.
+Session 015 returned a correct authenticated answer and admitted four
+250,128-token requests using the corrected bounded-memory scorer. No completed
+full-context result is claimed. The previous context client was safely canceled
+after a memory-scaling defect was verified; all partial data and its genuine RED
+are preserved in [context-direct-002](context-direct-002/README.md). The model
+then shut down cleanly. All 17 scorer tests and both focused reviews pass.
 
 Qwen remains the recorded default. The launch configures 1,048,576 aggregate
 tokens across four 262,144-token slots. Full-context processing, paired fidelity,
 production switching and lifecycle qualification remain pending. Production
 admission is closed. Performance is **not yet measured**.
+
+The [native probability diagnostic](native-logprobs-001/README.md) passed exact
+input/position alignment on one non-final window. It measured delta-NLL
+0.043934924660812516 and top-1 accuracy loss 1.5144113336590133 percentage points
+against the native BF16 teacher. These point values exceed the eventual limits,
+but one non-final case is not the required 100-case gate. No performance benefit
+or adoption approval is claimed for that loss. Public native reference coverage
+for 100 qualifying cases remains unavailable; broader published captures are
+[retained privately](reference-followup-001/README.md).
 
 The media startup fix uses native dummy options: at most 16 video frames and
 512×512 throwaway warm-up images. Real media resolution and request limits are
