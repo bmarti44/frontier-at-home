@@ -92,6 +92,24 @@ class CaptureTests(unittest.TestCase):
         self.assertGreaterEqual(len(attempts), 2)
         self.assertIn('PermissionError', json.loads((self.root / 'capture.json').read_text())['capture_failure'])
 
+    def test_cleanup_error_logging_failure_cannot_release_lock(self):
+        real_lstat, real_exists = Path.lstat, Path.exists; attempts = []
+        def observe(path):
+            if str(path).startswith('/sys/fs/cgroup/user.slice/'):
+                attempts.append(str(path))
+                with mock.patch.object(capture, 'LOCK', self.root / 'lock'), self.assertRaises(BlockingIOError):
+                    with capture.inference_lock(): pass
+                if len(attempts) == 1: raise PermissionError('cgroup unobservable')
+                raise FileNotFoundError('confirmed absent')
+            return real_lstat(path)
+        def exists(path):
+            if path.name == 'cleanup-observation-error.json': raise PermissionError('evidence unobservable')
+            return real_exists(path)
+        with mock.patch.object(Path, 'lstat', observe), mock.patch.object(Path, 'exists', exists), self.assertRaisesRegex(ValueError, 'capture failed'):
+            self.run_cpu_wrapper(0)
+        self.assertGreaterEqual(len(attempts), 2)
+        self.assertIn('PermissionError', json.loads((self.root / 'capture.json').read_text())['capture_failure'])
+
     def test_parent_sigterm_cleans_wrapper_before_releasing_lock(self):
         import subprocess, time, signal
         lock = self.root / 'lock'; lock.touch()
