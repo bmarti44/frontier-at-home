@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "qualification": "bounded_load_path_staging_only",
+  "selection": "Exact frozen shard/name/dtype/shape/digest selection, filtered before stock lazy safetensors get_tensor; preserve upstream expert filtering. Reject duplicate/missing/wrong-shard/shape/dtype/source identities. No global loader mutation, eager or prefetch path.",
+  "staging": "One persistent pinned uint8 buffer at most 8 MiB and one reusable completion event. Complete each transfer before buffer reuse. One owned CUDA temporary per synchronous consume callback; callback must not retain it or its views. Synchronize callback use before release. Account for destination overlap.",
+  "acceptance": "CPU source digest equals frozen tensor digest and chunked device readback digest for every selected tensor, including scalars, mixed dtypes and short final chunks. Actual loader/finalizer storage and byte checks are separately required in fresh contained processes at full geometry.",
+  "default": "Uninstalled evidence helper, explicit enabled=True startup selection only; disabled call performs no imports or filesystem work.",
+  "limits": "Does not make internal pointer-table copies pinned, guarantee zero filesystem readahead, qualify production performance, model fidelity or full-load memory fit. Diagnostics are confined to evidence loading; no serving token path is modified."
+}
