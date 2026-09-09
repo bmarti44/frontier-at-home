@@ -66,6 +66,14 @@ def main():
     if text.count(old) != 1:
         raise ValueError("FlashInfer metadata anchor count is not one")
     requirements.write_text(text.replace(old, new))
+    rust = vllm / "tools/build_rust.py"
+    text = rust.read_text()
+    for old, new in (( 'args=["--bin", "vllm-rs"],', 'args=["--bin", "vllm-rs", "--locked"],'),
+                     ('features=["pyo3/abi3-py38"],', 'features=["pyo3/abi3-py38"],\n            args=["--locked"],')):
+        if text.count(old) != 1:
+            raise ValueError("Rust locked-build anchor count is not one")
+        text = text.replace(old, new)
+    rust.write_text(text)
     for relative, key, tag in (("CMakeLists.txt", "cutlass", "v4.4.2"),
                                ("cmake/external_projects/triton_kernels.cmake", "triton_kernels", "v3.5.1")):
         path = vllm / relative

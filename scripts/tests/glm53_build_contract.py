@@ -5,9 +5,12 @@ import importlib.util
 from importlib.metadata import version
 from pathlib import Path
 import re
+import sys
 import unittest
 
 from packaging.requirements import Requirement
+
+sys.dont_write_bytecode = True
 
 
 def suite(source, pristine=None):

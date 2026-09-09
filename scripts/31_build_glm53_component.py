@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--prepared", type=Path, required=True)
     parser.add_argument("--runtime", type=Path, required=True)
     parser.add_argument("--uv", type=Path, required=True)
+    parser.add_argument("--rust-install", type=Path, help="pinned standalone installation; required for vLLM")
     parser.add_argument("--component", choices=("exllamav3", "vllm", "vllm-exl3"), required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -60,6 +61,27 @@ def main():
            "PYTHONNOUSERSITE": "1", "PYTHONDONTWRITEBYTECODE": "1",
            "EXL3_EXT_INCLUDE": str(prepared / "exllamav3/exllamav3/exllamav3_ext"),
            "VLLM_TARGET_DEVICE": "cuda", "VLLM_USE_PRECOMPILED": "0", "VLLM_USE_PRECOMPILED_RUST": "0"}
+    rust_manifest_sha256 = None
+    if args.component == "vllm":
+        if args.rust_install is None:
+            parser.error("vLLM requires --rust-install from scripts/32_install_glm53_rust.py")
+        rust_root = args.rust_install.resolve()
+        rust_manifest_path = rust_root / "manifest.json"
+        rust_manifest = json.loads(rust_manifest_path.read_text())
+        if rust_manifest["source_lock_sha256"] != sha(ROOT / "configs/build-manifests/glm53-rust-toolchain.json"):
+            raise ValueError("Rust toolchain lock mismatch")
+        rust_prefix = rust_root / "toolchain"
+        expected = {entry["path"]: entry for entry in rust_manifest["files"]}
+        actual = {str(p.relative_to(rust_prefix)) for p in rust_prefix.rglob("*") if p.is_file()}
+        if len(expected) != len(rust_manifest["files"]) or actual != expected.keys():
+            raise ValueError("Rust toolchain inventory mismatch")
+        for name, entry in expected.items():
+            path = rust_prefix / name
+            if path.stat().st_size != entry["size_bytes"] or sha(path) != entry["sha256"]:
+                raise ValueError(f"Rust toolchain changed: {name}")
+        rust_manifest_sha256 = sha(rust_manifest_path)
+        env.update(PATH=f"{rust_prefix}/bin:" + env["PATH"], CARGO_BUILD_JOBS="2",
+                   CARGO_HOME=str(output / "cargo-home"), VLLM_REQUIRE_RUST_FRONTEND="1")
     subprocess.run([str(uv), "pip", "check", "--python", str(python)], env=env, check=True)
     output.mkdir(parents=True, exist_ok=False)
     command = ["/usr/bin/env", "-i", *(f"{k}={v}" for k, v in sorted(env.items())), str(uv),
@@ -72,6 +94,8 @@ def main():
                "scorer_sha256": sha(Path(__file__)), "binary_sha256": sha(python.resolve()),
                "wrapper_sha256": sha(wrapper), "safe_run_sha256": sha(safe), "uv_sha256": sha(uv),
                "command": command, "start_unix": time.time()}
+    if rust_manifest_sha256 is not None:
+        receipt["toolchain_manifest_sha256"] = rust_manifest_sha256
     (output / "manifest.json").write_text(json.dumps(receipt, indent=2) + "\n")
     outer = dict(os.environ)
     # Do not inherit optional wrapper overrides or parent-lock exemptions.
