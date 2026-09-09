@@ -1,0 +1,62 @@
+test_complete_inventory_passes (test_glm53_contract.ClosedInventoryContract.test_complete_inventory_passes) ... ok
+test_empty_duplicate_and_unlisted_payloads_are_rejected (test_glm53_contract.ClosedInventoryContract.test_empty_duplicate_and_unlisted_payloads_are_rejected) ... ok
+test_invalid_sizes_and_digest_are_rejected (test_glm53_contract.ClosedInventoryContract.test_invalid_sizes_and_digest_are_rejected) ... ok
+test_json_number_overflow_is_rejected (test_glm53_contract.ClosedInventoryContract.test_json_number_overflow_is_rejected) ... 
+  test_json_number_overflow_is_rejected (test_glm53_contract.ClosedInventoryContract.test_json_number_overflow_is_rejected) (number='1e999') ... FAIL
+  test_json_number_overflow_is_rejected (test_glm53_contract.ClosedInventoryContract.test_json_number_overflow_is_rejected) (number='-1e999') ... FAIL
+test_new_payload_during_hashing_is_rejected (test_glm53_contract.ClosedInventoryContract.test_new_payload_during_hashing_is_rejected) ... FAIL
+test_path_escape_and_symlink_are_rejected (test_glm53_contract.ClosedInventoryContract.test_path_escape_and_symlink_are_rejected) ... ok
+test_same_size_replacement_is_rejected (test_glm53_contract.ClosedInventoryContract.test_same_size_replacement_is_rejected) ... ok
+test_generic_launcher_rejects_glm_before_any_lifecycle_action (test_glm53_contract.Glm53ProfileContract.test_generic_launcher_rejects_glm_before_any_lifecycle_action) ... ok
+test_profile_is_optional_and_explicitly_four_slots (test_glm53_contract.Glm53ProfileContract.test_profile_is_optional_and_explicitly_four_slots) ... ok
+test_render_carries_safety_and_environment (test_glm53_contract.Glm53ProfileContract.test_render_carries_safety_and_environment) ... ok
+test_render_rejects_equals_form_topology_overrides (test_glm53_contract.Glm53ProfileContract.test_render_rejects_equals_form_topology_overrides) ... 
+  test_render_rejects_equals_form_topology_overrides (test_glm53_contract.Glm53ProfileContract.test_render_rejects_equals_form_topology_overrides) (flag='--max-model-len=1048576') ... FAIL
+  test_render_rejects_equals_form_topology_overrides (test_glm53_contract.Glm53ProfileContract.test_render_rejects_equals_form_topology_overrides) (flag='--max-num-seqs=1') ... FAIL
+test_render_rejects_mismatched_topology (test_glm53_contract.Glm53ProfileContract.test_render_rejects_mismatched_topology) ... ok
+test_unqualified_switch_rejects_before_mutating_previous_state (test_glm53_contract.Glm53ProfileContract.test_unqualified_switch_rejects_before_mutating_previous_state) ... ok
+
+======================================================================
+FAIL: test_json_number_overflow_is_rejected (test_glm53_contract.ClosedInventoryContract.test_json_number_overflow_is_rejected) (number='1e999')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_contract.py", line 142, in test_json_number_overflow_is_rejected
+    with self.subTest(number=number), self.assertRaisesRegex(ValueError, "nonfinite"):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_json_number_overflow_is_rejected (test_glm53_contract.ClosedInventoryContract.test_json_number_overflow_is_rejected) (number='-1e999')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_contract.py", line 142, in test_json_number_overflow_is_rejected
+    with self.subTest(number=number), self.assertRaisesRegex(ValueError, "nonfinite"):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_new_payload_during_hashing_is_rejected (test_glm53_contract.ClosedInventoryContract.test_new_payload_during_hashing_is_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_contract.py", line 135, in test_new_payload_during_hashing_is_rejected
+    with self.assertRaisesRegex(ValueError, "inventory|coverage|changed"):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_render_rejects_equals_form_topology_overrides (test_glm53_contract.Glm53ProfileContract.test_render_rejects_equals_form_topology_overrides) (flag='--max-model-len=1048576')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_contract.py", line 59, in test_render_rejects_equals_form_topology_overrides
+    with self.subTest(flag=flag), self.assertRaises(profile_resolver.ProfileError):
+AssertionError: ProfileError not raised
+
+======================================================================
+FAIL: test_render_rejects_equals_form_topology_overrides (test_glm53_contract.Glm53ProfileContract.test_render_rejects_equals_form_topology_overrides) (flag='--max-num-seqs=1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_contract.py", line 59, in test_render_rejects_equals_form_topology_overrides
+    with self.subTest(flag=flag), self.assertRaises(profile_resolver.ProfileError):
+AssertionError: ProfileError not raised
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.046s
+
+FAILED (failures=5)
