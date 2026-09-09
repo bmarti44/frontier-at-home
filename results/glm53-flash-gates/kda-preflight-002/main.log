@@ -1,0 +1,18 @@
+2026-09-09T13:35:22,684219670+00:00 SAFE_RUN start tag=glm53-kda-preflight-002 vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 timeout_s=600 allow_cgroup_high=0
+2026-09-09T13:35:22,688914642+00:00 cmd: /usr/bin/env -i CUDA_CACHE_PATH=/home/bmarti44/.cache/glm53-flash/kda-preflight-002/state/cuda-cache CUDA_HOME=/usr/local/cuda-13.0 CUDA_VISIBLE_DEVICES=0 GLM53_EXL3_BF16_SHARD_FIX=1 HF_HUB_OFFLINE=1 HOME=/home/bmarti44/.cache/glm53-flash/kda-preflight-002/state LANG=C.UTF-8 MAX_JOBS=2 NVCC_THREADS=1 NVIDIA_TF32_OVERRIDE=0 PATH=/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 TOKENIZERS_PARALLELISM=false TORCH_COMPILE_DISABLE=1 TORCH_EXTENSIONS_DIR=/home/bmarti44/.cache/glm53-flash/kda-preflight-002/state/torch-extensions TRANSFORMERS_OFFLINE=1 TRITON_CACHE_DIR=/home/bmarti44/.cache/glm53-flash/kda-preflight-002/state/triton /home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3 -I -B /home/bmarti44/.cache/glm53-flash/kda-preflight-002/code/scripts/38_guard_glm53_probe.py --output /home/bmarti44/.cache/glm53-flash/kda-preflight-002/identity -- /home/bmarti44/.cache/glm53-flash/kda-preflight-002/code/scripts/41_probe_glm53_kda.py --metadata /home/bmarti44/.cache/glm53-flash/processor-metadata-002 --output /home/bmarti44/.cache/glm53-flash/kda-preflight-002/checks --seed 1889933027113813406
+2026-09-09T13:35:22,695022817+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T13:35:22,699981725+00:00 candidate_provenance_enabled=0
+2026-09-09T13:35:22,707502080+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-kda-preflight-002-934165.service memory_high=72461844480 memory_max=76756811776 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121102708 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.504,"stable_samples_observed":3}
+2026-09-09T13:35:25,280514669+00:00 wrapper_pid=934206 engine_pid=934209 pgid=934206 (periodic sampler; actual cadence in samples.log)
+2026-09-09T13:36:19,487604860+00:00 cgroup_final current_bytes=69332992 peak_bytes=1612734464 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/triton/language/core.py:2284: UserWarning: tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.
+  warn("tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.")
+{"verdict": "PASS", "failure": null, "qualification": "model_free_KDA_analytic_falsifier_only", "model_loaded": false, "actual_input_tokens_processed": 0, "context_capability": "not measured", "performance": "not measured", "raw_sha256": "1d75534afd61d55b23cea6ca12ac75c42f8716bd91162cd05e67ba70e6aab8e2"}
+{"verdict": "PASS", "qualification": "Python_probe_identity_only", "identity_samples": 204, "probe_exit_code": 0, "live_process_group_after": [], "raw_sha256": "ce965b59a6eb00c1e7e860e608c0f7a13e15b84d39ce4f1579a35d3effafe13b", "failure": null}
+2026-09-09T13:36:19,530554104+00:00 safety_artifact_verified name=samples.log sha256=947888b6448051025d289d4eccadccb5ab548ced78b3e3e89457b56e545892d2 size=33357
+2026-09-09T13:36:19,541158499+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T13:36:19,546315440+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   121012320 kB

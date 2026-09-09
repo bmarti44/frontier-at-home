@@ -1,0 +1,86 @@
+{
+  "verdict": "NO_RESULT",
+  "qualification": "preparatory_KDA_JIT_falsifier_only",
+  "failure": null,
+  "host": {
+    "verdict": "PASS",
+    "qualification": "host_and_probe_identity_observations_only",
+    "unit": "glm52-glm53-kda-preflight-002-934165.service",
+    "minimum_mem_available_kib": 118751200,
+    "maximum_cgroup_peak_bytes": 1612734464,
+    "memory_samples": 186,
+    "identity_samples": 204,
+    "identity_pid": 934209,
+    "identity_start_ticks": 31372584,
+    "maximum_memory_sample_gap_seconds": 0.3131380081176758,
+    "maximum_identity_sample_gap_seconds": 1.1154265403747559,
+    "whole_system_swap_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "required_separate_checks": [
+      "frozen runtime and metadata inventories",
+      "post-freeze verified public seed",
+      "inner probe correctness",
+      "model qualification"
+    ]
+  },
+  "inner": {
+    "verdict": "PASS",
+    "failure": null,
+    "qualification": "model_free_KDA_analytic_falsifier_only",
+    "model_loaded": false,
+    "actual_input_tokens_processed": 0,
+    "context_capability": "not measured",
+    "performance": "not measured",
+    "raw_sha256": "1d75534afd61d55b23cea6ca12ac75c42f8716bd91162cd05e67ba70e6aab8e2",
+    "tensor_checks": [
+      {
+        "query_rows": 2048,
+        "elements": 22020096,
+        "maximum_absolute_error": 0.01615762710571289,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      },
+      {
+        "query_rows": 4,
+        "elements": 5275648,
+        "maximum_absolute_error": 0.0015413761138916016,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      },
+      {
+        "query_rows": 2,
+        "elements": 5259264,
+        "maximum_absolute_error": 0.0015413761138916016,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      },
+      {
+        "query_rows": 3,
+        "elements": 5267456,
+        "maximum_absolute_error": 0.0015413761138916016,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      },
+      {
+        "query_rows": 1,
+        "elements": 5251072,
+        "maximum_absolute_error": 0.0015413761138916016,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      }
+    ]
+  },
+  "model_loaded": false,
+  "model_fidelity": "not measured",
+  "context_capability": "not measured",
+  "performance": "not measured",
+  "end_unix": 1788960989.8312662,
+  "kernel_binary_qualification": "NO_RESULT",
+  "generated_cache_inventory": {
+    "path": "generated-cache-inventory.json",
+    "sha256": "4ddfc5605a783f9b6bfd5a8e9e52bbd04cd74f1f740cfe39bf156cc64fce2b1f"
+  },
+  "confirmation_required": "prewarm, freeze compiled kernels, seal replay and obtain a new public seed"
+}
