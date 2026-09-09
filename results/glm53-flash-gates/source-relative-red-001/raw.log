@@ -1,0 +1,31 @@
+Preparing worktree (detached HEAD 878631b)
+HEAD is now at 878631b [Model] Harden GLM-5.3 FlashInfer integration
+Preparing worktree (detached HEAD 17bc392)
+HEAD is now at 17bc392 Bump to v1.4.4
+Preparing worktree (detached HEAD 6b26e5c)
+HEAD is now at 6b26e5c Merge pull request #7 from vcruz305/fix/dense-no-coop-gemm
+Traceback (most recent call last):
+  File "/home/bmarti44/.cache/glm53-flash/upstream/recipe/scripts/patch_glm53_sm121_nope.py", line 732, in <module>
+    main()
+  File "/home/bmarti44/.cache/glm53-flash/upstream/recipe/scripts/patch_glm53_sm121_nope.py", line 43, in main
+    replace_once(
+  File "/home/bmarti44/.cache/glm53-flash/upstream/recipe/scripts/patch_glm53_sm121_nope.py", line 15, in replace_once
+    source = path.read_text(encoding="utf-8")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '../.cache/glm53-flash/path-regression-failed-001/vllm/vllm/v1/attention/backends/mla/flashinfer_mla_sparse_sm120.py'
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/29_prepare_glm53_runtime.py", line 94, in <module>
+    main()
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/29_prepare_glm53_runtime.py", line 53, in main
+    command([args.python, recipe / name, "--source", vllm])
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/29_prepare_glm53_runtime.py", line 22, in command
+    subprocess.run([str(arg) for arg in argv], check=True, **kwargs)
+  File "/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/bmarti44/.cache/glm53-flash/runtime/bin/python3', '/home/bmarti44/.cache/glm53-flash/upstream/recipe/scripts/patch_glm53_sm121_nope.py', '--source', '../.cache/glm53-flash/path-regression-failed-001/vllm']' returned non-zero exit status 1.
