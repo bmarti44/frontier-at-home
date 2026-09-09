@@ -134,3 +134,21 @@ class LaunchBindingTests(unittest.TestCase):
         self.assertTrue({'BASH_ENV','LD_PRELOAD','PYTHONPATH'}.isdisjoint(environment))
 
 if __name__=='__main__':unittest.main()
+
+class ComponentLoadRunnerTests(unittest.TestCase):
+    def test_load_kinds_and_frozen_dependencies(self):
+        for case in ('moe','kda','mla','ordinary'):
+            self.assertEqual(runner.probe_verdict('load-'+case,None),'PASS')
+            self.assertEqual(runner.probe_verdict('load-'+case,'failed'),'FAIL')
+        required={'scripts/42_probe_glm53_load.py','scripts/lib/glm53_load_fixture.py',
+                  'scripts/lib/glm53_pinned_stream.py','configs/decision-specs/glm53-load-preflight.json'}
+        self.assertTrue(required.issubset(runner.CODE_FILES))
+
+    def test_load_state_rejects_unfrozen_generated_code(self):
+        clean={'entries':[{'path':'.','type':'directory'},{'path':'.cache','type':'directory'},
+                         {'path':'.cache/humming/lock','type':'file','size_bytes':0,'sha256':hashlib.sha256(b'').hexdigest()}]}
+        runner.validate_load_state(clean)
+        for entry in ({'path':'kernel.cubin','type':'file','size_bytes':1,'sha256':'a'*64},
+                      {'path':'library.so','type':'symlink','target':'/tmp/unfrozen'},
+                      {'path':'.cache/humming/lock','type':'file','size_bytes':1,'sha256':'a'*64}):
+            with self.assertRaises(ValueError):runner.validate_load_state({'entries':[entry]})
