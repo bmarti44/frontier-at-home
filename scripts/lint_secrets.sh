@@ -111,7 +111,7 @@ redact_matches() {
 
 # Public package hashes and wrapper artifact receipts, restricted to the two
 # recorded GLM-5.3 dependency attempts and exact line formats.
-readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12])/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-exllamav3-001)/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
 
 scan_stream() {
   local matches
