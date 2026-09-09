@@ -1,0 +1,43 @@
+test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) ... 
+  test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) (total=18000, configured=16, overrides={'max_frames': 2048}) ... FAIL
+  test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) (total=18000, configured=2048, overrides={}) ... FAIL
+  test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) (total=18000, configured=2048, overrides={'num_frames': 16}) ... FAIL
+  test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) (total=18000, configured=2048, overrides={'max_frames': 2048}) ... FAIL
+test_existing_within_cap_sampling_is_identical (__main__.suite.<locals>.FrameContract.test_existing_within_cap_sampling_is_identical) ... ok
+
+======================================================================
+FAIL: test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) (total=18000, configured=16, overrides={'max_frames': 2048})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_frame_contract.py", line 37, in test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides
+    self.assertLessEqual(len(frames), 16)
+AssertionError: 1200 not less than or equal to 16
+
+======================================================================
+FAIL: test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) (total=18000, configured=2048, overrides={})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_frame_contract.py", line 37, in test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides
+    self.assertLessEqual(len(frames), 16)
+AssertionError: 1200 not less than or equal to 16
+
+======================================================================
+FAIL: test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) (total=18000, configured=2048, overrides={'num_frames': 16})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_frame_contract.py", line 37, in test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides
+    self.assertLessEqual(len(frames), 16)
+AssertionError: 1200 not less than or equal to 16
+
+======================================================================
+FAIL: test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) (total=18000, configured=2048, overrides={'max_frames': 2048})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_frame_contract.py", line 37, in test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides
+    self.assertLessEqual(len(frames), 16)
+AssertionError: 1200 not less than or equal to 16
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.009s
+
+FAILED (failures=4)
