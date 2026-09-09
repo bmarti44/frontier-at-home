@@ -124,7 +124,7 @@ def run_native(metadata, expected, seed, record):
         groups = get_kv_cache_groups(cfg, specs)
         require(len(groups) == expected["groups"], "group coverage mismatch")
         require([len(g.layer_names) for g in groups if isinstance(g.kv_cache_spec, MambaSpec)] == expected["kda_group_layer_counts"], "KDA group coverage mismatch")
-        worker = get_kv_cache_config_from_groups(cfg, groups, expected["unique_backing_bytes"])
+        worker = get_kv_cache_config_from_groups(cfg, groups, expected["logical_backing_bytes"])
         require(worker.num_blocks == expected["shared_pool_blocks"], "shared block count mismatch")
         supported = get_supported_kv_cache_layouts([backend, DeepseekV32IndexerBackend, KpoolTailBackend,
                                                    get_mamba_attn_backend(MambaAttentionBackendEnum.GDN_ATTN)])
@@ -140,10 +140,10 @@ def run_native(metadata, expected, seed, record):
         torch.cuda.synchronize()
         require(set(views) == set(specs), "missing allocated layer views")
         storage = {v.untyped_storage().data_ptr(): v.untyped_storage().nbytes() for v in views.values()}
-        require(len(storage) == 1 and sum(storage.values()) == expected["unique_backing_bytes"], "unique backing allocation mismatch")
-        record({"event": "allocated_and_zeroed", "unique_backing_bytes": sum(storage.values()), "layer_views": len(views),
+        record({"event": "allocated_and_zeroed", "unique_backing_bytes": sum(storage.values()), "storage_count": len(storage), "layer_views": len(views),
                 "cuda_memory_allocated": torch.cuda.memory_allocated(), "cuda_memory_reserved": torch.cuda.memory_reserved(),
                 "cuda_peak_allocated": torch.cuda.max_memory_allocated()})
+        require(len(storage) == 1 and sum(storage.values()) == expected["unique_backing_bytes"], "unique backing allocation mismatch")
         scheduler = generate_scheduler_kv_cache_config([worker])
         scheduler_bs, hash_bs = resolve_kv_cache_block_sizes(scheduler, cfg)
         require(scheduler_bs == hash_bs == 4456448, "scheduler/hash normalization mismatch")

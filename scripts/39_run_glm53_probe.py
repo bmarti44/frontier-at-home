@@ -91,10 +91,10 @@ def validate_cache_rows(rows, seed, layer_types):
             all(set(g) == {'layers', 'spec'} and isinstance(g['spec'], str) and g['spec'] and isinstance(g['layers'], list) for g in groups), 'cache group schema mismatch')
     require([len(g['layers']) for g in groups] == [22, 11, 9, 9, 8, 8] and set(groups[0]['layers']) == mla and set(groups[1]['layers']) == tail and
             set(name for g in groups[2:] for name in g['layers']) == mamba, 'cache group layer coverage mismatch')
-    fields(allocation, {'unique_backing_bytes', 'layer_views', 'cuda_memory_allocated', 'cuda_memory_reserved', 'cuda_peak_allocated'})
-    require(all(type(allocation[k]) is int and allocation[k] >= 0 for k in ('unique_backing_bytes', 'layer_views', 'cuda_memory_allocated', 'cuda_memory_reserved', 'cuda_peak_allocated')) and
-            allocation['unique_backing_bytes'] == 9565304320 and allocation['layer_views'] == 67 and
-            9565304320 <= allocation['cuda_memory_allocated'] <= min(allocation['cuda_memory_reserved'], allocation['cuda_peak_allocated']), 'cache backing observation mismatch')
+    fields(allocation, {'unique_backing_bytes', 'storage_count', 'layer_views', 'cuda_memory_allocated', 'cuda_memory_reserved', 'cuda_peak_allocated'})
+    require(all(type(allocation[k]) is int and allocation[k] >= 0 for k in ('unique_backing_bytes', 'storage_count', 'layer_views', 'cuda_memory_allocated', 'cuda_memory_reserved', 'cuda_peak_allocated')) and
+            allocation['unique_backing_bytes'] == 9565306880 and allocation['storage_count'] == 1 and allocation['layer_views'] == 67 and
+            9565306880 <= allocation['cuda_memory_allocated'] <= min(allocation['cuda_memory_reserved'], allocation['cuda_peak_allocated']), 'cache backing observation mismatch')
     fields(scheduler, {'scheduler_block_tokens', 'hash_block_tokens'})
     require(scheduler['scheduler_block_tokens'] == scheduler['hash_block_tokens'] == 4456448, 'cache scheduler normalization mismatch')
     order = [f'cache-preflight-{i}' for i in range(5)]; random.Random(seed).shuffle(order)
