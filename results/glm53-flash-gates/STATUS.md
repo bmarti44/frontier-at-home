@@ -1,48 +1,36 @@
 # GLM-5.3-Flash CUDA status
 
-**GLM is now serving text and tools locally.** The
-[basic serving checks passed again after restore](server-bringup-010-text-restore/README.md): authenticated chat,
-rejection of unauthenticated requests, a valid tool call, and four overlapping
-client requests with correct completed answers. The lowest externally sampled
-available memory was 20.467586517333984 GiB through that snapshot; cgroup swap
-remained zero. This is a live-server snapshot, not a completed lifecycle or
-production qualification result.
+**GLM is now serving text, tools, images and video locally.** The
+[basic serving checks passed](server-bringup-012/README.md): authenticated chat,
+unauthenticated rejection, correct tool arguments, four overlapping text requests,
+one image, four images in order, and a16-frame video. Media fixtures were224x224;
+larger inputs remain unqualified. The externally sampled memory low point through
+this live snapshot was18.473777770996094GiB, with cgroup swap0.
 
-Use `python3 scripts/47_run_glm53_dev.py --start` for the same working settings;
-[the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and the
-2.5-hour development timeout. The current endpoint is localhost:8015, model
-`glm-5.3-flash`. The current run directory is
-`/home/bmarti44/.cache/glm53-flash/server-bringup-010-text-restore`.
+Use `python3 scripts/47_run_glm53_dev.py --start` for the verified optional
+settings; [the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and
+the2.5-hour development timeout. Current endpoint: localhost:8015, model
+`glm-5.3-flash`; run directory:
+`/home/bmarti44/.cache/glm53-flash/server-bringup-012`.
 
-Qwen remains the recorded default. The working launch configures **1,048,576
-aggregate tokens across four 262,144-token slots**. Full-context processing has
-not yet been tested. Images/video are disabled in this first usable text/tools
-launch. The [latest media retry](server-bringup-009/README.md) passed engine initialization but hit the host memory floor during API-side dummy video warm-up. The working text server was restored with the same API key and port; prior failures remain preserved. Production
-admission is closed and performance is **not yet measured**.
+Qwen remains the recorded default. The launch configures1,048,576 aggregate
+tokens across four262,144-token slots. Full-context processing, paired fidelity,
+production switching and lifecycle qualification remain pending. Production
+admission is closed. Performance is **not yet measured**.
 
-The simple working setup uses 128-token prefill chunks, the standard CUDA
-allocator, one-time cleanup of unused warm-up memory, prepared FlashInfer
-libraries and default attention tactics without autotuning. The focused startup
-cleanup review found no verified high/critical issue. Additional indexer
-cache-guard work remains deferred per the owner's simplification instruction.
+The media startup fix uses native dummy options: at most16 video frames and
+512x512 throwaway warm-up images. Real media resolution and request limits are
+unchanged. Earlier failed attempts and genuine regressions remain preserved;
+focused source review found no verified high/critical issue. No new token-path
+diagnostic or runtime patch was needed for this fix.
 
-[Weight preparation completed](model-weights-001/README.md): 84,696,019,172 tensor
+[Weight preparation completed](model-weights-001/README.md):84,696,019,172 tensor
 bytes with no new local quantization. Main source shards passed whole-source
 hash checks; selected dense ranges were read twice and compared, with complete
 dense-source hashes remaining metadata only. Every launch verifies the final
-local model/tokenizer inventory. The earlier
-[real-shard loader smoke](real-loader-smoke-001/README.md) also passed.
-
-The [reference binding check](reference-binding-001/README.md) verified exact
-public tokenizer, BF16 output-head and final-normalization bytes. This does not
-establish native reference equivalence or pass paired model fidelity.
-
-The remaining media fix is narrowly identified: the native dummy-video option
-`--limit-mm-per-prompt '{"image":4,"video":{"count":1,"num_frames":16}}'`
-would bound startup frame allocation before preprocessing. The persistent gap
-reviewer confirmed that path in the pinned source. It has not been applied or
-run; maximum image dimensions may still matter. Keep the usable text server
-running while that optional work is pending.
+local model/tokenizer inventory. The [reference binding check](reference-binding-001/README.md)
+verified exact public tokenizer, BF16 output-head and final-normalization bytes;
+this does not establish native reference equivalence or paired model fidelity.
 
 The component history below describes earlier model-free work.
 

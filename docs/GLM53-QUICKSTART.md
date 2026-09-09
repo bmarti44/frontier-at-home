@@ -2,17 +2,17 @@
 
 GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`.
 The model name is `glm-5.3-flash`. Qwen remains the recorded default.
-The verified running session (restored after the media retry) is
-`/home/bmarti44/.cache/glm53-flash/server-bringup-010-text-restore`; its private key is in
+The verified running session is
+`/home/bmarti44/.cache/glm53-flash/server-bringup-012`; its private key is in
 `api-key` within that directory. Text, tool-call and four concurrent-request
-checks passed; images/video remain pending.
+checks passed. Single-image, four-image and16-frame video checks also passed with224x224 inputs.
 
 The requested capacity is **four slots of 262,144 tokens each**, totaling
 1,048,576 tokens. Configuration and short answers do not establish that all
 four slots can process their maximum inputs; that test remains separate.
 
 Start the optional local server from the repository (the launcher now defaults
-to the settings that passed the text/tool checks):
+to the settings that passed the text/tool/media checks):
 
 ```bash
 python3 scripts/47_run_glm53_dev.py --start
@@ -26,6 +26,5 @@ and requires the other large model to be stopped and memory to recover first.
 
 This is a manual development server with a 2.5-hour safety timeout. It does not
 change reboot defaults or authorize the production switch. The existing memory
-watchdog and containment remain active. This initial recipe enables text and tools. Images and video remain pending
-a startup configuration that stays within the memory floor. Current results are in
+watchdog and containment remain active. This recipe enables text, tools, images and video. Use `--text-only` for the working text fallback. Larger media and full context remain unqualified. Current results are in
 [GLM status](../results/glm53-flash-gates/STATUS.md).
