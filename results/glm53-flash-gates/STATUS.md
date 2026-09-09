@@ -44,7 +44,7 @@ are unchanged. Performance is **not yet measured**.
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
-The latest completed scoped CPU audit has 201 passing tests; these include
+The latest completed scoped CPU audit has 229 passing tests; these include
 admission, media, existing profiles, switching and the model-free harness. Three source-function tests cover 48 sampler combinations, four
 within-cap comparisons, and three actual loader/metadata cases.
 
@@ -154,6 +154,10 @@ The observed retained-phase increase is 4,500 KiB RSS/PSS-anonymous and
 1,822,587,392 CUDA allocation bytes. This is a probe observation, not established
 production overhead per layer. Cgroup peak is below live CUDA allocation, so the
 external whole-host floor remains mandatory.
+
+Convolution candidate 1 passed both persistent reviews at campaign round 43,
+with no verified high or critical findings. Eight cases cover decode, prefill
+and fresh/continued short histories; the contained preparation run is next.
 
 Next: finish convolution and indexer workspace probes. Do not multiply fresh-process RSS by
 layer count or add it blindly to CUDA allocations. The synthetic input was
