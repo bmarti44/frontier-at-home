@@ -58,6 +58,7 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--port',type=int,default=8015)
     parser.add_argument('--text-only',action='store_true',help='First text smoke; keeps the full four-slot text geometry')
+    parser.add_argument('--skip-mm-profiling',action='store_true',help='Skip automatic media warm-up while retaining media support')
     args=parser.parse_args()
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
@@ -79,6 +80,7 @@ def main():
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
                 '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320']
     if args.text_only:arguments+=['--language-model-only']
+    if args.skip_mm_profiling:arguments+=['--skip-mm-profiling']
     state=output/'state'
     environment={**profile['launch']['env'],'HOME':str(state),'LANG':'C.UTF-8',
         'PATH':f'{RUNTIME}/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin','CUDA_HOME':'/usr/local/cuda-13.0',
