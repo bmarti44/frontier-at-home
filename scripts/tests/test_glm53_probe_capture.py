@@ -49,6 +49,34 @@ class CaptureTests(unittest.TestCase):
         row = json.loads((self.root / 'swap.json').read_text())
         self.assertEqual(row['text'], path.read_text())
 
+    def run_cpu_wrapper(self, exit_code):
+        tag = 'glm53-native-smoke-004'
+        crash_root = self.root / 'crashes'; crash = crash_root / ('20260909-120000-' + tag); crash.mkdir(parents=True)
+        for name in ('main.log', 'samples.log', 'kernel.log', 'cmd.log'): (crash / name).write_text('raw bytes\n')
+        script = self.root / 'wrapper.sh'
+        script.write_text("sleep 0.3\nprintf '%s\\n' 'SAFE_RUN_DONE rc=" + str(exit_code) + " killed=no dir=" + str(crash) + "'\nexit " + str(exit_code) + "\n")
+        (self.root / 'identity').mkdir(); (self.root / 'identity/raw.jsonl').write_text('{"event":"identity"}\n')
+        lock = self.root / 'lock'; lock.touch()
+        def unit(path, name):
+            self.assertIn('FLOCK', Path('/proc/self/fdinfo/' + environment['GLM_SAFE_PARENT_LOCK_FD']).read_text())
+            capture.write(path, {'unit': name, 'actual_query_mocked_for_CPU_control': True})
+        with mock.patch.object(capture, 'LOCK', lock), capture.inference_lock() as environment:
+            with mock.patch.object(capture, 'CRASH_ROOT', crash_root), mock.patch.object(capture, 'capture_unit', side_effect=unit):
+                return capture.capture_wrapper(self.root, script, tag, [], {**os.environ, **environment}, 10)
+
+    def test_cpu_wrapper_captures_raw_logs_and_holds_lock_through_cleanup(self):
+        result = self.run_cpu_wrapper(0)
+        self.assertEqual(result['wrapper_exit_code'], 0)
+        self.assertEqual((self.root / 'main.log').read_text(), 'raw bytes\n')
+        self.assertTrue((self.root / 'unit-live.json').exists())
+        self.assertTrue((self.root / 'unit-after.json').exists())
+        self.assertFalse(json.loads((self.root / 'cgroup-after.json').read_text())['exists'])
+
+    def test_failed_cpu_wrapper_keeps_logs_and_rejects(self):
+        with self.assertRaisesRegex(ValueError, 'failed'): self.run_cpu_wrapper(1)
+        self.assertEqual(json.loads((self.root / 'capture.json').read_text())['wrapper_exit_code'], 1)
+        self.assertEqual((self.root / 'cmd.log').read_text(), 'raw bytes\n')
+
     def test_crash_copy_rejects_outside_path_and_duplicate_receipts(self):
         for log in ('SAFE_RUN_DONE rc=0 killed=no dir=/etc\n',
                     'SAFE_RUN_DONE rc=0 killed=no dir=/a\nSAFE_RUN_DONE rc=1 killed=yes dir=/b\n'):
