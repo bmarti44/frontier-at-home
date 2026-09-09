@@ -132,7 +132,8 @@ def main():
                 "environment_bytes": sorted(os.fsencode(k + "=" + v) for k, v in environment.items()),
                 "cgroup": Path("/proc/self/cgroup").read_text(),
                 "source_hashes": {str(guard): sha(guard), str(target): sha(target)}}
-    manifest = {k: v for k, v in expected.items() if not k.endswith("_bytes")}
+    manifest = {k: v for k, v in expected.items() if not k.endswith("_bytes") and k != "source_hashes"}
+    manifest["source_files"] = [{"path": path, "sha256": digest} for path, digest in expected["source_hashes"].items()]
     manifest.update(argv=argv, environment_sha256=hashlib.sha256(b"\0".join(expected["environment_bytes"])).hexdigest(),
                     qualification="Python_probe_identity_only", period_seconds=0.25, start_unix=time.time())
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
