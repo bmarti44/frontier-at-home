@@ -38,6 +38,8 @@ def _scan(root, excluded=None):
         resolved = path.resolve(strict=True)
         if not resolved.is_relative_to(root):
             raise ValueError("symlink escapes source root: " + str(path))
+        if excluded is not None and resolved.is_relative_to(root / excluded):
+            return
         value = resolved.stat()
         if stat.S_ISDIR(value.st_mode):
             if resolved in ancestors:
