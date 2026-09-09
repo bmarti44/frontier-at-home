@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "qualification": "model_free_component_load_storage_only",
+  "fresh_process_per_case": ["moe", "kda", "mla", "ordinary"],
+  "safety": {"minimum_start_gib": 110, "kill_floor_gib": 40, "timeout_seconds": 600, "swap_max": 0},
+  "fixture": "Canonical4096-byte SHAKE256 blocks from domain GLM53-LOAD-FIXTURE-v1, length-prefixed compact UTF8 JSON [seed,name,dtype,shape,block_index]. Arbitrary INT16 trellis; finite FP16 words 0x2400|(word&0x83ff); finite BF16 words0x3e80|(word&0x807f); exact signed codebook markers. Tensor bytes independent of transfer chunk boundaries. Freeze generator/spec/runtime before public seed; retain generated input hashes and source payloads separately from observed hashes.",
+  "expected": {
+    "moe": {"experts":288,"hidden":4096,"intermediate":2048,"bits":2,"checkpoint_tensors":3456,"checkpoint_bytes":1822559616,"constructor_parameter_bytes":1822563072,"pointer_table_bytes":20736},
+    "kda": {"input":4096,"outputs":[8192,8192,8192,64,128,128],"bf16_shards":[3,4,5],"bits":4,"checkpoint_tensors":15,"checkpoint_bytes":53026828,"constructor_parameter_bytes":53707440,"new_trellis_bytes":50331648,"bf16_clone_bytes":2621440},
+    "mla": {"input":4096,"outputs":[1536,512],"bits":4,"checkpoint_tensors":8,"checkpoint_bytes":4214792,"constructor_parameter_bytes":4214800,"new_trellis_bytes":4194304},
+    "ordinary": {"shape":[154880,4096],"dtype":"BF16","checkpoint_tensors":1,"checkpoint_bytes":1268776960}
+  },
+  "acceptance": "All expected checkpoint names load exactly once through actual selected parameter loaders. Byte-identical source, staged temporary, loaded parameter and final handle logical bytes. Exact unique-storage census and offsets; no dense expert expansion; full MoE pointer tables match live handles and alias fields; preserve real native constructors/finalizers and shared scratch. No retained temporary by consumer. Correct mixed BF16 geometry and clone; deleted fused staging attributes. Actual host/identity/hash/seed/cleanup gate must pass.",
+  "measurement": "Timestamp constructor, each transfer, finalization and verification phases separately. Capture RSS/PSS anon/file breakdown, CUDA current/reserved/peak and pinned allocator counters; external whole-host minimum and cgroup samples remain authoritative. Verification workspaces and existing internal pageable pointer copies remain explicit costs, not pinned-copy claims. Process exit is cleanup boundary because registries retain modules.",
+  "not_qualified": ["surrounding MoE/model constructor", "full resident model load", "serving memory envelope", "forward kernels", "model fidelity", "context capability", "production performance", "production activation"]
+}
