@@ -49,7 +49,8 @@ environment = {'HOME': str(state), 'PATH': f'{runtime}/bin:/usr/local/cuda-13.0/
 node = Path('/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node')
 wrapper = ROOT / 'results/glm52-gates/harness/glm_cgroup_run.sh'
 tools = [runtime / 'bin/python3', Path('/usr/bin/git'), Path('/usr/bin/bash'), node, wrapper,
-         ROOT / 'results/glm52-gates/harness/glm_safe_run.sh', ROOT / 'scripts/03_memory_guard.py']
+         ROOT / 'results/glm52-gates/harness/glm_safe_run.sh', ROOT / 'scripts/03_memory_guard.py',
+         Path('/usr/lib/aarch64-linux-gnu/libc.so.6')]
 sha = runner.sha256_file
 native_extensions = {}
 for name in ('exllamav3_ext', 'vllm_exl3_c'):

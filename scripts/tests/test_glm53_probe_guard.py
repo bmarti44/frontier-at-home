@@ -108,7 +108,7 @@ time.sleep(0.35)
         guard = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(guard)
         with mock.patch.object(guard, "process_stat", return_value={"start_ticks": 43, "pgid": 123, "ppid": os.getpid(), "state": "Z"}), \
-             mock.patch.object(guard, "live_group") as group, mock.patch.object(guard.os, "pidfd_open") as open_pid:
+             mock.patch.object(guard, "live_group") as group, mock.patch.object(guard, "pidfd_open") as open_pid:
             with self.assertRaisesRegex(ValueError, "anchor"):
                 guard.terminate_group(123, 42)
             group.assert_not_called()

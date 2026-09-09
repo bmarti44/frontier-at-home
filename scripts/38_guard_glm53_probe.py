@@ -33,6 +33,32 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def pidfd_open(pid):
+    """Use the same Linux pidfd ABI when standalone CPython omits its binding."""
+    require(type(pid) is int and 0 < pid <= 2147483647, 'invalid pidfd process ID')
+    native = getattr(os, 'pidfd_open', None)
+    if native is not None: return native(pid)
+    function = ctypes.CDLL(None, use_errno=True).pidfd_open
+    function.argtypes = [ctypes.c_int, ctypes.c_uint]; function.restype = ctypes.c_int
+    descriptor = function(pid, 0)
+    if descriptor < 0:
+        error = ctypes.get_errno(); raise OSError(error, os.strerror(error))
+    return descriptor
+
+
+def pidfd_send_signal(descriptor, number):
+    require(type(descriptor) is int and 0 <= descriptor <= 2147483647 and isinstance(number, int) and
+            not isinstance(number, bool) and 0 <= number < signal.NSIG, 'invalid pidfd signal arguments')
+    native = getattr(signal, 'pidfd_send_signal', None)
+    if native is not None: return native(descriptor, number)
+    function = ctypes.CDLL(None, use_errno=True).pidfd_send_signal
+    function.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint]; function.restype = ctypes.c_int
+    result = function(descriptor, number, None, 0)
+    if result < 0:
+        error = ctypes.get_errno(); raise OSError(error, os.strerror(error))
+    require(result == 0, 'unexpected pidfd signal result')
+
+
 def process_stat(pid):
     text = Path(f"/proc/{pid}/stat").read_text()
     tail = text.rsplit(")", 1)[1].split()
@@ -66,10 +92,10 @@ def terminate_group(pgid, leader_start_ticks):
         for member in members:
             descriptor = None
             try:
-                descriptor = os.pidfd_open(member["pid"])
+                descriptor = pidfd_open(member["pid"])
                 current = process_stat(member["pid"])
                 require(current["start_ticks"] == member["start_ticks"] and current["pgid"] == pgid, "cleanup process identity changed")
-                signal.pidfd_send_signal(descriptor, signal.SIGKILL)
+                pidfd_send_signal(descriptor, signal.SIGKILL)
             except (ProcessLookupError, FileNotFoundError):
                 pass
             finally:

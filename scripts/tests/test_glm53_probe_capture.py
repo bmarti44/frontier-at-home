@@ -133,14 +133,14 @@ with c.inference_lock() as env:
             deadline = time.monotonic() + 5
             while not (self.root / 'wrapper-pid').exists() and time.monotonic() < deadline: time.sleep(0.02)
             self.assertTrue((self.root / 'wrapper-pid').exists())
-            child_pid = int((self.root / 'wrapper-pid').read_text()); child_pidfd = os.pidfd_open(child_pid)
+            child_pid = int((self.root / 'wrapper-pid').read_text()); child_pidfd = capture.pidfd_open(child_pid)
             parent.send_signal(signal.SIGTERM); parent.wait(timeout=10)
             try: status = Path(f'/proc/{child_pid}/stat').read_text().rsplit(')',1)[1].split()[0]
             except FileNotFoundError: status = 'gone'
             self.assertIn(status, ('gone','Z'), 'wrapper survived parent termination and lock release')
         finally:
             if child_pidfd is not None:
-                try: signal.pidfd_send_signal(child_pidfd, signal.SIGKILL)
+                try: capture.pidfd_send_signal(child_pidfd, signal.SIGKILL)
                 except ProcessLookupError: pass
                 os.close(child_pidfd)
             if parent.poll() is None: parent.kill()

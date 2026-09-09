@@ -6,6 +6,7 @@ No serving path imports this module.
 """
 from contextlib import contextmanager
 import fcntl
+import ctypes
 import json
 import os
 from pathlib import Path
@@ -21,6 +22,32 @@ LOCK = Path('/run/lock/frontier-at-home/inference.lock')
 VMSTAT = Path('/proc/vmstat')
 CRASH_ROOT = Path('/home/bmarti44/.local/state/glm52-crashlog')
 CLEANUP_SIGNALS = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
+
+
+def pidfd_open(pid):
+    """Use the same Linux pidfd ABI when standalone CPython omits its binding."""
+    require(type(pid) is int and 0 < pid <= 2147483647, 'invalid pidfd process ID')
+    native = getattr(os, 'pidfd_open', None)
+    if native is not None: return native(pid)
+    function = ctypes.CDLL(None, use_errno=True).pidfd_open
+    function.argtypes = [ctypes.c_int, ctypes.c_uint]; function.restype = ctypes.c_int
+    descriptor = function(pid, 0)
+    if descriptor < 0:
+        error = ctypes.get_errno(); raise OSError(error, os.strerror(error))
+    return descriptor
+
+
+def pidfd_send_signal(descriptor, number):
+    require(type(descriptor) is int and 0 <= descriptor <= 2147483647 and isinstance(number, int) and
+            not isinstance(number, bool) and 0 <= number < signal.NSIG, 'invalid pidfd signal arguments')
+    native = getattr(signal, 'pidfd_send_signal', None)
+    if native is not None: return native(descriptor, number)
+    function = ctypes.CDLL(None, use_errno=True).pidfd_send_signal
+    function.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint]; function.restype = ctypes.c_int
+    result = function(descriptor, number, None, 0)
+    if result < 0:
+        error = ctypes.get_errno(); raise OSError(error, os.strerror(error))
+    require(result == 0, 'unexpected pidfd signal result')
 
 
 def write(path, value):
@@ -112,7 +139,7 @@ def capture_wrapper(root, wrapper, tag, command, environment, timeout):
                                            pass_fds=(int(environment['GLM_SAFE_PARENT_LOCK_FD']),))
                 unit = f'glm52-{tag}-{process.pid}.service'
                 cgroup = Path('/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice') / unit
-                pidfd = os.pidfd_open(process.pid)
+                pidfd = pidfd_open(process.pid)
             finally:
                 for number, handler in handlers.items(): signal.signal(number, handler)
             if deferred: raise InterruptedError(f'probe controller received signal {deferred[0]} during launch')
@@ -127,7 +154,7 @@ def capture_wrapper(root, wrapper, tag, command, environment, timeout):
     except BaseException as error:
         failure = repr(error)
         if pidfd is not None:
-            try: signal.pidfd_send_signal(pidfd, signal.SIGTERM)
+            try: pidfd_send_signal(pidfd, signal.SIGTERM)
             except ProcessLookupError: pass
     finally:
         prior_mask = signal.pthread_sigmask(signal.SIG_BLOCK, CLEANUP_SIGNALS)
