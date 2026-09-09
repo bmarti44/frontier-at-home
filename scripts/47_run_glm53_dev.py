@@ -25,7 +25,7 @@ def sha(path):
 def reuse_prepared_kernels(state):
     """Copy existing warm caches; keep preparation evidence untouched."""
     sources=[]
-    for attempt in ('mla-preflight-001','kda-preflight-002','conv-preflight-001','indexer-preflight-003','sampling-preparation-003','server-bringup-001','server-bringup-007','server-bringup-008'):
+    for attempt in ('mla-preflight-001','kda-preflight-002','conv-preflight-001','indexer-preflight-003','sampling-preparation-003','server-bringup-001','server-bringup-007','server-bringup-008','server-bringup-012'):
         source=BASE/attempt/'state'
         for subtree in ('triton','.cache/flashinfer','.cache/vllm/modelinfos','deep-gemm','.tilelang/cache'):
             if (source/subtree).exists():
