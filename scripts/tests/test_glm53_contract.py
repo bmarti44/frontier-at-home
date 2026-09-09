@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/lib"))
@@ -50,6 +51,14 @@ class Glm53ProfileContract(unittest.TestCase):
         host = profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json")
         with self.assertRaisesRegex(profile_resolver.ProfileError, "context|topology"):
             profile_resolver.resolve(p, model, host)
+
+    def test_render_rejects_equals_form_topology_overrides(self):
+        for flag in ("--max-model-len=1048576", "--max-num-seqs=1"):
+            p = self.profile()
+            p["launch"]["args"].append(flag)
+            with self.subTest(flag=flag), self.assertRaises(profile_resolver.ProfileError):
+                profile_resolver.resolve(p, profile_resolver.load_model("glm-5.3-flash"),
+                    profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json"))
 
     def test_render_carries_safety_and_environment(self):
         p = self.profile()
@@ -115,6 +124,23 @@ class ClosedInventoryContract(unittest.TestCase):
 
     def test_complete_inventory_passes(self):
         self.api.verify_inventory(self.root, self.manifest)
+
+    def test_new_payload_during_hashing_is_rejected(self):
+        original = self.api.sha256_file
+        def add_payload(path):
+            result = original(path)
+            (self.root / "unlisted.py").write_bytes(b"injected during verification")
+            return result
+        with mock.patch.object(self.api, "sha256_file", side_effect=add_payload):
+            with self.assertRaisesRegex(ValueError, "inventory|coverage|changed"):
+                self.api.verify_inventory(self.root, self.manifest)
+
+    def test_json_number_overflow_is_rejected(self):
+        for number in ("1e999", "-1e999"):
+            path = self.root / "overflow.json"
+            path.write_text('{"nested": [{"value": ' + number + '}]}')
+            with self.subTest(number=number), self.assertRaisesRegex(ValueError, "nonfinite"):
+                self.api.strict_json(path)
 
     def test_same_size_replacement_is_rejected(self):
         (self.root / "engine.so").write_bytes(b"replacement-content")
