@@ -103,6 +103,8 @@ def main():
     profile=json.loads((ROOT/'configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json').read_text())
     arguments=[value.replace('{model}',str(model)).replace('{port}',str(args.port)) for value in profile['launch']['args'][4:]]
     arguments[arguments.index('--max-num-batched-tokens')+1]=str(args.prefill_batch)
+    if not args.text_only:
+        arguments[arguments.index('--limit-mm-per-prompt')+1]='{"image":4,"video":{"count":1,"num_frames":16}}'
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
                 '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320',
                 '--mm-processor-cache-gb','0']
