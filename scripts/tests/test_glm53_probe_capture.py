@@ -127,7 +127,7 @@ c.subprocess.Popen=launch
 with c.inference_lock() as env:
  c.capture_wrapper(r,r/'wrapper.sh','glm53-cpu-control',[],{**os.environ,**env},10)
 """)
-        parent = subprocess.Popen([sys.executable, str(worker), str(Path(capture.__file__).parent), str(self.root)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        parent = subprocess.Popen([sys.executable, "-I", "-B", str(worker), str(Path(capture.__file__).parent), str(self.root)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         child_pidfd = None
         try:
             deadline = time.monotonic() + 5

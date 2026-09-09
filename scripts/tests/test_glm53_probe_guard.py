@@ -38,7 +38,7 @@ class ProbeGuardTests(unittest.TestCase):
         self.assertTrue(all(row["executable_verified"] and row["argv_verified"] and row["environment_verified"] for row in samples))
 
     def test_same_python_exec_with_changed_command_rejects(self):
-        result, summary, _ = self.run_probe("import os,sys\nos.execv(sys.executable,[sys.executable,'-c','import time;time.sleep(5)'])\n")
+        result, summary, _ = self.run_probe("import os,sys\nos.execv(sys.executable,[sys.executable,'-I','-B','-c','import time;time.sleep(5)'])\n")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(summary["verdict"], "FAIL")
         self.assertIn("argv", summary["failure"])
@@ -115,7 +115,7 @@ time.sleep(0.35)
             open_pid.assert_not_called()
 
     def test_surviving_descendant_fails_and_is_killed(self):
-        result, summary, _ = self.run_probe("import subprocess,sys,time\nsubprocess.Popen([sys.executable,'-c','import time;time.sleep(5)'])\ntime.sleep(0.35)\n")
+        result, summary, _ = self.run_probe("import subprocess,sys,time\nsubprocess.Popen([sys.executable,'-I','-B','-c','import time;time.sleep(5)'])\ntime.sleep(0.35)\n")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(summary["verdict"], "FAIL")
         self.assertIn("descendant", summary["failure"])
