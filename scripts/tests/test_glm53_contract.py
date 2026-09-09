@@ -56,6 +56,24 @@ class Glm53ProfileContract(unittest.TestCase):
         self.assertIn("--enable-auto-tool-choice", argv)
         self.assertIn("--no-enable-prefix-caching", argv)
 
+    def test_service_cannot_write_builder_owned_runtime_and_cache(self):
+        p = self.profile()
+        self.assertEqual(p["launch"]["user"], "dsv4")
+        self.assertEqual(p["launch"]["args"][:2], ["-I", "-B"])
+        properties = p["containment"]["extra_properties"]
+        self.assertEqual(properties["Group"], "dsv4")
+        self.assertEqual(properties["SupplementaryGroups"], "")
+        self.assertEqual(properties["CapabilityBoundingSet"], "")
+        self.assertEqual(properties["AmbientCapabilities"], "")
+        self.assertEqual(properties["NoNewPrivileges"], "yes")
+
+    def test_default_api_alias_and_no_inductor_baseline_are_explicit(self):
+        argv = self.profile()["launch"]["args"]
+        index = argv.index("--served-model-name")
+        self.assertEqual(argv[index + 1:index + 3], ["glm-5.3-flash", "default"])
+        index = argv.index("--compilation-config")
+        self.assertEqual(json.loads(argv[index + 1]), {"mode": 0})
+
     def test_render_rejects_mismatched_topology(self):
         p = self.profile()
         p["serving"]["request_context_cap"] = 1048576
