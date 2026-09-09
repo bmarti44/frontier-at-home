@@ -1,0 +1,77 @@
+.FFFFF
+======================================================================
+FAIL: test_frozen_warm_hit_loads_once_without_compiler_or_writer (__main__.FlashInferSealedTests.test_frozen_warm_hit_loads_once_without_compiler_or_writer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_flashinfer_sealed.py", line 48, in test_frozen_warm_hit_loads_once_without_compiler_or_writer
+    for _ in range(2): self.assertIs(self.spec().build_and_load(), self.loader.return_value)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/flashinfer/jit/core.py", line 320, in build_and_load
+    self.build()
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/flashinfer/jit/core.py", line 426, in build
+    self.write_ninja()
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/unittest/mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/unittest/mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/unittest/mock.py", line 1198, in _execute_mock_call
+    raise effect
+AssertionError: build writer entered
+
+======================================================================
+FAIL: test_invalid_bindings_reject_before_loading (__main__.FlashInferSealedTests.test_invalid_bindings_reject_before_loading)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_flashinfer_sealed.py", line 88, in test_invalid_bindings_reject_before_loading
+    with self.assertRaises(ValueError): self.select()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_load_failure_propagates_without_fallback_or_runtime_mutation (__main__.FlashInferSealedTests.test_load_failure_propagates_without_fallback_or_runtime_mutation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_flashinfer_sealed.py", line 70, in test_load_failure_propagates_without_fallback_or_runtime_mutation
+    with self.assertRaisesRegex(ImportError, 'unloadable'): self.select()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ImportError not raised
+
+======================================================================
+FAIL: test_missing_or_corrupt_library_rejects_before_loading (__main__.FlashInferSealedTests.test_missing_or_corrupt_library_rejects_before_loading)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_flashinfer_sealed.py", line 64, in test_missing_or_corrupt_library_rejects_before_loading
+    with self.assertRaises(ValueError): self.select()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_unlisted_module_explicit_path_and_direct_build_reject (__main__.FlashInferSealedTests.test_unlisted_module_explicit_path_and_direct_build_reject)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_flashinfer_sealed.py", line 81, in test_unlisted_module_explicit_path_and_direct_build_reject
+    with self.assertRaisesRegex(ValueError, 'sealed'): call()
+                                                       ^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_flashinfer_sealed.py", line 77, in <lambda>
+    for call in (lambda: self.spec('unknown').build_and_load(),
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/flashinfer/jit/core.py", line 320, in build_and_load
+    self.build()
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/flashinfer/jit/core.py", line 426, in build
+    self.write_ninja()
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/unittest/mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/unittest/mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/unittest/mock.py", line 1198, in _execute_mock_call
+    raise effect
+AssertionError: build writer entered
+
+----------------------------------------------------------------------
+Ran 6 tests in 3.480s
+
+FAILED (failures=5)
