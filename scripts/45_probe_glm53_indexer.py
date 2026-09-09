@@ -181,8 +181,8 @@ def run_native(metadata, output, seed, record):
     from vllm.forward_context import set_forward_context
     from vllm.platforms import current_platform
     from vllm.model_executor.layers.attention.mla_attention import _canonicalize_sparse_mla_kv_cache_dtype
-    from vllm.model_executor.layers.sparse_attn_indexer_kpool import sparse_attn_indexer_kpool
     from vllm.models.glm5next.nvidia.attention import Glm5NextIndexerCache, Glm5NextTailCache
+    from vllm.model_executor.layers.sparse_attn_indexer_kpool import sparse_attn_indexer_kpool
     from vllm.v1.attention.backend import CommonAttentionMetadata
     from vllm.v1.attention.backends.mla.flashinfer_mla_sparse import FlashInferMLASparseSM120Backend
     from vllm.v1.attention.backends.mla.indexer import DeepseekV32IndexerBackend, KpoolTailBackend
