@@ -2,7 +2,9 @@
 
 Evidence-only adapter, never imported by serving. Call with strict-decoded JSON
 from a frozen request using prompt_logprobs=1, return_token_ids=true, n=1 and
-max_tokens=1. The pinned completion response includes native prompt_logprobs,
+max_tokens=1 and verified engine logprobs_mode=raw_logprobs. Raw logits can
+occupy the same response field; field naming cannot establish semantics.
+The pinned completion response includes native prompt_logprobs,
 not the display-clamped echo logprobs. Exact source/runtime/tokenizer/fixture
 and response hashes must be bound by the surrounding campaign; this reduction
 alone cannot authenticate an engine or authorize a model quality verdict.
@@ -66,7 +68,7 @@ def reduce_prompt_response(response, token_ids, model_name, vocab_size):
         if len(top) != 1 or set(row) != {str(target), top[0]}:
             raise ValueError("native top1 is missing or ambiguous")
         truth, best = row[str(target)], row[top[0]]
-        if str(target) != top[0] and truth["logprob"] >= best["logprob"]:
+        if str(target) != top[0] and truth["logprob"] > best["logprob"]:
             raise ValueError("native logprob order disagrees with rank")
         nll.append(-truth["logprob"])
         correct += top[0] == str(target)
