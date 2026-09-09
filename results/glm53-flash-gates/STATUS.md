@@ -9,11 +9,14 @@ this live snapshot was 18.62453842163086 GiB, with cgroup swap 0.
 
 Use `python3 scripts/47_run_glm53_dev.py --start` for the verified optional
 settings; [the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and
-the 2.5-hour development timeout. Current endpoint: localhost:8015, model
+the 2.5-hour development timeout. Development endpoint: localhost:8015, model
 `glm-5.3-flash`; run directory:
-`/home/bmarti44/.cache/glm53-flash/server-bringup-016-restore`.
+`/home/bmarti44/.cache/glm53-flash/server-bringup-017-restore`.
 Session 016 restores the working settings and passed chat, tools, four
-overlapping requests, one image, four images and a 16-frame video. The separate four-slot context run **failed**:
+overlapping requests, one image, four images and a 16-frame video. Session 016 later crossed the watchdog floor during repository publication and
+was stopped; its terminal FAIL is preserved alongside the functional snapshot.
+Session 017 is the replacement after background publication finishes.
+The separate four-slot context run **failed**:
 all four 250,128-token requests returned server errors after a CUDA illegal
 memory access and Xid31. No request completed. Raw evidence is preserved in
 [context-direct-003](context-direct-003/README.md). The engine exited and host

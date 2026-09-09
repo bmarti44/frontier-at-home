@@ -20,3 +20,10 @@ and clean shutdown have not been observed for this still-running attempt.
 Qwen remains the recorded default. The test server has a 2.5-hour timeout.
 
 See [the one-command launch guide](../../../docs/GLM53-QUICKSTART.md).
+
+## Terminal update
+
+After this functional snapshot, memory crossed the watchdog floor during repository
+publication and the server was stopped (exit 16). Full terminal logs and a FAIL
+record are in `terminal/`. The earlier snapshot is not a successful lifecycle
+qualification. Complete background publication before starting the replacement.
