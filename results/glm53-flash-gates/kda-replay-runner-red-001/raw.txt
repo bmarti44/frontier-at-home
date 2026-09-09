@@ -1,0 +1,16 @@
+.E..
+======================================================================
+ERROR: test_frozen_replay_requires_startup_receipt (test_glm53_kda_runner.KDARunnerTests.test_frozen_replay_requires_startup_receipt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_kda_runner.py", line 65, in test_frozen_replay_requires_startup_receipt
+    self.assertEqual(runner.score_inner(root,'kda-replay',123,binding)['verdict'],'PASS')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 90, in score_inner
+    raise ValueError('unknown probe kind')
+ValueError: unknown probe kind
+
+----------------------------------------------------------------------
+Ran 4 tests in 1.516s
+
+FAILED (errors=1)
