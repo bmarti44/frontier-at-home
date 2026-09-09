@@ -79,5 +79,48 @@ class IndexerProbeTests(unittest.TestCase):
             with self.assertRaises(ValueError): a.validate_memory(row,'prefill-4')
         with self.assertRaises(ValueError): a.score_capture(self.root,[],7)
 
+    def test_complete_receipts_reject_missing_duplicate_and_malformed_evidence(self):
+        a=self.api; seed=7
+        rows=[{'time_unix':100.,'event':'configured',**a.geometry(seed)},
+              {'time_unix':101.,'event':'profiled','workspace_bytes':1385168896,'cuda_peak_allocated':3000000000,'cuda_reserved':4000000000}]
+        for name in ('manifest.json','summary.json','raw.jsonl','traceback.log'): (self.root/name).touch()
+        for case in a.fixture.case_order(seed):
+            names=a.tensor_names(case); calls=[]
+            for i,spec in enumerate(a.call_specs(case)):
+                name=f'logits-{case}-{i}.f32.gz'; (self.root/name).touch()
+                calls.append({**spec,'file':name,'sha256':'a'*64,'cuda_allocated_at_return':3500000000})
+            for name in names: (self.root/name).touch()
+            rows.extend([{'time_unix':100.+len(rows),'event':'start','case':case},
+                {'time_unix':101.+len(rows),'event':'output','case':case,
+                 'artifacts':[{'file':name,'sha256':'a'*64} for name in names],'calls':calls,
+                 'metadata':a.expected_metadata(seed,case),'memory':{'cuda_allocated':2000000000,'cuda_reserved':4000000000,
+                 'cuda_peak_allocated':3500000000,'device_free':110000000000,'device_total':120000000000,'workspace_bytes':1385168896},
+                 'cuda_elapsed_ms':1.,'cache_stride':[8448,132,1],'tail_stride':[1024,512,128,1],'output_alias':True}])
+        self.assertEqual(len(a.validate_capture(self.root,rows,seed)),6)
+        mutations=[lambda x:x.pop(),lambda x:x[3].__setitem__('case','wrong'),
+                   lambda x:x[3]['metadata']['index_slots'].__setitem__(0,0),
+                   lambda x:x[3]['calls'][0].__setitem__('columns',1),
+                   lambda x:x[3]['calls'].append(x[3]['calls'][0]),
+                   lambda x:x[3]['calls'][0].__setitem__('cuda_allocated_at_return',0),
+                   lambda x:x[0].__setitem__('pinned_staging',1),
+                   lambda x:x[3].__setitem__('time_unix',float('nan')),
+                   lambda x:x[3]['artifacts'][0].__setitem__('file','../escape')]
+        for mutate in mutations:
+            changed=copy.deepcopy(rows); mutate(changed)
+            with self.assertRaises(ValueError): a.validate_capture(self.root,changed,seed)
+        # Receipt validation alone cannot turn empty artifacts into a result.
+        with self.assertRaises(ValueError): a.score_capture(self.root,rows,seed)
+        (self.root/'unexpected').touch()
+        with self.assertRaises(ValueError): a.validate_capture(self.root,rows,seed)
+
+    def test_preparation_controller_never_claims_qualified_kernels(self):
+        spec=importlib.util.spec_from_file_location('indexer_runner',Path(__file__).resolve().parents[1]/'39_run_glm53_probe.py')
+        runner=importlib.util.module_from_spec(spec); spec.loader.exec_module(runner)
+        self.assertEqual(runner.probe_verdict('indexer',None),'NO_RESULT')
+        self.assertEqual(runner.probe_verdict('indexer','failure'),'FAIL')
+        self.assertIn('scripts/45_probe_glm53_indexer.py',runner.CODE_FILES)
+        self.assertIn('scripts/lib/glm53_indexer_fixture.py',runner.CODE_FILES)
+        self.assertIn('configs/decision-specs/glm53-indexer-preflight.json',runner.CODE_FILES)
+
 
 if __name__=='__main__': unittest.main()
