@@ -1,0 +1,53 @@
+FFFF
+======================================================================
+FAIL: test_pinned_child_gets_continuous_identity_samples (test_glm53_probe_guard.ProbeGuardTests.test_pinned_child_gets_continuous_identity_samples)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 29, in test_pinned_child_gets_continuous_identity_samples
+    result, summary, rows = self.run_probe("import time\ntime.sleep(0.65)\n")
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 23, in run_probe
+    self.assertTrue((output / "summary.json").is_file(), result.stderr)
+AssertionError: False is not true : /usr/bin/python3: can't open file '/home/bmarti44/spark-deepseek-v4-flash/scripts/38_guard_glm53_probe.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_replaced_executable_rejects (test_glm53_probe_guard.ProbeGuardTests.test_replaced_executable_rejects)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 45, in test_replaced_executable_rejects
+    result, summary, _ = self.run_probe("import os\nos.execv('/bin/sleep',['sleep','5'])\n")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 23, in run_probe
+    self.assertTrue((output / "summary.json").is_file(), result.stderr)
+AssertionError: False is not true : /usr/bin/python3: can't open file '/home/bmarti44/spark-deepseek-v4-flash/scripts/38_guard_glm53_probe.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_same_python_exec_with_changed_command_rejects (test_glm53_probe_guard.ProbeGuardTests.test_same_python_exec_with_changed_command_rejects)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 39, in test_same_python_exec_with_changed_command_rejects
+    result, summary, _ = self.run_probe("import os,sys\nos.execv(sys.executable,[sys.executable,'-c','import time;time.sleep(5)'])\n")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 23, in run_probe
+    self.assertTrue((output / "summary.json").is_file(), result.stderr)
+AssertionError: False is not true : /usr/bin/python3: can't open file '/home/bmarti44/spark-deepseek-v4-flash/scripts/38_guard_glm53_probe.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_surviving_descendant_fails_and_is_killed (test_glm53_probe_guard.ProbeGuardTests.test_surviving_descendant_fails_and_is_killed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 51, in test_surviving_descendant_fails_and_is_killed
+    result, summary, _ = self.run_probe("import subprocess,sys,time\nsubprocess.Popen([sys.executable,'-c','import time;time.sleep(5)'])\ntime.sleep(0.35)\n")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 23, in run_probe
+    self.assertTrue((output / "summary.json").is_file(), result.stderr)
+AssertionError: False is not true : /usr/bin/python3: can't open file '/home/bmarti44/spark-deepseek-v4-flash/scripts/38_guard_glm53_probe.py': [Errno 2] No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.038s
+
+FAILED (failures=4)
