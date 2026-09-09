@@ -20,6 +20,7 @@ from glm53_host_evidence import read, require, unit_query
 LOCK = Path('/run/lock/frontier-at-home/inference.lock')
 VMSTAT = Path('/proc/vmstat')
 CRASH_ROOT = Path('/home/bmarti44/.local/state/glm52-crashlog')
+CLEANUP_SIGNALS = {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}
 
 
 def write(path, value):
@@ -31,17 +32,23 @@ def write(path, value):
 @contextmanager
 def inference_lock():
     fd = os.open(LOCK, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
+    previous_handlers = {}
+    def interrupted(number, frame):
+        raise InterruptedError(f'probe controller received signal {number}')
     try:
         info = os.fstat(fd)
         require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and
                 (info.st_dev, info.st_ino) == (LOCK.stat().st_dev, LOCK.stat().st_ino), 'inference lock identity changed')
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        for number in CLEANUP_SIGNALS:
+            previous_handlers[number] = signal.signal(number, interrupted)
         ticks = Path('/proc/self/stat').read_text().rsplit(')', 1)[1].split()[19]
         yield {'GLM_SAFE_PARENT_LOCK_PID': str(os.getpid()), 'GLM_SAFE_PARENT_LOCK_START_TICKS': ticks,
                'GLM_SAFE_PARENT_LOCK_FD': str(fd), 'GLM_SAFE_PARENT_LOCK_DEV_INO': f'{info.st_dev}:{info.st_ino}',
                'GLM_SAFE_PARENT_LOCK_KERNEL_KEY': f'{os.major(info.st_dev):02x}:{os.minor(info.st_dev):02x}:{info.st_ino}'}
     finally:
         os.close(fd)
+        for number, handler in previous_handlers.items(): signal.signal(number, handler)
 
 
 def capture_unit(path, unit):
@@ -96,11 +103,16 @@ def capture_wrapper(root, wrapper, tag, command, environment, timeout):
     process = None; pidfd = None; failure = None; unit = None; cgroup = None
     try:
         with (root / 'wrapper.log').open('xb') as log:
-            process = subprocess.Popen(['/usr/bin/bash', str(wrapper), '--tag', tag, '--', *command],
-                                       env=environment, stdout=log, stderr=subprocess.STDOUT)
-            unit = f'glm52-{tag}-{process.pid}.service'
-            cgroup = Path('/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice') / unit
-            pidfd = os.pidfd_open(process.pid)
+            prior_mask = signal.pthread_sigmask(signal.SIG_BLOCK, CLEANUP_SIGNALS)
+            try:
+                process = subprocess.Popen(['/usr/bin/bash', str(wrapper), '--tag', tag, '--', *command],
+                                           env=environment, stdout=log, stderr=subprocess.STDOUT,
+                                           pass_fds=(int(environment['GLM_SAFE_PARENT_LOCK_FD']),))
+                unit = f'glm52-{tag}-{process.pid}.service'
+                cgroup = Path('/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice') / unit
+                pidfd = os.pidfd_open(process.pid)
+            finally:
+                signal.pthread_sigmask(signal.SIG_SETMASK, prior_mask)
             deadline = time.monotonic() + timeout + 120
             while process.poll() is None:
                 identity_raw = root / 'identity/raw.jsonl'
@@ -115,19 +127,31 @@ def capture_wrapper(root, wrapper, tag, command, environment, timeout):
             try: signal.pidfd_send_signal(pidfd, signal.SIGTERM)
             except ProcessLookupError: pass
     finally:
-        if process is not None:
-            # Its hardened signal trap and systemd RuntimeMaxSec own shutdown.
-            # Keep the parent inference lock until the unit's entire cgroup is gone.
-            while process.poll() is None: time.sleep(0.2)
-            if cgroup is not None:
-                while True:
-                    try: cgroup.lstat()
-                    except FileNotFoundError: break
-                    time.sleep(0.2)
-                capture_unit(root / 'unit-after.json', unit)
-                capture_cgroup(root / 'cgroup-after.json', cgroup)
-            capture_swap(root / 'swap-after.json')
-        if pidfd is not None: os.close(pidfd)
+        prior_mask = signal.pthread_sigmask(signal.SIG_BLOCK, CLEANUP_SIGNALS)
+        try:
+            if process is not None:
+                # The wrapper signal trap and systemd RuntimeMaxSec own shutdown.
+                # Uncertain observations never authorize lock release.
+                while process.poll() is None: time.sleep(0.2)
+                if cgroup is not None:
+                    while True:
+                        try: cgroup.lstat()
+                        except FileNotFoundError: break
+                        except OSError as error:
+                            failure = failure or repr(error)
+                            if not (root / 'cleanup-observation-error.json').exists():
+                                try: write(root / 'cleanup-observation-error.json', {'failure': repr(error), 'time_unix': time.time()})
+                                except OSError: pass
+                        time.sleep(0.2)
+                    try:
+                        capture_unit(root / 'unit-after.json', unit)
+                        capture_cgroup(root / 'cgroup-after.json', cgroup)
+                    except Exception as error: failure = failure or repr(error)
+                try: capture_swap(root / 'swap-after.json')
+                except Exception as error: failure = failure or repr(error)
+        finally:
+            if pidfd is not None: os.close(pidfd)
+            signal.pthread_sigmask(signal.SIG_SETMASK, prior_mask)
     result = {'wrapper_exit_code': process.returncode if process else None, 'capture_failure': failure, 'unit': unit}
     try: result['crash_directory'] = copy_crash(root, tag)
     except Exception as error: result['capture_failure'] = result['capture_failure'] or repr(error)
