@@ -91,13 +91,21 @@ def score_tensors(output_path, state_path, digests, count, seed):
     return {'elements': elements, 'maximum_absolute_error': maximum, 'mismatched_elements': mismatches, 'nonfinite_elements': nonfinite}
 
 
+def normalized_geometry(metadata):
+    from vllm.transformers_utils.configs.glm5_next import Glm5NextConfig
+    text = Glm5NextConfig(**strict_json(metadata / 'config.json')).text_config
+    geometry = {'heads': text.linear_num_heads, 'dimensions': text.linear_head_dim,
+                'lower_bound': text.linear_lower_bound, 'conv_size': text.linear_conv_kernel_dim}
+    require(geometry == {'heads': 64, 'dimensions': 128, 'lower_bound': -5.0, 'conv_size': 4},
+            'KDA model geometry changed')
+    return geometry
+
+
 def run_native(metadata, output, seed, record):
+    normalized_geometry(metadata)
     import torch
     import vllm.models.glm5next.nvidia.kda as kda
     require(torch.cuda.get_device_capability() == (12, 1), 'SM121 required')
-    text = strict_json(metadata / 'config.json')['text_config']
-    require(text['linear_num_heads'] == 64 and text['linear_head_dim'] == 128 and
-            text['linear_lower_bound'] == -5.0, 'KDA model geometry changed')
     requests = request_order(seed)
     pattern_host = torch.empty(4, dtype=torch.bfloat16, pin_memory=True)
     order_host = torch.empty(4, dtype=torch.int32, pin_memory=True)
