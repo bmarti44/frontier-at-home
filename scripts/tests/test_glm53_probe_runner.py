@@ -146,9 +146,9 @@ class ComponentLoadRunnerTests(unittest.TestCase):
 
     def test_load_state_rejects_unfrozen_generated_code(self):
         clean={'entries':[{'path':'.','type':'directory'},{'path':'.cache','type':'directory'},
-                         {'path':'.cache/humming/lock','type':'file','size_bytes':0,'sha256':hashlib.sha256(b'').hexdigest()}]}
+                         {'path':'.humming/tmp/lock/launcher.lock','type':'file','size_bytes':0,'sha256':hashlib.sha256(b'').hexdigest()}]}
         runner.validate_load_state(clean)
         for entry in ({'path':'kernel.cubin','type':'file','size_bytes':1,'sha256':'a'*64},
                       {'path':'library.so','type':'symlink','target':'/tmp/unfrozen'},
-                      {'path':'.cache/humming/lock','type':'file','size_bytes':1,'sha256':'a'*64}):
+                      {'path':'.humming/tmp/lock/launcher.lock','type':'file','size_bytes':1,'sha256':'a'*64}):
             with self.assertRaises(ValueError):runner.validate_load_state({'entries':[entry]})

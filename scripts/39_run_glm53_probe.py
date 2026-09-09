@@ -19,6 +19,8 @@ from glm53_contract import sha256_file, strict_json, verify_inventory
 from glm53_host_evidence import object_text, read, require, score_host_observations
 from glm53_probe_capture import capture_wrapper, inference_lock, write
 
+LOAD_KINDS = ('load-moe', 'load-kda', 'load-mla', 'load-ordinary')
+
 CONTROL_ENV = {'HOME': '/home/bmarti44', 'USER': 'bmarti44', 'LOGNAME': 'bmarti44',
                'LANG': 'C.UTF-8', 'PATH': '/usr/bin:/bin', 'XDG_RUNTIME_DIR': '/run/user/1000',
                'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus'}
@@ -93,6 +95,14 @@ def score_inner(output, kind, seed, binding):
                     type(receipt['time_unix']) in (int, float) and math.isfinite(receipt['time_unix']) and
                     0 < receipt['time_unix'] < times[0], 'invalid sealed KDA startup receipt')
             summary['sealed_selection'] = receipt
+    elif kind in LOAD_KINDS:
+        case = kind.removeprefix('load-')
+        require(summary['qualification'] == 'model_free_component_load_storage_only' and
+                summary['case'] == case and summary['actual_input_tokens_processed'] == 0, 'load qualification mismatch')
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('frozen_load_scorer', Path(__file__).parent / '42_probe_glm53_load.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        summary = {**summary, 'tensor_checks': module.score_capture(root, rows, case, seed)}
     elif kind == 'cache':
         require(summary['qualification'] == 'model_free_cache_allocation_only' and summary['actual_input_tokens_processed'] == 0, 'cache qualification mismatch')
         validate_cache_rows(rows, seed, binding['cache_layer_types'])
@@ -227,7 +237,9 @@ def verify_accepted_inputs(output, accepted):
 CODE_FILES = (
     'scripts/39_run_glm53_probe.py', 'scripts/38_guard_glm53_probe.py',
     'scripts/35_smoke_glm53_native.py', 'scripts/37_probe_glm53_cache.py', 'scripts/40_probe_glm53_mla.py',
-    'scripts/41_probe_glm53_kda.py',
+    'scripts/41_probe_glm53_kda.py', 'scripts/42_probe_glm53_load.py',
+    'scripts/lib/glm53_pinned_stream.py', 'scripts/lib/glm53_load_fixture.py',
+    'configs/decision-specs/glm53-load-preflight.json',
     'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
     'scripts/lib/glm53_runtime_jit.py', 'scripts/lib/glm53_mla_replay.py', 'scripts/lib/glm53_kda_replay.py',
     'configs/build-manifests/glm53-flash-sources.json', 'configs/decision-specs/glm53-cache-preflight.json',
@@ -242,6 +254,11 @@ def verify_frozen(output, manifest):
     require({str(p.relative_to(output / 'code')) for p in (output / 'code').rglob('*') if p.is_file()} == set(CODE_FILES), 'unexpected frozen code files')
     for name, row in manifest['code'].items():
         require(sha256_file(output / 'code' / name) == row['sha256'], 'frozen code changed: ' + name)
+    if manifest.get('kind') in LOAD_KINDS:
+        require(manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1' and
+                manifest['probe_arguments_without_seed'][-3:] == ['--case', manifest['kind'].removeprefix('load-'), '--pinned-stream'],
+                'component load startup selection mismatch')
     if manifest.get('kind') == 'mla-replay':
         from glm53_mla_replay import verify_bundle
         verify_bundle(output / 'kernels', manifest['sealed_kernels'])
@@ -288,9 +305,16 @@ def verify_beacon(output, manifest, receipt=None):
 
 
 def probe_verdict(kind, failure):
-    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay'), 'unknown probe kind')
+    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', *LOAD_KINDS), 'unknown probe kind')
     if failure is not None: return 'FAIL'
     return 'NO_RESULT' if kind in ('mla', 'kda') else 'PASS'
+
+
+def validate_load_state(record):
+    for row in record['entries']:
+        require(row['type'] == 'directory' or (row['type'] == 'file' and
+                row['path'] == '.humming/tmp/lock/launcher.lock' and row['size_bytes'] == 0 and
+                row['sha256'] == hashlib.sha256(b'').hexdigest()), 'component load created unqualified runtime artifact')
 
 
 def generated_cache_inventory(root):
@@ -330,6 +354,7 @@ def run(output):
     require(Path(__file__).resolve() == output / 'code/scripts/39_run_glm53_probe.py', 'run the frozen runner copy')
     expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py',
                      'mla': '40_probe_glm53_mla.py', 'mla-replay': '40_probe_glm53_mla.py', 'kda': '41_probe_glm53_kda.py', 'kda-replay': '41_probe_glm53_kda.py'}
+    expected_kind.update({kind: '42_probe_glm53_load.py' for kind in LOAD_KINDS})
     kind = manifest['kind']; require(kind in expected_kind, 'unknown probe kind')
     python = Path(manifest['runtime']['root']) / 'bin/python3'
     require(Path(sys.executable).resolve() == python.resolve(), 'controller must use frozen packaged interpreter')
@@ -371,6 +396,9 @@ def run(output):
                 if kind == 'kda-replay':
                     binding.update(sealed_kernels=manifest['sealed_kernels'],
                                    replay_decision=manifest['code']['configs/decision-specs/glm53-kda-replay.json'])
+            elif kind in LOAD_KINDS:
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-load-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'], case=kind.removeprefix('load-'))
             else:
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-cache-preflight.json'],
                                metadata=manifest['cache_metadata_hashes'], cache_layer_types=manifest['cache_layer_types'])
@@ -395,10 +423,12 @@ def run(output):
                 verify_accepted_inputs(output, accepted)
             except Exception as error: failure = failure or repr(error)
             generated = None
-            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay'):
+            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay', *LOAD_KINDS):
                 try:
                     cache_path = output / 'generated-cache-inventory.json'
-                    write(cache_path, generated_cache_inventory(output / 'state'))
+                    state_inventory = generated_cache_inventory(output / 'state')
+                    write(cache_path, state_inventory)
+                    if kind in LOAD_KINDS: validate_load_state(state_inventory)
                     generated = {'path': cache_path.name, 'sha256': sha256_file(cache_path)}
                 except Exception as error: failure = failure or repr(error)
             summary = {'verdict': probe_verdict(kind, failure),
@@ -415,6 +445,9 @@ def run(output):
             if kind == 'kda-replay':
                 summary.update(qualification='model_free_frozen_KDA_selected_configurations_only',
                                kernel_binary_qualification=probe_verdict(kind, failure), sealed_kernels=manifest['sealed_kernels'],
+                               generated_cache_inventory=generated)
+            if kind in LOAD_KINDS:
+                summary.update(qualification='model_free_component_load_storage_only', case=kind.removeprefix('load-'),
                                generated_cache_inventory=generated)
             write(output / 'summary.json', summary)
     print(json.dumps(summary)); return 0 if failure is None else 1

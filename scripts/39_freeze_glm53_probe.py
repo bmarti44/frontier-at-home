@@ -14,10 +14,10 @@ import time
 ROOT = Path('/home/bmarti44/spark-deepseek-v4-flash')
 BASE = Path('/home/bmarti44/.cache/glm53-flash')
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay'))
+parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'load-moe', 'load-kda', 'load-mla', 'load-ordinary'))
 parser.add_argument('attempt')
 args = parser.parse_args()
-if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight', 'kda-replay': 'kda-replay'}[args.kind] + r'-[0-9]{3}', args.attempt):
+if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight', 'kda-replay': 'kda-replay', **{f'load-{case}': f'load-{case}' for case in ('moe', 'kda', 'mla', 'ordinary')}}[args.kind] + r'-[0-9]{3}', args.attempt):
     raise ValueError('invalid fresh attempt name')
 if subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True):
     raise ValueError('repository source is not clean')
@@ -48,6 +48,8 @@ environment = {'HOME': str(state), 'PATH': f'{runtime}/bin:/usr/local/cuda-13.0/
                'TRITON_CACHE_DIR': str(state / 'triton'), 'TORCH_EXTENSIONS_DIR': str(state / 'torch-extensions'),
                'CUDA_CACHE_PATH': str(state / 'cuda-cache'), 'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1',
                'TOKENIZERS_PARALLELISM': 'false'}
+if args.kind in runner.LOAD_KINDS:
+    environment.update(FLASHINFER_DISABLE_JIT='1', CUDA_CACHE_DISABLE='1')
 sealed_kernels = None
 if args.kind == 'mla-replay':
     from glm53_mla_replay import prepare_bundle
@@ -137,6 +139,9 @@ manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.up
                 str(prepared if args.kind == 'native' else metadata), '--output', str(output / 'checks')],
             'seed_rule': 'uint64 from first16 hex characters of BLS-verified post-freeze drand randomness',
             'model_weights': 'none', 'frozen_at_unix': time.time()}
+if args.kind in runner.LOAD_KINDS:
+    manifest.update(qualification='model_free_component_load_storage_only')
+    manifest['probe_arguments_without_seed'].extend(['--case', args.kind.removeprefix('load-'), '--pinned-stream'])
 if sealed_kernels:
     manifest.update(qualification=('model_free_frozen_MLA_constant_cache_replay_only' if args.kind == 'mla-replay'
                                    else 'model_free_frozen_KDA_selected_configurations_only'), sealed_kernels=sealed_kernels)
