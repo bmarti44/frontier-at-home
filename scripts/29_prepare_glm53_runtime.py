@@ -60,6 +60,7 @@ def main():
     command([args.python, recipe / "patch_glm53_dense_exl3_quant_config.py", vllm / "vllm"])
     command([args.python, recipe / "patch_exllamav3_aarch64.py", exllama / "exllamav3/exllamav3_ext"])
     command([args.python, ROOT / "scripts/28_patch_glm53_frames.py", "--source", vllm])
+    command([args.python, ROOT / "scripts/36_patch_glm53_bf16_geometry.py", "--source", args.output / "vllm-exl3"])
     requirements = vllm / "requirements/cuda.txt"
     text = requirements.read_text()
     old, new = "flashinfer-python==0.6.17", "flashinfer-python==0.6.18rc10"
