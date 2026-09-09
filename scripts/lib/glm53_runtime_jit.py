@@ -55,6 +55,16 @@ def activate_flashinfer(root, manifest, modules, *, enabled=False):
     def reject_build(*args, **kwargs):
         raise ValueError('sealed FlashInfer compilation is unavailable')
 
+    def load_path(path):
+        for name, frozen_path in paths.items():
+            if str(path) == frozen_path:
+                return loaded[name]
+        raise ValueError('unlisted sealed FlashInfer library path')
+
+    # Original Nvcc.load aliases resolve this core-local namespace. Do not
+    # replace the shared tvm_ffi package's loader used by other libraries.
+    from types import SimpleNamespace
+    core.tvm_ffi = SimpleNamespace(load_module=load_path)
     core.JitSpec.build_and_load = select
     spec_class.try_load = select
     spec_class.load = select
