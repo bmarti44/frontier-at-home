@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 RUNNER = Path(__file__).resolve().parents[1] / "35_smoke_glm53_native.py"
@@ -52,6 +53,22 @@ sys.exit("required assertion was removed")
             fixture.write_text("def unrelated():\n    pass\n")
             with self.assertRaisesRegex(ValueError, "fixture names changed"):
                 smoke.load_functions(fixture, {"must_fail"}, {})
+
+    def test_bare_linear_fixture_gets_native_method_binding(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "fixture.py"
+            fixture.write_text("def construct(method):\n    layer = torch.nn.Module()\n    assert layer.quant_method is method\n    return layer\n")
+            namespace = {"torch": SimpleNamespace(nn=SimpleNamespace(Module=SimpleNamespace))}
+            smoke.load_functions(fixture, {"construct"}, namespace, linear_fixture_bindings=1)
+            method = object()
+            self.assertIs(namespace["construct"](method).quant_method, method)
+
+    def test_changed_linear_fixture_shape_rejects(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "fixture.py"
+            fixture.write_text("def construct(method):\n    layer = torch.nn.Module(123)\n    return layer\n")
+            with self.assertRaisesRegex(ValueError, "linear fixture setup changed"):
+                smoke.load_functions(fixture, {"construct"}, {}, linear_fixture_bindings=1)
 
     def test_fixture_seed_is_stable_per_case_and_public_seed(self):
         self.assertEqual(smoke.fixture_seed(123, "case_a"), smoke.fixture_seed(123, "case_a"))
