@@ -1,0 +1,32 @@
+...FFF.
+======================================================================
+FAIL: test_complete_ordinary_record_and_mutations (test_glm53_load_probe.LoadScoreTests.test_complete_ordinary_record_and_mutations) (key='upload_chunks')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_load_probe.py", line 90, in test_complete_ordinary_record_and_mutations
+    with self.subTest(key=key), self.assertRaises(ValueError):api.score_capture(root,changed,'ordinary',7)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_complete_ordinary_record_and_mutations (test_glm53_load_probe.LoadScoreTests.test_complete_ordinary_record_and_mutations) (finding='H1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_load_probe.py", line 104, in test_complete_ordinary_record_and_mutations
+    with self.subTest(finding='H1'), self.assertRaises(ValueError):api.score_capture(root,changed,'ordinary',7)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_complete_ordinary_record_and_mutations (test_glm53_load_probe.LoadScoreTests.test_complete_ordinary_record_and_mutations) (finding='H2')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_load_probe.py", line 107, in test_complete_ordinary_record_and_mutations
+    with self.subTest(finding='H2'), self.assertRaises(ValueError):api.score_capture(root,rows,'ordinary',7)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 5 tests in 1.545s
+
+FAILED (failures=3)
