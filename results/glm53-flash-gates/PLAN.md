@@ -1,34 +1,18 @@
 # GLM-5.3-Flash / CUDA qualification campaign
 
-Status: QUALIFYING MODEL-FREE RUNTIME — no GLM-5.3 model has been loaded or qualified here.
+Status: REAL MODEL SERVING — authenticated text, tool calls, and four concurrent
+short requests passed in development attempt 008. Full context, paired fidelity,
+media, and production switching remain pending; GLM remains optional and the
+recorded Qwen default is unchanged.
 
-The owner-authorized review resumed and closed the identity, capture, runner,
-packaged pidfd and terminal-RSS corrections. Native007 now passes the complete
-model-free native gate: fourteen kernel checks, actual host/identity evidence,
-verified public seed and full runtime inventories before and after.
+The model-free build, cache, attention, convolution/indexer, and loader work is
+preserved in the evidence archive. Real weights are downloaded, checked against
+the local inventory at launch, and loaded successfully. See [STATUS.md](STATUS.md)
+for the latest actual serving result; the acceptance formulas below are unchanged.
 
-The cache page-rounding correction closed at candidate 1 / campaign round 30.
-Both persistent reviewers found no high or critical issues; all 159 scoped
-packaged CPU tests pass. Cache003 now passes the actual four-slot backing and
-reservation gate. It allocated 9565306880 bytes, held all four full reservations,
-rejected a fifth, and freed all physical IDs. Zero input tokens were processed.
-All failed attempts, including native004–006 and cache002, remain preserved.
-
-MLA replay001 and KDA replay001 now pass their separately frozen analytic gates,
-including host/identity/seed/cleanup checks. The load-sizing census rules out
-a full-resident cache-off load at the 40 GiB floor; 18 GiB feasibility remains
-unmeasured.
-
-Four full-geometry component load probes now PASS with exact byte/storage checks
-and complete containment evidence. No real model weights have been loaded.
-
-The two-layer growth probe also PASSes, including shared-cache identity and
-first-layer rechecks. Its observed deltas do not establish full-model fit.
-
-Next: remaining convolution/indexer workspace probes at
-2048 prefill rows and decode batches 1–4, with maximum-position addressing;
-then the remaining JIT, model load, fidelity, context and service gates. No model
-weight payload has been downloaded or loaded. GLM remains estimated/disabled.
+Next: the bounded media retry uses the working 128-token prefill configuration,
+then direct aggregate-context and remaining qualification gates. Do not repeat
+already frozen component reviews or add more startup guard infrastructure.
 
 Target: one ARM64 DGX Spark, 1,048,576 aggregate context tokens in four
 262,144-token slots; text, reasoning, tools, four images or one video sampled
