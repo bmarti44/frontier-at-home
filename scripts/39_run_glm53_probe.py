@@ -175,6 +175,10 @@ def verify_frozen(output, manifest):
     require({str(p.relative_to(output / 'code')) for p in (output / 'code').rglob('*') if p.is_file()} == set(CODE_FILES), 'unexpected frozen code files')
     for name, row in manifest['code'].items():
         require(sha256_file(output / 'code' / name) == row['sha256'], 'frozen code changed: ' + name)
+    if manifest.get('kind') == 'mla':
+        require({p.name for p in (output / 'tools').iterdir()} == {'ninja'} and
+                not (output / 'tools/ninja').is_symlink() and str(output / 'tools/ninja') in manifest['tools'],
+                'preparatory JIT tool coverage mismatch')
     for name, row in manifest['tools'].items():
         require(sha256_file(Path(name)) == row['sha256'], 'frozen tool changed: ' + name)
     for name, row in manifest['orchestration'].items():
@@ -214,10 +218,16 @@ def generated_cache_inventory(root):
     """Post-run preparation record only; this does not freeze executed binaries."""
     def snapshot():
         result = {}
-        for path in (root, *sorted(root.rglob('*'))):
+        def visit(path):
             value = path.lstat()
             result[path.relative_to(root).as_posix()] = (
                 value.st_dev, value.st_ino, value.st_mode, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+            if stat.S_ISDIR(value.st_mode):
+                # Unlike Path.rglob, scandir propagates unreadable-directory errors.
+                with os.scandir(path) as entries:
+                    children = sorted(entry.name for entry in entries)
+                for name in children: visit(path / name)
+        visit(root)
         return result
     before = snapshot(); entries = []
     require(stat.S_ISDIR(before['.'][2]), 'generated cache root is not a directory')

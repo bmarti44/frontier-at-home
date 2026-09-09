@@ -46,11 +46,28 @@ environment = {'HOME': str(state), 'PATH': f'{runtime}/bin:/usr/local/cuda-13.0/
                'TRITON_CACHE_DIR': str(state / 'triton'), 'TORCH_EXTENSIONS_DIR': str(state / 'torch-extensions'),
                'CUDA_CACHE_PATH': str(state / 'cuda-cache'), 'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1',
                'TOKENIZERS_PARALLELISM': 'false'}
+jit_tools = []
+if args.kind == 'mla':
+    jit_directory = output / 'tools'; jit_directory.mkdir()
+    ninja_source = BASE / 'runtime/bin/ninja'
+    if ninja_source.is_symlink() or not ninja_source.is_file():
+        raise ValueError('prepared Ninja must be a regular native executable')
+    ninja = jit_directory / 'ninja'; shutil.copyfile(ninja_source, ninja); ninja.chmod(0o555)
+    if runner.sha256_file(ninja) != runner.sha256_file(ninja_source):
+        raise ValueError('prepared Ninja copy digest mismatch')
+    environment['PATH'] = str(jit_directory) + ':' + environment['PATH']
+    version = subprocess.run([str(ninja), '--version'], env=environment, capture_output=True, text=True, timeout=10)
+    if version.returncode != 0 or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+\n', version.stdout) or version.stderr:
+        raise ValueError('prepared Ninja version preflight failed')
+    (output / 'jit-tool-preflight.json').write_text(json.dumps({'command': [str(ninja), '--version'],
+        'returncode': version.returncode, 'stdout': version.stdout, 'stderr': version.stderr,
+        'source': str(ninja_source), 'sha256': runner.sha256_file(ninja)}, indent=2) + '\n')
+    jit_tools = [ninja, Path('/usr/local/cuda-13.0/bin/nvcc'), Path('/usr/bin/c++').resolve()]
 node = Path('/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node')
 wrapper = ROOT / 'results/glm52-gates/harness/glm_cgroup_run.sh'
 tools = [runtime / 'bin/python3', Path('/usr/bin/git'), Path('/usr/bin/bash'), node, wrapper,
          ROOT / 'results/glm52-gates/harness/glm_safe_run.sh', ROOT / 'scripts/03_memory_guard.py',
-         Path('/usr/lib/aarch64-linux-gnu/libc.so.6')]
+         Path('/usr/lib/aarch64-linux-gnu/libc.so.6'), *jit_tools]
 sha = runner.sha256_file
 native_extensions = {}
 for name in ('exllamav3_ext', 'vllm_exl3_c'):
