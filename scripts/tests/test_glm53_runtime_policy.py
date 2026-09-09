@@ -74,6 +74,21 @@ class MediaAdmission(unittest.IsolatedAsyncioTestCase):
         for path in ("/v1/responses", "/invocations", "/pooling", "/v1/chat/completions/"):
             self.assertEqual(await self.invoke(self.request(5), path), ([], 404))
 
+    async def test_disguised_and_cross_type_media_never_reaches_engine(self):
+        # Pinned vLLM honors direct media keys when uuid is present, even if
+        # the part declares type=text. Counted type must equal parsed type.
+        for kind in ("text", "refusal", "image_url", "video_url"):
+            for hidden in ("image_url", "video_url", "image_embeds", "audio_embeds"):
+                part = {"type": kind, "uuid": "synthetic-uuid", hidden: "https://example.invalid/media"}
+                if kind in ("text", "refusal"):
+                    part[kind] = "Describe."
+                request = self.request(4, 0)
+                request["messages"][0]["content"].append(part)
+                self.assertEqual(await self.invoke(request), ([], 400))
+        request = self.request()
+        request["messages"][0]["content"][0]["video_url"] = "https://example.invalid/media"
+        self.assertEqual(await self.invoke(request), ([], 400))
+
 
 if __name__ == "__main__":
     unittest.main()
