@@ -55,6 +55,16 @@ class KDAReplayTests(parent.MLAReplayTests):
         self.tuning.write_text('{"key": [], "key": [1], "configs_timings": []}')
         with self.assertRaises(ValueError): self.api.autotune_receipt(self.tuning, self.source / 'triton')
 
+    def test_effective_config_alias_rejected(self):
+        data=copy.deepcopy(self.data)
+        first=data['configs_timings'][0]
+        alias=copy.deepcopy(first); alias[0]['kwargs']['num_warps']=999
+        alias[1]=[2., 1.9, 2.1]
+        data['configs_timings'].insert(1,alias)
+        self.tuning.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, 'config'):
+            self.api.autotune_receipt(self.tuning, self.source / 'triton')
+
 
 class RetuningGuardTests(unittest.TestCase):
     def test_disabled_selection_has_no_imports(self):
