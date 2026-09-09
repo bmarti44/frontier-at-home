@@ -89,6 +89,14 @@ class GeneratedCacheInventoryTests(unittest.TestCase):
             self.assertEqual(rows['kernel.so']['sha256'], hashlib.sha256(b'compiled fixture').hexdigest())
             self.assertEqual(rows['outside'], {'path': 'outside', 'type': 'symlink', 'target': '/does/not/exist'})
 
+    def test_unreadable_directory_cannot_hide_generated_kernels(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); blocked = root / 'unreadable'; blocked.mkdir()
+            (blocked / 'kernel.so').write_bytes(b'compiled fixture'); blocked.chmod(0)
+            try:
+                with self.assertRaises(PermissionError): runner.generated_cache_inventory(root)
+            finally: blocked.chmod(0o700)
+
     def test_mutation_during_generated_inventory_rejects(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); path = root / 'kernel.so'; path.write_bytes(b'original')
