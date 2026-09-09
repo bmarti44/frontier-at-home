@@ -11,7 +11,13 @@ Use `python3 scripts/47_run_glm53_dev.py --start` for the verified optional
 settings; [the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and
 the 2.5-hour development timeout. Current endpoint: localhost:8015, model
 `glm-5.3-flash`; run directory:
-`/home/bmarti44/.cache/glm53-flash/server-bringup-012`.
+`/home/bmarti44/.cache/glm53-flash/server-bringup-014-context`.
+Session 014 returned a correct authenticated answer and admitted all four
+250,128-token requests for the direct aggregate-context check. No completed
+full-context result is claimed yet. Session 013 was stopped by the memory
+watchdog during offline test preparation, before any large request was sent;
+that attempt is preserved as NO_RESULT. Session 014 prepares inputs before
+loading the model.
 
 Qwen remains the recorded default. The launch configures 1,048,576 aggregate
 tokens across four 262,144-token slots. Full-context processing, paired fidelity,
