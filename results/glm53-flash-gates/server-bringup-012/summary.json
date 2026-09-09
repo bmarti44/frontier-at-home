@@ -1,0 +1,36 @@
+{
+  "scope": "basic serving smoke only; live process snapshot, not production qualification",
+  "verdict": "PASS",
+  "snapshot_unix": 1788984075.378561,
+  "checks": {
+    "authenticated_text": true,
+    "unauthenticated_rejected": true,
+    "tool_name_and_arguments": true,
+    "four_requests_completed": true,
+    "four_client_requests_overlap": true,
+    "memory_above_18_gib": true,
+    "cgroup_swap_zero": true,
+    "same_api_key_as_008": true,
+    "image-smoke": true,
+    "images4-smoke": true,
+    "video-smoke": true,
+    "qwen_default_unchanged": true
+  },
+  "memory_low_gib": 18.473777770996094,
+  "memory_formula": "minimum externally sampled MemAvailable_kB / 1048576",
+  "cgroup_swap_peak_bytes": 0,
+  "capacity": {
+    "slots": 4,
+    "tokens_per_slot": 262144,
+    "aggregate_tokens": 1048576,
+    "full_context_tested": false
+  },
+  "media": "single image, four images and16-frame video smoke passed at224x224; larger media unqualified",
+  "recorded_switch_state": {
+    "active_profile": "qwen38-1m",
+    "schema_version": 1,
+    "state": "recorded"
+  },
+  "performance": "not yet measured",
+  "server_lifecycle": "still running; watchdog remains active with 9000-second timeout"
+}

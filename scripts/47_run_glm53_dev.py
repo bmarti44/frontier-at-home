@@ -71,7 +71,7 @@ def main():
     parser.add_argument('--model',type=Path,default=BASE/'model-weights-001')
     parser.add_argument('--output',type=Path,default=BASE/('server-'+time.strftime('%Y%m%d-%H%M%S')))
     parser.add_argument('--port',type=int,default=8015)
-    parser.add_argument('--text-only',action=argparse.BooleanOptionalAction,default=True,help='First text smoke; keeps the full four-slot text geometry')
+    parser.add_argument('--text-only',action=argparse.BooleanOptionalAction,default=False,help='Disable vision while retaining the same four-slot text geometry')
     parser.add_argument('--skip-mm-profiling',action=argparse.BooleanOptionalAction,default=True,help='Skip automatic media warm-up while retaining media support')
     parser.add_argument('--prefill-batch',type=int,choices=(128,256,512,1024,2048),default=128,help='Prompt chunk size; does not change context or slot count')
     parser.add_argument('--standard-cuda-allocator',action=argparse.BooleanOptionalAction,default=True,help='Avoid expandable virtual reservations under the existing address-space limit')
