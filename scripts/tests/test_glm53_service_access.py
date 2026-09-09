@@ -81,6 +81,27 @@ class ServiceAccessContract(unittest.TestCase):
                 os.close(fd)
             self.api.reject_writable_descriptors(protected)
 
+    def test_bound_inventory_gate_rejects_manifest_and_artifact_changes(self):
+        import hashlib
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "tree"
+            root.mkdir()
+            artifact = root / "engine.so"
+            artifact.write_bytes(b"synthetic")
+            manifest = Path(tmp) / "inventory.json"
+            manifest.write_text(json.dumps({"schema_version": 1, "files": [{
+                "path": "engine.so", "size_bytes": 9, "sha256": hashlib.sha256(b"synthetic").hexdigest()}]}))
+            digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
+            with (mock.patch.object(self.api, "read_credentials", return_value=self.credentials),
+                  mock.patch.object(self.api.os, "access", side_effect=lambda p, mode, **kw: mode != os.W_OK)):
+                self.assertEqual(self.api.verify_service_tree(root, manifest, digest, 995, 982)["files"], 1)
+                with self.assertRaisesRegex(ValueError, "manifest hash"):
+                    self.api.verify_service_tree(root, manifest, "0" * 64, 995, 982)
+                artifact.write_bytes(b"mutations")
+                with self.assertRaisesRegex(ValueError, "digest mismatch"):
+                    self.api.verify_service_tree(root, manifest, digest, 995, 982)
+
 
 if __name__ == "__main__":
     unittest.main()
