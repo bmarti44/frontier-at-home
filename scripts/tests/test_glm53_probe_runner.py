@@ -1,6 +1,7 @@
 """Reject incomplete native-probe verdicts; synthetic CPU records only."""
 import importlib.util
 import json
+import hashlib
 from pathlib import Path
 import random
 import os
@@ -17,11 +18,14 @@ class RunnerTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name); (self.root/'checks').mkdir()
         self.seed=123
-        self.binding={'scorer_sha256':'a'*64, 'binary_sha256':'b'*64, 'expected_checks':14}
+        self.binding={'scorer_sha256':'a'*64, 'binary_sha256':'b'*64, 'expected_checks':14,
+                      'native_extensions':{name:{'path':'/runtime/'+name+'.so','sha256':'d'*64} for name in ('exllamav3_ext','vllm_exl3_c')}}
         order=runner.native_ids(); random.Random(self.seed).shuffle(order)
-        self.rows=[{'check_order':order}]
+        self.rows=[{'native_extension':name,**value} for name,value in self.binding['native_extensions'].items()] + [{'check_order':order}]
         for name in order:
-            self.rows.extend([{'event':'start','check_id':name}, {'event':'pass','check_id':name}])
+            seed=int.from_bytes(hashlib.sha256(json.dumps([self.seed,name],separators=(',',':')).encode()).digest()[:8],'big') % 2**63
+            self.rows.extend([{'event':'start','check_id':name,'global_torch_seed':seed}, {'event':'pass','check_id':name}])
+        for i,row in enumerate(self.rows):row['time_unix']=1700000000+i*0.01
         (self.root/'checks/assertion-output.log').write_text('')
         self.seal()
 
@@ -29,7 +33,7 @@ class RunnerTests(unittest.TestCase):
         p=self.root/'checks';(p/'raw.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in self.rows))
         (p/'summary.json').write_text(json.dumps({'verdict':'PASS','qualification':'synthetic_native_smoke_only','model_loaded':False,'checks_completed':14,
             'raw_sha256':runner.sha256_file(p/'raw.jsonl'),'test_output_sha256':runner.sha256_file(p/'assertion-output.log')}))
-        (p/'manifest.json').write_text(json.dumps({'seed':self.seed,**self.binding}))
+        (p/'manifest.json').write_text(json.dumps({'seed':self.seed,**{k:v for k,v in self.binding.items() if k not in ('native_extensions','cache_layer_types')}}))
 
     def test_complete_native_record_accepts(self):
         self.assertEqual(runner.score_inner(self.root,'native',self.seed,self.binding)['checks_completed'],14)
@@ -37,6 +41,15 @@ class RunnerTests(unittest.TestCase):
     def test_missing_duplicate_reordered_or_failed_native_records_reject(self):
         original=list(self.rows)
         variants=[original[:-1], original+[original[-1]], original[:1]+list(reversed(original[1:])), original+[{'event':'failure'}]]
+        for rows in variants:
+            self.rows=rows;self.seal()
+            with self.assertRaises(ValueError):runner.score_inner(self.root,'native',self.seed,self.binding)
+
+    def test_native_extension_rng_and_schema_mutations_reject(self):
+        original=json.loads(json.dumps(self.rows))
+        variants=[original[2:], original+[{'arbitrary':'unrecognized'}]]
+        for key,value,index in [('path','/unfrozen/fake.so',0),('sha256','e'*64,0),('global_torch_seed',0,3),('time_unix',float('nan'),0)]:
+            changed=json.loads(json.dumps(original));changed[index][key]=value;variants.append(changed)
         for rows in variants:
             self.rows=rows;self.seal()
             with self.assertRaises(ValueError):runner.score_inner(self.root,'native',self.seed,self.binding)
@@ -56,26 +69,38 @@ class CacheRunnerTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name);(self.root/'checks').mkdir();self.seed=123
-        self.binding={'scorer_sha256':'a'*64,'binary_sha256':'b'*64}
+        self.binding={'scorer_sha256':'a'*64,'binary_sha256':'b'*64,'cache_layer_types':['deepseek_sparse_attention' if i%4==3 else 'linear_attention' for i in range(45)]}
         order=[f'cache-preflight-{i}' for i in range(5)];random.Random(self.seed).shuffle(order)
-        self.rows=[{'event':'allocated_and_zeroed','unique_backing_bytes':9565304320}]
+        mla=[];tail=[];mamba=[]
+        for i,kind in enumerate(self.binding['cache_layer_types']):
+            prefix=f'model.language_model.layers.{i}.self_attn'
+            if kind=='linear_attention':mamba.append(prefix)
+            else:mla += [prefix+'.attn',prefix+'.indexer.k_cache'];tail.append(prefix+'.indexer.tail_cache')
+        self.rows=[{'event':'normalized','attention_block_tokens':8704,'mamba_block_tokens':262144,
+                    'mamba_shapes':[[3,24576],[64,128,128]],'mamba_dtypes':['torch.bfloat16','torch.float32'],
+                    'layout':'LBHNC','shared_pool_blocks':145,'groups':[{'layers':g,'spec':'synthetic'} for g in [mla,tail,mamba[:9],mamba[9:18],mamba[18:26],mamba[26:]]]},
+                   {'event':'allocated_and_zeroed','unique_backing_bytes':9565304320,'layer_views':67,'cuda_memory_allocated':9565304320,'cuda_memory_reserved':9565304320,'cuda_peak_allocated':9565304320},
+                   {'event':'scheduler_normalized','scheduler_block_tokens':4456448,'hash_block_tokens':4456448}]
         for i,name in enumerate(order[:4]):
             ids=list(range(i*36+1,(i+1)*36+1))
             self.rows.append({'event':'reserve','request_id':name,'block_ids':[ids[:31],*[ids[j:j+1] for j in range(31,36)]],'free_blocks':144-36*(i+1)})
         self.rows += [{'event':'fifth_rejected','live_requests':4,'distinct_blocks':144},{'event':'restored','free_blocks':144}]
+        for i,row in enumerate(self.rows):row['time_unix']=1700000000+i*0.01
         self.seal()
     def seal(self):
         p=self.root/'checks';(p/'raw.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in self.rows))
-        (p/'manifest.json').write_text(json.dumps({'seed':self.seed,**self.binding}))
+        (p/'manifest.json').write_text(json.dumps({'seed':self.seed,**{k:v for k,v in self.binding.items() if k not in ('native_extensions','cache_layer_types')}}))
         (p/'summary.json').write_text(json.dumps({'verdict':'PASS','qualification':'model_free_cache_allocation_only','actual_input_tokens_processed':0,'model_loaded':False,'raw_sha256':runner.sha256_file(p/'raw.jsonl')}))
+    def test_complete_cache_record_accepts(self):
+        self.assertEqual(runner.score_inner(self.root,'cache',self.seed,self.binding)['verdict'],'PASS')
     def test_cache_reservations_must_match_frozen_physical_contract(self):
         original=json.loads(json.dumps(self.rows))
         changes=[('request_id','duplicate'),('block_ids',[[1001]]),('free_blocks',999)]
         for key,value in changes:
-            self.rows=json.loads(json.dumps(original));self.rows[1][key]=value;self.seal()
+            self.rows=json.loads(json.dumps(original));self.rows[3][key]=value;self.seal()
             with self.assertRaises(ValueError):runner.score_inner(self.root,'cache',self.seed,self.binding)
     def test_cache_block_reuse_and_seed_order_reject(self):
-        self.rows[2]['block_ids']=self.rows[1]['block_ids'];self.seal()
+        self.rows[4]['block_ids']=self.rows[3]['block_ids'];self.seal()
         with self.assertRaises(ValueError):runner.score_inner(self.root,'cache',self.seed,self.binding)
 
 class LaunchBindingTests(unittest.TestCase):
