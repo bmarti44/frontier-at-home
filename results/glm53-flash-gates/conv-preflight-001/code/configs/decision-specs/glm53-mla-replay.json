@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "qualification": "model_free_frozen_MLA_constant_cache_replay_only",
+  "selection": "--sealed-kernels <frozen bundle>",
+  "default_enabled": false,
+  "preparation": "mla-preflight-001 remains NO_RESULT; compiled binaries copied byte-identically into a new read-only bundle; only Triton group absolute paths relocated before freeze",
+  "acceptance": {
+    "analytic_outputs": "unchanged glm53-mla-preflight.json formula, all five query-row cases and every output element",
+    "compiled_cache": "complete runtime and compiled bundle hashes verified before and after the fresh public-seed run",
+    "selection": "record both sealed Triton and preloaded FlashInfer selections before the first case",
+    "host": "unchanged reviewed identity, cgroup, 110 GiB start, 40 GiB kill floor, 600 second timeout and no new swap requirements",
+    "cache_miss": "reject without compiling"
+  },
+  "not_established": ["full model memory", "general attention fidelity", "actual input token processing", "serving cache immutability", "other kernel families", "production speed"]
+}
