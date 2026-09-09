@@ -26,6 +26,7 @@ class FlashInferSealedTests(unittest.TestCase):
             'size_bytes': self.path.stat().st_size, 'sha256': hashlib.sha256(self.path.read_bytes()).hexdigest()}]}
         self.modules = {'sparse_mla_sm120': 'sparse_mla_sm120/sparse_mla_sm120.so'}
         self.loader = self.stack.enter_context(mock.patch.object(self.core.tvm_ffi, 'load_module', return_value=object()))
+        self.stack.enter_context(mock.patch.object(self.core, 'tvm_ffi', self.core.tvm_ffi))
         self.compiler = self.stack.enter_context(mock.patch.object(self.core, 'run_ninja', side_effect=AssertionError('compiler entered')))
         self.writer = self.stack.enter_context(mock.patch.object(self.core.JitSpecNvcc, 'write_ninja', side_effect=AssertionError('build writer entered')))
         self.stack.enter_context(mock.patch.dict(os.environ, {'FLASHINFER_DISABLE_JIT': ''}))
@@ -94,6 +95,14 @@ class FlashInferSealedTests(unittest.TestCase):
             self.modules = modules
             with self.assertRaises(ValueError): self.select()
         self.loader.assert_not_called()
+
+    def test_retained_load_alias_cannot_load_an_unlisted_binary(self):
+        original = self.core.JitSpecNvcc.load
+        self.select()
+        with self.assertRaisesRegex(ValueError, 'sealed'):
+            original(self.spec('unknown'), self.root / 'outside.so')
+        self.assertIs(original(self.spec(), self.path), self.loader.return_value)
+        self.loader.assert_called_once_with(str(self.path))
 
 
 if __name__ == '__main__':
