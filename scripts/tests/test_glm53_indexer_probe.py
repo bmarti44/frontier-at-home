@@ -77,6 +77,8 @@ class IndexerProbeTests(unittest.TestCase):
         for key,value in [('cuda_allocated',0),('cuda_peak_allocated',2000000000),('cuda_reserved',True),('device_free',float('nan')),('workspace_bytes',1)]:
             row=copy.deepcopy(good); row[key]=value
             with self.assertRaises(ValueError): a.validate_memory(row,'prefill-4')
+        above_device=copy.deepcopy(good); above_device.update(device_free=1000000000,device_total=3000000000)
+        with self.assertRaises(ValueError): a.validate_memory(above_device,'prefill-4')
         with self.assertRaises(ValueError): a.score_capture(self.root,[],7)
 
     def test_complete_receipts_reject_missing_duplicate_and_malformed_evidence(self):
@@ -102,6 +104,8 @@ class IndexerProbeTests(unittest.TestCase):
                    lambda x:x[3]['calls'][0].__setitem__('columns',1),
                    lambda x:x[3]['calls'].append(x[3]['calls'][0]),
                    lambda x:x[3]['calls'][0].__setitem__('cuda_allocated_at_return',0),
+                   lambda x:x[3]['calls'][0].__setitem__('cuda_allocated_at_return',3500000001),
+                   lambda x:x[3]['calls'][0].__setitem__('cuda_allocated_at_return',2**63),
                    lambda x:x[0].__setitem__('pinned_staging',1),
                    lambda x:x[3].__setitem__('time_unix',float('nan')),
                    lambda x:x[3]['artifacts'][0].__setitem__('file','../escape')]
