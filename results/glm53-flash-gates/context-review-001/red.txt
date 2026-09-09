@@ -1,0 +1,20 @@
+{
+  "kind": "synthetic mutation, not an actual attempt",
+  "source": "04bc66ef",
+  "actual_first_terminal_ns": 11,
+  "last_first_token_ns": 40,
+  "scored_first_terminal_ns": 100,
+  "verdict": "PASS",
+  "checks": {
+    "four_valid_cases": true,
+    "generated_streams_overlap": true,
+    "metrics_corrobates_four_running": true,
+    "no_preemption": true,
+    "aggregate_input_tokens": true
+  }
+}
+Traceback (most recent call last):
+  File "/tmp/glm53-context-review/reproduce.py", line 27, in <module>
+    assert result['verdict']=='FAIL','BUG: non-overlapping terminal chronology and missing metrics baseline accepted'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: BUG: non-overlapping terminal chronology and missing metrics baseline accepted
