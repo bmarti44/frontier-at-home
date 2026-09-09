@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import random
 import re
+import stat
 import subprocess
 import sys
 import time
@@ -203,6 +204,34 @@ def verify_beacon(output, manifest, receipt=None):
     return receipt
 
 
+def probe_verdict(kind, failure):
+    require(kind in ('native', 'cache', 'mla'), 'unknown probe kind')
+    if failure is not None: return 'FAIL'
+    return 'NO_RESULT' if kind == 'mla' else 'PASS'
+
+
+def generated_cache_inventory(root):
+    """Post-run preparation record only; this does not freeze executed binaries."""
+    def snapshot():
+        result = {}
+        for path in (root, *sorted(root.rglob('*'))):
+            value = path.lstat()
+            result[path.relative_to(root).as_posix()] = (
+                value.st_dev, value.st_ino, value.st_mode, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+        return result
+    before = snapshot(); entries = []
+    require(stat.S_ISDIR(before['.'][2]), 'generated cache root is not a directory')
+    for name, identity in before.items():
+        path = root / name; mode = identity[2]
+        if stat.S_ISDIR(mode): entries.append({'path': name, 'type': 'directory'})
+        elif stat.S_ISREG(mode): entries.append({'path': name, 'type': 'file', 'size_bytes': identity[3], 'sha256': sha256_file(path)})
+        elif stat.S_ISLNK(mode): entries.append({'path': name, 'type': 'symlink', 'target': os.readlink(path)})
+        else: raise ValueError('special file in generated cache: ' + name)
+    require(snapshot() == before, 'generated cache changed during inventory')
+    return {'schema_version': 1, 'qualification': 'post_run_JIT_preparation_inventory_only',
+            'frozen_before_execution': False, 'root': str(root), 'entries': entries}
+
+
 def run(output):
     require(not sys.flags.optimize and sys.flags.isolated and sys.dont_write_bytecode, 'runner requires unoptimized isolated -I -B Python')
     require(dict(os.environ) == CONTROL_ENV, 'controller requires the declared clean environment')
@@ -264,9 +293,20 @@ def run(output):
                 verify_frozen(output, manifest)
                 verify_accepted_inputs(output, accepted)
             except Exception as error: failure = failure or repr(error)
-            summary = {'verdict': 'PASS' if failure is None else 'FAIL', 'qualification': 'model_free_' + kind + '_probe_only',
+            generated = None
+            if kind == 'mla':
+                try:
+                    cache_path = output / 'generated-cache-inventory.json'
+                    write(cache_path, generated_cache_inventory(output / 'state'))
+                    generated = {'path': cache_path.name, 'sha256': sha256_file(cache_path)}
+                except Exception as error: failure = failure or repr(error)
+            summary = {'verdict': probe_verdict(kind, failure),
+                       'qualification': 'preparatory_MLA_JIT_falsifier_only' if kind == 'mla' else 'model_free_' + kind + '_probe_only',
                        'failure': failure, 'host': host, 'inner': inner, 'model_loaded': False,
                        'model_fidelity': 'not measured', 'context_capability': 'not measured', 'performance': 'not measured', 'end_unix': time.time()}
+            if kind == 'mla':
+                summary.update(kernel_binary_qualification='NO_RESULT', generated_cache_inventory=generated,
+                               confirmation_required='prewarm, freeze compiled kernels, seal replay and obtain a new public seed')
             write(output / 'summary.json', summary)
     print(json.dumps(summary)); return 0 if failure is None else 1
 

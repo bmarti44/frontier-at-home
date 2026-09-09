@@ -57,7 +57,7 @@ for name in ('exllamav3_ext', 'vllm_exl3_c'):
     paths = list((runtime / 'lib/python3.12/site-packages').glob(name + '.*.so'))
     if len(paths) != 1: raise ValueError('native extension inventory mismatch')
     native_extensions[name] = {'path': str(paths[0]), 'sha256': sha(paths[0])}
-manifest = {'schema_version': 1, 'qualification': 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
+manifest = {'schema_version': 1, 'qualification': 'preparatory_MLA_JIT_falsifier_only' if args.kind == 'mla' else 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
             'tag': 'glm53-' + args.attempt,
             'source_revision': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
             'runtime': {'root': str(runtime), 'manifest': str(inventory), 'sha256': sha(inventory), 'files': len(identities)},
