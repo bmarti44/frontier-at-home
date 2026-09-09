@@ -1,0 +1,33 @@
+{
+  "verdict": "PASS",
+  "qualification": "CPU_pre_submission_audit_only",
+  "candidate_revision": "55b9d277",
+  "gate_candidate": 1,
+  "campaign_review_round": 36,
+  "tests": 190,
+  "failures": 0,
+  "files": {
+    "scripts/41_probe_glm53_kda.py": {
+      "sha256": "e740e84f197632e84d1ec911df47f292252bb8192f65219520396cd5f02c1a6b"
+    },
+    "scripts/39_run_glm53_probe.py": {
+      "sha256": "87422134d10da0bc0cfa14af50e1c97fe7a9369867773c6255ad146411b9c6bf"
+    },
+    "scripts/39_freeze_glm53_probe.py": {
+      "sha256": "4bda9f5a46c429641811f20d02d94ac12235c97cb3b680f947c8fec9cf337374"
+    },
+    "scripts/tests/test_glm53_kda_probe.py": {
+      "sha256": "b85ee62e7180109548c6c3c5043c9c4e27d62c8dc1f0fa9f225d35af02f56a72"
+    },
+    "scripts/tests/test_glm53_kda_runner.py": {
+      "sha256": "0ae44b74c648c8165950af9bfefa2c918d7d84176368fe80a05d3bad76253b62"
+    },
+    "configs/decision-specs/glm53-kda-preflight.json": {
+      "sha256": "bc39ec9ccd9ac4edb020d2a6976f40973c780de0274f424f862f7a10eef373ad"
+    }
+  },
+  "test_log": {
+    "sha256": "319d9178211d8d25fa387fcc140cf7bf7cd1f8c9f961f22e82a0c36b9cd1c09b"
+  },
+  "scan": "No prompt/hash recognition, canned benchmark output, disabled assertions or timing manipulation. KDA uses actual pinned prefill/decode/gather/scatter functions; independent closed-form reference checks every output/state element. No convolution or model/context/speed qualification claimed. All new host transfers use persistent pinned staging."
+}
