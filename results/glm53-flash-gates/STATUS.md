@@ -5,7 +5,7 @@
 unauthenticated rejection, correct tool arguments, four overlapping text requests,
 one image, four images in order, and a 16-frame video. Media fixtures were 224x224;
 larger inputs remain unqualified. The externally sampled memory low point through
-this live snapshot was 18.62453842163086 GiB, with cgroup swap 0.
+this live snapshot was 18.79424285888672 GiB, with cgroup swap 0.
 
 Use `python3 scripts/47_run_glm53_dev.py --start` for the verified optional
 settings; [the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and
