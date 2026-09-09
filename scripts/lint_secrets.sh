@@ -111,14 +111,14 @@ redact_matches() {
 
 # Public package hashes and wrapper artifact receipts, restricted to the two
 # recorded GLM-5.3 dependency attempts and exact line formats.
-readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001|build-vllm-exl3-002|native-smoke-00[1234567]|cache-preflight-00[123]|mla-preflight-001|mla-replay-001|kda-preflight-00[12])/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001|build-vllm-exl3-002|native-smoke-00[1234567]|cache-preflight-00[123]|mla-preflight-001|mla-replay-001|kda-replay-001|kda-preflight-00[12])/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
 
-readonly GLM53_PROBE_DONE_DIGEST_ALLOWLIST='^results/glm53-flash-gates/(native-smoke-00[4567]|cache-preflight-00[23]|mla-preflight-001|mla-replay-001|kda-preflight-00[12])/wrapper\.log:[0-9]+:SAFE_RUN_DONE rc=[01] killed=no dir=/home/bmarti44/\.local/state/glm52-crashlog/[0-9]{8}-[0-9]{6}-glm53-(native-smoke-00[4567]|cache-preflight-00[23]|mla-preflight-001|mla-replay-001|kda-preflight-00[12]) main_sha256=[0-9a-f]{64} samples_sha256=[0-9a-f]{64} kernel_sha256=[0-9a-f]{64}$'
+readonly GLM53_PROBE_DONE_DIGEST_ALLOWLIST='^results/glm53-flash-gates/(native-smoke-00[4567]|cache-preflight-00[23]|mla-preflight-001|mla-replay-001|kda-replay-001|kda-preflight-00[12])/wrapper\.log:[0-9]+:SAFE_RUN_DONE rc=[01] killed=no dir=/home/bmarti44/\.local/state/glm52-crashlog/[0-9]{8}-[0-9]{6}-glm53-(native-smoke-00[4567]|cache-preflight-00[23]|mla-preflight-001|mla-replay-001|kda-replay-001|kda-preflight-00[12]) main_sha256=[0-9a-f]{64} samples_sha256=[0-9a-f]{64} kernel_sha256=[0-9a-f]{64}$'
 
 filter_glm53_native_log_digests() {
   python3 - 3<&0 <<'PY_NATIVE'
 import json, os, re
-prefix = re.compile(r"^(results/glm53-flash-gates/(?:native-smoke-00[1234567]|cache-preflight-00[123]|mla-preflight-001|mla-replay-001|kda-preflight-00[12])/(?:cmd|main)\.log:[0-9]+:)(.*)$")
+prefix = re.compile(r"^(results/glm53-flash-gates/(?:native-smoke-00[1234567]|cache-preflight-00[123]|mla-preflight-001|mla-replay-001|kda-replay-001|kda-preflight-00[12])/(?:cmd|main)\.log:[0-9]+:)(.*)$")
 def unique(items):
     value = {}
     for key, item in items:
@@ -129,7 +129,7 @@ def unique(items):
 for line in os.fdopen(3, encoding="utf-8"):
     match = prefix.fullmatch(line.rstrip("\n"))
     if match:
-        if match[1].startswith('results/glm53-flash-gates/mla-replay-001/main.log:'):
+        if match[1].startswith(('results/glm53-flash-gates/mla-replay-001/main.log:', 'results/glm53-flash-gates/kda-replay-001/main.log:')):
             line = re.sub(r'(--sealed-manifest-sha256 )[0-9a-f]{64}(?= --seed [0-9]+\n?$)',
                           r'\1[public SHA256]', line)
         try:
@@ -362,8 +362,11 @@ if display_path == ('results/glm53-flash-gates/mla-replay-001/kernels/triton/'
     allowlist.add('hash')
 glm53_replay_arguments = {
     'results/glm53-flash-gates/mla-replay-001/identity/manifest.json': 'argv',
+    'results/glm53-flash-gates/kda-replay-001/identity/manifest.json': 'argv',
     'results/glm53-flash-gates/mla-replay-001/invocation.json': 'command',
+    'results/glm53-flash-gates/kda-replay-001/invocation.json': 'command',
     'results/glm53-flash-gates/mla-replay-001/manifest.json': 'probe_arguments_without_seed',
+    'results/glm53-flash-gates/kda-replay-001/manifest.json': 'probe_arguments_without_seed',
 }.get(display_path)
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
@@ -422,7 +425,7 @@ def walk(value, path, allowed_string=False):
                 re.fullmatch(r"[0-9]+:[0-9]+", item[3])
             ):
                 continue
-            if display_path in {"results/glm53-flash-gates/native-smoke-004/manifest.json", "results/glm53-flash-gates/native-smoke-005/manifest.json", "results/glm53-flash-gates/native-smoke-006/manifest.json", "results/glm53-flash-gates/native-smoke-007/manifest.json", "results/glm53-flash-gates/cache-preflight-002/manifest.json", "results/glm53-flash-gates/cache-preflight-003/manifest.json", "results/glm53-flash-gates/mla-preflight-001/manifest.json", "results/glm53-flash-gates/mla-replay-001/manifest.json", "results/glm53-flash-gates/kda-preflight-001/manifest.json", "results/glm53-flash-gates/kda-preflight-002/manifest.json"} and key == "native_test_hashes":
+            if display_path in {"results/glm53-flash-gates/native-smoke-004/manifest.json", "results/glm53-flash-gates/native-smoke-005/manifest.json", "results/glm53-flash-gates/native-smoke-006/manifest.json", "results/glm53-flash-gates/native-smoke-007/manifest.json", "results/glm53-flash-gates/cache-preflight-002/manifest.json", "results/glm53-flash-gates/cache-preflight-003/manifest.json", "results/glm53-flash-gates/mla-preflight-001/manifest.json", "results/glm53-flash-gates/mla-replay-001/manifest.json", "results/glm53-flash-gates/kda-preflight-001/manifest.json", "results/glm53-flash-gates/kda-preflight-002/manifest.json", "results/glm53-flash-gates/kda-replay-001/manifest.json"} and key == "native_test_hashes":
                 if not (isinstance(item, dict) and set(item) == {"test_exl3_linear.py", "test_native_moe_contract.py"} and
                         all(isinstance(child, str) and hex64.fullmatch(child) for child in item.values())):
                     findings.append((item_path, "invalid native test digest map"))
@@ -529,7 +532,7 @@ scan_digest_file() {
     # not JSON. It remains subject to gitleaks plus the non-digest secret scan;
     # only the generic 64-hex structural parser is inapplicable.
     scripts/103_verify_drand_receipt_bundle.mjs) cat >/dev/null ;;
-    results/glm53-flash-gates/native-smoke-00[1234567]/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/cache-preflight-00[123]/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/mla-preflight-001/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/mla-replay-001/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/kda-preflight-00[12]/code/scripts/103_verify_drand_receipt_bundle.mjs)
+    results/glm53-flash-gates/native-smoke-00[1234567]/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/cache-preflight-00[123]/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/mla-preflight-001/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/mla-replay-001/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/kda-replay-001/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/kda-preflight-00[12]/code/scripts/103_verify_drand_receipt_bundle.mjs)
       cmp -s - "$(git rev-parse --show-toplevel)/scripts/103_verify_drand_receipt_bundle.mjs" || {
         echo 'copied GLM verifier differs from reviewed bundle' >&2; return 1;
       } ;;
@@ -916,7 +919,7 @@ self_test() {
   if printf '\377%s\n' "$fake_secret" | scan_stream >/dev/null 2>&1; then
     echo 'self-test failed: digest filter error was ignored' >&2; return 1
   fi
-  for probe_attempt in native-smoke-004 native-smoke-005 native-smoke-006 native-smoke-007 cache-preflight-002 cache-preflight-003 mla-preflight-001 mla-replay-001 kda-preflight-001 kda-preflight-002; do
+  for probe_attempt in native-smoke-004 native-smoke-005 native-smoke-006 native-smoke-007 cache-preflight-002 cache-preflight-003 mla-preflight-001 mla-replay-001 kda-replay-001 kda-preflight-001 kda-preflight-002; do
     local probe_done="results/glm53-flash-gates/$probe_attempt/wrapper.log:1:SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/.local/state/glm52-crashlog/20260909-120000-glm53-$probe_attempt main_sha256=$fake_secret samples_sha256=$fake_secret kernel_sha256=$fake_secret"
     if ! printf '%s\n' "$probe_done" | scan_stream >/dev/null 2>&1 ||
        printf '%s extra=%s\n' "$probe_done" "$fake_secret" | scan_stream >/dev/null 2>&1; then
