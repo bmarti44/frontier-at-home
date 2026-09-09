@@ -60,6 +60,17 @@ class ProbeGuardTests(unittest.TestCase):
         self.assertEqual(summary["verdict"], "PASS")
         self.assertEqual(sum(row.get("completion_verified", False) for row in rows), 1)
 
+    def test_atexit_replacement_cannot_bypass_terminal_identity(self):
+        result, summary, _ = self.run_probe("import atexit,os,time\natexit.register(lambda: os.execv('/bin/true',['true']))\ntime.sleep(0.35)\n")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(summary["verdict"], "FAIL")
+
+    def test_normal_atexit_cleanup_is_preserved(self):
+        result, summary, _ = self.run_probe("import atexit,time\natexit.register(lambda: print('NORMAL_FINALIZER_RAN'))\ntime.sleep(0.35)\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(summary["verdict"], "PASS")
+        self.assertIn("NORMAL_FINALIZER_RAN", result.stdout)
+
     def test_immediate_exit_cannot_substitute_for_verified_completion(self):
         result, summary, _ = self.run_probe("import os,time\ntime.sleep(0.35)\nos._exit(0)\n")
         self.assertNotEqual(result.returncode, 0)
