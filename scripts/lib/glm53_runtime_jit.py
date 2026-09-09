@@ -13,6 +13,43 @@ import sysconfig
 from glm53_contract import strict_json, verify_inventory
 
 
+def activate_triton(cache_class, *, enabled=False):
+    """Startup-only selection; disabled mode does not import or change Triton.
+
+    The lifecycle must log this selection and bind the verified cache before
+    any model allocation. This covers Triton only, not all CUDA compilation.
+    """
+    if type(enabled) is not bool:
+        raise ValueError("sealed Triton selection must be boolean")
+    if not enabled:
+        return
+    import triton.knobs as knobs
+    import triton.runtime.build as build
+    if cache_class is None:
+        raise ValueError("sealed Triton mode requires a verified cache class")
+    for field in ("always_compile", "override", "dump_ir"):
+        if getattr(knobs.compilation, field):
+            raise ValueError("sealed Triton rejects " + field)
+    if knobs.cache.manager_class is not None or knobs.cache.remote_manager_class is not None:
+        raise ValueError("sealed Triton rejects another cache manager")
+    if knobs.runtime.add_stages_inspection_hook is not None or knobs.compilation.listener is not None:
+        raise ValueError("sealed Triton rejects compiler hooks")
+
+    def reject_compilation(*args, **kwargs):
+        raise RuntimeError("sealed Triton native compilation is unavailable")
+
+    # Resolve switches now so later environment lookups cannot enable codegen.
+    knobs.compilation.always_compile = False
+    knobs.compilation.override = False
+    knobs.compilation.dump_ir = False
+    knobs.cache.manager_class = cache_class
+    knobs.cache.remote_manager_class = None
+    build.compile_module_from_src = sealed_native_loader(build)
+    # Also close previously imported aliases of the original loader: its
+    # fallback resolves _build from this module when it encounters an error.
+    build._build = reject_compilation
+
+
 def sealed_native_loader(build_module):
     """Select a loader without Triton's native-compiler fallback at startup.
 
