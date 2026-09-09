@@ -8,6 +8,7 @@ import random
 import struct
 import tempfile
 import unittest
+from unittest import mock
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 def load(name, path):
@@ -75,3 +76,25 @@ class MLARunnerTests(unittest.TestCase):
     def test_missing_case_rejects(self):
         self.rows = self.rows[:-2]; self.seal()
         with self.assertRaises(ValueError): runner.score_inner(self.root, 'mla', self.seed, self.binding)
+
+
+class GeneratedCacheInventoryTests(unittest.TestCase):
+    def test_files_and_symlinks_are_recorded_without_following_links(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); (root / 'kernel.so').write_bytes(b'compiled fixture')
+            (root / 'outside').symlink_to('/does/not/exist')
+            result = runner.generated_cache_inventory(root)
+            self.assertIs(result['frozen_before_execution'], False)
+            rows = {row['path']: row for row in result['entries']}
+            self.assertEqual(rows['kernel.so']['sha256'], hashlib.sha256(b'compiled fixture').hexdigest())
+            self.assertEqual(rows['outside'], {'path': 'outside', 'type': 'symlink', 'target': '/does/not/exist'})
+
+    def test_mutation_during_generated_inventory_rejects(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); path = root / 'kernel.so'; path.write_bytes(b'original')
+            original = runner.sha256_file
+            def change(target):
+                digest = original(target); target.write_bytes(b'changed size'); return digest
+            with mock.patch.object(runner, 'sha256_file', side_effect=change):
+                with self.assertRaisesRegex(ValueError, 'changed'):
+                    runner.generated_cache_inventory(root)
