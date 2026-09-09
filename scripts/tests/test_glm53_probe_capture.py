@@ -77,6 +77,57 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(json.loads((self.root / 'capture.json').read_text())['wrapper_exit_code'], 1)
         self.assertEqual((self.root / 'cmd.log').read_text(), 'raw bytes\n')
 
+    def test_cleanup_observation_error_retains_lock_until_confirmed_absence(self):
+        real_lstat = Path.lstat; attempts = []
+        def observe(path):
+            if str(path).startswith('/sys/fs/cgroup/user.slice/'):
+                attempts.append(str(path))
+                with mock.patch.object(capture, 'LOCK', self.root / 'lock'), self.assertRaises(BlockingIOError):
+                    with capture.inference_lock(): pass
+                if len(attempts) == 1: raise PermissionError('temporary observation failure')
+                raise FileNotFoundError('confirmed absent')
+            return real_lstat(path)
+        with mock.patch.object(Path, 'lstat', observe), self.assertRaisesRegex(ValueError, 'capture failed'):
+            self.run_cpu_wrapper(0)
+        self.assertGreaterEqual(len(attempts), 2)
+        self.assertIn('PermissionError', json.loads((self.root / 'capture.json').read_text())['capture_failure'])
+
+    def test_parent_sigterm_cleans_wrapper_before_releasing_lock(self):
+        import subprocess, time, signal
+        lock = self.root / 'lock'; lock.touch()
+        wrapper = self.root / 'wrapper.sh'; wrapper.write_text('exec /bin/sleep 10\n')
+        worker = self.root / 'worker.py'
+        worker.write_text("""import os,sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import glm53_probe_capture as c
+r=Path(sys.argv[2]); c.LOCK=r/'lock'
+original=c.subprocess.Popen
+def launch(*args,**kwargs):
+ p=original(*args,**kwargs); (r/'wrapper-pid').write_text(str(p.pid)); return p
+c.subprocess.Popen=launch
+with c.inference_lock() as env:
+ c.capture_wrapper(r,r/'wrapper.sh','glm53-cpu-control',[],{**os.environ,**env},10)
+""")
+        parent = subprocess.Popen([sys.executable, str(worker), str(Path(capture.__file__).parent), str(self.root)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        child_pidfd = None
+        try:
+            deadline = time.monotonic() + 5
+            while not (self.root / 'wrapper-pid').exists() and time.monotonic() < deadline: time.sleep(0.02)
+            self.assertTrue((self.root / 'wrapper-pid').exists())
+            child_pid = int((self.root / 'wrapper-pid').read_text()); child_pidfd = os.pidfd_open(child_pid)
+            parent.send_signal(signal.SIGTERM); parent.wait(timeout=10)
+            try: status = Path(f'/proc/{child_pid}/stat').read_text().rsplit(')',1)[1].split()[0]
+            except FileNotFoundError: status = 'gone'
+            self.assertIn(status, ('gone','Z'), 'wrapper survived parent termination and lock release')
+        finally:
+            if child_pidfd is not None:
+                try: signal.pidfd_send_signal(child_pidfd, signal.SIGKILL)
+                except ProcessLookupError: pass
+                os.close(child_pidfd)
+            if parent.poll() is None: parent.kill()
+            parent.wait(timeout=5)
+
     def test_crash_copy_rejects_outside_path_and_duplicate_receipts(self):
         for log in ('SAFE_RUN_DONE rc=0 killed=no dir=/etc\n',
                     'SAFE_RUN_DONE rc=0 killed=no dir=/a\nSAFE_RUN_DONE rc=1 killed=yes dir=/b\n'):
