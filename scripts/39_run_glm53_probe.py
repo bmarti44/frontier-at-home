@@ -7,6 +7,7 @@ import math
 import os
 from pathlib import Path
 import random
+import re
 import subprocess
 import sys
 import time
@@ -62,12 +63,50 @@ def score_inner(output, kind, seed, binding):
         require([r['check_order'] for r in rows if 'check_order' in r] == [order], 'native fixture order mismatch')
         require([(r.get('event'), r.get('check_id')) for r in rows if 'event' in r] ==
                 [(event, name) for name in order for event in ('start', 'pass')], 'native check coverage mismatch')
+    elif kind == 'mla':
+        require(summary['qualification'] == 'model_free_MLA_constant_cache_falsifier_only' and
+                summary['actual_input_tokens_processed'] == 0, 'MLA qualification mismatch')
+        summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed)}
     elif kind == 'cache':
         require(summary['qualification'] == 'model_free_cache_allocation_only' and summary['actual_input_tokens_processed'] == 0, 'cache qualification mismatch')
         validate_cache_rows(rows, seed, binding['cache_layer_types'])
     else:
         raise ValueError('unknown probe kind')
     return summary
+
+
+def validate_mla_rows(root, rows, seed):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('frozen_mla_scorer', Path(__file__).parent / '40_probe_glm53_mla.py')
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    order, requests = module.case_order(seed), module.request_order(seed)
+    require(len(rows) == 11 and rows[0] == {'time_unix': rows[0].get('time_unix'), 'event': 'configured',
+        'backend': 'FlashInferMLASparseSM120Impl', 'cache_bytes': 687865856, 'request_order': requests,
+        'case_order': order, 'addressed_last_position': 262143, 'pinned_staging': True}, 'MLA geometry or order mismatch')
+    require(type(rows[0]['cache_bytes']) is int and type(rows[0]['addressed_last_position']) is int and
+            rows[0]['pinned_staging'] is True and all(type(v) is int for v in rows[0]['request_order'] + rows[0]['case_order']),
+            'MLA geometry types changed')
+    artifacts = {f'output-{count}.bf16.gz' for count in order}
+    require({p.name for p in root.iterdir()} == artifacts | {'manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log'},
+            'MLA artifact coverage mismatch')
+    checks = []
+    for index, count in enumerate(order):
+        start, output = rows[1 + 2 * index:3 + 2 * index]
+        require(set(start) == {'time_unix', 'event', 'query_rows', 'fixture_seed', 'query_sha256'} and
+                start['event'] == 'start' and type(start['query_rows']) is int and start['query_rows'] == count and
+                type(start['fixture_seed']) is int and start['fixture_seed'] == module.fixture_seed(seed, count) and
+                isinstance(start['query_sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', start['query_sha256']), 'MLA fixture mismatch')
+        require(set(output) == {'time_unix', 'event', 'query_rows', 'file', 'sha256', 'uncompressed_bytes',
+                               'cuda_elapsed_ms', 'cuda_peak_allocated', 'cuda_memory_reserved'} and
+                output['event'] == 'output' and type(output['query_rows']) is int and output['query_rows'] == count and
+                output['file'] == f'output-{count}.bf16.gz', 'MLA output schema mismatch')
+        require(type(output['uncompressed_bytes']) is int and output['uncompressed_bytes'] == count * 65536 and
+                all(type(output[k]) is int for k in ('cuda_peak_allocated', 'cuda_memory_reserved')) and
+                687865856 <= output['cuda_peak_allocated'] <= output['cuda_memory_reserved'] and
+                type(output['cuda_elapsed_ms']) in (int, float) and math.isfinite(output['cuda_elapsed_ms']) and
+                output['cuda_elapsed_ms'] > 0, 'invalid MLA output accounting')
+        checks.append({'query_rows': count, **module.score_tensor(root / output['file'], output['sha256'], count, requests)})
+    return checks
 
 
 def validate_cache_rows(rows, seed, layer_types):
@@ -123,9 +162,10 @@ def verify_accepted_inputs(output, accepted):
 
 CODE_FILES = (
     'scripts/39_run_glm53_probe.py', 'scripts/38_guard_glm53_probe.py',
-    'scripts/35_smoke_glm53_native.py', 'scripts/37_probe_glm53_cache.py',
+    'scripts/35_smoke_glm53_native.py', 'scripts/37_probe_glm53_cache.py', 'scripts/40_probe_glm53_mla.py',
     'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
     'configs/build-manifests/glm53-flash-sources.json', 'configs/decision-specs/glm53-cache-preflight.json',
+    'configs/decision-specs/glm53-mla-preflight.json',
     'scripts/103_verify_drand_receipt_bundle.mjs')
 
 
@@ -170,7 +210,7 @@ def run(output):
     accepted = {name: hashlib.sha256(data).hexdigest() for name, data in input_bytes.items()}
     manifest = object_text(input_bytes['manifest.json'])
     require(Path(__file__).resolve() == output / 'code/scripts/39_run_glm53_probe.py', 'run the frozen runner copy')
-    expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py'}
+    expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py', 'mla': '40_probe_glm53_mla.py'}
     kind = manifest['kind']; require(kind in expected_kind, 'unknown probe kind')
     python = Path(manifest['runtime']['root']) / 'bin/python3'
     require(Path(sys.executable).resolve() == python.resolve(), 'controller must use frozen packaged interpreter')
@@ -200,6 +240,9 @@ def run(output):
             if kind == 'native':
                 binding.update(expected_checks=14, test_hashes=manifest['native_test_hashes'], native_extensions=manifest['native_extensions'],
                                source_revision=strict_json(output / 'code/configs/build-manifests/glm53-flash-sources.json')['sources']['vllm-exl3']['revision'])
+            elif kind == 'mla':
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-mla-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'])
             else:
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-cache-preflight.json'],
                                metadata=manifest['cache_metadata_hashes'], cache_layer_types=manifest['cache_layer_types'])

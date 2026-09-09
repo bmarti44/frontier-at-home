@@ -12,6 +12,7 @@ import json
 import math
 from pathlib import Path
 import random
+import stat
 import sys
 import time
 import traceback
@@ -52,6 +53,9 @@ def score_tensor(path, digest, rows, requests):
     require(type(rows) is int and rows in ROWS, 'invalid output shape')
     require(isinstance(requests, list) and len(requests) == 4 and
             all(type(r) is int for r in requests) and set(requests) == set(range(4)), 'invalid request order')
+    before = path.lstat()
+    require(stat.S_ISREG(before.st_mode) and before.st_size <= rows * 65536 + 1048576, 'invalid output file or size')
+    identity = lambda value: (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
     require(sha256_file(path) == digest, 'output digest mismatch')
     chunk_bytes = 64 * 512 * 2
     pattern = np.tile(np.array(PATTERN, dtype=np.float32), 64 * 512 // 4)
@@ -68,6 +72,7 @@ def score_tensor(path, digest, rows, requests):
             if finite.any(): maximum = max(maximum, float(error[finite].max()))
             mismatches += int(np.count_nonzero(~finite | (error > 0.02 + 0.02 * np.abs(expected))))
         require(stream.read(1) == b'', 'output size exceeds frozen shape')
+    require(identity(path.lstat()) == identity(before) and sha256_file(path) == digest, 'output file changed during scoring')
     require(nonfinite == 0 and mismatches == 0, 'MLA output violates analytic reference')
     return {'elements': rows * 64 * 512, 'maximum_absolute_error': maximum,
             'mismatched_elements': mismatches, 'nonfinite_elements': nonfinite}
