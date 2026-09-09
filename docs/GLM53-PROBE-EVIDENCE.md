@@ -113,3 +113,17 @@ The controller must reject output-recording errors and unexpected wrapper exit,
 retain ownership of the inference lock through descendant cleanup, and verify
 the output/runtime hashes before computing the combined verdict. No hardware
 qualification or production switch follows merely from a passing CPU test suite.
+
+## Reviewed runner
+
+`scripts/39_run_glm53_probe.py` combines these checks. Run its frozen copy with
+the packaged interpreter, `-I -B`, and exactly its declared `CONTROL_ENV` through
+`env -i`; ambient shell startup hooks and loader variables are forbidden. The
+runner binds the accepted manifest and randomness bytes before launch and checks
+them again afterward. It requires the exact round chosen by the frozen fetch
+algorithm, and validates native/cache raw schemas and inner identity bindings.
+
+The source-only freezer is in
+`results/glm53-flash-gates/probe-runner-preparation-001/freeze.py`. It requires a
+clean repository and a fresh attempt directory. Review closure is recorded in
+`probe-runner-review-002.md` (candidate 2 / campaign round 27).
