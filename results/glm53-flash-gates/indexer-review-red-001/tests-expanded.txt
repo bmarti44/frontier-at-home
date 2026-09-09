@@ -1,0 +1,39 @@
+F.E..F.
+======================================================================
+ERROR: test_complete_receipts_reject_missing_duplicate_and_malformed_evidence (test_glm53_indexer_probe.IndexerProbeTests.test_complete_receipts_reject_missing_duplicate_and_malformed_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_indexer_probe.py", line 101, in test_complete_receipts_reject_missing_duplicate_and_malformed_evidence
+    self.assertEqual(len(a.validate_capture(self.root,rows,seed)),6)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/45_probe_glm53_indexer.py", line 135, in validate_capture
+    require(set(profile) == {'time_unix','event','workspace_bytes','cuda_peak_allocated','cuda_reserved'} and profile['event']=='profiled' and
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_indexer_fixture.py", line 13, in require
+    if not value: raise ValueError(message)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: indexer profiling allocation mismatch
+
+======================================================================
+FAIL: test_actual_staged_ape_satisfies_upstream_kernel_precondition (test_glm53_indexer_probe.IndexerProbeTests.test_actual_staged_ape_satisfies_upstream_kernel_precondition)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_indexer_probe.py", line 147, in test_actual_staged_ape_satisfies_upstream_kernel_precondition
+    namespace['kpool_compress_and_write_cache'](torch.empty((1,64,132),dtype=torch.uint8),
+  File "/home/bmarti44/.cache/glm53-flash/build-source-005/vllm/vllm/models/glm5next/nvidia/ops/kpool_compress.py", line 285, in kpool_compress_and_write_cache
+    assert ape.dtype == torch.float32
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+======================================================================
+FAIL: test_memory_minima_and_malformed_receipts (test_glm53_indexer_probe.IndexerProbeTests.test_memory_minima_and_malformed_receipts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_indexer_probe.py", line 81, in test_memory_minima_and_malformed_receipts
+    with self.assertRaises(ValueError): a.validate_memory(above_device,'prefill-4')
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 7 tests in 3.078s
+
+FAILED (failures=2, errors=1)
