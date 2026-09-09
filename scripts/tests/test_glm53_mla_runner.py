@@ -46,6 +46,13 @@ class MLARunnerTests(unittest.TestCase):
         (self.checks / 'manifest.json').write_text(json.dumps({'seed': self.seed, **self.binding}))
         (self.checks / 'traceback.log').write_text('')
 
+    def test_preparatory_mla_cannot_claim_binary_qualification(self):
+        self.assertEqual(runner.probe_verdict('mla', None), 'NO_RESULT')
+        self.assertEqual(runner.probe_verdict('mla', 'kernel failure'), 'FAIL')
+        self.assertEqual(runner.probe_verdict('native', None), 'PASS')
+        self.assertEqual(runner.probe_verdict('cache', None), 'PASS')
+        with self.assertRaises(ValueError): runner.probe_verdict('unknown', None)
+
     def test_complete_bundle_scores_every_output(self):
         result = runner.score_inner(self.root, 'mla', self.seed, self.binding)
         self.assertEqual(sum(row['elements'] for row in result['tensor_checks']), (2048 + 1 + 2 + 3 + 4) * 32768)
