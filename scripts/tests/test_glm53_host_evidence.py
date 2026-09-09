@@ -83,6 +83,45 @@ class HostEvidenceTests(unittest.TestCase):
             summary = json.loads(path.read_text()); summary["raw_sha256"] = digest(self.root / "identity/raw.jsonl"); write_json(path, summary)
         (self.root / "wrapper.log").write_text(f"SAFE_RUN_DONE rc=0 killed=no dir=/raw/crash main_sha256={digest(self.root / 'main.log')} samples_sha256={digest(self.root / 'samples.log')} kernel_sha256={digest(self.root / 'kernel.log')}\n")
 
+    def append_rss_sample(self, delta, rss):
+        path = self.root / "samples.log"
+        stamp = datetime.fromtimestamp(self.base + delta, timezone.utc).isoformat()
+        with path.open("a") as stream:
+            stream.write(f"{stamp} mem_avail_kb=120000000 eng_rss_kb={rss} read_bytes=0 cgroup_current_bytes=200000000 cgroup_peak_bytes=300000000 cgroup_swap_current_bytes=0\n")
+        self.seal()
+
+    def test_zero_rss_suffix_after_terminal_identity_with_verified_cleanup(self):
+        self.append_rss_sample(1.15, 0)
+        self.assertEqual(score_host_observations(self.root, self.expected)["verdict"], "PASS")
+
+    def test_zero_rss_during_identity_or_all_zero_rejects(self):
+        path = self.root / "samples.log"; original = path.read_text()
+        for text in (original.replace("eng_rss_kb=100000", "eng_rss_kb=0", 1),
+                     original.replace("eng_rss_kb=100000", "eng_rss_kb=0")):
+            with self.subTest(text=text):
+                path.write_text(text); self.seal()
+                with self.assertRaisesRegex(ValueError, "RSS|memory"):
+                    score_host_observations(self.root, self.expected)
+
+    def test_zero_rss_at_terminal_identity_rejects(self):
+        self.append_rss_sample(1.1, 0)
+        with self.assertRaisesRegex(ValueError, "RSS|memory"):
+            score_host_observations(self.root, self.expected)
+
+    def test_rss_reappearing_after_disappearance_rejects(self):
+        self.append_rss_sample(1.15, 0)
+        self.append_rss_sample(1.18, 100000)
+        with self.assertRaisesRegex(ValueError, "RSS|memory"):
+            score_host_observations(self.root, self.expected)
+
+    def test_terminal_zero_rss_does_not_waive_exit_or_cleanup(self):
+        self.append_rss_sample(1.15, 0)
+        path = self.root / "identity/summary.json"; original = path.read_text()
+        for changes in ({"probe_exit_code": 1}, {"live_process_group_after": [12345]}):
+            row = json.loads(original); row.update(changes); write_json(path, row); self.seal()
+            with self.assertRaisesRegex(ValueError, "identity verdict"):
+                score_host_observations(self.root, self.expected)
+
     def test_stale_wrapper_chronology_rejects(self):
         path = self.root / "main.log"
         path.write_text(path.read_text().replace("2023-11-14", "2000-11-14")); self.seal()
