@@ -43,5 +43,31 @@ class KDARunnerTests(unittest.TestCase):
             changed = json.loads(json.dumps(rows)); changed[index][key] = value
             with self.assertRaises(ValueError): runner.validate_kda_rows(root, changed, seed)
 
+    def test_frozen_replay_requires_startup_receipt(self):
+        import hashlib
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); checks=root/'checks'; checks.mkdir()
+            kernels={'root':str(root/'kernels'), 'sha256':'f'*64}
+            binding={'sealed_kernels':kernels, 'replay_decision':{'sha256':'a'*64}}
+            raw=json.dumps({'time_unix':100., 'event':'configured'})+'\n'
+            (checks/'raw.jsonl').write_text(raw)
+            (checks/'manifest.json').write_text(json.dumps({'seed':123, **binding}))
+            (checks/'summary.json').write_text(json.dumps({'verdict':'PASS','model_loaded':False,
+                'qualification':'model_free_KDA_analytic_falsifier_only','actual_input_tokens_processed':0,
+                'raw_sha256':hashlib.sha256(raw.encode()).hexdigest()}))
+            receipt={'selection':'sealed_KDA_replay','bundle':kernels,'triton_cache_root':kernels['root']+'/triton',
+                     'retuning':'rejected','disk_autotune_cache':True,'time_unix':99.}
+            with patch.object(runner, 'validate_kda_rows', return_value=[]):
+                with self.assertRaises((ValueError,FileNotFoundError)): runner.score_inner(root,'kda-replay',123,binding)
+                path=checks/'sealed-selection.json'; path.write_text(json.dumps(receipt))
+                self.assertEqual(runner.score_inner(root,'kda-replay',123,binding)['verdict'],'PASS')
+                for key,value in (('retuning','enabled'),('time_unix',101.),('disk_autotune_cache',1),
+                                   ('bundle',dict(kernels,sha256='0'*64))):
+                    path.write_text(json.dumps(dict(receipt,**{key:value})))
+                    with self.assertRaises(ValueError): runner.score_inner(root,'kda-replay',123,binding)
+            self.assertEqual(runner.probe_verdict('kda-replay',None),'PASS')
+
 
 if __name__ == '__main__': unittest.main()
