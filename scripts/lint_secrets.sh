@@ -109,9 +109,13 @@ redact_matches() {
     -e 's/(tskey-)[A-Za-z0-9-]{20,}/\1[REDACTED]/g'
 }
 
+# Public package hashes and wrapper artifact receipts, restricted to the two
+# recorded GLM-5.3 dependency attempts and exact line formats.
+readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-004/cmd\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/dependencies-003/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+
 scan_stream() {
   local matches
-  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST" || true)"
+  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_DEPENDENCY_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1
@@ -811,6 +815,20 @@ self_test() {
       | scan_digest_json "$w4_manifest_path" >/dev/null 2>&1; then
     printf '%s\n' \
       'self-test failed: undeclared W4 manifest digest was accepted' >&2
+    return 1
+  fi
+  local glm53_digest_line
+  glm53_digest_line="results/glm53-flash-gates/dependencies-004/cmd.log:1:    --hash=sha256:$fake_secret"
+  if ! printf '%s\n' "$glm53_digest_line" | scan_stream >/dev/null 2>&1; then
+    echo 'self-test failed: public GLM dependency hash rejected' >&2
+    return 1
+  fi
+  if printf '%s\n' "$glm53_digest_line extra=$fake_secret" | scan_stream >/dev/null 2>&1; then
+    echo 'self-test failed: GLM dependency digest allowance is too broad' >&2
+    return 1
+  fi
+  if printf '%s\n' "unrelated.log:1:    --hash=sha256:$fake_secret" | scan_stream >/dev/null 2>&1; then
+    echo 'self-test failed: GLM dependency digest allowance escaped path scope' >&2
     return 1
   fi
   printf '%s\n' 'self-test passed'

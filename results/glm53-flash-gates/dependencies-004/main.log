@@ -1,0 +1,9 @@
+2026-09-09T02:12:38,128845236+00:00 SAFE_RUN start tag=glm53-deps-hashes vlimit_kb=419430400 kill_floor_gib=18 min_start_gib=110 timeout_s=600 allow_cgroup_high=0
+2026-09-09T02:12:38,134426593+00:00 cmd: /usr/bin/env MAX_JOBS=2 CMAKE_BUILD_PARALLEL_LEVEL=2 NVCC_THREADS=1 MAKEFLAGS=-j2 /home/bmarti44/.local/bin/uv pip compile --generate-hashes --no-annotate --no-header --python-version 3.12 --python-platform aarch64-manylinux_2_39 --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cu130 /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements.lock --output-file /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements-hashed.lock
+2026-09-09T02:12:38,140729233+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T02:12:38,145740827+00:00 candidate_provenance_enabled=0
+2026-09-09T02:12:38,152190684+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-deps-hashes-403714.service memory_high=96629424128 memory_max=100924391424 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121627776 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.989,"stable_samples_observed":3}
+2026-09-09T02:12:40,749080057+00:00 FATAL isolated process-group mismatch expected=403785 actual=missing

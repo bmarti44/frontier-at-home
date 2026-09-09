@@ -1,0 +1,39 @@
+2026-09-09T02:07:43,150529087+00:00 SAFE_RUN start tag=glm53-deps-003 vlimit_kb=419430400 kill_floor_gib=18 min_start_gib=110 timeout_s=600 allow_cgroup_high=0
+2026-09-09T02:07:43,156520618+00:00 cmd: /usr/bin/env MAX_JOBS=2 CMAKE_BUILD_PARALLEL_LEVEL=2 NVCC_THREADS=1 MAKEFLAGS=-j2 /home/bmarti44/.local/bin/uv pip compile --python-version 3.12 --python-platform aarch64-manylinux_2_39 --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cu130 /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements.in --output-file /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements.lock
+2026-09-09T02:07:43,164395786+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T02:07:43,170094757+00:00 candidate_provenance_enabled=0
+2026-09-09T02:07:43,177996100+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-deps-003-400913.service memory_high=96623132672 memory_max=100918099968 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121622080 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.985,"stable_samples_observed":3}
+2026-09-09T02:07:45,750187203+00:00 wrapper_pid=400964 engine_pid=400966 pgid=400964 (periodic sampler; actual cadence in samples.log)
+2026-09-09T02:07:46,338544146+00:00 cgroup_final current_bytes=16502784 peak_bytes=265838592 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+    #   pydantic-settings
+urllib3==2.7.0
+    # via
+    #   requests
+    #   sentry-sdk
+uvicorn==0.52.4
+    # via
+    #   fastapi
+    #   fastapi-cli
+    #   fastapi-cloud-cli
+    #   mcp
+uvloop==0.22.1
+    # via uvicorn
+watchfiles==1.2.0
+    # via
+    #   -r /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements.in
+    #   uvicorn
+websockets==17.1
+    # via uvicorn
+xgrammar==0.2.6
+    # via -r /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements.in
+yarl==1.24.5
+    # via aiohttp
+z3-solver==4.15.4.0
+    # via tilelang
+2026-09-09T02:07:46,647744326+00:00 safety_artifact_verified name=samples.log sha256=edf2cd096670550046dcc5602c89acd54dd5cd55a65258bcc02ff0463e115544 size=360
+2026-09-09T02:07:46,658420698+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T02:07:46,663589540+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   121508032 kB
