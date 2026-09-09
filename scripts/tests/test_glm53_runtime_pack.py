@@ -64,6 +64,12 @@ class RuntimePackContract(unittest.TestCase):
             self.pack()
         self.assertEqual(sentinel.read_bytes(), b"preserve")
 
+    def test_base_site_packages_exclusion_also_applies_through_lib64_alias(self):
+        (self.base / "lib64").symlink_to("lib")
+        self.pack()
+        self.assertFalse((self.out / "runtime/lib64/python3.12/site-packages").exists())
+        self.assertEqual((self.out / "runtime/lib64/python3.12/os.py").read_bytes(), b"synthetic-stdlib")
+
     def test_rejects_output_nested_in_input_before_copy(self):
         self.out = self.site / "candidate"
         with self.assertRaisesRegex(ValueError, "overlap"):
