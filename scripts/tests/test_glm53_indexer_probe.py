@@ -148,5 +148,18 @@ class IndexerProbeTests(unittest.TestCase):
             torch.empty((0,4,128),dtype=torch.bfloat16),torch.empty((0,4,128),dtype=torch.bfloat16),
             ape,torch.empty(0,dtype=torch.int64),pool_size=4,head_dim=128)
 
+    def test_native_imports_in_fresh_process(self):
+        import ast
+        import os
+        import subprocess
+        import sys
+        tree=ast.parse(Path(self.api.__file__).read_text())
+        function=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='run_native')
+        imports=[node for node in function.body if isinstance(node,(ast.Import,ast.ImportFrom))]
+        code=ast.unparse(ast.Module(body=imports,type_ignores=[]))
+        env={**os.environ,'CUDA_VISIBLE_DEVICES':'','PYTHONDONTWRITEBYTECODE':'1'}
+        result=subprocess.run([sys.executable,'-I','-B','-c',code],env=env,capture_output=True,text=True,timeout=60)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
 
 if __name__=='__main__': unittest.main()
