@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "qualification": "model_free_post_projection_indexer_falsifier_only",
+  "execution_stage": "JIT_preparation_only",
+  "combined_success_verdict": "NO_RESULT",
+  "request_context_cap": 262144,
+  "parallel_slots": 4,
+  "query_rows": [
+    1,
+    2,
+    3,
+    4,
+    2048
+  ],
+  "prefill_shapes": [
+    [
+      2048
+    ],
+    [
+      512,
+      512,
+      512,
+      512
+    ]
+  ],
+  "indexer_heads": 32,
+  "head_dim": 128,
+  "topk_tokens": 2048,
+  "pool_tokens": 4,
+  "manager_blocks": 145,
+  "manager_block_tokens": 8704,
+  "pooled_page_states": 64,
+  "physical_cache_shape": [
+    4930,
+    64,
+    132
+  ],
+  "physical_cache_dtype": "uint8",
+  "physical_page_layout": "8192 FP8 value bytes followed by 256 FP32 scale bytes; no interleaved scale per token",
+  "tail_shape": [
+    145,
+    2,
+    4,
+    128
+  ],
+  "tail_dtype": "bfloat16",
+  "gather_rows": 10485760,
+  "gather_bytes": 1384120320,
+  "profiling_radix_reservation_bytes": 1048576,
+  "prefill_logit_chunk_limit_bytes": 536870912,
+  "four_request_logit_overlap_bytes": 1073741824,
+  "native_cublaslt_workspace_bytes": 33554432,
+  "fixture": "Public seed permutes six cases, four logical request IDs and all 144 non-null manager blocks, allocating 36 distinct blocks per request (31 attention, one tail and four unused KDA reservations). Historical key channel zero is FP8 one, other channels zero. Scale=(rank+1)/65536 with rank=((2*request+1)*pool+seed%65536+request*8191)%65536, unique per request. Query channel zero is one for all 32 heads, others zero; weights=1/32. Small raw keys are constant across channels and vary by request and pool phase as (request+1)*[1,2,4,8][phase]/4096. Gate scores and APE are zero. Unused cache bytes are 0x55; unused tail values are 3.25.",
+  "reference": "Independently rank eligible historical pools. Every row returns 511 distinct groups from its request's unique top512 set, four consecutive token IDs per group, arbitrary group order. Append exactly the incomplete current pool tail (0..3 tokens), then -1 padding. At position262143 all four tail columns are -1. New pool bytes follow exact four-way mean, BF16 rounding, normalized Hadamard, BF16 rounding, power-of-two absmax scale and E4M3 nearest-even conversion. Compare all final cache and tail bytes, including unchanged padding/null/inactive areas. Capture and independently compare every valid FP32 logit byte; exclude uninitialized masked columns from artifacts. Historical logits equal the request-specific scale, and newly compressed pool logits equal decoded channel zero. Evidence-only wrappers around the actual two DeepGEMM calls capture returned tensors without replacing their computations.",
+  "acceptance": {
+    "invalid_indices": 0,
+    "cache_byte_mismatches": 0,
+    "tail_byte_mismatches": 0,
+    "nonfinite_valid_logits": 0,
+    "valid_logit_byte_mismatches": 0
+  },
+  "memory_scope": "Measure actual post-projection calls, metadata, profiling arena and two-logit overlap. Include native cuBLASLt initialization. Allocator counters supplement continuous whole-host memory observations; they do not establish full-model fit.",
+  "staging_scope": "Persistent pinned staging for probe-owned inputs and readback. Python metadata uses device-side construction. Native launch descriptors are not a claim of universal pinned runtime I/O.",
+  "safety": {
+    "minimum_start_gib": 110,
+    "kill_floor_gib": 40,
+    "timeout_seconds": 600
+  },
+  "not_established": [
+    "full-model fidelity",
+    "projection correctness",
+    "actual long-context token processing",
+    "full-model memory fit",
+    "production performance",
+    "sealed Triton or DeepGEMM kernels"
+  ]
+}

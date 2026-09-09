@@ -161,5 +161,17 @@ class IndexerProbeTests(unittest.TestCase):
         result=subprocess.run([sys.executable,'-I','-B','-c',code],env=env,capture_output=True,text=True,timeout=60)
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
 
+    def test_actual_raw_key_reload_preserves_bf16_bits(self):
+        import ast
+        import torch
+        tree=ast.parse(Path(self.api.__file__).read_text())
+        calls=[node for node in ast.walk(tree) if isinstance(node,ast.Call) and isinstance(node.func,ast.Attribute)
+               and isinstance(node.func.value,ast.Name) and node.func.value.id=='keys' and node.func.attr=='copy_']
+        self.assertEqual(len(calls),1)
+        host=torch.tensor([[self.api.fixture.bf16_bits(self.api.fixture.raw_value(r,p))]*128 for r in range(4) for p in range(4)],dtype=torch.uint16)
+        keys=torch.empty(host.shape,dtype=torch.bfloat16)
+        eval(compile(ast.Expression(calls[0]),'<actual raw key reload>','eval'),{'keys':keys,'hosts':{'keys':host},'torch':torch})
+        self.assertTrue(torch.equal(keys.view(torch.uint16),host),'raw-key reload numerically converts BF16 storage bits')
+
 
 if __name__=='__main__': unittest.main()

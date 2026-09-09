@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/bmarti44/.cache/glm53-flash/indexer-preflight-002/code/scripts/45_probe_glm53_indexer.py", line 371, in main
+    try: run_native(args.metadata,args.output,args.seed,record)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/indexer-preflight-002/code/scripts/45_probe_glm53_indexer.py", line 351, in run_native
+    score_tensors([output/a['file'] for a in artifacts],[a['sha256'] for a in artifacts],seed,case)
+  File "/home/bmarti44/.cache/glm53-flash/indexer-preflight-002/code/scripts/45_probe_glm53_indexer.py", line 86, in score_tensors
+    require(blobs[2] == tail.tobytes(), 'indexer tail bytes differ')
+  File "/home/bmarti44/.cache/glm53-flash/indexer-preflight-002/code/scripts/lib/glm53_indexer_fixture.py", line 13, in require
+    if not value: raise ValueError(message)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: indexer tail bytes differ
