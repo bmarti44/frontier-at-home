@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import test_glm53_mla_replay as parent
@@ -75,6 +75,25 @@ class RetuningGuardTests(unittest.TestCase):
             for key, configs in (((), []), ((1,), [SimpleNamespace(pre_hook=lambda: None)])):
                 with self.assertRaisesRegex(ValueError, 'retuning'):
                     Autotuner.check_disk_cache(None, key, configs, lambda: Autotuner._bench(None))
+            # Exercise the real run() cache-disabled branch, with no kernel call.
+            tuner=object.__new__(Autotuner)
+            tuner.arg_names=['n']; tuner.keys=['n']; tuner.cache={}; tuner.configs=[object(), object()]
+            tuner.cache_results=False; tuner.prune_configs=lambda _: tuner.configs
+            with self.assertRaisesRegex(ValueError, 'retuning'): tuner.run(1)
+            # Ordinary disk cache miss must propagate without invoking benchmark.
+            from triton import Config
+            from triton.runtime.jit import JITFunction
+            module=importlib.import_module('triton.runtime.autotuner')
+            fn=object.__new__(JITFunction); fn.__name__='synthetic'; fn._hash='frozen'
+            tuner.fn=fn
+            with patch.object(JITFunction, 'cache_key', new_callable=PropertyMock, return_value='frozen'), \
+                 patch.object(module, 'get_cache_manager', side_effect=ValueError('unsealed miss')), \
+                 patch.object(module, 'triton_key', return_value='frozen'), \
+                 patch.object(module, 'get_cache_invalidating_env_vars', return_value={}), \
+                 patch.object(module.driver, '_active', SimpleNamespace(get_current_target=lambda: None)), \
+                 patch('triton.compiler.compiler.make_backend', return_value=SimpleNamespace(hash=lambda:'backend')):
+                with self.assertRaisesRegex(ValueError, 'unsealed miss'):
+                    tuner.check_disk_cache((1,), [Config({})], lambda: self.fail('benchmark invoked'))
         finally: Autotuner._bench=original
 
 

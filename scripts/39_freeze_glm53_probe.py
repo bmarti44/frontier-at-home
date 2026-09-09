@@ -14,10 +14,10 @@ import time
 ROOT = Path('/home/bmarti44/spark-deepseek-v4-flash')
 BASE = Path('/home/bmarti44/.cache/glm53-flash')
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda'))
+parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay'))
 parser.add_argument('attempt')
 args = parser.parse_args()
-if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight'}[args.kind] + r'-[0-9]{3}', args.attempt):
+if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight', 'kda-replay': 'kda-replay'}[args.kind] + r'-[0-9]{3}', args.attempt):
     raise ValueError('invalid fresh attempt name')
 if subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True):
     raise ValueError('repository source is not clean')
@@ -65,6 +65,22 @@ if args.kind == 'mla-replay':
     sealed_kernels = prepare_bundle(preparation / 'state', output / 'kernels',
                                    runner.strict_json(preparation / 'generated-cache-inventory.json'))
     environment.update(TRITON_CACHE_DIR=str(output / 'kernels/triton'), FLASHINFER_DISABLE_JIT='1', CUDA_CACHE_DISABLE='1')
+if args.kind == 'kda-replay':
+    from glm53_kda_replay import prepare_bundle
+    preparation = BASE / 'kda-preflight-002'
+    retained = ROOT / 'results/glm53-flash-gates/kda-preflight-002'
+    for name in ('manifest.json', 'summary.json', 'generated-cache-inventory.json'):
+        if runner.sha256_file(preparation / name) != runner.sha256_file(retained / name):
+            raise ValueError('KDA preparation differs from committed evidence')
+        external_files.extend((preparation / name, retained / name))
+    prior = runner.strict_json(preparation / 'summary.json')
+    if prior['verdict'] != 'NO_RESULT' or prior['host']['verdict'] != 'PASS' or prior['inner']['verdict'] != 'PASS':
+        raise ValueError('KDA preparation did not complete analytic and host checks')
+    if runner.strict_json(preparation / 'manifest.json')['runtime']['sha256'] != runner.sha256_file(inventory):
+        raise ValueError('KDA preparation used another runtime')
+    sealed_kernels = prepare_bundle(preparation / 'state', output / 'kernels',
+                                   runner.strict_json(preparation / 'generated-cache-inventory.json'))
+    environment.update(TRITON_CACHE_DIR=str(output / 'kernels/triton'), TRITON_CACHE_AUTOTUNING='1', CUDA_CACHE_DISABLE='1')
 jit_tools = []
 if args.kind == 'kda':
     jit_tools = [Path('/usr/bin/gcc').resolve(), Path('/usr/bin/g++').resolve(),
@@ -122,7 +138,8 @@ manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.up
             'seed_rule': 'uint64 from first16 hex characters of BLS-verified post-freeze drand randomness',
             'model_weights': 'none', 'frozen_at_unix': time.time()}
 if sealed_kernels:
-    manifest.update(qualification='model_free_frozen_MLA_constant_cache_replay_only', sealed_kernels=sealed_kernels)
+    manifest.update(qualification=('model_free_frozen_MLA_constant_cache_replay_only' if args.kind == 'mla-replay'
+                                   else 'model_free_frozen_KDA_selected_configurations_only'), sealed_kernels=sealed_kernels)
     manifest['probe_arguments_without_seed'].extend(['--sealed-kernels', sealed_kernels['root'],
                                                     '--sealed-manifest-sha256', sealed_kernels['sha256']])
 (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')

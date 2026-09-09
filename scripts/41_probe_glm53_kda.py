@@ -167,18 +167,28 @@ def main():
     require(not sys.flags.optimize and sys.dont_write_bytecode, 'unoptimized no-bytecode Python required')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--metadata', type=Path, required=True); parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--sealed-kernels', type=Path); parser.add_argument('--sealed-manifest-sha256')
     parser.add_argument('--seed', type=int, required=True); args = parser.parse_args(); case_order(args.seed)
+    require(bool(args.sealed_kernels) == bool(args.sealed_manifest_sha256), 'incomplete sealed KDA selection')
     args.output.mkdir(parents=True, exist_ok=False)
     manifest = {'qualification': QUALIFICATION, 'seed': args.seed, 'scorer_sha256': sha256_file(Path(__file__)),
         'binary_sha256': sha256_file(Path(sys.executable).resolve()),
         'decision': {'sha256': sha256_file(ROOT / 'configs/decision-specs/glm53-kda-preflight.json')},
         'metadata': {p.name: {'sha256': sha256_file(p)} for p in args.metadata.iterdir() if p.is_file()}, 'start_unix': time.time()}
+    if args.sealed_kernels:
+        manifest.update(sealed_kernels={'root': str(args.sealed_kernels), 'sha256': args.sealed_manifest_sha256},
+                        replay_decision={'sha256': sha256_file(ROOT / 'configs/decision-specs/glm53-kda-replay.json')})
     (args.output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     failure = None
     with (args.output / 'raw.jsonl').open('w') as raw, (args.output / 'traceback.log').open('w') as errors:
         def record(row):
             raw.write(json.dumps({'time_unix': time.time(), **row}, allow_nan=False) + '\n'); raw.flush()
-        try: run_native(args.metadata, args.output, args.seed, record)
+        try:
+            if args.sealed_kernels:
+                from glm53_kda_replay import activate
+                receipt = activate(args.sealed_kernels, manifest['sealed_kernels'])
+                (args.output / 'sealed-selection.json').write_text(json.dumps({'time_unix': time.time(), **receipt}, indent=2) + '\n')
+            run_native(args.metadata, args.output, args.seed, record)
         except Exception as error:
             failure = repr(error); traceback.print_exc(file=errors); record({'event': 'failure', 'failure': failure})
     summary = {'verdict': 'FAIL' if failure else 'PASS', 'failure': failure, 'qualification': QUALIFICATION,
