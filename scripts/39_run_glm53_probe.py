@@ -95,6 +95,13 @@ def score_inner(output, kind, seed, binding):
                     type(receipt['time_unix']) in (int, float) and math.isfinite(receipt['time_unix']) and
                     0 < receipt['time_unix'] < times[0], 'invalid sealed KDA startup receipt')
             summary['sealed_selection'] = receipt
+    elif kind == 'growth':
+        require(summary['qualification'] == 'model_free_two_MoE_layers_incremental_storage_only' and
+                type(summary['actual_input_tokens_processed']) is int and summary['actual_input_tokens_processed'] == 0, 'growth qualification mismatch')
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('frozen_growth_scorer', Path(__file__).parent / '43_probe_glm53_growth.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        summary = {**summary, 'tensor_checks': module.score_capture(root, rows, seed)}
     elif kind in LOAD_KINDS:
         case = kind.removeprefix('load-')
         require(summary['qualification'] == 'model_free_component_load_storage_only' and
@@ -240,6 +247,7 @@ CODE_FILES = (
     'scripts/41_probe_glm53_kda.py', 'scripts/42_probe_glm53_load.py',
     'scripts/lib/glm53_pinned_stream.py', 'scripts/lib/glm53_load_fixture.py',
     'configs/decision-specs/glm53-load-preflight.json',
+    'scripts/43_probe_glm53_growth.py', 'configs/decision-specs/glm53-load-growth.json',
     'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
     'scripts/lib/glm53_runtime_jit.py', 'scripts/lib/glm53_mla_replay.py', 'scripts/lib/glm53_kda_replay.py',
     'configs/build-manifests/glm53-flash-sources.json', 'configs/decision-specs/glm53-cache-preflight.json',
@@ -254,6 +262,10 @@ def verify_frozen(output, manifest):
     require({str(p.relative_to(output / 'code')) for p in (output / 'code').rglob('*') if p.is_file()} == set(CODE_FILES), 'unexpected frozen code files')
     for name, row in manifest['code'].items():
         require(sha256_file(output / 'code' / name) == row['sha256'], 'frozen code changed: ' + name)
+    if manifest.get('kind') == 'growth':
+        require(manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1' and
+                manifest['probe_arguments_without_seed'][-1:] == ['--pinned-growth'], 'growth startup selection mismatch')
     if manifest.get('kind') in LOAD_KINDS:
         require(manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
                 manifest['environment']['CUDA_CACHE_DISABLE'] == '1' and
@@ -305,7 +317,7 @@ def verify_beacon(output, manifest, receipt=None):
 
 
 def probe_verdict(kind, failure):
-    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', *LOAD_KINDS), 'unknown probe kind')
+    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'growth', *LOAD_KINDS), 'unknown probe kind')
     if failure is not None: return 'FAIL'
     return 'NO_RESULT' if kind in ('mla', 'kda') else 'PASS'
 
@@ -354,6 +366,7 @@ def run(output):
     require(Path(__file__).resolve() == output / 'code/scripts/39_run_glm53_probe.py', 'run the frozen runner copy')
     expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py',
                      'mla': '40_probe_glm53_mla.py', 'mla-replay': '40_probe_glm53_mla.py', 'kda': '41_probe_glm53_kda.py', 'kda-replay': '41_probe_glm53_kda.py'}
+    expected_kind['growth'] = '43_probe_glm53_growth.py'
     expected_kind.update({kind: '42_probe_glm53_load.py' for kind in LOAD_KINDS})
     kind = manifest['kind']; require(kind in expected_kind, 'unknown probe kind')
     python = Path(manifest['runtime']['root']) / 'bin/python3'
@@ -396,6 +409,9 @@ def run(output):
                 if kind == 'kda-replay':
                     binding.update(sealed_kernels=manifest['sealed_kernels'],
                                    replay_decision=manifest['code']['configs/decision-specs/glm53-kda-replay.json'])
+            elif kind == 'growth':
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-load-growth.json'],
+                               metadata=manifest['cache_metadata_hashes'])
             elif kind in LOAD_KINDS:
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-load-preflight.json'],
                                metadata=manifest['cache_metadata_hashes'], case=kind.removeprefix('load-'))
@@ -423,12 +439,12 @@ def run(output):
                 verify_accepted_inputs(output, accepted)
             except Exception as error: failure = failure or repr(error)
             generated = None
-            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay', *LOAD_KINDS):
+            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay', 'growth', *LOAD_KINDS):
                 try:
                     cache_path = output / 'generated-cache-inventory.json'
                     state_inventory = generated_cache_inventory(output / 'state')
                     write(cache_path, state_inventory)
-                    if kind in LOAD_KINDS: validate_load_state(state_inventory)
+                    if kind in (*LOAD_KINDS, 'growth'): validate_load_state(state_inventory)
                     generated = {'path': cache_path.name, 'sha256': sha256_file(cache_path)}
                 except Exception as error: failure = failure or repr(error)
             summary = {'verdict': probe_verdict(kind, failure),
@@ -446,6 +462,8 @@ def run(output):
                 summary.update(qualification='model_free_frozen_KDA_selected_configurations_only',
                                kernel_binary_qualification=probe_verdict(kind, failure), sealed_kernels=manifest['sealed_kernels'],
                                generated_cache_inventory=generated)
+            if kind == 'growth':
+                summary.update(qualification='model_free_two_MoE_layers_incremental_storage_only', generated_cache_inventory=generated)
             if kind in LOAD_KINDS:
                 summary.update(qualification='model_free_component_load_storage_only', case=kind.removeprefix('load-'),
                                generated_cache_inventory=generated)
