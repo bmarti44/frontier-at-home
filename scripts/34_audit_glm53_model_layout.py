@@ -97,6 +97,8 @@ def main():
         raise ValueError("overlay source identity mismatch")
     spec = importlib.util.spec_from_file_location("audited_dense_overlay", overlay)
     module = importlib.util.module_from_spec(spec)
+    # Audit imports must not contaminate the prepared plugin source with .pyc.
+    sys.dont_write_bytecode = True
     spec.loader.exec_module(module)
     manifest = {"schema_version": 1, "qualification": "metadata_only", "model_loaded": False,
                 "source_lock_sha256": sha256_file(lock_path), "scorer_sha256": sha256_file(Path(__file__)),
