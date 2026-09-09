@@ -1,0 +1,18 @@
+E..
+======================================================================
+ERROR: test_complete_bundle_and_mutated_order_or_output_references (test_glm53_kda_runner.KDARunnerTests.test_complete_bundle_and_mutated_order_or_output_references)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_kda_runner.py", line 37, in test_complete_bundle_and_mutated_order_or_output_references
+    checks = runner.validate_kda_rows(root, rows, seed)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 134, in validate_kda_rows
+    require(len(rows) == 11 and rows[0] == {'time_unix': rows[0].get('time_unix'), 'event': 'configured',
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_host_evidence.py", line 24, in require
+    raise ValueError(message)
+ValueError: KDA geometry or order mismatch
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.117s
+
+FAILED (errors=1)
