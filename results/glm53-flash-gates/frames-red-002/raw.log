@@ -1,0 +1,26 @@
+test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) ... ok
+test_existing_within_cap_sampling_is_identical (__main__.suite.<locals>.FrameContract.test_existing_within_cap_sampling_is_identical) ... ok
+test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false (__main__.suite.<locals>.FrameContract.test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false) ... 
+  test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false (__main__.suite.<locals>.FrameContract.test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false) (overrides={}) ... FAIL
+  test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false (__main__.suite.<locals>.FrameContract.test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false) (overrides={'max_frames': 2048}) ... FAIL
+
+======================================================================
+FAIL: test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false (__main__.suite.<locals>.FrameContract.test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false) (overrides={})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_frame_contract.py", line 45, in test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false
+    self.assertLessEqual(len(frames), 16)
+AssertionError: 1200 not less than or equal to 16
+
+======================================================================
+FAIL: test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false (__main__.suite.<locals>.FrameContract.test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false) (overrides={'max_frames': 2048})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_frame_contract.py", line 45, in test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false
+    self.assertLessEqual(len(frames), 16)
+AssertionError: 1200 not less than or equal to 16
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.012s
+
+FAILED (failures=2)
