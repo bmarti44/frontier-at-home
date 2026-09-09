@@ -3,12 +3,13 @@
 GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`.
 The model name is `glm-5.3-flash`. Qwen remains the recorded default.
 The replacement launch directory is
-`/home/bmarti44/.cache/glm53-flash/server-bringup-017-restore`; its private key is
-in `api-key` within that directory. The preceding session 016 passed authenticated
+`/home/bmarti44/.cache/glm53-flash/server-bringup-018-restore`; its private key is
+in `api-key` within that directory. The preceding session 017 passed authenticated
 chat, tool-call, four concurrent-request, single-image, four-image and 16-frame
-video checks with 224x224 media inputs. [Raw serving evidence](../results/glm53-flash-gates/server-bringup-016-restore/README.md)
-is preserved. Session 016 subsequently hit the memory watchdog during repository
-publication. Finish memory-heavy background work before starting GLM.
+video checks with 224x224 media inputs. [Raw serving evidence](../results/glm53-flash-gates/server-bringup-017-restore/README.md)
+is preserved. Session 017 then stopped cleanly for a small native operator test.
+Session 018 uses the same serving settings. Finish memory-heavy background work
+before starting GLM.
 
 The requested capacity is **four slots of 262,144 tokens each**, totaling
 1,048,576 tokens. The separate full-context test **failed with a CUDA memory

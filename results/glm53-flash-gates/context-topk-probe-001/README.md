@@ -17,3 +17,14 @@ floor, a 180-second wall timeout and identity monitoring. Stop the serving model
 and require at least 110 GiB available before either process starts. The two
 small arms use persistent pinned input staging and the installed native binary;
 no CUDA build or runtime modification is authorized by this diagnostic.
+
+## Observed result
+
+Both fresh contained cases completed with wrapper exit0, identity checks passed,
+zero cgroup swap and intact output guards. All128 rows in both cases returned
+512 distinct indices within the valid candidate range. The finite case matched
+the independent expected selection exactly. The all-NaN input did not reproduce
+the comparison-only concern from CPU triage. This null result does not prove
+all nonfinite patterns safe or explain the model crash. Full raw tensors,
+identity observations, memory samples and binary/source bindings are archived.
+No source or serving configuration was changed.

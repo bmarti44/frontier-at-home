@@ -1,0 +1,61 @@
+{
+  "scope": "two synthetic native operator cases, not model qualification",
+  "verdict": "NO_RESULT",
+  "reason": "No CUDA failure or malformed selections reproduced; original context crash remains unexplained",
+  "checks": {
+    "finite": {
+      "operator": {
+        "case": "finite",
+        "scope": "synthetic operator diagnostic, no model weights",
+        "verdict": "PASS",
+        "crash_attribution": "NO_RESULT",
+        "rows_with_out_of_range_indices": 0,
+        "rows_with_duplicate_indices": 0,
+        "canaries_intact": true,
+        "finite_topk_matches_expected": true,
+        "limits": "No native model logits were captured. This tests selection only and never gathers attention using returned indices."
+      },
+      "wrapper_exit_zero": true,
+      "identity": {
+        "verdict": "PASS",
+        "qualification": "Python_probe_identity_only",
+        "identity_samples": 23,
+        "probe_exit_code": 0,
+        "live_process_group_after": [],
+        "raw_sha256": "76fb1a16dc4052c847043cc441bd8fa46c3f415759d7e5e15b04c1b4e0733d3f",
+        "failure": null
+      },
+      "minimum_available_gib": 114.89336776733398,
+      "swap_peak_bytes": 0,
+      "no_kill": true
+    },
+    "nan": {
+      "operator": {
+        "case": "nan",
+        "scope": "synthetic operator diagnostic, no model weights",
+        "verdict": "PASS",
+        "crash_attribution": "NO_RESULT",
+        "rows_with_out_of_range_indices": 0,
+        "rows_with_duplicate_indices": 0,
+        "canaries_intact": true,
+        "finite_topk_matches_expected": null,
+        "limits": "No native model logits were captured. This tests selection only and never gathers attention using returned indices."
+      },
+      "wrapper_exit_zero": true,
+      "identity": {
+        "verdict": "PASS",
+        "qualification": "Python_probe_identity_only",
+        "identity_samples": 22,
+        "probe_exit_code": 0,
+        "live_process_group_after": [],
+        "raw_sha256": "81ab6f7ad74c53f7744c99ba7330540e222d1ed7a2f008d85570398e43937f02",
+        "failure": null
+      },
+      "minimum_available_gib": 114.87495040893555,
+      "swap_peak_bytes": 0,
+      "no_kill": true
+    }
+  },
+  "next_bounded_alternative": "convolution/state-gather/KDA tensors with synchronization at each stage; no production patch based on this null result",
+  "time_unix": 1788991306.5199752
+}
