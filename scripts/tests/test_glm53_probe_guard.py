@@ -1,11 +1,13 @@
 """Real process controls for the evidence-only Python probe supervisor."""
 import json
+import importlib.util
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 GUARD = Path(__file__).resolve().parents[1] / "38_guard_glm53_probe.py"
 
@@ -46,6 +48,27 @@ class ProbeGuardTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(summary["verdict"], "FAIL")
         self.assertIn("executable", summary["failure"])
+
+    def test_terminal_exec_cannot_substitute_for_verified_completion(self):
+        result, summary, _ = self.run_probe("import os,time\ntime.sleep(0.35)\nos.execv('/bin/true',['true'])\n")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("completion", summary["failure"])
+
+    def test_immediate_exit_cannot_substitute_for_verified_completion(self):
+        result, summary, _ = self.run_probe("import os,time\ntime.sleep(0.35)\nos._exit(0)\n")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("completion", summary["failure"])
+
+    def test_reused_group_anchor_is_never_signaled(self):
+        spec = importlib.util.spec_from_file_location("probe_guard", GUARD)
+        guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard)
+        with mock.patch.object(guard, "process_stat", return_value={"start_ticks": 43, "pgid": 123, "ppid": os.getpid(), "state": "Z"}), \
+             mock.patch.object(guard, "live_group") as group, mock.patch.object(guard.os, "pidfd_open") as open_pid:
+            with self.assertRaisesRegex(ValueError, "anchor"):
+                guard.terminate_group(123, 42)
+            group.assert_not_called()
+            open_pid.assert_not_called()
 
     def test_surviving_descendant_fails_and_is_killed(self):
         result, summary, _ = self.run_probe("import subprocess,sys,time\nsubprocess.Popen([sys.executable,'-c','import time;time.sleep(5)'])\ntime.sleep(0.35)\n")
