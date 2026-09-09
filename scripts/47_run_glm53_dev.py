@@ -24,7 +24,7 @@ def sha(path):
 def reuse_prepared_kernels(state):
     """Copy existing warm caches; keep preparation evidence untouched."""
     sources=[]
-    for attempt in ('mla-preflight-001','kda-preflight-002','conv-preflight-001','indexer-preflight-003'):
+    for attempt in ('mla-preflight-001','kda-preflight-002','conv-preflight-001','indexer-preflight-003','sampling-preparation-001'):
         source=BASE/attempt/'state'
         for subtree in ('triton','.cache/flashinfer','.cache/vllm/modelinfos','deep-gemm'):
             if (source/subtree).exists():
@@ -62,6 +62,7 @@ def main():
     parser.add_argument('--prefill-batch',type=int,choices=(128,256,512,1024,2048),default=2048,help='Prompt chunk size; does not change context or slot count')
     parser.add_argument('--standard-cuda-allocator',action='store_true',help='Avoid expandable virtual reservations under the existing address-space limit')
     parser.add_argument('--release-warmup-cache',action='store_true',help='Release unused startup allocations before reserving the full KV cache')
+    parser.add_argument('--prepared-flashinfer',action='store_true',help='Use existing compiled FlashInfer libraries through its native cache provider')
     args=parser.parse_args()
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
@@ -73,6 +74,8 @@ def main():
             raise ValueError('model inventory mismatch')
     output.mkdir(parents=True,exist_ok=False); (output/'lib').mkdir(); (output/'state').mkdir()
     shutil.copyfile(ROOT/'scripts/lib/glm53_runtime_policy.py',output/'lib/glm53_runtime_policy.py')
+    if args.prepared_flashinfer:
+        shutil.copyfile(ROOT/'scripts/lib/glm53_flashinfer_cache.py',output/'lib/flashinfer_jit_cache.py')
     if args.release_warmup_cache:
         shutil.copyfile(ROOT/'scripts/lib/glm53_worker.py',output/'lib/glm53_worker.py')
     shutil.copyfile(ROOT/'scripts/38_guard_glm53_probe.py',output/'guard.py')
@@ -103,6 +106,7 @@ def main():
     if args.standard_cuda_allocator:environment['PYTORCH_CUDA_ALLOC_CONF']='expandable_segments:False'
     launch={'scope':'development bring-up; no model qualification or performance claim',
         'start_unix':time.time(),'arguments':arguments,'environment':environment,
+        'library_sources':[{'path':p.name,'sha256':sha(p)} for p in sorted((output/'lib').glob('*.py'))],
         'worker_source':{'sha256':sha(output/'lib/glm53_worker.py')} if args.release_warmup_cache else None,
         'model_inventory':{'sha256':sha(model/'inventory.json')},
         'python':{'sha256':sha(RUNTIME/'bin/python3')},
