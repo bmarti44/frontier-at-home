@@ -24,6 +24,13 @@ class PromptMetricTests(unittest.TestCase):
     def test_native_truth_logprobs_and_top1_reduce(self):
         self.assertEqual(self.reduce(response()), {"tokens": 2, "nll_sum": 2.75, "top1_correct": 1})
 
+    def test_native_tied_truth_uses_the_selected_rank_one_token(self):
+        # Pinned append_logprobs_for_next_position assigns selected top-k
+        # rank1 while count-greater-or-equal can assign tied truth rank2.
+        value = response()
+        value["choices"][0]["prompt_logprobs"][2]["3"].update(logprob=-0.2, rank=2)
+        self.assertEqual(self.reduce(value), {"tokens": 2, "nll_sum": 0.45, "top1_correct": 1})
+
     def test_wrong_model_tokens_usage_or_completion_rejects(self):
         changes = [lambda r: r.update(model="wrong"),
                    lambda r: r["choices"][0].update(prompt_token_ids=[1, 2, 4]),
