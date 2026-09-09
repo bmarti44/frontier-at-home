@@ -1,0 +1,16 @@
+EXL3_LINEAR_TP_TEST PASS
+EXL3_LINEAR shards=[512, 512, 1024] rows=1 rel_l2=2.5326e-03
+EXL3_LINEAR shards=[512, 512, 1024] rows=4 rel_l2=2.5421e-03
+EXL3_LINEAR shards=[512, 512, 1024] rows=300 rel_l2=2.5375e-03
+EXL3_LINEAR shards=[1024] rows=1 rel_l2=2.6402e-03
+EXL3_LINEAR shards=[1024] rows=4 rel_l2=2.5793e-03
+EXL3_LINEAR shards=[1024] rows=300 rel_l2=2.5361e-03
+EXL3_LINEAR_TEST PASS worst_rel_l2=2.6402e-03
+Traceback (most recent call last):
+  File "/home/bmarti44/.cache/glm53-flash/native-smoke-002/code/scripts/35_smoke_glm53_native.py", line 159, in main
+    function(*arguments)
+  File "/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/tests/test_exl3_linear.py", line 229, in test_exl3_linear_mixed_mul1
+    method.create_weights(
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime/lib/python3.12/site-packages/vllm_exl3/exl3.py", line 2632, in create_weights
+    raise NotImplementedError(
+NotImplementedError: EXL3 padded linear geometry is supported for single-shard layers without bf16 shards only: in=4096 out=[512, 512, 512, 64, 128, 128]

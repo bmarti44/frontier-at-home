@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "qualification": "synthetic_native_smoke_only",
+  "source_revision": "7dc60bf31e1a4f4f090cbfa007349a43b853741c",
+  "runtime": {
+    "root": "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime",
+    "manifest": "/home/bmarti44/.cache/glm53-flash/native-runtime-001/inventory.json",
+    "sha256": "426208f0fdea4b72711ef324c9188fb2c08822c821df2a0b496f59a1a3a84114",
+    "files": 61353
+  },
+  "code": {
+    "scripts/35_smoke_glm53_native.py": {
+      "sha256": "df39a95bb4aef3c56e3da1522ffc87bbeea57d0392a7a085caa1706e65745814"
+    },
+    "scripts/lib/glm53_contract.py": {
+      "sha256": "26f0673769eae0d4bf86971fb0364262cbd760069f3afeef177067b74d264be8"
+    },
+    "configs/build-manifests/glm53-flash-sources.json": {
+      "sha256": "201c7d4b8055e6a3e6a014e1ec90528cc0acb43c84488211fb8066bed6370b84"
+    },
+    "scripts/103_verify_drand_receipt_bundle.mjs": {
+      "sha256": "b3729f3b9d213a9c040ea77324ee96d419c3bf4b8a80e2be9f54e6d8ebcff2bc"
+    }
+  },
+  "prepared": {
+    "root": "/home/bmarti44/.cache/glm53-flash/build-source-004",
+    "sha256": "39cf31710bc748e8cd3a3d0eed8e074d2bd0c2d72c4d6308ca4e167d3406cc7b"
+  },
+  "test_files": {
+    "test_exl3_linear.py": {
+      "sha256": "9bc9115857bfc5389186579274540033a7388ea37b85e2cd1ee1ac4bf6a0ed83"
+    },
+    "test_native_moe_contract.py": {
+      "sha256": "0f522df5c969fd898d716c9a153e517b0e8174f2ffbb27783f7eed4f6787f319"
+    }
+  },
+  "tools": {
+    "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime/bin/python3": {
+      "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+    },
+    "/usr/bin/git": {
+      "sha256": "aa6540695d076182256dd6e96c8b302e4d56381e3000bbfd5c71bbdfe94a4942"
+    },
+    "/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node": {
+      "sha256": "3159f9115ab4be7d318b7c28e946837a4dceb7f2b3c43232aa2f2e3852550b90"
+    },
+    "/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_cgroup_run.sh": {
+      "sha256": "08054584eb6422743901b4fbd90fc1e3ba1223f48d43ef6e46f46cb3ef23c3c1"
+    },
+    "/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_safe_run.sh": {
+      "sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
+    }
+  },
+  "orchestration": {
+    "freeze.py": {
+      "sha256": "a836dc2eba4a27343a84c45a853adb9c8d5cdee479ca455395807ac2402d2079"
+    },
+    "launch.py": {
+      "sha256": "514e3f9cc26312cc511db0e7893449e7de5bfa4a4d89e4c219dbe8001aedf746"
+    },
+    "fetch-randomness.py": {
+      "sha256": "cc3b50b27250eef0002ed7cdb67c47476e53b45fc12b87f4ddb485a1af899f99"
+    }
+  },
+  "environment": {
+    "HOME": "/home/bmarti44/.cache/glm53-flash/native-smoke-002/state",
+    "PATH": "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "CUDA_HOME": "/usr/local/cuda-13.0",
+    "CUDA_VISIBLE_DEVICES": "0",
+    "TORCH_COMPILE_DISABLE": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "NVIDIA_TF32_OVERRIDE": "0",
+    "MAX_JOBS": "2",
+    "NVCC_THREADS": "1",
+    "TRITON_CACHE_DIR": "/home/bmarti44/.cache/glm53-flash/native-smoke-002/state/triton",
+    "TORCH_EXTENSIONS_DIR": "/home/bmarti44/.cache/glm53-flash/native-smoke-002/state/torch-extensions",
+    "CUDA_CACHE_PATH": "/home/bmarti44/.cache/glm53-flash/native-smoke-002/state/cuda-cache"
+  },
+  "safety": {
+    "minimum_start_gib": 110,
+    "kill_floor_gib": 40,
+    "timeout_seconds": 600
+  },
+  "argv_without_seed": [
+    "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime/bin/python3",
+    "-I",
+    "-B",
+    "/home/bmarti44/.cache/glm53-flash/native-smoke-002/code/scripts/35_smoke_glm53_native.py",
+    "--prepared",
+    "/home/bmarti44/.cache/glm53-flash/build-source-004",
+    "--output",
+    "/home/bmarti44/.cache/glm53-flash/native-smoke-002/checks"
+  ],
+  "seed_rule": "uint64 from first16 hex characters of BLS-verified post-freeze drand randomness",
+  "frozen_at_unix": 1788930006.5304735,
+  "model_weights": "none; synthetic seeded tensors only"
+}
