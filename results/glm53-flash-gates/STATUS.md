@@ -139,7 +139,7 @@ All four separately frozen component probes pass: [288-expert MoE](load-moe-001/
 persistent pinned staging, actual loaders and final native handles, exact storage
 relationships, phase memory observations and complete host/identity/hash/seed/
 cleanup. Both reviewers closed the two evidence defects at candidate2 / campaign41;
-220 scoped CPU tests pass. All attempts had zero new swap and no generated runtime
+225 scoped CPU tests pass. All attempts had zero new swap and no generated runtime
 artifacts. Inputs are synthetic, not model weights.
 
 The MoE component retains2,124,585,984 bytes, including288 MiB shared scratch,
@@ -148,8 +148,14 @@ requires at least2,537,553,920 bytes of simultaneous destination and temporary
 storage; its actual allocation observations pass that lower bound. These are
 component costs, not a full-model fit or production-performance result.
 
-Next: measure incremental two-layer overhead and shared-cache reuse; finish
-convolution and indexer workspace probes. Do not multiply fresh-process RSS by
+The [two-layer growth probe](load-growth-001/README.md) also passes. Both modules
+remain live and independent, while shared scratch/cache identities remain stable.
+The observed retained-phase increase is 4,500 KiB RSS/PSS-anonymous and
+1,822,587,392 CUDA allocation bytes. This is a probe observation, not established
+production overhead per layer. Cgroup peak is below live CUDA allocation, so the
+external whole-host floor remains mandatory.
+
+Next: finish convolution and indexer workspace probes. Do not multiply fresh-process RSS by
 layer count or add it blindly to CUDA allocations. The synthetic input was
 freshly generated, so these runs do not establish cold checkpoint I/O behavior.
 

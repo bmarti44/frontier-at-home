@@ -46,3 +46,10 @@ No single allocation above independently falsifies the remaining9.2 GiB
 metadata overhead envelope. Proposed next work is independent full-geometry
 convolution/indexer preparation and sealed replay, with full output/state checks.
 Incremental model-loader overhead remains separate and unmeasured.
+
+Follow-up layout check: mamba_utils.get_conv_state_layout defaults to SD, and the
+qualified cache backing has shape [state_blocks,3,24576]. GLM transposes the last
+two dimensions before convolution (models/glm5next/nvidia/kda.py:375). Therefore
+construct backing [5,3,24576] and pass its [5,24576,3] view with strides
+[73728,1,24576], rather than substituting contiguous [5,24576,3] state. This
+changes neither the 720 KiB byte count nor the scope of the proposed probe.
