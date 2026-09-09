@@ -1,0 +1,128 @@
+test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) ... 
+  test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='glm53_probe_capture', pid=True) ... ERROR
+  test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='glm53_probe_capture', pid=-1) ... ERROR
+  test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='glm53_probe_capture', pid=0) ... ERROR
+  test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='glm53_probe_capture', pid=4295845583) ... ERROR
+  test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='guard_pidfd', pid=True) ... ERROR
+  test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='guard_pidfd', pid=-1) ... ERROR
+  test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='guard_pidfd', pid=0) ... ERROR
+  test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='guard_pidfd', pid=4295845583) ... ERROR
+test_missing_python_entry_points_use_same_kernel_pidfd (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_missing_python_entry_points_use_same_kernel_pidfd) ... 
+  test_missing_python_entry_points_use_same_kernel_pidfd (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_missing_python_entry_points_use_same_kernel_pidfd) (module='glm53_probe_capture') ... ERROR
+  test_missing_python_entry_points_use_same_kernel_pidfd (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_missing_python_entry_points_use_same_kernel_pidfd) (module='guard_pidfd') ... ERROR
+test_real_pidfd_open_signal_zero_and_closed_descriptor (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_real_pidfd_open_signal_zero_and_closed_descriptor) ... 
+  test_real_pidfd_open_signal_zero_and_closed_descriptor (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_real_pidfd_open_signal_zero_and_closed_descriptor) (module='glm53_probe_capture') ... ERROR
+  test_real_pidfd_open_signal_zero_and_closed_descriptor (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_real_pidfd_open_signal_zero_and_closed_descriptor) (module='guard_pidfd') ... ERROR
+
+======================================================================
+ERROR: test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='glm53_probe_capture', pid=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 34, in test_invalid_integer_arguments_cannot_wrap_to_another_process
+    with self.subTest(module=module.__name__,pid=pid),self.assertRaises(ValueError):module.pidfd_open(pid)
+                                                                                    ^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_probe_capture' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='glm53_probe_capture', pid=-1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 34, in test_invalid_integer_arguments_cannot_wrap_to_another_process
+    with self.subTest(module=module.__name__,pid=pid),self.assertRaises(ValueError):module.pidfd_open(pid)
+                                                                                    ^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_probe_capture' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='glm53_probe_capture', pid=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 34, in test_invalid_integer_arguments_cannot_wrap_to_another_process
+    with self.subTest(module=module.__name__,pid=pid),self.assertRaises(ValueError):module.pidfd_open(pid)
+                                                                                    ^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_probe_capture' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='glm53_probe_capture', pid=4295845583)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 34, in test_invalid_integer_arguments_cannot_wrap_to_another_process
+    with self.subTest(module=module.__name__,pid=pid),self.assertRaises(ValueError):module.pidfd_open(pid)
+                                                                                    ^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_probe_capture' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='guard_pidfd', pid=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 34, in test_invalid_integer_arguments_cannot_wrap_to_another_process
+    with self.subTest(module=module.__name__,pid=pid),self.assertRaises(ValueError):module.pidfd_open(pid)
+                                                                                    ^^^^^^^^^^^^^^^^^
+AttributeError: module 'guard_pidfd' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='guard_pidfd', pid=-1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 34, in test_invalid_integer_arguments_cannot_wrap_to_another_process
+    with self.subTest(module=module.__name__,pid=pid),self.assertRaises(ValueError):module.pidfd_open(pid)
+                                                                                    ^^^^^^^^^^^^^^^^^
+AttributeError: module 'guard_pidfd' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='guard_pidfd', pid=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 34, in test_invalid_integer_arguments_cannot_wrap_to_another_process
+    with self.subTest(module=module.__name__,pid=pid),self.assertRaises(ValueError):module.pidfd_open(pid)
+                                                                                    ^^^^^^^^^^^^^^^^^
+AttributeError: module 'guard_pidfd' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_invalid_integer_arguments_cannot_wrap_to_another_process (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_invalid_integer_arguments_cannot_wrap_to_another_process) (module='guard_pidfd', pid=4295845583)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 34, in test_invalid_integer_arguments_cannot_wrap_to_another_process
+    with self.subTest(module=module.__name__,pid=pid),self.assertRaises(ValueError):module.pidfd_open(pid)
+                                                                                    ^^^^^^^^^^^^^^^^^
+AttributeError: module 'guard_pidfd' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_missing_python_entry_points_use_same_kernel_pidfd (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_missing_python_entry_points_use_same_kernel_pidfd) (module='glm53_probe_capture')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 26, in test_missing_python_entry_points_use_same_kernel_pidfd
+    fd=module.pidfd_open(os.getpid())
+       ^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_probe_capture' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_missing_python_entry_points_use_same_kernel_pidfd (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_missing_python_entry_points_use_same_kernel_pidfd) (module='guard_pidfd')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 26, in test_missing_python_entry_points_use_same_kernel_pidfd
+    fd=module.pidfd_open(os.getpid())
+       ^^^^^^^^^^^^^^^^^
+AttributeError: module 'guard_pidfd' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_real_pidfd_open_signal_zero_and_closed_descriptor (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_real_pidfd_open_signal_zero_and_closed_descriptor) (module='glm53_probe_capture')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 18, in test_real_pidfd_open_signal_zero_and_closed_descriptor
+    fd=module.pidfd_open(os.getpid())
+       ^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_probe_capture' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_real_pidfd_open_signal_zero_and_closed_descriptor (test_glm53_pidfd_compat.PidfdCompatibilityTests.test_real_pidfd_open_signal_zero_and_closed_descriptor) (module='guard_pidfd')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_pidfd_compat.py", line 18, in test_real_pidfd_open_signal_zero_and_closed_descriptor
+    fd=module.pidfd_open(os.getpid())
+       ^^^^^^^^^^^^^^^^^
+AttributeError: module 'guard_pidfd' has no attribute 'pidfd_open'
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.002s
+
+FAILED (errors=12)
