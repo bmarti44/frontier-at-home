@@ -92,7 +92,7 @@ def validate_memory(row, case):
     keys={'cuda_allocated','cuda_reserved','cuda_peak_allocated','device_free','device_total','workspace_bytes'}
     require(isinstance(row,dict) and set(row) == keys and all(type(v) is int and v > 0 for v in row.values()), 'invalid indexer memory fields')
     base=WORKSPACE+CACHE_BYTES+TAIL_BYTES+TOPK_BYTES
-    require(row['workspace_bytes'] == WORKSPACE and base <= row['cuda_allocated'] <= row['cuda_peak_allocated'] <= row['cuda_reserved'] and
+    require(row['workspace_bytes'] == WORKSPACE and base <= row['cuda_allocated'] <= row['cuda_peak_allocated'] <= row['cuda_reserved'] <= row['device_total'] and
             row['device_free'] < row['device_total'], 'indexer memory accounting mismatch')
     logits = 1073741824 if case == 'prefill-4' else 536870912 if case == 'prefill-1' else sum(fixture.CASES[case])*262144*4
     require(row['cuda_peak_allocated'] >= base+logits, 'missing native logits/workspace allocation')
@@ -132,9 +132,9 @@ def validate_capture(root, rows, seed):
             all(b>a for a,b in zip(times,times[1:])), 'indexer timestamps invalid')
     require(json.dumps(rows[0],sort_keys=True) == json.dumps({'time_unix':times[0],'event':'configured',**geometry(seed)},sort_keys=True), 'indexer startup geometry mismatch')
     profile=rows[1]
-    require(set(profile) == {'time_unix','event','workspace_bytes','cuda_peak_allocated','cuda_reserved'} and profile['event']=='profiled' and
-            all(type(profile[k]) is int for k in ('workspace_bytes','cuda_peak_allocated','cuda_reserved')) and
-            profile['workspace_bytes']==WORKSPACE and WORKSPACE+CACHE_BYTES+TAIL_BYTES+TOPK_BYTES+536870912 <= profile['cuda_peak_allocated'] <= profile['cuda_reserved'], 'indexer profiling allocation mismatch')
+    require(set(profile) == {'time_unix','event','workspace_bytes','cuda_peak_allocated','cuda_reserved','device_total'} and profile['event']=='profiled' and
+            all(type(profile[k]) is int for k in ('workspace_bytes','cuda_peak_allocated','cuda_reserved','device_total')) and
+            profile['workspace_bytes']==WORKSPACE and WORKSPACE+CACHE_BYTES+TAIL_BYTES+TOPK_BYTES+536870912 <= profile['cuda_peak_allocated'] <= profile['cuda_reserved'] <= profile['device_total'], 'indexer profiling allocation mismatch')
     names={'manifest.json','summary.json','raw.jsonl','traceback.log'}; checks=[]
     for i,case in enumerate(order):
         start,row=rows[2+2*i:4+2*i]
@@ -156,7 +156,7 @@ def validate_capture(root, rows, seed):
                     all(type(call[k]) is int for k in ('start','stop','columns','cuda_allocated_at_return')) and
                     {k:call[k] for k in spec}==spec and call['file']==name, 'indexer native call receipt mismatch')
             overlap=536870912*(j+1) if case.startswith('prefill') else sum(fixture.CASES[case])*262144*4
-            require(call['cuda_allocated_at_return'] >= WORKSPACE+CACHE_BYTES+TAIL_BYTES+TOPK_BYTES+overlap, 'native logit lifetime overlap missing')
+            require(WORKSPACE+CACHE_BYTES+TAIL_BYTES+TOPK_BYTES+overlap <= call['cuda_allocated_at_return'] <= row['memory']['cuda_peak_allocated'], 'native logit lifetime overlap missing')
         checks.append(row)
     require({p.name for p in root.iterdir()}==names, 'indexer file coverage mismatch')
     return checks
@@ -257,7 +257,7 @@ def run_native(metadata, output, seed, record):
         q=stage('query',qbits,current_platform.fp8_dtype())
         weights=stage('weights',np.full((2048,32),1/32,dtype='<f4'))
         gate=stage('gate',np.zeros((2048,128),dtype='<u2'),torch.bfloat16)
-        ape=stage('ape',np.zeros((4,128),dtype='<u2'),torch.bfloat16)
+        ape=stage('ape',np.zeros((4,128),dtype='<f4'))
         keys=stage('keys',np.zeros((2048,128),dtype='<u2'),torch.bfloat16)
         def invoke(count,positions):
             return sparse_attn_indexer_kpool(hidden[:count],prefix,cache,q[:count],None,keys[:count],weights[:count],
@@ -268,7 +268,7 @@ def run_native(metadata, output, seed, record):
         torch.cuda.synchronize(); torch.cuda.reset_peak_memory_stats()
         with set_forward_context(None,cfg,num_tokens=2048): invoke(2048,None)
         torch.cuda.synchronize()
-        record({'event':'profiled','workspace_bytes':workspace_bytes(),'cuda_peak_allocated':torch.cuda.max_memory_allocated(),'cuda_reserved':torch.cuda.memory_reserved()})
+        record({'event':'profiled','workspace_bytes':workspace_bytes(),'cuda_peak_allocated':torch.cuda.max_memory_allocated(),'cuda_reserved':torch.cuda.memory_reserved(),'device_total':torch.cuda.mem_get_info()[1]})
         require(workspace_bytes()==WORKSPACE, 'native profiling workspace changed')
 
         for case in fixture.case_order(seed):
