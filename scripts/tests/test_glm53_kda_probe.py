@@ -2,6 +2,7 @@
 import gzip
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -36,6 +37,16 @@ class KDAProbeTests(unittest.TestCase):
         coefficient = math.exp(-2.5) * initial + 0.5 * (1 - math.exp(-2.5) * initial * n) * n
         self.assertAlmostEqual(float(output[0, 0, 0]), (slot + 1) * 0.5 * coefficient * n / math.sqrt(128), places=7)
         self.assertTrue(np.all(state[0] == 3.25))
+
+    def test_checkpoint_nested_kda_config_uses_pinned_normalizer(self):
+        config = {'text_config': {'linear_attn_config': {'num_heads': 64, 'head_dim': 128,
+                   'short_conv_kernel_size': 4, 'gate_lower_bound': -5.0}}}
+        path = self.root / 'config.json'; path.write_text(json.dumps(config))
+        self.assertEqual(self.api.normalized_geometry(self.root), {'heads': 64, 'dimensions': 128, 'lower_bound': -5.0, 'conv_size': 4})
+        for key, value in (('num_heads', 32), ('head_dim', 64), ('gate_lower_bound', -3.0), ('short_conv_kernel_size', 3)):
+            changed = json.loads(json.dumps(config)); changed['text_config']['linear_attn_config'][key] = value
+            path.write_text(json.dumps(changed))
+            with self.assertRaises(ValueError): self.api.normalized_geometry(self.root)
 
     def test_scores_every_output_and_state_element(self):
         paths, digests = self.capture()
