@@ -2,8 +2,8 @@
 
 GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`.
 The model name is `glm-5.3-flash`. Qwen remains the recorded default.
-The verified running session is
-`/home/bmarti44/.cache/glm53-flash/server-bringup-008`; its private key is in
+The verified running session (restored after the media retry) is
+`/home/bmarti44/.cache/glm53-flash/server-bringup-010-text-restore`; its private key is in
 `api-key` within that directory. Text, tool-call and four concurrent-request
 checks passed; images/video remain pending.
 
