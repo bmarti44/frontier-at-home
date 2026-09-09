@@ -111,7 +111,7 @@ redact_matches() {
 
 # Public package hashes and wrapper artifact receipts, restricted to the two
 # recorded GLM-5.3 dependency attempts and exact line formats.
-readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-exllamav3-001)/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001)/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
 
 scan_stream() {
   local matches
@@ -848,6 +848,14 @@ self_test() {
     echo 'self-test failed: GLM install digest allowance is too broad' >&2
     return 1
   fi
+  for glm53_build_component in exllamav3 vllm vllm-exl3; do
+    glm53_digest_line="results/glm53-flash-gates/build-$glm53_build_component-001/main.log:1:2026-09-09T04:37:58,201429491+00:00 safety_artifact_verified name=samples.log sha256=$fake_secret size=12"
+    if ! printf '%s\n' "$glm53_digest_line" | scan_stream >/dev/null 2>&1 ||
+       printf '%s\n' "$glm53_digest_line extra=$fake_secret" | scan_stream >/dev/null 2>&1; then
+      echo 'self-test failed: GLM build digest scope is incorrect' >&2
+      return 1
+    fi
+  done
   local layout_path='results/glm53-flash-gates/model-layout-001/raw.jsonl'
   if ! is_checksum_file "$layout_path" ||
       ! printf '{"header_sha256":"%s","shard_sha256_expected":"%s"}\n' "$fake_secret" "$fake_secret" |
