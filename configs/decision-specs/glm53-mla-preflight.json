@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "qualification": "model_free_MLA_constant_cache_falsifier_only",
+  "request_context_cap": 262144,
+  "parallel_slots": 4,
+  "query_rows": [1, 2, 3, 4, 2048],
+  "heads": 64,
+  "latent_dimensions": 512,
+  "cache_block_tokens": 64,
+  "cache_state_bytes": 656,
+  "topk": 2048,
+  "kv_cache_dtype": "fp8_ds_mla",
+  "kv_scale_format": "arbitrary_fp32",
+  "constant_cache_pattern": [0.5, -0.25, 1.0, -2.0],
+  "reference": "Every populated key/value in request r has the repeated pattern multiplied by r+1. Attention over identical values returns that value independently of query and softmax. Read and score every output BF16 element independently from bounded gzip artifacts.",
+  "acceptance": {"absolute_tolerance": 0.02, "relative_tolerance": 0.02, "nonfinite_elements": 0, "mismatched_elements": 0},
+  "safety": {"minimum_start_gib": 110, "kill_floor_gib": 40, "timeout_seconds": 600},
+  "not_established": ["general attention correctness", "model fidelity", "actual long-context token processing", "full model workspace peak", "production performance", "sealed JIT cache"]
+}
