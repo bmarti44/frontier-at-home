@@ -1,0 +1,18 @@
+......E........
+======================================================================
+ERROR: test_growth_probe_kind_and_frozen_dependencies (test_glm53_probe_runner.GrowthRunnerTests.test_growth_probe_kind_and_frozen_dependencies)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 158, in test_growth_probe_kind_and_frozen_dependencies
+    self.assertEqual(runner.probe_verdict('growth',None),'PASS')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 308, in probe_verdict
+    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', *LOAD_KINDS), 'unknown probe kind')
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_host_evidence.py", line 24, in require
+    raise ValueError(message)
+ValueError: unknown probe kind
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.022s
+
+FAILED (errors=1)
