@@ -76,6 +76,26 @@ def fixture_digest(seed, spec):
     return digest.hexdigest()
 
 
+def canonical_fixture(case, seed):
+    """Independently reconstruct the complete input file, including excluded bytes."""
+    specs = sorted([*tensor_specs(case), *EXCLUDED], key=lambda row: row['name'])
+    header = {'__metadata__': {'qualification': 'synthetic_load_fixture_only'}}; offset = 0
+    for spec in specs:
+        end = offset + byte_count(spec)
+        header[spec['name']] = {'dtype': spec['dtype'], 'shape': spec['shape'], 'data_offsets': [offset, end]}
+        offset = end
+    encoded = json.dumps(header, separators=(',', ':')).encode(); encoded += b' ' * (-len(encoded) % 8)
+    digest = hashlib.sha256(struct.pack('<Q', len(encoded)) + encoded); tensor_digests = {}
+    for spec in specs:
+        tensor_hash = hashlib.sha256()
+        for start in range(0, byte_count(spec), CAPACITY):
+            data = fixture_bytes(seed, spec, start, min(CAPACITY, byte_count(spec) - start))
+            digest.update(data); tensor_hash.update(data)
+        tensor_digests[spec['name']] = tensor_hash.hexdigest()
+    return tensor_digests, {'schema_version': 1, 'files': [{'path': 'weights.safetensors',
+        'size_bytes': 8 + len(encoded) + offset, 'sha256': digest.hexdigest()}]}
+
+
 def write_fixture(root, case, seed):
     """Generated inputs are retained; all headers/payloads precede CUDA loading."""
     specs = tensor_specs(case)
@@ -300,9 +320,10 @@ def run_native(metadata, output, case, seed, record):
     require(text.hidden_size == 4096 and text.n_routed_experts == 288 and text.moe_intermediate_size == 2048 and
             text.vocab_size == 154880 and text.num_hidden_layers == 45, 'model sizing metadata changed')
     import torch
-    require(torch.cuda.get_device_capability() == (12, 1), 'SM121 required')
+    require(torch.cuda.get_device_capability() == (12, 1) and
+            torch.cuda.get_device_properties(0).multi_processor_count == 48, '48-SM GB10 SM121 required')
     record({'event': 'configured', 'case': case, 'selection': 'persistent_pinned_stream', 'triton': 'all_specializations_rejected',
-            'retuning': 'rejected', 'minimal_MoE_context': case == 'moe', 'pinned_capacity': CAPACITY})
+            'retuning': 'rejected', 'minimal_MoE_context': case == 'moe', 'pinned_capacity': CAPACITY, 'multiprocessors': 48})
     fixture = write_fixture(output / 'fixture', case, seed)
     (output / 'fixture.json').write_text(json.dumps(fixture, indent=2) + '\n')
     capture = Capture()
@@ -386,7 +407,9 @@ def validate_memory(value):
     require(isinstance(value, dict) and set(value) == {'process_kib', 'cuda_allocated', 'cuda_reserved',
             'cuda_peak_allocated', 'cuda_peak_reserved', 'pinned_allocator'}, 'memory schema mismatch')
     require(set(value['process_kib']) == {'Rss', 'Pss', 'Pss_Anon', 'Pss_File'} and
-            all(type(v) is int and v >= 0 for v in value['process_kib'].values()), 'invalid RSS/PSS')
+            all(type(v) is int and v >= 0 for v in value['process_kib'].values()) and
+            value['process_kib']['Rss'] >= value['process_kib']['Pss'] >= value['process_kib']['Pss_Anon'] > 0 and
+            value['process_kib']['Pss'] >= value['process_kib']['Pss_File'], 'invalid RSS/PSS')
     require(all(type(value[k]) is int and value[k] >= 0 for k in ('cuda_allocated', 'cuda_reserved', 'cuda_peak_allocated', 'cuda_peak_reserved')) and
             value['cuda_allocated'] <= value['cuda_reserved'] <= value['cuda_peak_reserved'] and
             value['cuda_allocated'] <= value['cuda_peak_allocated'] <= value['cuda_peak_reserved'], 'invalid CUDA allocation counters')
@@ -397,9 +420,23 @@ def validate_memory(value):
             pinned['allocated_bytes.current'] >= pinned['active_bytes.current'] >= CAPACITY, 'invalid pinned allocation counters')
 
 
+def validate_retained_geometry(retained, case):
+    if case == 'moe': require(type(retained['concurrency']) is int and retained['concurrency'] == 6, 'invalid scratch concurrency')
+    for key in ('shared_scratch', 'tensor_cache'):
+        expected_shapes = ([[6, 2048, 4096]] * 2 + [[6, 2048, 2048]] * 2 if case == 'moe' else []) if key == 'shared_scratch' else (
+            [[1, 2048], [1, 4096]] if case == 'moe' else [[1, 4096]] if case in ('kda', 'mla') else [])
+        require(sorted(r['shape'] for r in retained[key]) == sorted(expected_shapes), 'retained cache/scratch geometry mismatch')
+        for row in retained[key]:
+            require(row['dtype'] == 'torch.float16' and row['stride'] == contiguous_stride(row['shape']) and
+                    row['storage_offset'] == 0 and row['storage_bytes'] == math.prod(row['shape']) * 2,
+                    'retained cache/scratch layout mismatch')
+
+
+
 def score_capture(root, rows, case, seed):
     specs = tensor_specs(case); names = [s['name'] for s in specs]
-    expected = {s['name']: fixture_digest(seed, s) for s in specs}
+    digests, canonical_inventory = canonical_fixture(case, seed)
+    expected = {s['name']: digests[s['name']] for s in specs}
     fixture = strict_json(root / 'fixture.json')
     require(set(fixture) == {'schema_version', 'qualification', 'case', 'seed', 'generator_sha256', 'inventory', 'selection', 'excluded'} and
             type(fixture['schema_version']) is int and fixture['schema_version'] == 1 and
@@ -409,16 +446,16 @@ def score_capture(root, rows, case, seed):
     require(fixture['selection'] == {s['name']: {'file': 'weights.safetensors', 'dtype': DTYPES[s['dtype']],
             'shape': s['shape'], 'sha256': expected[s['name']]} for s in specs}, 'fixture selection differs from independent generator')
     require(fixture['excluded'] == {s['name']: {'dtype': DTYPES[s['dtype']], 'shape': s['shape'],
-            'sha256': fixture_digest(seed, s)} for s in EXCLUDED}, 'excluded fixture binding mismatch')
-    require([r['path'] for r in fixture['inventory']['files']] == ['weights.safetensors'], 'fixture file coverage mismatch')
+            'sha256': digests[s['name']]} for s in EXCLUDED}, 'excluded fixture binding mismatch')
+    require(fixture['inventory'] == canonical_inventory, 'retained fixture is not the canonical complete file')
     verify_inventory(root / 'fixture', fixture['inventory'])
     require({p.name for p in root.iterdir()} == {'manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log', 'fixture.json', 'fixture'}, 'load artifact coverage mismatch')
     require([r.get('event') for r in rows] == ['configured', 'memory', 'constructed'] +
             ['loaded', 'transfer'] * len(specs) + ['memory', 'memory'] + ['final_bytes'] * len(specs) + ['retained'], 'load event coverage mismatch')
     require(rows[0] == {'time_unix': rows[0]['time_unix'], 'event': 'configured', 'case': case,
             'selection': 'persistent_pinned_stream', 'triton': 'all_specializations_rejected', 'retuning': 'rejected',
-            'minimal_MoE_context': case == 'moe', 'pinned_capacity': CAPACITY} and
-            type(rows[0]['minimal_MoE_context']) is bool and type(rows[0]['pinned_capacity']) is int, 'load startup selection mismatch')
+            'minimal_MoE_context': case == 'moe', 'pinned_capacity': CAPACITY, 'multiprocessors': 48} and
+            type(rows[0]['minimal_MoE_context']) is bool and type(rows[0]['pinned_capacity']) is int and type(rows[0]['multiprocessors']) is int, 'load startup selection mismatch')
     phases = [r for r in rows if r['event'] == 'memory']
     require([r['phase'] for r in phases] == ['before_constructor', 'after_transfers_and_verification', 'after_finalization'], 'load memory phase mismatch')
     for row in phases:
@@ -498,11 +535,41 @@ def score_capture(root, rows, case, seed):
                         final[f'model.language_model.layers.3.mlp.experts.{e}.{suffix}.{part}']['storage']['data_pointer'] for e in range(288)] and
                     all(type(v) is int for v in row['values']), 'pointer table values mismatch')
         require(len({r['storage']['storage_pointer'] for r in tables.values()}) == 9, 'pointer tables alias')
-        require(type(retained['concurrency']) is int and retained['concurrency'] >= 0, 'invalid scratch concurrency')
+        require(type(retained['concurrency']) is int and retained['concurrency'] == 6, 'invalid scratch concurrency')
         unique = {(r['device'], r['storage_pointer']): r['storage_bytes'] for r in retained['shared_scratch']}
         require(sum(unique.values()) == 50331648 * retained['concurrency'], 'scratch size mismatch')
+    known = [r['storage'] for r in final.values()]
+    if case == 'moe': known.extend(parameters.values())
+    validate_retained_geometry(retained, case)
+    known.extend(retained['shared_scratch']); known.extend(retained['tensor_cache'])
+    known.extend(r['storage'] for r in tables.values())
+    # Repeated views must agree on backing size; independent retained allocations cannot overlap.
+    unique = {}
+    for row in known:
+        if row['storage_bytes']:
+            pointer = row['storage_pointer']
+            require(pointer not in unique or unique[pointer] == row['storage_bytes'], 'contradictory backing sizes')
+            unique[pointer] = row['storage_bytes']
+    independent = [r['storage_pointer'] for key in ('shared_scratch', 'tensor_cache') for r in retained[key]] + [r['storage']['storage_pointer'] for r in tables.values()]
+    parameter_pointers = {r['storage_pointer'] for r in known[:len(final) + (len(parameters) if case == 'moe' else 0)]}
+    require(len(set(independent)) == len(independent) and not (set(independent) & parameter_pointers), 'retained allocations alias')
+    allocations = sorted(unique.items())
+    require(all(p + size <= q for (p, size), (q, _) in zip(allocations, allocations[1:])), 'retained allocations overlap')
+    baseline = phases[0]['cuda_allocated']; constructor = layout_bytes(layout)
+    transfer_peak = constructor + max(byte_count(spec) * (2 if case in ('kda', 'mla') and spec['parameter'] == 'trellis' else 1) for spec in specs)
+    current_final = sum(unique.values())
+    finalization_peak = max(current_final, constructor + sum(r['storage_bytes'] for r in retained['tensor_cache']) +
+        sum(next(r['storage']['storage_bytes'] for r in final.values() if r['storage']['storage_pointer'] == pointer)
+            for pointer in new_trees | clones))
+    for observation, current_min, peak_min in ((constructed['memory'], constructor, constructor),
+            (phases[1], constructor, transfer_peak), (phases[2], current_final, finalization_peak),
+            (retained['memory'], current_final, finalization_peak)):
+        require(observation['cuda_allocated'] >= baseline + current_min and
+                observation['cuda_peak_allocated'] >= baseline + peak_min, 'CUDA counters contradict live storage or required overlap')
+    require(phases[1]['pinned_allocator']['active_bytes.peak'] >= 2 * CAPACITY, 'missing simultaneous pinned buffers')
     return {'case': case, 'tensors_checked': len(specs), 'bytes_checked_per_stage': sum(byte_count(s) for s in specs),
-            'constructor_parameter_bytes': layout_bytes(layout), 'new_trellis_storages': len(new_trees), 'bf16_clone_storages': len(clones),
+            'constructor_parameter_bytes': layout_bytes(layout), 'retained_unique_bytes': current_final,
+            'minimum_transfer_peak_bytes': transfer_peak, 'minimum_finalization_peak_bytes': finalization_peak, 'new_trellis_storages': len(new_trees), 'bf16_clone_storages': len(clones),
             'model_loaded': False, 'full_load_fit': 'not measured'}
 
 

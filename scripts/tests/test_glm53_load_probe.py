@@ -58,13 +58,13 @@ class LoadScoreTests(unittest.TestCase):
         storage={'device':'cuda:0','dtype':'torch.bfloat16','shape':[2,4],'stride':[4,1],
                  'storage_pointer':4096,'storage_bytes':size,'data_pointer':4096,'storage_offset':0}
         memory={'process_kib':{'Rss':1,'Pss':1,'Pss_Anon':1,'Pss_File':0},'cuda_allocated':size,
-                'cuda_reserved':size,'cuda_peak_allocated':size,'cuda_peak_reserved':size,
-                'pinned_allocator':{f'{group}.{kind}':api.CAPACITY for group in
+                'cuda_reserved':size*2,'cuda_peak_allocated':size*2,'cuda_peak_reserved':size*2,
+                'pinned_allocator':{f'{group}.{kind}':api.CAPACITY*2 for group in
                     ('allocated_bytes','active_bytes','allocations','active_requests') for kind in ('current','peak','allocated','freed')}}
         chunks=(size+api.CAPACITY-1)//api.CAPACITY
         rows=[{'event':'configured','case':'ordinary','selection':'persistent_pinned_stream','triton':'all_specializations_rejected',
-               'retuning':'rejected','minimal_MoE_context':False,'pinned_capacity':api.CAPACITY},
-              {'event':'memory','phase':'before_constructor',**memory},
+               'retuning':'rejected','minimal_MoE_context':False,'pinned_capacity':api.CAPACITY,'multiprocessors':48},
+              {'event':'memory','phase':'before_constructor',**memory,'cuda_allocated':0,'cuda_reserved':0,'cuda_peak_allocated':0,'cuda_peak_reserved':0},
               {'event':'constructed','parameters':{'weight':storage},'memory':memory},
               {'event':'loaded','name':name,'sha256':digest,'storage':storage},
               {'event':'transfer','name':name,'bytes':size,'source_sha256':digest,'device_sha256':digest,
@@ -83,7 +83,7 @@ class LoadScoreTests(unittest.TestCase):
             (root/'fixture.json').write_text(json.dumps(fixture))
             self.assertEqual(api.score_capture(root,rows,'ordinary',7)['bytes_checked_per_stage'],size)
             mutations=[(4,'pinned',False),(4,'completed_reuses',chunks*2-1),(4,'device_sha256','b'*64),
-                       (4,'temporary_bytes',0),(4,'staging_bytes',1),(4,'upload_chunks',1),
+                       (4,'temporary_bytes',0),(4,'staging_bytes',1),(4,'upload_chunks',0),
                        (0,'minimal_MoE_context',True),(8,'handles',[{}]),(8,'pointer_tables',{'fake':{}})]
             for index,key,value in mutations:
                 changed=copy.deepcopy(rows);changed[index][key]=value
@@ -105,3 +105,22 @@ class LoadScoreTests(unittest.TestCase):
             path=root/'fixture/weights.safetensors';path.chmod(0o644);path.write_bytes(b'invalid retained payload')
             fixture['inventory']=api.file_inventory(root/'fixture');(root/'fixture.json').write_text(json.dumps(fixture))
             with self.subTest(finding='H2'), self.assertRaises(ValueError):api.score_capture(root,rows,'ordinary',7)
+
+    def test_retained_cache_and_scratch_geometry_cannot_disappear(self):
+        api=self.api
+        def row(shape):
+            import math
+            return {'device':'cuda:0','dtype':'torch.float16','shape':shape,'stride':api.contiguous_stride(shape),
+                    'storage_offset':0,'storage_bytes':math.prod(shape)*2,'storage_pointer':4096,'data_pointer':4096}
+        for case,cache,scratch in [('moe',[[1,2048],[1,4096]],[[6,2048,4096]]*2+[[6,2048,2048]]*2),
+                                  ('kda',[[1,4096]],[]),('mla',[[1,4096]],[]),('ordinary',[],[])]:
+            valid={'concurrency':6,'tensor_cache':[row(s) for s in cache],'shared_scratch':[row(s) for s in scratch]}
+            api.validate_retained_geometry(valid,case)
+            for key in ('tensor_cache','shared_scratch'):
+                changed=copy.deepcopy(valid)
+                if changed[key]:changed[key].pop()
+                else:changed[key]=[row([1,1])]
+                with self.subTest(case=case,key=key), self.assertRaises(ValueError):api.validate_retained_geometry(changed,case)
+            if case=='moe':
+                changed=copy.deepcopy(valid);changed['concurrency']=0;changed['shared_scratch']=[]
+                with self.assertRaises(ValueError):api.validate_retained_geometry(changed,case)
