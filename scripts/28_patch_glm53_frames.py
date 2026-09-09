@@ -10,8 +10,8 @@ sys.path.insert(0, str(ROOT / "scripts/lib"))
 from glm53_contract import strict_json
 
 RELATIVE = "vllm/transformers_utils/processors/glm5next.py"
-OLD = 'max_frame_count=kwargs.get("max_frames") or self.max_frame_count_dynamic,'
-NEW = 'max_frame_count=min(16, kwargs.get("max_frames") or self.max_frame_count_dynamic),'
+OLD = '    extract_t = min(extract_t, int(max_frame_count))'
+NEW = '    extract_t = min(extract_t, int(max_frame_count), 16)'
 
 
 def patch(source):
