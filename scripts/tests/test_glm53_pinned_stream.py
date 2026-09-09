@@ -80,5 +80,34 @@ class PinnedStreamTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.api.stream_selected_weights(self.root,self.inventory,changed,consume,rows.append,enabled=True,pinned_capacity=7)
 
+    def test_wrong_shard_rejected_before_copy(self):
+        from safetensors.torch import save_file
+        from glm53_mla_replay import file_inventory
+        name=next(iter(self.values))
+        save_file({name:self.values[name],'other':self.values[name].clone()},self.root/'b.safetensors')
+        selection={**self.selection,'other':dict(self.selection[name],file='b.safetensors')}
+        with self.assertRaisesRegex(ValueError,'wrong shard'):
+            list(self.api.selected_weights(self.root,file_inventory(self.root),selection))
+
+    def test_corrupted_device_bytes_do_not_reach_consumer(self):
+        torch=self.torch; original_empty=torch.empty; original_copy=torch.Tensor.copy_
+        devices=set(); consumed=[]
+        def empty(*a,**k):
+            device=k.pop('device',None);k.pop('pin_memory',None);tensor=original_empty(*a,**k)
+            if device=='cuda':devices.add(tensor.untyped_storage().data_ptr())
+            return tensor
+        def copy(tensor,source,*a,**k):
+            result=original_copy(tensor,source,*a,**k)
+            if tensor.untyped_storage().data_ptr() in devices: tensor[0] ^= 1
+            return result
+        with patch.object(torch,'empty',side_effect=empty),patch.object(torch.Tensor,'is_pinned',return_value=True), \
+             patch.object(torch.Tensor,'copy_',copy),patch.object(torch.cuda,'Event',return_value=MagicMock()), \
+             patch.object(torch.cuda,'synchronize'):
+            with self.assertRaisesRegex(ValueError,'transfer byte mismatch'):
+                self.api.stream_selected_weights(self.root,self.inventory,self.selection,
+                    lambda *args:consumed.append(args),lambda row:None,enabled=True,pinned_capacity=7)
+        self.assertEqual(consumed,[])
+        self.assertFalse(torch.cuda.is_initialized())
+
 
 if __name__=='__main__':unittest.main()
