@@ -111,12 +111,14 @@ redact_matches() {
 
 # Public package hashes and wrapper artifact receipts, restricted to the two
 # recorded GLM-5.3 dependency attempts and exact line formats.
-readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001|build-vllm-exl3-002|native-smoke-00[123]|cache-preflight-001)/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001|build-vllm-exl3-002|native-smoke-00[1234]|cache-preflight-00[12])/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+
+readonly GLM53_PROBE_DONE_DIGEST_ALLOWLIST='^results/glm53-flash-gates/(native-smoke-004|cache-preflight-002)/wrapper\.log:[0-9]+:SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/\.local/state/glm52-crashlog/[0-9]{8}-[0-9]{6}-glm53-(native-smoke-004|cache-preflight-002) main_sha256=[0-9a-f]{64} samples_sha256=[0-9a-f]{64} kernel_sha256=[0-9a-f]{64}$'
 
 filter_glm53_native_log_digests() {
   python3 - 3<&0 <<'PY_NATIVE'
 import json, os, re
-prefix = re.compile(r"^(results/glm53-flash-gates/(?:native-smoke-00[123]|cache-preflight-001)/(?:cmd|main)\.log:[0-9]+:)(.*)$")
+prefix = re.compile(r"^(results/glm53-flash-gates/(?:native-smoke-00[1234]|cache-preflight-00[12])/(?:cmd|main)\.log:[0-9]+:)(.*)$")
 def unique(items):
     value = {}
     for key, item in items:
@@ -146,7 +148,7 @@ scan_stream() {
     echo 'native digest filtering failed; refusing to pass secret scan' >&2
     return 1
   fi
-  matches="$(printf '%s\n' "$filtered" | grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_DEPENDENCY_DIGEST_ALLOWLIST" || true)"
+  matches="$(printf '%s\n' "$filtered" | grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_DEPENDENCY_DIGEST_ALLOWLIST|$GLM53_PROBE_DONE_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1
@@ -409,6 +411,11 @@ def walk(value, path, allowed_string=False):
                 re.fullmatch(r"[0-9]+:[0-9]+", item[3])
             ):
                 continue
+            if display_path in {"results/glm53-flash-gates/native-smoke-004/manifest.json", "results/glm53-flash-gates/cache-preflight-002/manifest.json"} and key == "native_test_hashes":
+                if not (isinstance(item, dict) and set(item) == {"test_exl3_linear.py", "test_native_moe_contract.py"} and
+                        all(isinstance(child, str) and hex64.fullmatch(child) for child in item.values())):
+                    findings.append((item_path, "invalid native test digest map"))
+                continue
             if (key in map_allowlist or (r05_proxy_red_candidate_4 and key == "test_sha256")) and isinstance(item, dict) and all(
                 isinstance(child, str) for child in item.values()
             ):
@@ -507,7 +514,7 @@ scan_digest_file() {
     # not JSON. It remains subject to gitleaks plus the non-digest secret scan;
     # only the generic 64-hex structural parser is inapplicable.
     scripts/103_verify_drand_receipt_bundle.mjs) cat >/dev/null ;;
-    results/glm53-flash-gates/native-smoke-00[123]/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/cache-preflight-001/code/scripts/103_verify_drand_receipt_bundle.mjs)
+    results/glm53-flash-gates/native-smoke-00[1234]/code/scripts/103_verify_drand_receipt_bundle.mjs|results/glm53-flash-gates/cache-preflight-00[12]/code/scripts/103_verify_drand_receipt_bundle.mjs)
       cmp -s - "$(git rev-parse --show-toplevel)/scripts/103_verify_drand_receipt_bundle.mjs" || {
         echo 'copied GLM verifier differs from reviewed bundle' >&2; return 1;
       } ;;
@@ -894,6 +901,13 @@ self_test() {
   if printf '\377%s\n' "$fake_secret" | scan_stream >/dev/null 2>&1; then
     echo 'self-test failed: digest filter error was ignored' >&2; return 1
   fi
+  for probe_attempt in native-smoke-004 cache-preflight-002; do
+    local probe_done="results/glm53-flash-gates/$probe_attempt/wrapper.log:1:SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/.local/state/glm52-crashlog/20260909-120000-glm53-$probe_attempt main_sha256=$fake_secret samples_sha256=$fake_secret kernel_sha256=$fake_secret"
+    if ! printf '%s\n' "$probe_done" | scan_stream >/dev/null 2>&1 ||
+       printf '%s extra=%s\n' "$probe_done" "$fake_secret" | scan_stream >/dev/null 2>&1; then
+      echo 'self-test failed: probe terminal digest scope' >&2; return 1
+    fi
+  done
   local native_log_prefix='results/glm53-flash-gates/native-smoke-001/cmd.log:1:'
   if ! printf '%s{"raw_sha256":"%s","test_output_sha256":"%s"}\n' "$native_log_prefix" "$fake_secret" "$fake_secret" | scan_stream >/dev/null 2>&1; then
     echo 'self-test failed: native summary digests rejected' >&2; return 1
