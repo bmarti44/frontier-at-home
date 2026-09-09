@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "model": "glm-5.3-flash",
+  "backend": "cuda",
+  "status": "source_audit_only",
+  "sources": {
+    "recipe": {
+      "url": "https://github.com/vcruz305/GLM-5.3-Flash-EXL3-K2-DGX-Spark-recipe.git",
+      "revision": "489b9c7ca8891da0e74082d706d179e128a26577",
+      "files": [
+        {
+          "path": "scripts/install_local_runtime.sh",
+          "sha256": "cf31048a0659358e56385649165e1d57997b6c6ae7e97e7ccfacc971b95b41a9"
+        },
+        {
+          "path": "scripts/patch_glm53_dense_exl3_quant_config.py",
+          "sha256": "4963e1a1226d9e187bd86157912448e1a36254c422ab83ad7163b87c00265b82"
+        },
+        {
+          "path": "scripts/patch_glm53_sm121_nope.py",
+          "sha256": "8ad321dccf1f1b2a73bf76fca70e6a4bda4ca70d71b032cc89b6697e58d201a0"
+        },
+        {
+          "path": "scripts/patch_kpool_tail_positions.py",
+          "sha256": "d8845fe7e043263f6ac3f063ad581067985b20dd039544d4de32dc1473b3922e"
+        },
+        {
+          "path": "scripts/patch_exllamav3_aarch64.py",
+          "sha256": "37fbd305cf760c9a2c5b5e08ff65bebf52847d4532c4c9d04c6756d1caf58c21"
+        }
+      ]
+    },
+    "vllm": {
+      "url": "https://github.com/ZJY0516/vllm.git",
+      "revision": "878631b6079d2cf9fb80830ef9cb41b43aded098",
+      "files": [
+        {
+          "path": "vllm/transformers_utils/processors/glm5next.py",
+          "sha256": "de809b50588d39ef0926781b492add5869a44c6862b8f8e9639a46d1f83fb607"
+        },
+        {
+          "path": "vllm/model_executor/layers/attention/mla_attention.py",
+          "sha256": "6efbbb7f1913eb40516586a1a9dbfaa7be80e96c7135bf5a39a6cd6d3ce6f514"
+        },
+        {
+          "path": "vllm/v1/attention/backends/mla/flashinfer_mla_sparse_sm120.py",
+          "sha256": "a0023f72125cb0d5599b5bf940c86be1f0c9985bd62b0919f243a8fda76f4449"
+        },
+        {
+          "path": "vllm/v1/attention/backends/mla/flashinfer_mla_sparse.py",
+          "sha256": "aa220ad4a2c226dca616bb3d4101d599102d52fae0b9cbb5bed32f9d03a63dd2"
+        },
+        {
+          "path": "vllm/platforms/cuda.py",
+          "sha256": "3df63ea9e819614f96865aab7ef1c3c3de3d1bfff17f72bea030e570db319239"
+        },
+        {
+          "path": "vllm/entrypoints/chat_utils.py",
+          "sha256": "52bf63020eb5ee244d0ff91baf00689ff716312ea5eb51bf98d86e28d13f65ae"
+        },
+        {
+          "path": "requirements/cuda.txt",
+          "sha256": "1fe25dbd6e1907203c0e732eda8d7f85f58020a7f84ea9228aa83287e69e4685"
+        }
+      ]
+    },
+    "vllm-exl3": {
+      "url": "https://github.com/vcruz305/vllm-exl3.git",
+      "revision": "6b26e5c9d35a455f61ee5b5529151ff2e5c08103",
+      "files": [
+        {
+          "path": "src/vllm_exl3/exl3.py",
+          "sha256": "e2fc2f2070b247667a0565a7a87c00c2dbd6364c09f6f1c0c17eb3f69fdb5443"
+        },
+        {
+          "path": "pyproject.toml",
+          "sha256": "89219be387cf27a5cec7645dc48e1f8cd6e5125da790242e8fe343f507b098bd"
+        },
+        {
+          "path": "setup.py",
+          "sha256": "0cfb362734a9cd21b8ff3a3c8e8e0b0ec5780e28c040781bff573bced8715425"
+        },
+        {
+          "path": "tools/dense_overlay.py",
+          "sha256": "117a73fe9f51d4d4ab89668d62aaab6e9afa3b28e1c116cc7127cc3eaa712ccc"
+        }
+      ]
+    },
+    "exllamav3": {
+      "url": "https://github.com/turboderp-org/exllamav3.git",
+      "revision": "17bc3923259ffd48aab742edd261a0ca45d55459",
+      "files": [
+        {
+          "path": "setup.py",
+          "sha256": "cd279315c5a40e1afd7cadd1f61aede0116345e08d8d4ad6b37bd8abe354ca38"
+        }
+      ]
+    }
+  },
+  "artifacts": {
+    "exl3_k2": {
+      "repo": "vcruz305/GLM-5.3-Flash-EXL3-K2",
+      "revision": "ca0bcdae265f7df1e346c57a2b53b8b8f632ee0b",
+      "weight_bytes": 97728721536
+    },
+    "dense_overlay_source": {
+      "repo": "turboderp/GLM-5.3-Flash-exl3",
+      "revision": "51058cd551c7e570d87bd32a4adee720edce2349",
+      "weight_bytes": 85148910958,
+      "download_policy": "selected dense tensor ranges only; full second pack exceeds disk budget"
+    },
+    "llamacpp_fallback": {
+      "repo": "unsloth/GLM-5.3-Flash-GGUF",
+      "revision": "621d456e93e926e4b52f85cff5f634358c1828f9",
+      "variant": "UD-IQ1_S; matching mmproj required; unqualified"
+    }
+  },
+  "build_policy": {
+    "maximum_jobs": 2,
+    "nvcc_threads": 1,
+    "minimum_start_gib": 110,
+    "editable_install": false,
+    "require_pip_check": true,
+    "runtime_inventory_required": true,
+    "dependency_resolution": "not yet frozen",
+    "torch": "2.13.0+cu130",
+    "torchvision": "0.28.0+cu130",
+    "flashinfer_python": "0.6.18rc10",
+    "source_metadata_patch_required": true
+  },
+  "transitive_sources": {
+    "cutlass": {
+      "url": "https://github.com/NVIDIA/cutlass.git",
+      "tag_observed": "v4.4.2",
+      "revision": "da5e086dab31d63815acafdac9a9c5893b1c69e2"
+    },
+    "triton_kernels": {
+      "url": "https://github.com/triton-lang/triton.git",
+      "tag_observed": "v3.5.1",
+      "revision": "0add68262ab0a2e33b84524346cb27cbb2787356"
+    }
+  }
+}

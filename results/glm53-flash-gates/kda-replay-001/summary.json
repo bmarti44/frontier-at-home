@@ -1,0 +1,100 @@
+{
+  "verdict": "PASS",
+  "qualification": "model_free_frozen_KDA_selected_configurations_only",
+  "failure": null,
+  "host": {
+    "verdict": "PASS",
+    "qualification": "host_and_probe_identity_observations_only",
+    "unit": "glm52-glm53-kda-replay-001-946531.service",
+    "minimum_mem_available_kib": 118576360,
+    "maximum_cgroup_peak_bytes": 2011148288,
+    "memory_samples": 39,
+    "identity_samples": 41,
+    "identity_pid": 946575,
+    "identity_start_ticks": 31534410,
+    "maximum_memory_sample_gap_seconds": 0.2973949909210205,
+    "maximum_identity_sample_gap_seconds": 1.2155423164367676,
+    "whole_system_swap_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "required_separate_checks": [
+      "frozen runtime and metadata inventories",
+      "post-freeze verified public seed",
+      "inner probe correctness",
+      "model qualification"
+    ]
+  },
+  "inner": {
+    "verdict": "PASS",
+    "failure": null,
+    "qualification": "model_free_KDA_analytic_falsifier_only",
+    "model_loaded": false,
+    "actual_input_tokens_processed": 0,
+    "context_capability": "not measured",
+    "performance": "not measured",
+    "raw_sha256": "2908cec2f43ad4a8b952bfb55c074a5bb83dc71142650aadce5c96b68bc183b4",
+    "tensor_checks": [
+      {
+        "query_rows": 4,
+        "elements": 5275648,
+        "maximum_absolute_error": 0.0015413761138916016,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      },
+      {
+        "query_rows": 2,
+        "elements": 5259264,
+        "maximum_absolute_error": 0.0015413761138916016,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      },
+      {
+        "query_rows": 3,
+        "elements": 5267456,
+        "maximum_absolute_error": 0.0015413761138916016,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      },
+      {
+        "query_rows": 2048,
+        "elements": 22020096,
+        "maximum_absolute_error": 0.01615762710571289,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      },
+      {
+        "query_rows": 1,
+        "elements": 5251072,
+        "maximum_absolute_error": 0.0008523166179656982,
+        "mismatched_elements": 0,
+        "nonfinite_elements": 0
+      }
+    ],
+    "sealed_selection": {
+      "time_unix": 1788962543.6008043,
+      "selection": "sealed_KDA_replay",
+      "bundle": {
+        "root": "/home/bmarti44/.cache/glm53-flash/kda-replay-001/kernels",
+        "sha256": "790fd671fadce2be5a9fecb60fa6d3a9a5dfd3e5f7c68f72466085c00303f64f"
+      },
+      "triton_cache_root": "/home/bmarti44/.cache/glm53-flash/kda-replay-001/kernels/triton",
+      "retuning": "rejected",
+      "disk_autotune_cache": true
+    }
+  },
+  "model_loaded": false,
+  "model_fidelity": "not measured",
+  "context_capability": "not measured",
+  "performance": "not measured",
+  "end_unix": 1788962564.9762208,
+  "kernel_binary_qualification": "PASS",
+  "sealed_kernels": {
+    "root": "/home/bmarti44/.cache/glm53-flash/kda-replay-001/kernels",
+    "sha256": "790fd671fadce2be5a9fecb60fa6d3a9a5dfd3e5f7c68f72466085c00303f64f"
+  },
+  "generated_cache_inventory": {
+    "path": "generated-cache-inventory.json",
+    "sha256": "938299d94248c8cad106e267e28281a9a20989298d562493601f19648f7347c2"
+  }
+}
