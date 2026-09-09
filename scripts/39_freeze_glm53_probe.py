@@ -57,7 +57,7 @@ if args.kind == 'mla':
         raise ValueError('prepared Ninja copy digest mismatch')
     environment['PATH'] = str(jit_directory) + ':' + environment['PATH']
     version = subprocess.run([str(ninja), '--version'], env=environment, capture_output=True, text=True, timeout=10)
-    if version.returncode != 0 or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+\n', version.stdout) or version.stderr:
+    if version.returncode != 0 or version.stdout != '1.13.2.git.kitware.jobserver-pipe-1\n' or version.stderr:
         raise ValueError('prepared Ninja version preflight failed')
     (output / 'jit-tool-preflight.json').write_text(json.dumps({'command': [str(ninja), '--version'],
         'returncode': version.returncode, 'stdout': version.stdout, 'stderr': version.stderr,
