@@ -95,13 +95,17 @@ def score_inner(output, kind, seed, binding):
                     type(receipt['time_unix']) in (int, float) and math.isfinite(receipt['time_unix']) and
                     0 < receipt['time_unix'] < times[0], 'invalid sealed KDA startup receipt')
             summary['sealed_selection'] = receipt
-    elif kind == 'conv':
+    elif kind in ('conv', 'conv-replay'):
         require(summary['qualification'] == 'model_free_convolution_analytic_falsifier_only' and
                 type(summary['actual_input_tokens_processed']) is int and summary['actual_input_tokens_processed'] == 0, 'convolution qualification mismatch')
         import importlib.util
         spec = importlib.util.spec_from_file_location('frozen_conv_scorer', Path(__file__).parent / '44_probe_glm53_conv.py')
         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
-        summary = {**summary, 'tensor_checks': module.score_capture(root, rows, seed)}
+        summary = {**summary, 'tensor_checks': module.score_capture(root, rows, seed, replay=kind == 'conv-replay')}
+        if kind == 'conv-replay':
+            receipt = strict_json(root / 'sealed-selection.json')
+            validate_conv_receipt(receipt, binding['sealed_kernels'], times[0])
+            summary['sealed_selection'] = receipt
     elif kind == 'growth':
         require(summary['qualification'] == 'model_free_two_MoE_layers_incremental_storage_only' and
                 type(summary['actual_input_tokens_processed']) is int and summary['actual_input_tokens_processed'] == 0, 'growth qualification mismatch')
@@ -123,6 +127,15 @@ def score_inner(output, kind, seed, binding):
     else:
         raise ValueError('unknown probe kind')
     return summary
+
+
+def validate_conv_receipt(receipt, bundle, first_time):
+    expected = {'selection': 'sealed_convolution_replay', 'bundle': bundle,
+                'triton_cache_root': bundle['root'] + '/triton', 'retuning': 'rejected',
+                'time_unix': receipt.get('time_unix')}
+    require(receipt == expected and type(receipt['time_unix']) in (int, float) and
+            math.isfinite(receipt['time_unix']) and 0 < receipt['time_unix'] < first_time,
+            'invalid sealed convolution startup receipt')
 
 
 def validate_mla_rows(root, rows, seed, replay=False):
@@ -254,6 +267,7 @@ CODE_FILES = (
     'scripts/41_probe_glm53_kda.py', 'scripts/42_probe_glm53_load.py',
     'scripts/lib/glm53_pinned_stream.py', 'scripts/lib/glm53_load_fixture.py',
     'configs/decision-specs/glm53-load-preflight.json',
+    'scripts/lib/glm53_conv_replay.py', 'configs/decision-specs/glm53-conv-replay.json',
     'scripts/44_probe_glm53_conv.py', 'configs/decision-specs/glm53-conv-preflight.json',
     'scripts/43_probe_glm53_growth.py', 'configs/decision-specs/glm53-load-growth.json',
     'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
@@ -270,8 +284,15 @@ def verify_frozen(output, manifest):
     require({str(p.relative_to(output / 'code')) for p in (output / 'code').rglob('*') if p.is_file()} == set(CODE_FILES), 'unexpected frozen code files')
     for name, row in manifest['code'].items():
         require(sha256_file(output / 'code' / name) == row['sha256'], 'frozen code changed: ' + name)
-    if manifest.get('kind') == 'conv':
-        require(manifest['probe_arguments_without_seed'][-1:] == ['--pinned-convolution'], 'convolution startup selection mismatch')
+    if manifest.get('kind') in ('conv', 'conv-replay'):
+        args = manifest['probe_arguments_without_seed']
+        require(args[-5:-4] == ['--pinned-convolution'] if manifest['kind'] == 'conv-replay' else args[-1:] == ['--pinned-convolution'], 'convolution startup selection mismatch')
+    if manifest.get('kind') == 'conv-replay':
+        from glm53_conv_replay import verify_bundle
+        verify_bundle(output / 'kernels', manifest['sealed_kernels'])
+        require(manifest['environment']['TRITON_CACHE_DIR'] == str(output / 'kernels/triton') and
+                manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1', 'sealed convolution environment mismatch')
     if manifest.get('kind') == 'growth':
         require(manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
                 manifest['environment']['CUDA_CACHE_DISABLE'] == '1' and
@@ -327,7 +348,7 @@ def verify_beacon(output, manifest, receipt=None):
 
 
 def probe_verdict(kind, failure):
-    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'growth', *LOAD_KINDS), 'unknown probe kind')
+    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'conv-replay', 'growth', *LOAD_KINDS), 'unknown probe kind')
     if failure is not None: return 'FAIL'
     return 'NO_RESULT' if kind in ('mla', 'kda', 'conv') else 'PASS'
 
@@ -376,6 +397,7 @@ def run(output):
     require(Path(__file__).resolve() == output / 'code/scripts/39_run_glm53_probe.py', 'run the frozen runner copy')
     expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py',
                      'mla': '40_probe_glm53_mla.py', 'mla-replay': '40_probe_glm53_mla.py', 'kda': '41_probe_glm53_kda.py', 'kda-replay': '41_probe_glm53_kda.py'}
+    expected_kind['conv-replay'] = '44_probe_glm53_conv.py'
     expected_kind['conv'] = '44_probe_glm53_conv.py'
     expected_kind['growth'] = '43_probe_glm53_growth.py'
     expected_kind.update({kind: '42_probe_glm53_load.py' for kind in LOAD_KINDS})
@@ -420,9 +442,12 @@ def run(output):
                 if kind == 'kda-replay':
                     binding.update(sealed_kernels=manifest['sealed_kernels'],
                                    replay_decision=manifest['code']['configs/decision-specs/glm53-kda-replay.json'])
-            elif kind == 'conv':
+            elif kind in ('conv', 'conv-replay'):
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-conv-preflight.json'],
                                metadata=manifest['cache_metadata_hashes'], startup_selection='pinned_convolution')
+                if kind == 'conv-replay':
+                    binding.update(sealed_kernels=manifest['sealed_kernels'],
+                                   replay_decision=manifest['code']['configs/decision-specs/glm53-conv-replay.json'])
             elif kind == 'growth':
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-load-growth.json'],
                                metadata=manifest['cache_metadata_hashes'])
@@ -443,7 +468,7 @@ def run(output):
             identities = [object_text(line) for line in read(output / 'identity/raw.jsonl').splitlines()]
             inner_rows = [object_text(line) for line in read(output / 'checks/raw.jsonl').splitlines()]
             require(identities[0]['time_unix'] <= inner_rows[0]['time_unix'] <= inner_rows[-1]['time_unix'] <= identities[-2]['time_unix'], 'inner probe timestamps escape identity window')
-            if kind in ('mla-replay', 'kda-replay'):
+            if kind in ('mla-replay', 'kda-replay', 'conv-replay'):
                 require(identities[0]['time_unix'] <= inner['sealed_selection']['time_unix'], 'sealed selection escapes identity window')
         except BaseException as error:
             failure = repr(error)
@@ -453,12 +478,12 @@ def run(output):
                 verify_accepted_inputs(output, accepted)
             except Exception as error: failure = failure or repr(error)
             generated = None
-            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'growth', *LOAD_KINDS):
+            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'conv-replay', 'growth', *LOAD_KINDS):
                 try:
                     cache_path = output / 'generated-cache-inventory.json'
                     state_inventory = generated_cache_inventory(output / 'state')
                     write(cache_path, state_inventory)
-                    if kind in (*LOAD_KINDS, 'growth'): validate_load_state(state_inventory)
+                    if kind in (*LOAD_KINDS, 'growth', 'conv-replay'): validate_load_state(state_inventory)
                     generated = {'path': cache_path.name, 'sha256': sha256_file(cache_path)}
                 except Exception as error: failure = failure or repr(error)
             summary = {'verdict': probe_verdict(kind, failure),
@@ -474,6 +499,10 @@ def run(output):
                                generated_cache_inventory=generated)
             if kind == 'kda-replay':
                 summary.update(qualification='model_free_frozen_KDA_selected_configurations_only',
+                               kernel_binary_qualification=probe_verdict(kind, failure), sealed_kernels=manifest['sealed_kernels'],
+                               generated_cache_inventory=generated)
+            if kind == 'conv-replay':
+                summary.update(qualification='model_free_frozen_convolution_replay_only',
                                kernel_binary_qualification=probe_verdict(kind, failure), sealed_kernels=manifest['sealed_kernels'],
                                generated_cache_inventory=generated)
             if kind == 'growth':

@@ -109,7 +109,7 @@ def geometry():
             'weight_dtype': 'torch.float32', 'pinned_staging_scope': 'probe_buffers_and_retained_metadata'}
 
 
-def score_capture(root, rows, seed):
+def score_capture(root, rows, seed, replay=False):
     order = case_order(seed)
     times = [r.get('time_unix') for r in rows]
     require(all(type(t) in (int, float) and math.isfinite(t) and t > 0 for t in times) and
@@ -121,6 +121,7 @@ def score_capture(root, rows, seed):
     require(all(type(v) is int for v in rows[0]['slots'] + rows[0]['state_shape'] + rows[0]['state_view_strides']) and
             type(rows[0]['channels']) is int and type(rows[0]['projected_width']) is int, 'convolution geometry types')
     artifacts = {f'{kind}-{case}.bf16.gz' for case in order for kind in ('output', 'state', 'input')}
+    if replay: artifacts.add('sealed-selection.json')
     require({p.name for p in root.iterdir()} == artifacts | {'manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log'},
             'convolution file coverage mismatch')
     checks = []
@@ -215,16 +216,27 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--metadata', type=Path, required=True); parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--seed', type=int, required=True); parser.add_argument('--pinned-convolution', action='store_true')
-    args = parser.parse_args(); case_order(args.seed); require(args.pinned_convolution, 'explicit --pinned-convolution required')
+    parser.add_argument('--sealed-kernels', type=Path); parser.add_argument('--sealed-manifest-sha256')
+    args = parser.parse_args()
+    require(bool(args.sealed_kernels) == bool(args.sealed_manifest_sha256), 'incomplete sealed convolution selection')
+    case_order(args.seed); require(args.pinned_convolution, 'explicit --pinned-convolution required')
     args.output.mkdir(parents=True, exist_ok=False)
     manifest = {'qualification': QUALIFICATION, 'seed': args.seed, 'scorer_sha256': sha256_file(Path(__file__)),
                 'binary_sha256': sha256_file(Path(sys.executable).resolve()), 'startup_selection': 'pinned_convolution',
                 'decision': {'sha256': sha256_file(ROOT / 'configs/decision-specs/glm53-conv-preflight.json')},
                 'metadata': {p.name: {'sha256': sha256_file(p)} for p in args.metadata.iterdir() if p.is_file()}, 'start_unix': time.time()}
+    if args.sealed_kernels:
+        manifest.update(sealed_kernels={'root': str(args.sealed_kernels), 'sha256': args.sealed_manifest_sha256},
+                        replay_decision={'sha256': sha256_file(ROOT / 'configs/decision-specs/glm53-conv-replay.json')})
     (args.output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n'); failure = None
     with (args.output / 'raw.jsonl').open('w') as raw, (args.output / 'traceback.log').open('w') as errors:
         def record(row): raw.write(json.dumps({'time_unix': time.time(), **row}, allow_nan=False) + '\n'); raw.flush()
-        try: run_native(args.metadata, args.output, args.seed, record)
+        try:
+            if args.sealed_kernels:
+                from glm53_conv_replay import activate
+                receipt = activate(args.sealed_kernels, manifest['sealed_kernels'])
+                (args.output / 'sealed-selection.json').write_text(json.dumps({'time_unix': time.time(), **receipt}, indent=2) + '\n')
+            run_native(args.metadata, args.output, args.seed, record)
         except Exception as error:
             failure = repr(error); traceback.print_exc(file=errors); record({'event': 'failure', 'failure': failure})
     summary = {'verdict': 'FAIL' if failure else 'PASS', 'failure': failure, 'qualification': QUALIFICATION,
