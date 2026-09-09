@@ -26,7 +26,14 @@ def strict_json(path: Path) -> dict:
     def constant(value):
         raise ValueError(f"nonfinite JSON value: {value}")
 
-    value = json.loads(path.read_bytes(), object_pairs_hook=pairs, parse_constant=constant)
+    def finite_float(value):
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError(f"nonfinite JSON value: {value}")
+        return result
+
+    value = json.loads(path.read_bytes(), object_pairs_hook=pairs,
+                       parse_constant=constant, parse_float=finite_float)
     if not isinstance(value, dict):
         raise ValueError("expected JSON object")
     return value
@@ -82,14 +89,21 @@ def verify_inventory(root: Path, manifest: dict) -> dict[str, tuple[int, int, in
         if not isinstance(entry["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]):
             raise ValueError("invalid inventory digest")
         declared[path.as_posix()] = entry
-    actual = set()
-    for path in root.rglob("*"):
-        mode = path.lstat().st_mode
-        if stat.S_ISDIR(mode):
-            continue
-        if not stat.S_ISREG(mode):
-            raise ValueError(f"inventory contains symlink or non-regular file: {path}")
-        actual.add(path.relative_to(root).as_posix())
+    identity = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+    def snapshot():
+        files, identities = set(), {}
+        for path in (root, *root.rglob("*")):
+            observed = path.lstat()
+            mode = observed.st_mode
+            name = path.relative_to(root).as_posix()
+            if not (stat.S_ISDIR(mode) or stat.S_ISREG(mode)):
+                raise ValueError(f"inventory contains symlink or non-regular file: {path}")
+            identities[name] = identity(observed)
+            if stat.S_ISREG(mode):
+                files.add(name)
+        return files, identities
+
+    actual, before_tree = snapshot()
     if actual != set(declared):
         raise ValueError(f"inventory coverage mismatch: missing={sorted(set(declared)-actual)}, unlisted={sorted(actual-set(declared))}")
     identities = {}
@@ -100,12 +114,14 @@ def verify_inventory(root: Path, manifest: dict) -> dict[str, tuple[int, int, in
             raise ValueError(f"inventory size mismatch: {name}")
         digest = sha256_file(path)
         after = path.stat(follow_symlinks=False)
-        identity = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
         if not stat.S_ISREG(after.st_mode) or identity(before) != identity(after):
             raise ValueError(f"inventory changed during verification: {name}")
         if digest != entry["sha256"]:
             raise ValueError(f"inventory digest mismatch: {name}")
         identities[name] = identity(after)
+    after_files, after_tree = snapshot()
+    if after_files != actual or after_tree != before_tree:
+        raise ValueError("inventory coverage or identity changed during verification")
     return identities
 
 
@@ -122,7 +138,7 @@ def validate_serving(profile: dict) -> None:
     argv = profile["launch"].get("args", [])
     for flag, expected in (("--max-model-len", serving["request_context_cap"]),
                            ("--max-num-seqs", serving["parallel_slots"])):
-        if argv.count(flag) != 1:
+        if argv.count(flag) != 1 or any(arg.startswith(flag + "=") for arg in argv):
             raise ValueError(f"serving topology requires one {flag}")
         index = argv.index(flag)
         if index + 1 == len(argv) or argv[index + 1] != str(expected):
