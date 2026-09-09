@@ -60,6 +60,7 @@ def main():
     parser.add_argument('--text-only',action='store_true',help='First text smoke; keeps the full four-slot text geometry')
     parser.add_argument('--skip-mm-profiling',action='store_true',help='Skip automatic media warm-up while retaining media support')
     parser.add_argument('--prefill-batch',type=int,choices=(128,256,512,1024,2048),default=2048,help='Prompt chunk size; does not change context or slot count')
+    parser.add_argument('--standard-cuda-allocator',action='store_true',help='Avoid expandable virtual reservations under the existing address-space limit')
     args=parser.parse_args()
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
@@ -95,6 +96,7 @@ def main():
         'VLLM_SPARSE_INDEXER_MAX_LOGITS_MB':'512',
         'INSTANTTENSOR_BUFFER_SIZE':'1342177280','INSTANTTENSOR_CHUNK_SIZE':'8388608',
         'INSTANTTENSOR_CONCURRENCY':'1','INSTANTTENSOR_IO_DEPTH':'3','INSTANTTENSOR_BACKEND':'AIO'}
+    if args.standard_cuda_allocator:environment['PYTORCH_CUDA_ALLOC_CONF']='expandable_segments:False'
     launch={'scope':'development bring-up; no model qualification or performance claim',
         'start_unix':time.time(),'arguments':arguments,'environment':environment,
         'model_inventory':{'sha256':sha(model/'inventory.json')},
