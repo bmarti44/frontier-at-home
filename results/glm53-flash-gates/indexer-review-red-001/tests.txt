@@ -1,0 +1,23 @@
+.F..F.
+======================================================================
+FAIL: test_complete_receipts_reject_missing_duplicate_and_malformed_evidence (test_glm53_indexer_probe.IndexerProbeTests.test_complete_receipts_reject_missing_duplicate_and_malformed_evidence)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_indexer_probe.py", line 114, in test_complete_receipts_reject_missing_duplicate_and_malformed_evidence
+    with self.assertRaises(ValueError): a.validate_capture(self.root,changed,seed)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_memory_minima_and_malformed_receipts (test_glm53_indexer_probe.IndexerProbeTests.test_memory_minima_and_malformed_receipts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_indexer_probe.py", line 81, in test_memory_minima_and_malformed_receipts
+    with self.assertRaises(ValueError): a.validate_memory(above_device,'prefill-4')
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 6 tests in 1.793s
+
+FAILED (failures=2)
