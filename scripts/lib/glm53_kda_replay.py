@@ -107,7 +107,12 @@ def autotune_receipt(path, root):
         require(isinstance(config['kwargs'], dict) and all(isinstance(k, str) and type(v) in (int, bool) for k, v in config['kwargs'].items()), 'invalid tuning kwargs')
         require(all(type(config[k]) is int and config[k] > 0 for k in ('num_warps', 'num_ctas', 'num_stages')) and
                 all(config[k] is None for k in ('maxnreg', 'pre_hook', 'ir_override')), 'unsupported tuning config')
-        identity = json.dumps(config, sort_keys=True, allow_nan=False)
+        # Match pinned Config.all_kwargs()/__eq__: explicit non-null options
+        # override kwargs, insertion order is retained, and bool/int equality
+        # follows Python tuples just as Triton's timing dictionary does.
+        effective = {**config['kwargs'], **{k: config[k] for k in
+            ('num_warps', 'num_ctas', 'num_stages', 'maxnreg', 'ir_override') if config[k] is not None}}
+        identity = tuple(effective.items())
         require(identity not in seen, 'duplicate tuning configuration'); seen.add(identity)
         require(isinstance(timing, list) and len(timing) == 3 and all(type(t) in (int, float) for t in timing), 'invalid tuning timing')
         finite = all(math.isfinite(t) and t > 0 for t in timing)
