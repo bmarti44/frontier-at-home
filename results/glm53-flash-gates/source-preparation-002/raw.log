@@ -1,0 +1,44 @@
+Preparing worktree (detached HEAD 878631b)
+HEAD is now at 878631b [Model] Harden GLM-5.3 FlashInfer integration
+Preparing worktree (detached HEAD 17bc392)
+HEAD is now at 17bc392 Bump to v1.4.4
+Preparing worktree (detached HEAD 6b26e5c)
+HEAD is now at 6b26e5c Merge pull request #7 from vcruz305/fix/dense-no-coop-gemm
+GLM-5.3 NoPE sparse-MLA SM121 source patch verified
+patched: /home/bmarti44/.cache/glm53-flash/build-source-002/vllm/vllm/v1/worker/gpu/model_states/mamba_hybrid.py
+mamba_hybrid.py now passes positions=input_batch.positions
+patched: /home/bmarti44/.cache/glm53-flash/build-source-002/vllm/vllm/v1/attention/backends/mla/indexer.py
+compute_kpool_tail_slot_mapping now writes the persistent buffer in place
+kda.py: patched
+model.py: patched
+P2_FORK_PATCH_OK
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/avx2_target.h
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/avx512_target.h
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/avx2_target.cpp
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/avx512_target.cpp
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/parallel/all_reduce_cpu_avx2.cpp
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/parallel/all_reduce_cpu_avx512.cpp
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/cpu/moe_mul1.cpp
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/cpu/moe_handoff.cu
+patched /home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext/parallel/all_reduce_cpu.cu
+test_cuda_transitive_sources_use_commits (__main__.suite.<locals>.MetadataContract.test_cuda_transitive_sources_use_commits) ... ok
+test_flashinfer_requirement_accepts_installed_pinned_distribution (__main__.suite.<locals>.MetadataContract.test_flashinfer_requirement_accepts_installed_pinned_distribution) ... ok
+test_no_spec_baseline_preserves_original_cache_and_mtp_sources (__main__.suite.<locals>.MetadataContract.test_no_spec_baseline_preserves_original_cache_and_mtp_sources) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.002s
+
+OK
+test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides (__main__.suite.<locals>.FrameContract.test_actual_sampler_obeys_hard_cap_with_config_and_request_overrides) ... ok
+test_existing_within_cap_sampling_is_identical (__main__.suite.<locals>.FrameContract.test_existing_within_cap_sampling_is_identical) ... ok
+test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false (__main__.suite.<locals>.FrameContract.test_real_media_loader_cannot_skip_cap_via_do_sample_frames_false) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.010s
+
+OK
+[detached HEAD 1db42d8] Prepare optional GLM 5.3 Spark source candidate
+ 12 files changed, 80 insertions(+), 21 deletions(-)
+[detached HEAD 9f06ed6] Prepare optional GLM 5.3 Spark source candidate
+ 9 files changed, 49 insertions(+), 3066 deletions(-)
+Prepared source only; runtime remains unqualified: /home/bmarti44/.cache/glm53-flash/build-source-002

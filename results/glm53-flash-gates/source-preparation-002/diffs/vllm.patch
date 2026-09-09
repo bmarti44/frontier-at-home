@@ -1,0 +1,292 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index bb0f51b..44df6ad 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -483,7 +483,7 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+     SET(CUTLASS_ENABLE_HEADERS_ONLY ON CACHE BOOL "Enable only the header library")
+ 
+     # Set CUTLASS_REVISION. Used for FetchContent. Also fixes some bogus messages when building.
+-    set(CUTLASS_REVISION "v4.4.2")
++    set(CUTLASS_REVISION "da5e086dab31d63815acafdac9a9c5893b1c69e2")
+ 
+     # Use the specified CUTLASS source directory for compilation if VLLM_CUTLASS_SRC_DIR is provided
+     if (DEFINED ENV{VLLM_CUTLASS_SRC_DIR})
+@@ -507,7 +507,7 @@ if(VLLM_GPU_LANG STREQUAL "CUDA" OR VLLM_GPU_LANG STREQUAL "HIP")
+           # Speed up CUTLASS download by retrieving only the specified GIT_TAG instead of the history.
+           # Important: If GIT_SHALLOW is enabled then GIT_TAG works only with branch names and tags.
+           # So if the GIT_TAG above is updated to a commit hash, GIT_SHALLOW must be set to FALSE
+-          GIT_SHALLOW TRUE
++          GIT_SHALLOW FALSE
+       )
+     endif()
+     FetchContent_MakeAvailable(cutlass)
+diff --git a/cmake/external_projects/triton_kernels.cmake b/cmake/external_projects/triton_kernels.cmake
+index 8312c1f..a9c42fe 100644
+--- a/cmake/external_projects/triton_kernels.cmake
++++ b/cmake/external_projects/triton_kernels.cmake
+@@ -16,7 +16,7 @@ else()
+     set(TRITON_KERNELS_TAG "0f380657dbf3ee86eb57558ff71df24f03b5d4e7")
+   else()
+     set(TRITON_GIT "https://github.com/triton-lang/triton.git")
+-    set(TRITON_KERNELS_TAG "v3.5.1")
++    set(TRITON_KERNELS_TAG "0add68262ab0a2e33b84524346cb27cbb2787356")
+   endif()
+   message (STATUS "[triton_kernels] Fetch from ${TRITON_GIT}:${TRITON_KERNELS_TAG}")
+   FetchContent_Declare(
+diff --git a/requirements/cuda.txt b/requirements/cuda.txt
+index a2c0364..bde1826 100644
+--- a/requirements/cuda.txt
++++ b/requirements/cuda.txt
+@@ -14,7 +14,7 @@ PyNvVideoCodec==2.0.4
+ # flashinfer-cubin is not on PyPI since 0.6.14; setup.py excludes it from
+ # install_requires so the published wheel does not carry an unresolvable pin
+ --extra-index-url https://flashinfer.ai/whl/
+-flashinfer-python==0.6.17
++flashinfer-python==0.6.18rc10
+ flashinfer-cubin==0.6.17
+ apache-tvm-ffi==0.1.11
+ tilelang==0.1.12
+diff --git a/vllm/model_executor/layers/sparse_attn_indexer_kpool.py b/vllm/model_executor/layers/sparse_attn_indexer_kpool.py
+index 5924d9f..8120363 100644
+--- a/vllm/model_executor/layers/sparse_attn_indexer_kpool.py
++++ b/vllm/model_executor/layers/sparse_attn_indexer_kpool.py
+@@ -596,7 +596,7 @@ def sparse_attn_indexer_kpool(
+                         + 1
+                     )
+                     expanded = kpool_ops.expand_pools_and_append_tail(
+-                        pool_ids, q_seq, index_kpool
++                        pool_ids[:, : select_k - 1], q_seq, index_kpool
+                     )
+                 else:
+                     valid = pool_ids >= 0
+@@ -880,7 +880,9 @@ def sparse_attn_indexer_kpool(
+                 if dec_seq.ndim == 2:
+                     dec_seq = dec_seq[:, -1]
+                 dec_seq = dec_seq.to(torch.int32)
+-            out = kpool_ops.expand_pools_and_append_tail(pool_ids, dec_seq, index_kpool)
++            out = kpool_ops.expand_pools_and_append_tail(
++                pool_ids[:, : select_k - 1], dec_seq, index_kpool
++            )
+         else:
+             out = topk_dst
+ 
+diff --git a/vllm/models/glm5next/nvidia/kda.py b/vllm/models/glm5next/nvidia/kda.py
+index 8bea48f..dbeaa7c 100644
+--- a/vllm/models/glm5next/nvidia/kda.py
++++ b/vllm/models/glm5next/nvidia/kda.py
+@@ -154,7 +154,11 @@ class Glm5NextLinearAttention(GatedDeltaNetAttention):
+         # KDA projections remain BF16 because fp8 checkpoints omit their scales.
+         saved_quant_config = vllm_config.quant_config
+         try:
+-            vllm_config.quant_config = None
++            # Keep the quant config when the pack declares dense EXL3 tensors
++            # for these projections (vllm-exl3 non_routed_exl3); unmatched
++            # linears still resolve to the unquantized method.
++            if not getattr(saved_quant_config, "non_routed_exl3", None):
++                vllm_config.quant_config = None
+             super().__init__(config, vllm_config, prefix)
+         finally:
+             vllm_config.quant_config = saved_quant_config
+diff --git a/vllm/models/glm5next/nvidia/model.py b/vllm/models/glm5next/nvidia/model.py
+index 2cff402..24b0e14 100644
+--- a/vllm/models/glm5next/nvidia/model.py
++++ b/vllm/models/glm5next/nvidia/model.py
+@@ -326,7 +326,12 @@ class Glm5NextDecoderLayer(nn.Module):
+                 kv_lora_rank=config.kv_lora_rank,
+                 max_position_embeddings=config.max_position_embeddings,
+                 cache_config=cache_config,
+-                quant_config=None,  # MLA projections are BF16 in checkpoint
++                # MLA projections are BF16 unless the pack declares dense EXL3
++                quant_config=(
++                    quant_config
++                    if getattr(quant_config, "non_routed_exl3", None)
++                    else None
++                ),
+                 prefix=f"{prefix}.self_attn",
+                 topk_indices_buffer=topk_indices_buffer,
+                 skip_rope=config.mla_nope,
+@@ -591,7 +596,7 @@ class Glm5NextModel(nn.Module):
+             # Reserve room for the incomplete pool tail.
+             kpool = config.index_kpool
+             assert kpool is not None
+-            buffer_width = topk_tokens + (kpool - 1 if kpool > 1 else 0)
++            buffer_width = topk_tokens
+             # Sparse MLA tiles top-k in 128 columns; padded slots remain masked.
+             sparse_topk_block_n = 128
+             buffer_width = (
+diff --git a/vllm/platforms/cuda.py b/vllm/platforms/cuda.py
+index 09071df..63f1293 100644
+--- a/vllm/platforms/cuda.py
++++ b/vllm/platforms/cuda.py
+@@ -422,7 +422,11 @@ class CudaPlatformBase(Platform):
+         # kpool paged-MQA indexer: the storage block (block_size /
+         # index_kpool) is virtually split into pool pages, so block_size
+         # must be a multiple of index_kpool * min(PAGED_MQA_PAGE_SIZES).
+-        return index_kpool * min(PAGED_MQA_PAGE_SIZES)
++        page_sizes = PAGED_MQA_PAGE_SIZES
++        capability = cls.get_device_capability()
++        if capability is not None and capability.major == 12:
++            page_sizes = tuple(p for p in page_sizes if p == 64)
++        return index_kpool * min(page_sizes)
+ 
+     @classmethod
+     def get_attn_backend_cls(
+@@ -745,7 +749,7 @@ class CudaPlatformBase(Platform):
+             major, _ = torch.cuda.get_device_capability(device)
+         except Exception:
+             return False
+-        return major >= 9
++        return major in (9, 10)
+ 
+ 
+ # NVML utils
+diff --git a/vllm/transformers_utils/processors/glm5next.py b/vllm/transformers_utils/processors/glm5next.py
+index df39802..df63567 100644
+--- a/vllm/transformers_utils/processors/glm5next.py
++++ b/vllm/transformers_utils/processors/glm5next.py
+@@ -87,7 +87,7 @@ def glm_sample_frame_indices(
+         target_fps = GLM_VIDEO_DEFAULT_FPS
+ 
+     extract_t = int(duration * target_fps)
+-    extract_t = min(extract_t, int(max_frame_count))
++    extract_t = min(extract_t, int(max_frame_count), 16)
+ 
+     duration_per_frame = 1 / fps
+     timestamps = [i * duration_per_frame for i in range(total_frames)]
+diff --git a/vllm/v1/attention/backends/mla/flashinfer_mla_sparse.py b/vllm/v1/attention/backends/mla/flashinfer_mla_sparse.py
+index d25d693..e3cf71f 100644
+--- a/vllm/v1/attention/backends/mla/flashinfer_mla_sparse.py
++++ b/vllm/v1/attention/backends/mla/flashinfer_mla_sparse.py
+@@ -160,7 +160,7 @@ class FlashInferMLASparseSM120Backend(_FlashInferMLASparseBackendBase):
+ 
+     @staticmethod
+     def get_supported_kernel_block_sizes() -> list[int | MultipleOf]:
+-        return [64, 256]
++        return [64]
+ 
+     @staticmethod
+     def get_impl_cls() -> type[MLAAttentionImpl]:
+diff --git a/vllm/v1/attention/backends/mla/flashinfer_mla_sparse_sm120.py b/vllm/v1/attention/backends/mla/flashinfer_mla_sparse_sm120.py
+index 4de2c2f..2b2c99d 100644
+--- a/vllm/v1/attention/backends/mla/flashinfer_mla_sparse_sm120.py
++++ b/vllm/v1/attention/backends/mla/flashinfer_mla_sparse_sm120.py
+@@ -74,6 +74,15 @@ class FlashInferMLASparseSM120Impl(MLAAttentionImpl[FlashInferMLASparseMetadata]
+         self.kv_lora_rank: int = mla_args["kv_lora_rank"]
+         self.qk_nope_head_dim: int = mla_args["qk_nope_head_dim"]
+         self.qk_rope_head_dim: int = mla_args["qk_rope_head_dim"]
++        self.rope_pad = 0
++        if self.qk_rope_head_dim == 0:
++            if self.kv_lora_rank != 512:
++                raise NotImplementedError(
++                    "NoPE MLA padding on SM120 requires "
++                    f"kv_lora_rank=512; got {self.kv_lora_rank}."
++                )
++            self.rope_pad = 64
++        self.kernel_qk_rope_head_dim = self.qk_rope_head_dim + self.rope_pad
+         from vllm.config import get_current_vllm_config
+ 
+         vllm_config = get_current_vllm_config()
+@@ -112,22 +121,31 @@ class FlashInferMLASparseSM120Impl(MLAAttentionImpl[FlashInferMLASparseMetadata]
+     ) -> tuple[torch.Tensor, torch.Tensor | None]:
+         if isinstance(q, tuple):
+             q = torch.cat(q, dim=-1)
++        if self.rope_pad:
++            q = torch.nn.functional.pad(q, (0, self.rope_pad))
+ 
+         num_actual_toks = q.shape[0]
+ 
+         assert self.topk_indices_buffer is not None
+         topk_indices = self.topk_indices_buffer[:num_actual_toks]
+ 
+-        topk_indices_physical = cast(
+-            torch.Tensor,
++        topk_indices_physical, topk_lengths = cast(
++            tuple[torch.Tensor, torch.Tensor],
+             triton_convert_req_index_to_global_index(
+                 attn_metadata.req_id_per_token[:num_actual_toks],
+                 attn_metadata.block_table,
+                 topk_indices,
+                 BLOCK_SIZE=attn_metadata.block_size,
+                 NUM_TOPK_TOKENS=topk_indices.shape[1],
++                return_valid_counts=True,
+             ),
+         )
++        sparse_topk_capacity = topk_indices_physical.shape[1]
++        empty_rows = topk_lengths == 0
++        topk_indices_physical[:, 0] = topk_indices_physical[:, 0].masked_fill(
++            empty_rows, 0
++        )
++        topk_lengths = topk_lengths.clamp(min=1)
+ 
+         output = q.new_empty(
+             (num_actual_toks, self.num_heads, self.kv_lora_rank),
+@@ -147,14 +165,31 @@ class FlashInferMLASparseSM120Impl(MLAAttentionImpl[FlashInferMLASparseMetadata]
+             workspace_buffer=self._workspace_buffer,
+             qk_nope_head_dim=self.qk_nope_head_dim,
+             kv_lora_rank=self.kv_lora_rank,
+-            qk_rope_head_dim=self.qk_rope_head_dim,
++            qk_rope_head_dim=self.kernel_qk_rope_head_dim,
+             block_tables=topk_indices_physical.unsqueeze(1),
+-            seq_lens=None,
+-            max_seq_len=attn_metadata.topk_tokens,
++            seq_lens=topk_lengths,
++            max_seq_len=sparse_topk_capacity,
+             out=output.unsqueeze(1),
+             bmm1_scale=self.scale,
+             bmm2_scale=1.0,
+-            sparse_mla_top_k=attn_metadata.topk_tokens,
++            sparse_mla_top_k=sparse_topk_capacity,
+             kv_scale_format=self.kv_scale_format,
+         )
+-        return out.squeeze(1), None
++        out = out.squeeze(1)
++        out.masked_fill_(empty_rows.view(-1, 1, 1), 0.0)
++        return out, None
++
++    def do_kv_cache_update(
++        self,
++        kv_c_normed: torch.Tensor,
++        k_pe: torch.Tensor,
++        kv_cache: torch.Tensor,
++        slot_mapping: torch.Tensor,
++        kv_cache_dtype: str,
++        k_scale: torch.Tensor,
++    ) -> None:
++        if self.rope_pad:
++            k_pe = k_pe.new_zeros((k_pe.shape[0], 1, self.rope_pad))
++        super().do_kv_cache_update(
++            kv_c_normed, k_pe, kv_cache, slot_mapping, kv_cache_dtype, k_scale
++        )
+diff --git a/vllm/v1/attention/backends/mla/indexer.py b/vllm/v1/attention/backends/mla/indexer.py
+index ff7c3ff..970b41a 100644
+--- a/vllm/v1/attention/backends/mla/indexer.py
++++ b/vllm/v1/attention/backends/mla/indexer.py
+@@ -505,7 +505,10 @@ def compute_kpool_tail_slot_mapping(
+     kpool: int,
+ ) -> torch.Tensor:
+     """Map every token to its request's one circular tail block."""
+-    out = slot_mapping.clone()
++    # In place: slot_mapping is the tail group's persistent buffer. A fresh
++    # clone here is captured by CUDA graphs at a transient address and read
++    # back stale on replay (illegal memory access). See docs/KPOOL_TAIL_BUG.md.
++    out = slot_mapping
+     if num_actual_tokens == 0:
+         return out
+     tokens = torch.arange(num_actual_tokens, device=slot_mapping.device)
+diff --git a/vllm/v1/worker/gpu/model_states/mamba_hybrid.py b/vllm/v1/worker/gpu/model_states/mamba_hybrid.py
+index c8ccde3..4e71275 100644
+--- a/vllm/v1/worker/gpu/model_states/mamba_hybrid.py
++++ b/vllm/v1/worker/gpu/model_states/mamba_hybrid.py
+@@ -308,6 +308,12 @@ class MambaHybridModelState(DefaultModelState):
+             kv_cache_config=kv_cache_config,
+             seq_lens_cpu_upper_bound=seq_lens_cpu_upper_bound,
+             dcp_local_seq_lens=input_batch.dcp_local_seq_lens,
++            # Hybrid models never passed positions here, unlike default.py.
++            # The K-pool tail builder needs them: without positions it skips
++            # compute_kpool_tail_slot_mapping and uses the generic paged
++            # mapping against a one-entry block-table row, which writes the
++            # tail cache out of bounds. See docs/KPOOL_TAIL_BUG.md.
++            positions=input_batch.positions,
+             model_specific_attn_metadata=mamba_attn_metadata,
+             for_cudagraph_capture=for_capture,
+             rswa_prefix_lens=input_batch.prompt_lens,

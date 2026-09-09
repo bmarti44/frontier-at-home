@@ -1,7 +1,8 @@
 # GLM-5.3-Flash CUDA status
 
 Integration is **in preparation**, not serving-qualified. No GLM-5.3 weights
-have been downloaded or loaded. No CUDA build has run. The optional profile
+have been downloaded or loaded. The first contained ExLlamaV3 CUDA build is
+running; no serving runtime is qualified. The optional profile
 requests 1,048,576 aggregate tokens in four 262,144-token slots; the default
 and recorded previous profile are unchanged. Production activation rejects
 before state, lock, or engine changes. Performance is **not yet measured**.
@@ -13,6 +14,9 @@ before state, lock, or engine changes. Performance is **not yet measured**.
 | Admission and inventory helpers | `95a804c3` | 1 plus focused medium fixes | 1 | Both reviewers: no critical/high; all three medium regressions closed |
 | Request media policy | `eefea2ad` | 2 | 3 | Both reviewers: H1 closed; zero critical/high |
 | Actual frame sampler and loader | `3a4a4aa7` | 2 | 5 | Both reviewers: F1 closed; zero critical/high |
+| Source preparation | `7babbb1d` | 1 plus focused medium fixes | 6 | Relative paths, extra DFlash/MTP scope and mutable transitive tags closed |
+| NVIDIA wheel metadata repair | `65c4448b` | 1 | 7 | Independent RECORD/payload check; zero critical/high |
+| Contained build driver | `d3b2df87` | 1 plus focused Rust fix | 8 | Two CUDA/C++/Cargo jobs, pinned Rust, locked Cargo resolution |
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
@@ -38,10 +42,20 @@ ambiguous content keys, and media overrides before engine dispatch.
 ## Runtime preparation
 
 Exact upstream commits and audited file hashes are in
-`configs/build-manifests/glm53-flash-sources.json`. Dependencies are resolved
-and distribution hashes recorded in `glm53-flash-dependencies.json`; they
-have not been installed. These source/dependency locks are not a built-runtime
-manifest and cannot authorize a launch.
+`configs/build-manifests/glm53-flash-sources.json`. All 204 preparation
+dependencies are installed in an isolated managed Python 3.12.13 environment;
+`glm53-runtime-dependencies.json` records the expanded distribution lock.
+`uv pip check` passes after the explicitly recorded cuSPARSELt metadata repair.
+The original 195-package resolution remains preserved. These locks cannot
+authorize a launch.
+
+The NVIDIA repair preserves all library bytes and changes only WHEEL/RECORD;
+it asserts local Linux AArch64 packaging, not manylinux compatibility. An
+earlier instanttensor source build failed because system Python lacked headers;
+the managed-interpreter retry passed. Both attempts are retained. Rust 1.95.0
+is installed into a user-owned prefix from a pinned standalone archive.
+The latest prepared source adds locked Cargo resolution; all seven source
+contract tests pass. Each preparation attempt retains its complete source diff.
 
 Dependency attempts are retained individually:
 
@@ -55,7 +69,7 @@ Dependency attempts are retained individually:
 
 ## Remaining gates
 
-Install the immutable dependency set and clean-build the pinned runtime with
+Finish clean-building the pinned runtime with
 at most two jobs after a stable 110 GiB start-memory check. Freeze source
 patches, packages, native extensions, interpreter and loader dependencies;
 verify imports and bounded native-kernel parity before downloading weights.
