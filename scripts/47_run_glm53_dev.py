@@ -21,6 +21,28 @@ def sha(path):
     with Path(path).open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
 
 
+def reuse_prepared_kernels(state):
+    """Copy existing warm caches; keep preparation evidence untouched."""
+    sources=[]
+    for attempt in ('mla-preflight-001','kda-preflight-002','conv-preflight-001','indexer-preflight-003'):
+        source=BASE/attempt/'state'
+        for subtree in ('triton','.cache/flashinfer','.cache/vllm/modelinfos','deep-gemm'):
+            if (source/subtree).exists():
+                shutil.copytree(source/subtree,state/subtree,dirs_exist_ok=True)
+        sources.append(source)
+    for group in (state/'triton').rglob('__grp__*.json'):
+        data=json.loads(group.read_text())
+        children={}
+        for name,value in data['child_paths'].items():
+            old=Path(value)
+            origin=next((root for root in sources if old.is_relative_to(root)),None)
+            if origin is None:raise ValueError('unexpected prepared kernel child path')
+            relocated=state/old.relative_to(origin)
+            if not relocated.is_file() or sha(old)!=sha(relocated):raise ValueError('prepared kernel copy mismatch')
+            children[name]=str(relocated)
+        group.write_text(json.dumps({'child_paths':children})+'\n')
+
+
 def serve(directory):
     launch=json.loads((directory/'launch.json').read_text())
     os.environ['VLLM_API_KEY']=(directory/'api-key').read_text().strip()
@@ -49,6 +71,7 @@ def main():
     shutil.copyfile(ROOT/'scripts/lib/glm53_runtime_policy.py',output/'lib/glm53_runtime_policy.py')
     shutil.copyfile(ROOT/'scripts/38_guard_glm53_probe.py',output/'guard.py')
     shutil.copyfile(__file__,output/'server.py')
+    reuse_prepared_kernels(output/'state')
     descriptor=os.open(output/'api-key',os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
     with os.fdopen(descriptor,'w') as key:key.write(secrets.token_urlsafe(32)+'\n')
     profile=json.loads((ROOT/'configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json').read_text())
@@ -61,7 +84,8 @@ def main():
         'PATH':f'{RUNTIME}/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin','CUDA_HOME':'/usr/local/cuda-13.0',
         'CUDA_VISIBLE_DEVICES':'0','VLLM_PLUGINS':'vllm_exl3','GLM53_EXL3_BF16_SHARD_FIX':'1',
         'MAX_JOBS':'2','NVCC_THREADS':'1','TOKENIZERS_PARALLELISM':'false',
-        'HF_HUB_OFFLINE':'1','TRANSFORMERS_OFFLINE':'1','CUDA_CACHE_DISABLE':'1',
+        'HF_HUB_OFFLINE':'1','TRANSFORMERS_OFFLINE':'1','CUDA_CACHE_DISABLE':'1','FLASHINFER_DISABLE_JIT':'1',
+        'TRITON_CACHE_AUTOTUNING':'1',
         'TRITON_CACHE_DIR':str(state/'triton'),'DG_JIT_CACHE_DIR':str(state/'deep-gemm'),
         'DG_JIT_USE_NVRTC':'0','DG_JIT_NVCC_COMPILER':'/usr/local/cuda-13.0/bin/nvcc','DG_JIT_CPP_STANDARD':'20',
         'VLLM_SPARSE_INDEXER_MAX_LOGITS_MB':'512',
