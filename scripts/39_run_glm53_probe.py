@@ -23,10 +23,11 @@ def native_ids():
         'reject_' + bad for bad in ('rows', 'width', 'negative_limit', 'nan_limit', 'strided_pointers')]
 
 
-def score_inner(output, kind, seed):
+def score_inner(output, kind, seed, binding):
     root = output / 'checks'
     summary, manifest = strict_json(root / 'summary.json'), strict_json(root / 'manifest.json')
     require(summary['verdict'] == 'PASS' and summary['model_loaded'] is False and manifest['seed'] == seed, 'inner verdict or seed mismatch')
+    require(all(manifest.get(key) == value for key, value in binding.items()), 'frozen inner proof binding mismatch')
     raw = read(root / 'raw.jsonl')
     require(hashlib.sha256(raw).hexdigest() == summary['raw_sha256'], 'inner raw digest mismatch')
     rows = [object_text(line) for line in raw.splitlines()]
@@ -49,7 +50,17 @@ def score_inner(output, kind, seed):
     return summary
 
 
+CODE_FILES = (
+    'scripts/39_run_glm53_probe.py', 'scripts/38_guard_glm53_probe.py',
+    'scripts/35_smoke_glm53_native.py', 'scripts/37_probe_glm53_cache.py',
+    'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
+    'configs/build-manifests/glm53-flash-sources.json', 'configs/decision-specs/glm53-cache-preflight.json',
+    'scripts/103_verify_drand_receipt_bundle.mjs')
+
+
 def verify_frozen(output, manifest):
+    require(set(manifest['code']) == set(CODE_FILES), 'incomplete code hash coverage')
+    require({str(p.relative_to(output / 'code')) for p in (output / 'code').rglob('*') if p.is_file()} == set(CODE_FILES), 'unexpected frozen code files')
     for name, row in manifest['code'].items():
         require(sha256_file(output / 'code' / name) == row['sha256'], 'frozen code changed: ' + name)
     for name, row in manifest['tools'].items():
@@ -80,6 +91,7 @@ def verify_beacon(output, manifest):
 
 
 def run(output):
+    require(not sys.flags.optimize and sys.flags.isolated and sys.dont_write_bytecode, 'runner requires unoptimized isolated -I -B Python')
     manifest = strict_json(output / 'manifest.json')
     require(Path(__file__).resolve() == output / 'code/scripts/39_run_glm53_probe.py', 'run the frozen runner copy')
     expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py'}
@@ -107,7 +119,15 @@ def run(output):
                   'start_unix': time.time(), 'freeze': {'sha256': sha256_file(output / 'manifest.json')},
                   'randomness': {'sha256': sha256_file(output / 'randomness.json')}})
             capture_wrapper(output, wrapper, manifest['tag'], command, environment, 600)
-            inner = score_inner(output, kind, receipt['seed'])
+            binding = {'scorer_sha256': manifest['code']['scripts/' + probe.name]['sha256'],
+                       'binary_sha256': manifest['tools'][str(python)]['sha256']}
+            if kind == 'native':
+                binding.update(expected_checks=14, test_hashes=manifest['native_test_hashes'],
+                               source_revision=strict_json(output / 'code/configs/build-manifests/glm53-flash-sources.json')['sources']['vllm-exl3']['revision'])
+            else:
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-cache-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'])
+            inner = score_inner(output, kind, receipt['seed'], binding)
             host = score_host_observations(output, {
                 'binary_sha256': manifest['tools'][str(python)]['sha256'], 'executable': str(python.resolve()),
                 'guard': str(guard), 'guard_sha256': manifest['code']['scripts/38_guard_glm53_probe.py']['sha256'],
