@@ -353,6 +353,8 @@ if w7_cache_pass_raw:
         "logit_sequence_sha256",
     })
 glm53_layout_fields = {
+    "results/glm53-flash-gates/load-sizing-audit-001/census.json": {"census_sha256", "source_pins_sha256"},
+    "results/glm53-flash-gates/load-sizing-audit-001/checks.json": {"census_sha256"},
     "results/glm53-flash-gates/model-layout-001/raw.jsonl": {"header_sha256", "shard_sha256_expected"},
     "results/glm53-flash-gates/model-layout-001/manifest.json": {"overlay_sha256"},
 }.get(display_path, set())
