@@ -13,6 +13,59 @@ import sysconfig
 from glm53_contract import strict_json, verify_inventory
 
 
+def activate_flashinfer(root, manifest, modules, *, enabled=False):
+    """Preload frozen Nvcc modules and select a loader with no build fallback.
+
+    Evidence-only startup selection, not installed in the serving runtime.
+    The caller freezes runtime/manifest bytes and enforces engine-read-only
+    cache access. This does not cover independent CuTe or DeepGEMM entry points.
+    Disabled mode performs no imports, filesystem accesses or runtime changes.
+    """
+    if type(enabled) is not bool:
+        raise ValueError('sealed FlashInfer selection must be boolean')
+    if not enabled:
+        return
+    root = Path(root).absolute()
+    identities = verify_inventory(root, manifest)
+    if not isinstance(modules, dict) or not modules:
+        raise ValueError('sealed FlashInfer requires explicit module bindings')
+    paths = {}
+    for name, relative in modules.items():
+        if (not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9_]+', name) or
+                not isinstance(relative, str) or relative != name + '/' + name + '.so' or
+                relative not in identities):
+            raise ValueError('invalid sealed FlashInfer module binding')
+        paths[name] = str(root / relative)
+    import flashinfer.jit.core as core
+    # Complete every load and revalidation before mutating runtime entry points.
+    loaded = {name: core.tvm_ffi.load_module(path) for name, path in paths.items()}
+    if any(value is None for value in loaded.values()):
+        raise ValueError('sealed FlashInfer loader returned no module')
+    if verify_inventory(root, manifest) != identities:
+        raise ValueError('sealed FlashInfer cache changed during loading')
+    spec_class = core.JitSpecNvcc
+
+    def select(spec, so_path=None):
+        if type(spec) is not spec_class or spec.name not in loaded:
+            raise ValueError('unlisted sealed FlashInfer module')
+        if so_path is not None and str(so_path) != paths[spec.name]:
+            raise ValueError('unlisted sealed FlashInfer library path')
+        return loaded[spec.name]
+
+    def reject_build(*args, **kwargs):
+        raise ValueError('sealed FlashInfer compilation is unavailable')
+
+    core.JitSpec.build_and_load = select
+    spec_class.try_load = select
+    spec_class.load = select
+    spec_class.build = reject_build
+    spec_class.write_ninja = reject_build
+    # Retained aliases of Nvcc.build resolve these globals at call time.
+    core.run_ninja = reject_build
+    return {'selection': 'sealed_FlashInfer_Nvcc', 'modules': [
+        {'name': name, 'path': paths[name]} for name in sorted(paths)]}
+
+
 def activate_triton(cache_class, *, enabled=False):
     """Startup-only selection; disabled mode does not import or change Triton.
 

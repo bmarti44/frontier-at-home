@@ -57,6 +57,11 @@ class FlashInferSealedTests(unittest.TestCase):
             self.core.JitSpecNvcc.load, self.core.JitSpecNvcc.try_load, self.core.run_ninja))
         self.loader.assert_not_called()
 
+    def test_disabled_selection_does_not_import_or_inspect_cache(self):
+        with mock.patch('builtins.__import__', side_effect=AssertionError('import in disabled selection')), \
+                mock.patch.object(policy, 'verify_inventory', side_effect=AssertionError('cache access while disabled')):
+            self.select(False)
+
     def test_missing_or_corrupt_library_rejects_before_loading(self):
         for data in (b'changed bytes', None):
             if data is None: self.path.unlink()
@@ -73,11 +78,13 @@ class FlashInferSealedTests(unittest.TestCase):
 
     def test_unlisted_module_explicit_path_and_direct_build_reject(self):
         retained = self.core.JitSpec.build_and_load
+        retained_build = self.core.JitSpecNvcc.build
         self.select()
         for call in (lambda: self.spec('unknown').build_and_load(),
                      lambda: retained(self.spec('unknown')),
                      lambda: self.spec().load(self.root / 'outside.so'),
-                     lambda: self.spec().build()):
+                     lambda: self.spec().build(),
+                     lambda: retained_build(self.spec())):
             with self.assertRaisesRegex(ValueError, 'sealed'): call()
         self.compiler.assert_not_called(); self.writer.assert_not_called()
 
