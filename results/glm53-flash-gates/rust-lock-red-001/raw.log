@@ -1,0 +1,27 @@
+test_cuda_transitive_sources_use_commits (__main__.suite.<locals>.MetadataContract.test_cuda_transitive_sources_use_commits) ... ok
+test_flashinfer_requirement_accepts_installed_pinned_distribution (__main__.suite.<locals>.MetadataContract.test_flashinfer_requirement_accepts_installed_pinned_distribution) ... ok
+test_no_spec_baseline_preserves_original_cache_and_mtp_sources (__main__.suite.<locals>.MetadataContract.test_no_spec_baseline_preserves_original_cache_and_mtp_sources) ... ok
+test_rust_builds_cannot_re_resolve_cargo_lock (__main__.suite.<locals>.MetadataContract.test_rust_builds_cannot_re_resolve_cargo_lock) ... 
+  test_rust_builds_cannot_re_resolve_cargo_lock (__main__.suite.<locals>.MetadataContract.test_rust_builds_cannot_re_resolve_cargo_lock) (target={'': 'vllm.vllm-rs'}) ... FAIL
+  test_rust_builds_cannot_re_resolve_cargo_lock (__main__.suite.<locals>.MetadataContract.test_rust_builds_cannot_re_resolve_cargo_lock) (target={'': 'vllm._rust_tool_parser'}) ... FAIL
+
+======================================================================
+FAIL: test_rust_builds_cannot_re_resolve_cargo_lock (__main__.suite.<locals>.MetadataContract.test_rust_builds_cannot_re_resolve_cargo_lock) (target={'': 'vllm.vllm-rs'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_build_contract.py", line 23, in test_rust_builds_cannot_re_resolve_cargo_lock
+    self.assertIn("--locked", extension.args or [])
+AssertionError: '--locked' not found in ('--bin', 'vllm-rs')
+
+======================================================================
+FAIL: test_rust_builds_cannot_re_resolve_cargo_lock (__main__.suite.<locals>.MetadataContract.test_rust_builds_cannot_re_resolve_cargo_lock) (target={'': 'vllm._rust_tool_parser'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_build_contract.py", line 23, in test_rust_builds_cannot_re_resolve_cargo_lock
+    self.assertIn("--locked", extension.args or [])
+AssertionError: '--locked' not found in []
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.029s
+
+FAILED (failures=2)
