@@ -59,6 +59,7 @@ def main():
     parser.add_argument('--port',type=int,default=8015)
     parser.add_argument('--text-only',action='store_true',help='First text smoke; keeps the full four-slot text geometry')
     parser.add_argument('--skip-mm-profiling',action='store_true',help='Skip automatic media warm-up while retaining media support')
+    parser.add_argument('--prefill-batch',type=int,choices=(128,256,512,1024,2048),default=2048,help='Prompt chunk size; does not change context or slot count')
     args=parser.parse_args()
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
@@ -77,6 +78,7 @@ def main():
     with os.fdopen(descriptor,'w') as key:key.write(secrets.token_urlsafe(32)+'\n')
     profile=json.loads((ROOT/'configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json').read_text())
     arguments=[value.replace('{model}',str(model)).replace('{port}',str(args.port)) for value in profile['launch']['args'][4:]]
+    arguments[arguments.index('--max-num-batched-tokens')+1]=str(args.prefill_batch)
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
                 '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320']
     if args.text_only:arguments+=['--language-model-only']
