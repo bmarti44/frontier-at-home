@@ -78,7 +78,7 @@ class RenderedProfilesMatchFixtures(unittest.TestCase):
             )
             seen[alias] = f"{model_slug}/{profile_file}"
         self.assertEqual(
-            sorted(seen), ["dsv4", "glm52", "laguna", "qwen38", "qwen38-1m"]
+            sorted(seen), ["dsv4", "glm52", "glm53-flash", "laguna", "qwen38", "qwen38-1m"]
         )
 
 

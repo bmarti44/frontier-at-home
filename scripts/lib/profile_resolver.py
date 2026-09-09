@@ -57,7 +57,7 @@ PROFILE_KEYS = {
     "hardware_class", "ram_tier_gib", "min_system_ram_gib", "purpose",
     "status", "engine", "artifact_roles", "launch", "containment", "safety",
     "memory_model", "offload", "context_cap", "port_role", "bench",
-    "switch_alias", "verify_on_hardware",
+    "switch_alias", "verify_on_hardware", "serving",
 }
 LAUNCH_KEYS = {
     "mechanism", "user", "runuser", "delegate", "log_name", "env",
@@ -256,6 +256,12 @@ def _substitute(value: str, mapping: dict, label: str) -> str:
 
 
 def resolve(profile: dict, model: dict, host: dict, verb: str = "start") -> dict:
+    if "serving" in profile:
+        from glm53_contract import validate_serving
+        try:
+            validate_serving(profile)
+        except (KeyError, TypeError, ValueError) as error:
+            raise ProfileError(f"invalid serving context topology: {error}") from error
     """Render a validated profile against a host into a launch snapshot."""
     backend = profile["backend"]
     support = model["backend_support"].get(backend)
@@ -352,6 +358,10 @@ def resolve(profile: dict, model: dict, host: dict, verb: str = "start") -> dict
             "floor_gib": memory_model["floor_gib"],
         },
     }
+
+    if "serving" in profile:
+        snapshot["serving"] = dict(profile["serving"])
+        snapshot["safety"] = dict(profile["safety"])
 
     mechanism = launch["mechanism"]
     if mechanism == "delegated-launcher":

@@ -44,6 +44,9 @@ while (( $# > 0 )); do
     esac
 done
 [[ -n $PROFILE_ARG ]] || { usage >&2; exit 2; }
+if [[ $PROFILE_ARG == glm-5.3-flash/* ]]; then
+    die 'use the hardened GLM-5.3 lifecycle; generic profile launch is disabled for this model'
+fi
 if [[ -n $PORT_OVERRIDE ]]; then
     [[ $PORT_OVERRIDE =~ ^[0-9]+$ ]] && (( PORT_OVERRIDE >= 1024 && PORT_OVERRIDE <= 65535 )) \
         || die '--port must be 1024-65535'

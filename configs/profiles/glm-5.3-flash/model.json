@@ -1,0 +1,23 @@
+{
+ "schema_version": 1,
+ "model": "glm-5.3-flash",
+ "identity_manifest": "weights/glm-5.3-flash/manifest.json",
+ "artifacts": {
+  "exl3-k2-densek4": {
+   "kind": "safetensors",
+   "path": "{model_root}/glm-5.3-flash/exl3-k2-densek4",
+   "weights_gib": 80.0,
+   "note": "Estimate only. Full inventory and measured resident bytes required before launch."
+  }
+ },
+ "engines": {
+  "vllm-exl3-glm53": {
+   "build_manifest": "configs/build-manifests/glm53-flash-vllm-exl3.json",
+   "binary_path": "{cache_root}/glm53-flash/runtime/bin/python3",
+   "note": "Unbuilt; interpreter alone is not runtime identity. Closed package/extension inventory required."
+  }
+ },
+ "backend_support": {
+  "cuda": {"supported": true, "hardware_class": ["spark"], "note": "Candidate only; no qualification result."}
+ }
+}

@@ -1,0 +1,64 @@
+{
+ "schema_version": 4,
+ "profile_id": "glm-5.3-flash/cuda-spark-128g-1m",
+ "model": "glm-5.3-flash",
+ "backend": "cuda",
+ "hardware_class": "spark",
+ "ram_tier_gib": 128,
+ "purpose": "Optional GLM-5.3-Flash: 1M total in four 262K slots; estimated and not launch-authorized",
+ "status": {
+  "state": "estimated",
+  "basis": "results/glm53-flash-gates/PLAN.md; conservative unmeasured memory reservation, no model load or qualification"
+ },
+ "engine": "vllm-exl3-glm53",
+ "artifact_roles": {"model": "exl3-k2-densek4"},
+ "launch": {
+  "mechanism": "systemd-run",
+  "user": "bmarti44",
+  "log_name": "glm53-flash",
+  "env": {
+   "PYTHONNOUSERSITE": "1",
+   "PYTHONDONTWRITEBYTECODE": "1",
+   "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+   "NVIDIA_TF32_OVERRIDE": "0"
+  },
+  "diagnostics_unset": ["GLM_KPOOL_TAIL_BOUNDS", "VLLM_EXL3_PREFILL_SYNC"],
+  "args": [
+   "-m", "vllm.entrypoints.openai.api_server",
+   "--model", "{model}",
+   "--served-model-name", "glm-5.3-flash",
+   "--host", "127.0.0.1", "--port", "{port}",
+   "--quantization", "exl3",
+   "--max-model-len", "262144", "--max-num-seqs", "4",
+   "--max-num-batched-tokens", "2048",
+   "--kv-cache-dtype", "auto",
+   "--limit-mm-per-prompt", "{\"image\":4,\"video\":1}",
+   "--media-io-kwargs", "{\"video\":{\"num_frames\":16}}",
+   "--mm-processor-kwargs", "{\"max_frames\":16,\"max_frame_count_dynamic\":16}",
+   "--default-chat-template-kwargs", "{\"reasoning_effort\":\"low\",\"clear_thinking\":true}"
+  ]
+ },
+ "containment": {
+  "unit": "glm53-flash-engine",
+  "memory_high": "90G", "memory_max": "96G",
+  "memory_swap_max": "0", "oom_policy": "kill", "kill_mode": "control-group"
+ },
+ "safety": {
+  "kill_floor_gib": 18, "minimum_start_gib": 110,
+  "sample_hz": 1, "startup_timeout_seconds": 1800,
+  "note": "Containment values are admission ceilings only, not measured fit. Replace with frozen measured preflight before any large load."
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 24576,
+  "overhead_gib": 12.0, "extra_gib": 4.0, "floor_gib": 18,
+  "basis": "Conservative estimate, deliberately not a fit claim: 80 GiB weights + 24 GiB aggregate KV/index + 12 GiB recurrent/workspace/allocator + 4 GiB vision. Requires measured revision."
+ },
+ "serving": {
+  "parallel_slots": 4, "request_context_cap": 262144,
+  "max_images": 4, "max_videos": 1, "video_frames": 16
+ },
+ "context_cap": 1048576,
+ "port_role": "production",
+ "bench": {"stack_label": "glm-5.3-flash-cuda-spark-128g-1m"},
+ "switch_alias": "glm53-flash"
+}

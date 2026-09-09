@@ -1848,6 +1848,20 @@ if [[ $command == status ]]; then
     json_status
     exit 0
 fi
+if [[ $command == glm53-flash ]]; then
+    clean_python - "$REPO" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[1] + "/scripts/lib")
+import profile_resolver
+from glm53_contract import MODEL, PROFILE, require_qualified
+try:
+    require_qualified(profile_resolver.load_profile(MODEL, PROFILE))
+except (ValueError, profile_resolver.ProfileError) as error:
+    print(f"ERROR: {error}", file=sys.stderr)
+    raise SystemExit(1)
+PY
+    exit 1
+fi
 [[ $command == restore || $command == stop || $command == dsv4 || \
         $command == glm52 || $command == qwen38 || $command == qwen38-1m || \
         $command == laguna ]] ||

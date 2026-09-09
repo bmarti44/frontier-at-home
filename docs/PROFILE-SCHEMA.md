@@ -68,9 +68,17 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   tweaked config" re-spends. Re-running a spent rowset requires an
   owner-authorized `DSV4_LEDGER_NAMESPACE`; the profile system never mints
   namespaces.
-- `switch_alias` — reserved for the five production aliases pinned by the
-  AGENTS.md operator CLI (`dsv4|glm52|qwen38|qwen38-1m|laguna`); exactly one
-  profile may carry each.
+- `switch_alias` — one profile per operator alias. Existing production aliases
+  are `dsv4|glm52|qwen38|qwen38-1m|laguna`. `glm53-flash` is reserved for the
+  estimated GLM-5.3 profile and is rejected before any switch mutation until
+  qualification and the hardened lifecycle are installed.
+- `serving` — optional explicit topology for a vLLM profile: `parallel_slots`,
+  `request_context_cap`, `max_images`, `max_videos`, and `video_frames` are
+  positive integers. The first two multiply to `context_cap` (aggregate
+  tokens) and must match `--max-num-seqs` and `--max-model-len`. Snapshots with
+  this field also carry `safety`; existing profile snapshots stay unchanged.
+  Model-specific admission must enforce media limits; a rendered limit is
+  not proof that an upstream processor honors it.
 
 ## `extends` merge rules (deliberately crude)
 
