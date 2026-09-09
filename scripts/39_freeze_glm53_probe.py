@@ -1,5 +1,7 @@
 """Freeze a fresh model-free probe; no download, model import or CUDA call."""
 import argparse
+import base64
+import csv
 import importlib.util
 import json
 from pathlib import Path
@@ -52,6 +54,13 @@ if args.kind == 'mla':
     ninja_source = BASE / 'runtime/bin/ninja'
     if ninja_source.is_symlink() or not ninja_source.is_file():
         raise ValueError('prepared Ninja must be a regular native executable')
+    record_path = runtime / 'lib/python3.12/site-packages/ninja-1.13.2.dist-info/RECORD'
+    records = [row for row in csv.reader(record_path.read_text().splitlines()) if row and row[0] == '../../../bin/ninja']
+    if len(records) != 1 or len(records[0]) != 3 or not records[0][1].startswith('sha256='):
+        raise ValueError('inventoried Ninja wheel record is incomplete')
+    expected_ninja = base64.urlsafe_b64decode(records[0][1].removeprefix('sha256=') + '=').hex()
+    if runner.sha256_file(ninja_source) != expected_ninja or ninja_source.stat().st_size != int(records[0][2]):
+        raise ValueError('Ninja executable differs from inventoried wheel record')
     ninja = jit_directory / 'ninja'; shutil.copyfile(ninja_source, ninja); ninja.chmod(0o555)
     if runner.sha256_file(ninja) != runner.sha256_file(ninja_source):
         raise ValueError('prepared Ninja copy digest mismatch')
