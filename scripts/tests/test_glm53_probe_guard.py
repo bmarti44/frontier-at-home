@@ -71,6 +71,33 @@ class ProbeGuardTests(unittest.TestCase):
         self.assertEqual(summary["verdict"], "PASS")
         self.assertIn("NORMAL_FINALIZER_RAN", result.stdout)
 
+    def test_terminal_filter_covers_existing_threads(self):
+        source = """import atexit,os,threading,time
+event = threading.Event()
+def worker():
+    event.wait()
+    os.execv('/bin/true', ['true'])
+threading.Thread(target=worker, daemon=True).start()
+atexit.register(lambda: (event.set(), time.sleep(0.25)))
+time.sleep(0.35)
+"""
+        result, summary, _ = self.run_probe(source)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(summary["probe_exit_code"], -31)
+
+    def test_terminal_filter_covers_execveat(self):
+        source = """import atexit,ctypes,platform,time
+libc = ctypes.CDLL(None)
+number = {'aarch64':281, 'x86_64':322}[platform.machine()]
+argv = (ctypes.c_char_p * 2)(b'true', None)
+environment = (ctypes.c_char_p * 1)(None)
+atexit.register(lambda: libc.syscall(ctypes.c_long(number), ctypes.c_int(-100), ctypes.c_char_p(b'/bin/true'), argv, environment, ctypes.c_int(0)))
+time.sleep(0.35)
+"""
+        result, summary, _ = self.run_probe(source)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(summary["probe_exit_code"], -31)
+
     def test_immediate_exit_cannot_substitute_for_verified_completion(self):
         result, summary, _ = self.run_probe("import os,time\ntime.sleep(0.35)\nos._exit(0)\n")
         self.assertNotEqual(result.returncode, 0)
