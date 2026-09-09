@@ -1,0 +1,16 @@
+........E
+======================================================================
+ERROR: test_replay_requires_exact_startup_selection_receipt (test_glm53_mla_runner.MLARunnerTests.test_replay_requires_exact_startup_selection_receipt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_mla_runner.py", line 69, in test_replay_requires_exact_startup_selection_receipt
+    self.assertEqual(runner.score_inner(self.root, 'mla-replay', self.seed, self.binding)['verdict'], 'PASS')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 75, in score_inner
+    raise ValueError('unknown probe kind')
+ValueError: unknown probe kind
+
+----------------------------------------------------------------------
+Ran 9 tests in 2.404s
+
+FAILED (errors=1)
