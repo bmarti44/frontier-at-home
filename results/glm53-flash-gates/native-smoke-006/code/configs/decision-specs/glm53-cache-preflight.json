@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "model": "glm-5.3-flash",
+  "backend": "cuda",
+  "qualification": "model_free_cache_allocation_only",
+  "request_context_cap": 262144,
+  "parallel_slots": 4,
+  "aggregate_context_cap": 1048576,
+  "tensor_parallel_size": 1,
+  "prefix_caching": false,
+  "speculative_decoding": false,
+  "expected": {
+    "mla_layers": 11,
+    "kda_layers": 34,
+    "manager_block_tokens": 8704,
+    "groups": 6,
+    "kda_group_layer_counts": [9, 9, 8, 8],
+    "attention_blocks_per_request": 31,
+    "mamba_blocks_per_request": 4,
+    "tail_blocks_per_request": 1,
+    "shared_pool_blocks": 145,
+    "null_blocks": 1,
+    "unique_backing_bytes": 9565304320
+  },
+  "checks": [
+    "derive normalized configuration and specs through pinned engine APIs",
+    "real allocator touches the complete unique backing allocation",
+    "all four distinct full-request allocations coexist before freeing any",
+    "a fifth full-request allocation rejects while the first four remain live",
+    "freeing all four restores the original pool capacity",
+    "timestamped external memory and process identity observations remain valid",
+    "no model weights, OOM, Xid, new swap, timeout or surviving descendant"
+  ],
+  "safety": {"minimum_start_gib": 110, "kill_floor_gib": 40, "timeout_seconds": 600},
+  "not_established": ["weight residency or loading peak", "kernel workspace peak", "model fidelity", "actual input-token processing", "four-slot context capability", "performance"]
+}
