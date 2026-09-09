@@ -1,0 +1,11 @@
+{
+  "verdict": "RED",
+  "exit_code": 1,
+  "candidate": 1,
+  "campaign_review_round": 18,
+  "findings": {
+    "I1_high": "terminal exec /bin/true or os._exit(0) bypasses last identity sample",
+    "M1_medium": "cleanup must retain unreaped original group leader and reject reused anchor before signaling"
+  },
+  "fix": "completion handshake with close-on-exec FDs; WNOWAIT until identity-anchored group cleanup finishes"
+}

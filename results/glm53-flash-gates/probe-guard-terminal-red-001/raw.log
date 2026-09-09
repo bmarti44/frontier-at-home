@@ -1,0 +1,29 @@
+F..E..F
+======================================================================
+ERROR: test_reused_group_anchor_is_never_signaled (test_glm53_probe_guard.ProbeGuardTests.test_reused_group_anchor_is_never_signaled)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 69, in test_reused_group_anchor_is_never_signaled
+    guard.terminate_group(123, 42)
+TypeError: terminate_group() takes 1 positional argument but 2 were given
+
+======================================================================
+FAIL: test_immediate_exit_cannot_substitute_for_verified_completion (test_glm53_probe_guard.ProbeGuardTests.test_immediate_exit_cannot_substitute_for_verified_completion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 59, in test_immediate_exit_cannot_substitute_for_verified_completion
+    self.assertNotEqual(result.returncode, 0)
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_terminal_exec_cannot_substitute_for_verified_completion (test_glm53_probe_guard.ProbeGuardTests.test_terminal_exec_cannot_substitute_for_verified_completion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_guard.py", line 54, in test_terminal_exec_cannot_substitute_for_verified_completion
+    self.assertNotEqual(result.returncode, 0)
+AssertionError: 0 == 0
+
+----------------------------------------------------------------------
+Ran 7 tests in 3.333s
+
+FAILED (failures=2, errors=1)
