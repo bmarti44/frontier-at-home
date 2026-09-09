@@ -65,6 +65,20 @@ def validate_request(body, *, chat=True):
             if not isinstance(part, dict):
                 raise ValueError("invalid content part")
             kind = part.get("type")
+            # vLLM permits extra fields and switches parsing when uuid exists.
+            # A closed shape binds our counted modality to its parsed modality.
+            allowed = {"text": {"type", "text"},
+                       "refusal": {"type", "refusal"},
+                       "image_url": {"type", "image_url"},
+                       "video_url": {"type", "video_url"}}
+            if not isinstance(kind, str) or kind not in allowed or set(part) != allowed[kind]:
+                raise ValueError("unsupported or ambiguous content part")
+            if kind in ("image_url", "video_url"):
+                value = part[kind]
+                keys = {"url", "detail"} if kind == "image_url" else {"url"}
+                if (not isinstance(value, dict) or set(value) - keys or
+                        not isinstance(value.get("url"), str) or not value["url"]):
+                    raise ValueError("media requires a URL object without overrides")
             if kind == "image_url":
                 images += 1
             elif kind == "video_url":
