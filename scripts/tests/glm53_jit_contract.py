@@ -13,6 +13,7 @@ from unittest import mock
 
 from test_glm53_sealed_cache import SealedCacheContract
 from glm53_runtime_jit import sealed_native_loader
+import glm53_runtime_jit as policy
 
 cc = importlib.import_module("triton.compiler.compiler")
 rb = importlib.import_module("triton.runtime.build")
@@ -21,6 +22,30 @@ rb = importlib.import_module("triton.runtime.build")
 class ActualSourceContract(unittest.TestCase):
     setUp = SealedCacheContract.setUp
     factory = SealedCacheContract.factory
+
+    def test_disabled_selection_does_not_change_runtime(self):
+        before = (rb._build, rb.compile_module_from_src, cc.knobs.cache.manager_class)
+        policy.activate_triton(None, enabled=False)
+        self.assertEqual(before, (rb._build, rb.compile_module_from_src, cc.knobs.cache.manager_class))
+
+    def test_unsafe_compile_override_rejects_before_mutation(self):
+        before = (rb._build, rb.compile_module_from_src, cc.knobs.cache.manager_class)
+        with mock.patch.object(cc.knobs.compilation, "always_compile", True):
+            with self.assertRaisesRegex(ValueError, "always_compile"):
+                policy.activate_triton(self.factory(), enabled=True)
+        self.assertEqual(before, (rb._build, rb.compile_module_from_src, cc.knobs.cache.manager_class))
+
+    def test_selected_mode_blocks_direct_native_compiler_entry(self):
+        from contextlib import ExitStack
+        with ExitStack() as stack:
+            for obj, field in ((rb, "_build"), (rb, "compile_module_from_src"),
+                               (cc.knobs.cache, "manager_class"), (cc.knobs.cache, "remote_manager_class"),
+                               (cc.knobs.compilation, "always_compile"), (cc.knobs.compilation, "override"),
+                               (cc.knobs.compilation, "dump_ir")):
+                stack.enter_context(mock.patch.object(obj, field, getattr(obj, field)))
+            policy.activate_triton(self.factory(), enabled=True)
+            with self.assertRaisesRegex(RuntimeError, "sealed.*compil"):
+                rb._build("must-not-compile")
 
     def test_gpu_cache_hit_and_miss_do_not_enter_compiler_stages(self):
         key = base64.b32encode(hashlib.sha256(b"synthetic-cache-key").digest()).decode().rstrip("=")
