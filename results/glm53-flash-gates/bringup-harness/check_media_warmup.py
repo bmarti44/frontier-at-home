@@ -8,7 +8,7 @@ main=next(n for n in ast.parse(source.read_text()).body if isinstance(n,ast.Func
 start=next(i for i,n in enumerate(main.body) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='arguments' for t in n.targets))
 end=next(i for i,n in enumerate(main.body[start:],start) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='state' for t in n.targets))
 profile=json.loads((ROOT/'configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json').read_text())
-args=types.SimpleNamespace(port=8015,prefill_batch=128,skip_autotune=True,release_warmup_cache=True,text_only=False,skip_mm_profiling=True)
+args=types.SimpleNamespace(port=8015,prefill_batch=128,long_prefill_token_threshold=0,skip_autotune=True,release_warmup_cache=True,text_only=False,skip_mm_profiling=True)
 ns={'profile':profile,'model':Path('/unused-model'),'args':args,'json':json}
 exec(compile(ast.Module(body=main.body[start:end],type_ignores=[]),str(source),'exec'),ns)
 argv=ns['arguments'];limits=json.loads(argv[argv.index('--limit-mm-per-prompt')+1]);video=limits['video']

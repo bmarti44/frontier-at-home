@@ -74,6 +74,7 @@ def main():
     parser.add_argument('--text-only',action=argparse.BooleanOptionalAction,default=False,help='Disable vision while retaining the same four-slot text geometry')
     parser.add_argument('--skip-mm-profiling',action=argparse.BooleanOptionalAction,default=True,help='Skip automatic media warm-up while retaining media support')
     parser.add_argument('--prefill-batch',type=int,choices=(128,256,512,1024,2048),default=128,help='Prompt chunk size; does not change context or slot count')
+    parser.add_argument('--long-prefill-token-threshold',type=int,choices=(0,32),default=0,help='Native per-request chunk cap for the four-slot context probe')
     parser.add_argument('--standard-cuda-allocator',action=argparse.BooleanOptionalAction,default=True,help='Avoid expandable virtual reservations under the existing address-space limit')
     parser.add_argument('--release-warmup-cache',action=argparse.BooleanOptionalAction,default=True,help='Release unused startup allocations before reserving the full KV cache')
     parser.add_argument('--prepared-flashinfer',action=argparse.BooleanOptionalAction,default=True,help='Use existing compiled FlashInfer libraries through its native cache provider')
@@ -103,6 +104,8 @@ def main():
     profile=json.loads((ROOT/'configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json').read_text())
     arguments=[value.replace('{model}',str(model)).replace('{port}',str(args.port)) for value in profile['launch']['args'][4:]]
     arguments[arguments.index('--max-num-batched-tokens')+1]=str(args.prefill_batch)
+    if args.long_prefill_token_threshold:
+        arguments+=['--long-prefill-token-threshold',str(args.long_prefill_token_threshold)]
     if not args.text_only:
         arguments[arguments.index('--limit-mm-per-prompt')+1]='{"image":{"count":4,"width":512,"height":512},"video":{"count":1,"num_frames":16,"width":512,"height":512}}'
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
