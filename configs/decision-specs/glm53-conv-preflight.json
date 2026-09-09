@@ -7,13 +7,78 @@
   "projected_width": 24896,
   "weight_dtype": "float32",
   "input_state_dtype": "bfloat16",
-  "state_backing_shape": [5, 3, 24576],
-  "state_view_strides": [73728, 1, 24576],
-  "cases": {"decode-1": [1], "decode-2": [1, 1], "decode-3": [1, 1, 1], "decode-4": [1, 1, 1, 1], "prefill-1": [2048], "prefill-4": [512, 512, 512, 512], "prefill-ragged": [1, 7, 511, 1529]},
-  "fixture": "Public seed permutes cases and slots 1..4. Raw value for slot s, channel c, local time t is (4*s+c%16-8+(t+seed%7)%7)/32. Histories use t=-3,-2,-1. Weight tap j is ((c+j+seed%5)%5-2)/8. Null slot and projected 320-channel tail are 3.25. Decode always uses history; prefill request indices 0 and 2 use history, others start fresh.",
+  "state_backing_shape": [
+    5,
+    3,
+    24576
+  ],
+  "state_view_strides": [
+    73728,
+    1,
+    24576
+  ],
+  "cases": {
+    "decode-1": [
+      1
+    ],
+    "decode-2": [
+      1,
+      1
+    ],
+    "decode-3": [
+      1,
+      1,
+      1
+    ],
+    "decode-4": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "prefill-1": [
+      2048
+    ],
+    "prefill-4": [
+      512,
+      512,
+      512,
+      512
+    ],
+    "prefill-ragged": [
+      1,
+      7,
+      511,
+      1529
+    ],
+    "prefill-ragged-fresh": [
+      1,
+      7,
+      511,
+      1529
+    ]
+  },
+  "fixture": "Public seed permutes cases and slots 1..4. Raw value for slot s, channel c, local time t is (4*s+c%16-8+(t+seed%7)%7)/32. Histories use t=-3,-2,-1. Weight tap j is ((c+j+seed%5)%5-2)/8. Null slot and projected 320-channel tail are 3.25. Decode always uses history; prefill request indices 0 and 2 use history, others start fresh. The extra prefill-ragged-fresh case reverses the initial-history flags, including a fresh length-1 request.",
   "reference": "For each request independently, prepend its three old raw inputs or three zero rows. Sum four FP32 dyadic products in oldest-to-newest tap order, apply SiLU, compare every output. Final state equals last three raw input rows, byte-exact in SD backing. Unselected and null state slots remain byte-exact. Prefill must preserve all projected input bytes; decode must alias its projected input and preserve the 320-channel tail.",
-  "acceptance": {"absolute_tolerance": 0.001, "relative_tolerance": 0.01, "mismatched_elements": 0, "nonfinite_elements": 0, "state_byte_mismatches": 0, "input_guard_byte_mismatches": 0},
+  "acceptance": {
+    "absolute_tolerance": 0.001,
+    "relative_tolerance": 0.01,
+    "mismatched_elements": 0,
+    "nonfinite_elements": 0,
+    "state_byte_mismatches": 0,
+    "input_guard_byte_mismatches": 0
+  },
   "staging_scope": "Persistent pinned probe input, weight, state, IDs, starts, initial flags and readback buffers. Actual upstream metadata helper's pinned host arrays are verified and retained through synchronization. This is a bounded measurement, not a claim of persistent metadata reuse throughout production.",
-  "safety": {"minimum_start_gib": 110, "kill_floor_gib": 40, "timeout_seconds": 600},
-  "not_established": ["full model fidelity", "actual long-context token processing", "full-model memory fit", "production performance", "sealed JIT kernels"]
+  "safety": {
+    "minimum_start_gib": 110,
+    "kill_floor_gib": 40,
+    "timeout_seconds": 600
+  },
+  "not_established": [
+    "full model fidelity",
+    "actual long-context token processing",
+    "full-model memory fit",
+    "production performance",
+    "sealed JIT kernels"
+  ]
 }
