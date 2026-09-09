@@ -18,9 +18,11 @@ failures remain unchanged.
 KDA preparation001 failed on raw nested metadata access; the pinned configuration
 normalizer correction closed in campaign round 37. Preparation002 then passed
 all five analytic cases and host/identity/cleanup checks. It remains NO_RESULT
-because its compiled kernels were generated after freeze. Frozen KDA replay is
-under review in round 38; seven finite autotune winners and four failed trials
-are preserved separately from authoritative output evidence.
+because its compiled kernels were generated after freeze. Frozen KDA replay001 then passed all five cases with sealed compiled inputs,
+zero mismatches/nonfinite values, full freeze/seed/host/identity checks and clean
+containment exit. Both reviewers closed round 38, including the focused
+effective-config alias correction. Seven finite selected configurations passed;
+four historical failed trials remain preserved cache inputs.
 
 The optional profile requests 1,048,576 aggregate tokens in four 262,144-token
 slots. Production activation remains rejected; the default and rollback state
@@ -118,6 +120,17 @@ The [reference metadata audit](reference-layout-001/README.md) records a
 reference result exist yet. It distinguishes the published panel roles, actual
 public coverage and post-final-norm replay semantics.
 
+## Load sizing
+
+The [reproducible storage census](load-sizing-audit-001/README.md) counts
+84,696,019,172 selected payload bytes after dense overlay and MTP exclusion.
+At a fixed 115 GiB available-memory assumption, a cache-off full resident load
+cannot preserve a 40 GiB floor: **NO_GO for that envelope**. With the measured
+cache and an 18 GiB floor, 9,891,630,876 bytes remain for all runtime, loading,
+allocator and workspace overhead; feasibility remains **NO_RESULT**. The next
+step is bounded actual module loading with persistent pinned staging and
+separate constructor/transfer/finalization memory observations.
+
 ## Remaining gates
 
 The [runtime-compilation audit](jit-audit-001.md) identifies an additional
@@ -129,7 +142,7 @@ probes failed and are preserved; requested mount properties are not evidence
 of enforcement on this host.
 
 The three clean builds, runtime inventory, bounded native checks and cache
-allocation are complete. Finish remaining KDA/indexer
+allocation are complete. Finish remaining convolution/indexer
 kernels and the measured full workspace envelope before downloading weights.
 Resolve existing plugin environment reads and diagnostic overhead before any
 production qualification. Complete the Python-specific monitored lifecycle,

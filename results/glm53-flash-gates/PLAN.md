@@ -14,7 +14,12 @@ reservation gate. It allocated 9565306880 bytes, held all four full reservations
 rejected a fifth, and freed all physical IDs. Zero input tokens were processed.
 All failed attempts, including native004–006 and cache002, remain preserved.
 
-Next: bounded SM121 MLA/KDA/indexer kernel correctness and workspace probes at
+MLA replay001 and KDA replay001 now pass their separately frozen analytic gates,
+including host/identity/seed/cleanup checks. The load-sizing census rules out
+a full-resident cache-off load at the 40 GiB floor; 18 GiB feasibility remains
+unmeasured.
+
+Next: bounded load-path sizing and remaining convolution/indexer workspace probes at
 2048 prefill rows and decode batches 1–4, with maximum-position addressing;
 then the remaining JIT, model load, fidelity, context and service gates. No model
 weight payload has been downloaded or loaded. GLM remains estimated/disabled.

@@ -140,3 +140,18 @@ Triton cache rejection and the preloaded FlashInfer Nvcc loader; it records a
 hash-bound selection receipt before the first analytic case. Missing or altered
 receipts fail the controller. This remains a model-free constant-cache result,
 not general attention fidelity, processed context or a serving cache sandbox.
+
+## Frozen KDA replay
+
+`39_freeze_glm53_probe.py kda-replay kda-replay-NNN` prepares a separate sealed
+Triton bundle from committed KDA preparation002. It preserves original autotune
+inputs, including four exact positive-infinity failed-trial sentinels. A finite
+sidecar binds seven winners, trial order and failure indices. This cache-specific
+parsing exception never applies to new tensor, timing or host evidence.
+
+The startup selector enables disk cache before constructing autotuners, rejects
+retuning and selects the reviewed sealed Triton cache. Replay001 passed the fixed
+five-case analytic gate with every captured output/state element checked. Only
+the frozen selected configurations are qualified; no model performance, general
+KDA fidelity or context claim follows. Kernel archives are compressed losslessly,
+with every payload rechecked against its frozen manifest after packaging.
