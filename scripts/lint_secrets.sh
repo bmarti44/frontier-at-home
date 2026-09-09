@@ -141,8 +141,12 @@ PY_NATIVE
 }
 
 scan_stream() {
-  local matches
-  matches="$(filter_glm53_native_log_digests | grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_DEPENDENCY_DIGEST_ALLOWLIST" || true)"
+  local matches filtered
+  if ! filtered="$(filter_glm53_native_log_digests)"; then
+    echo 'native digest filtering failed; refusing to pass secret scan' >&2
+    return 1
+  fi
+  matches="$(printf '%s\n' "$filtered" | grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_DEPENDENCY_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1
@@ -887,6 +891,9 @@ self_test() {
       return 1
     fi
   done
+  if printf '\377%s\n' "$fake_secret" | scan_stream >/dev/null 2>&1; then
+    echo 'self-test failed: digest filter error was ignored' >&2; return 1
+  fi
   local native_log_prefix='results/glm53-flash-gates/native-smoke-001/cmd.log:1:'
   if ! printf '%s{"raw_sha256":"%s","test_output_sha256":"%s"}\n' "$native_log_prefix" "$fake_secret" "$fake_secret" | scan_stream >/dev/null 2>&1; then
     echo 'self-test failed: native summary digests rejected' >&2; return 1
