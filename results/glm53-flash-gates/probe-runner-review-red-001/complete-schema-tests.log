@@ -1,0 +1,68 @@
+test_cache_block_reuse_and_seed_order_reject (test_glm53_probe_runner.CacheRunnerTests.test_cache_block_reuse_and_seed_order_reject) ... ok
+test_cache_reservations_must_match_frozen_physical_contract (test_glm53_probe_runner.CacheRunnerTests.test_cache_reservations_must_match_frozen_physical_contract) ... ok
+test_complete_cache_record_accepts (test_glm53_probe_runner.CacheRunnerTests.test_complete_cache_record_accepts) ... ERROR
+test_accepted_input_files_must_stay_byte_identical (test_glm53_probe_runner.LaunchBindingTests.test_accepted_input_files_must_stay_byte_identical) ... ERROR
+test_later_beacon_cannot_replace_predetermined_round (test_glm53_probe_runner.LaunchBindingTests.test_later_beacon_cannot_replace_predetermined_round) ... FAIL
+test_outer_shell_environment_excludes_ambient_startup_hooks (test_glm53_probe_runner.LaunchBindingTests.test_outer_shell_environment_excludes_ambient_startup_hooks) ... ERROR
+test_complete_native_record_accepts (test_glm53_probe_runner.RunnerTests.test_complete_native_record_accepts) ... ERROR
+test_missing_duplicate_reordered_or_failed_native_records_reject (test_glm53_probe_runner.RunnerTests.test_missing_duplicate_reordered_or_failed_native_records_reject) ... ok
+test_native_extension_rng_and_schema_mutations_reject (test_glm53_probe_runner.RunnerTests.test_native_extension_rng_and_schema_mutations_reject) ... ok
+test_seed_and_unbound_raw_reject (test_glm53_probe_runner.RunnerTests.test_seed_and_unbound_raw_reject) ... ok
+test_stale_interpreter_or_probe_binding_rejects (test_glm53_probe_runner.RunnerTests.test_stale_interpreter_or_probe_binding_rejects) ... ok
+
+======================================================================
+ERROR: test_complete_cache_record_accepts (test_glm53_probe_runner.CacheRunnerTests.test_complete_cache_record_accepts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 95, in test_complete_cache_record_accepts
+    self.assertEqual(runner.score_inner(self.root,'cache',self.seed,self.binding)['verdict'],'PASS')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 30, in score_inner
+    require(all(manifest.get(key) == value for key, value in binding.items()), 'frozen inner proof binding mismatch')
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_host_evidence.py", line 24, in require
+    raise ValueError(message)
+ValueError: frozen inner proof binding mismatch
+
+======================================================================
+ERROR: test_accepted_input_files_must_stay_byte_identical (test_glm53_probe_runner.LaunchBindingTests.test_accepted_input_files_must_stay_byte_identical)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 119, in test_accepted_input_files_must_stay_byte_identical
+    with self.assertRaises(ValueError):runner.verify_accepted_inputs(self.root,accepted)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'runner' has no attribute 'verify_accepted_inputs'
+
+======================================================================
+ERROR: test_outer_shell_environment_excludes_ambient_startup_hooks (test_glm53_probe_runner.LaunchBindingTests.test_outer_shell_environment_excludes_ambient_startup_hooks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 122, in test_outer_shell_environment_excludes_ambient_startup_hooks
+    environment=runner.wrapper_environment({'GLM_SAFE_PARENT_LOCK_PID':'123'})
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'runner' has no attribute 'wrapper_environment'
+
+======================================================================
+ERROR: test_complete_native_record_accepts (test_glm53_probe_runner.RunnerTests.test_complete_native_record_accepts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 39, in test_complete_native_record_accepts
+    self.assertEqual(runner.score_inner(self.root,'native',self.seed,self.binding)['checks_completed'],14)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 30, in score_inner
+    require(all(manifest.get(key) == value for key, value in binding.items()), 'frozen inner proof binding mismatch')
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_host_evidence.py", line 24, in require
+    raise ValueError(message)
+ValueError: frozen inner proof binding mismatch
+
+======================================================================
+FAIL: test_later_beacon_cannot_replace_predetermined_round (test_glm53_probe_runner.LaunchBindingTests.test_later_beacon_cannot_replace_predetermined_round)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 114, in test_later_beacon_cannot_replace_predetermined_round
+    with self.assertRaises(ValueError):runner.verify_beacon(self.root,manifest)
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 11 tests in 0.012s
+
+FAILED (failures=1, errors=4)
