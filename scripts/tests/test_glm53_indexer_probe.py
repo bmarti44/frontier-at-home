@@ -84,7 +84,7 @@ class IndexerProbeTests(unittest.TestCase):
     def test_complete_receipts_reject_missing_duplicate_and_malformed_evidence(self):
         a=self.api; seed=7
         rows=[{'time_unix':100.,'event':'configured',**a.geometry(seed)},
-              {'time_unix':101.,'event':'profiled','workspace_bytes':1385168896,'cuda_peak_allocated':3000000000,'cuda_reserved':4000000000}]
+              {'time_unix':101.,'event':'profiled','workspace_bytes':1385168896,'cuda_peak_allocated':3000000000,'cuda_reserved':4000000000,'device_total':120000000000}]
         for name in ('manifest.json','summary.json','raw.jsonl','traceback.log'): (self.root/name).touch()
         for case in a.fixture.case_order(seed):
             names=a.tensor_names(case); calls=[]
@@ -99,7 +99,7 @@ class IndexerProbeTests(unittest.TestCase):
                  'cuda_peak_allocated':3500000000,'device_free':110000000000,'device_total':120000000000,'workspace_bytes':1385168896},
                  'cuda_elapsed_ms':1.,'cache_stride':[8448,132,1],'tail_stride':[1024,512,128,1],'output_alias':True}])
         self.assertEqual(len(a.validate_capture(self.root,rows,seed)),6)
-        mutations=[lambda x:x.pop(),lambda x:x[3].__setitem__('case','wrong'),
+        mutations=[lambda x:x.pop(),lambda x:x[1].__setitem__('device_total',3500000000),lambda x:x[3].__setitem__('case','wrong'),
                    lambda x:x[3]['metadata']['index_slots'].__setitem__(0,0),
                    lambda x:x[3]['calls'][0].__setitem__('columns',1),
                    lambda x:x[3]['calls'].append(x[3]['calls'][0]),
