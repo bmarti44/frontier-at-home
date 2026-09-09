@@ -1,0 +1,37 @@
+test_disabled_selection_does_not_change_runtime (__main__.ActualSourceContract.test_disabled_selection_does_not_change_runtime) ... ERROR
+test_gpu_cache_hit_and_miss_do_not_enter_compiler_stages (__main__.ActualSourceContract.test_gpu_cache_hit_and_miss_do_not_enter_compiler_stages) ... ok
+test_native_load_failure_cannot_fall_through_to_a_compiler (__main__.ActualSourceContract.test_native_load_failure_cannot_fall_through_to_a_compiler) ... ok
+test_selected_mode_blocks_direct_native_compiler_entry (__main__.ActualSourceContract.test_selected_mode_blocks_direct_native_compiler_entry) ... ERROR
+test_unsafe_compile_override_rejects_before_mutation (__main__.ActualSourceContract.test_unsafe_compile_override_rejects_before_mutation) ... ERROR
+
+======================================================================
+ERROR: test_disabled_selection_does_not_change_runtime (__main__.ActualSourceContract.test_disabled_selection_does_not_change_runtime)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_jit_contract.py", line 28, in test_disabled_selection_does_not_change_runtime
+    policy.activate_triton(None, enabled=False)
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_runtime_jit' has no attribute 'activate_triton'
+
+======================================================================
+ERROR: test_selected_mode_blocks_direct_native_compiler_entry (__main__.ActualSourceContract.test_selected_mode_blocks_direct_native_compiler_entry)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_jit_contract.py", line 46, in test_selected_mode_blocks_direct_native_compiler_entry
+    policy.activate_triton(self.factory(), enabled=True)
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_runtime_jit' has no attribute 'activate_triton'
+
+======================================================================
+ERROR: test_unsafe_compile_override_rejects_before_mutation (__main__.ActualSourceContract.test_unsafe_compile_override_rejects_before_mutation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_jit_contract.py", line 35, in test_unsafe_compile_override_rejects_before_mutation
+    policy.activate_triton(self.factory(), enabled=True)
+    ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_runtime_jit' has no attribute 'activate_triton'
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.014s
+
+FAILED (errors=3)
