@@ -63,6 +63,7 @@ def main():
     parser.add_argument('--standard-cuda-allocator',action='store_true',help='Avoid expandable virtual reservations under the existing address-space limit')
     parser.add_argument('--release-warmup-cache',action='store_true',help='Release unused startup allocations before reserving the full KV cache')
     parser.add_argument('--prepared-flashinfer',action='store_true',help='Use existing compiled FlashInfer libraries through its native cache provider')
+    parser.add_argument('--skip-autotune',action='store_true',help='Use native default FlashInfer tactics without optional startup tuning')
     args=parser.parse_args()
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
@@ -88,6 +89,7 @@ def main():
     arguments[arguments.index('--max-num-batched-tokens')+1]=str(args.prefill_batch)
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
                 '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320']
+    if args.skip_autotune:arguments+=['--kernel-config','{"enable_flashinfer_autotune":false}']
     if args.release_warmup_cache:arguments+=['--worker-cls','glm53_worker.WarmupCleanupWorker']
     if args.text_only:arguments+=['--language-model-only']
     if args.skip_mm_profiling:arguments+=['--skip-mm-profiling']
