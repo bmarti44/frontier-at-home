@@ -1,0 +1,9 @@
+{
+  "reviewer": "glm53_adversarial_reviewer",
+  "scope": "bounded CPU geometry, not crash attribution",
+  "findings": [
+    "QKV view may retain fused token stride24896;24576 assumes materialized contiguous input",
+    "16 temporal tiles times96 channel tiles means1536 Triton programs"
+  ],
+  "disposition": "preserve initial arithmetic; correct both assumptions before publication"
+}

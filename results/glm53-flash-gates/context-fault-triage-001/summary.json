@@ -1,0 +1,38 @@
+{
+  "scope": "bounded CPU geometry falsifier; no model/kernel execution",
+  "verdict": "NO_RESULT",
+  "reason": "no originating CUDA kernel or real state/cache index values captured",
+  "arithmetic_checks_passed": true,
+  "failed_scheduler_line": 3876,
+  "computed_tokens": [
+    52992,
+    52928,
+    52896,
+    52864
+  ],
+  "scheduled_tokens": [
+    32,
+    32,
+    32,
+    32
+  ],
+  "rebased_query_start_loc": [
+    0,
+    32,
+    64,
+    96,
+    128
+  ],
+  "temporal_tiles": 16,
+  "channel_tiles": 96,
+  "convolution_grid": [
+    16,
+    96
+  ],
+  "convolution_programs": 1536,
+  "merged_channels": 24576,
+  "fused_projection_token_stride": 24896,
+  "formula": "input offset = rebased token * stride + channel; stride is 24896 for the fused view or 24576 after compact materialization. SD state row offset = history tap * 24576 + channel",
+  "finding": "Absolute 529xx history does not itself enlarge these local convolution offsets. Invalid state IDs, corrupt metadata, data-dependent failures and earlier kernels remain untested.",
+  "time_unix": 1788990925.1971931
+}

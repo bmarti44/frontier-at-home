@@ -1,0 +1,32 @@
+{
+  "scope": "CPU insertion-final-phase comparison only",
+  "verdict": "NO_RESULT",
+  "reason": "No proof of nonfinite native logits, histogram admission to this phase, or downstream CUDA fault",
+  "source": {
+    "path": "/home/bmarti44/.cache/glm53-flash/build-source-005/vllm/csrc/libtorch_stable/sampler.cu",
+    "sha256": "25e1b8e34019794383b6147cebe040a34da9fc41b285229c01887118fac6321c"
+  },
+  "cases": [
+    {
+      "case": "finite_with_ties",
+      "comparison_ranks": [
+        1,
+        2,
+        0,
+        3
+      ],
+      "permutation_of_four_slots": true
+    },
+    {
+      "case": "all_nonfinite_nan",
+      "comparison_ranks": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "permutation_of_four_slots": false
+    }
+  ],
+  "finding": "If four NaNs reach this comparison phase, all receive rank zero. This motivates a bounded native top-k test, not a production patch."
+}
