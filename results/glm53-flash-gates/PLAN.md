@@ -2,19 +2,22 @@
 
 Status: QUALIFYING MODEL-FREE RUNTIME — no GLM-5.3 model has been loaded or qualified here.
 
-The owner authorized resuming the identity review. Identity, capture, runner,
-and packaged pidfd compatibility corrections are reviewed through campaign
-round 28. The terminal-RSS execution correction closed at candidate 1 / round
-29, with both persistent reviewers finding no high or critical issues and all
-158 scoped packaged CPU tests passing.
+The owner-authorized review resumed and closed the identity, capture, runner,
+packaged pidfd and terminal-RSS corrections. Native007 now passes the complete
+model-free native gate: fourteen kernel checks, actual host/identity evidence,
+verified public seed and full runtime inventories before and after.
 
-Native004 failed outer pidfd capture. Native005 failed preparation when test
-children rewrote packaged bytecode; all 45 original files were restored from
-verified bytes, and the complete 61,353-file inventory passed before and after
-the corrected test suite. Native006 failed the scorer's terminal zero-RSS rule;
-its full observations and failed verdict remain immutable. Native007 is the
-fresh attempt after the reviewed correction. No model payload has been loaded.
-The cache allocation, model memory, fidelity, context and serving gates remain.
+The cache page-rounding correction closed at candidate 1 / campaign round 30.
+Both persistent reviewers found no high or critical issues; all 159 scoped
+packaged CPU tests pass. Cache003 now passes the actual four-slot backing and
+reservation gate. It allocated 9565306880 bytes, held all four full reservations,
+rejected a fifth, and freed all physical IDs. Zero input tokens were processed.
+All failed attempts, including native004–006 and cache002, remain preserved.
+
+Next: bounded SM121 MLA/KDA/indexer kernel correctness and workspace probes at
+2048 prefill rows and decode batches 1–4, with maximum-position addressing;
+then the remaining JIT, model load, fidelity, context and service gates. No model
+weight payload has been downloaded or loaded. GLM remains estimated/disabled.
 
 Target: one ARM64 DGX Spark, 1,048,576 aggregate context tokens in four
 262,144-token slots; text, reasoning, tools, four images or one video sampled
