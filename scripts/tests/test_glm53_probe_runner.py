@@ -152,3 +152,9 @@ class ComponentLoadRunnerTests(unittest.TestCase):
                       {'path':'library.so','type':'symlink','target':'/tmp/unfrozen'},
                       {'path':'.humming/tmp/lock/launcher.lock','type':'file','size_bytes':1,'sha256':'a'*64}):
             with self.assertRaises(ValueError):runner.validate_load_state({'entries':[entry]})
+
+class GrowthRunnerTests(unittest.TestCase):
+    def test_growth_probe_kind_and_frozen_dependencies(self):
+        self.assertEqual(runner.probe_verdict('growth',None),'PASS')
+        self.assertEqual(runner.probe_verdict('growth','failed'),'FAIL')
+        self.assertTrue({'scripts/43_probe_glm53_growth.py','configs/decision-specs/glm53-load-growth.json'}.issubset(runner.CODE_FILES))
