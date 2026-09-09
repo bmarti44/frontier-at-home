@@ -103,6 +103,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--workers',type=int,choices=(1,2,4),default=4)
+    parser.add_argument('--source-cache',type=Path,help='Optional complete upstream shards under k2/; every shard is still hash-verified')
     args=parser.parse_args(); target=args.output.resolve()
     layout=BASE/'model-layout-001'
     sys.path.insert(0,str(ROOT/'scripts/lib'))
@@ -191,6 +192,9 @@ def main():
             print(json.dumps({'event':'start','pack':label,'file':filename,'time_unix':started}),flush=True)
             ranges=None
             if label=='dense':written,ranges=download_dense_ranges(url,sink.fileno(),segments,entry['size'])
+            elif args.source_cache is not None and (args.source_cache/label/filename).is_file():
+                with (args.source_cache/label/filename).open('rb') as source:
+                    written=stream_selected(source,sink.fileno(),segments,entry['size'],entry['lfs']['sha256'])
             else:
                 with urllib.request.urlopen(url,timeout=120) as response:
                     if response.status!=200: raise ValueError('full shard response required')
