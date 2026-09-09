@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "qualification": "model_free_two_MoE_layers_incremental_storage_only",
+  "layers_live": 2,
+  "fixture": "Same canonical full 288-expert MoE input from the frozen glm53_load_fixture generator and one post-freeze public seed, reused by two independent real module instances. Synthetic module labels do not claim a complete model constructor.",
+  "safety": {"minimum_start_gib": 110, "kill_floor_gib": 40, "timeout_seconds": 600, "swap_max": 0},
+  "acceptance": "Both layers remain owned and live. Each independently loads every selected tensor exactly once through the actual loaders with persistent pinned staging. Source, uploaded, loaded and finalized bytes match; layer0 bytes and backing addresses remain unchanged after layer1 finalizes. Independent parameter and pointer-table allocations are disjoint. The four shared scratch buffers and two GTensorCache buffers have exact geometry and identical backing across both layers. Unique allocation union determines phase CUDA lower bounds, including simultaneous transfer temporary. Full external host/identity/freeze/seed/cleanup gate passes.",
+  "expected": {"constructor_bytes_per_layer": 1822563072, "pointer_table_bytes_per_layer": 20736, "shared_scratch_bytes": 301989888, "shared_tensor_cache_bytes": 12288, "retained_bytes_two_layers": 3947169792},
+  "measurement": "Observe RSS/PSS anonymous/file breakdown, CUDA current/reserved/peak and pinned allocator at each constructor/transfer/finalizer phase. Report unrounded per-phase differences and independently reconciled storage union. Do not add RSS to CUDA or extrapolate linearly to the entire model from two samples.",
+  "not_qualified": ["full model constructor", "full model memory fit", "cold checkpoint I/O", "forward correctness", "model fidelity", "context capability", "performance", "production activation"]
+}

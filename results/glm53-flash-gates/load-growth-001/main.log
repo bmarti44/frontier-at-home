@@ -1,0 +1,25 @@
+2026-09-09T15:34:56,579175124+00:00 SAFE_RUN start tag=glm53-load-growth-001 vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 timeout_s=600 allow_cgroup_high=0
+2026-09-09T15:34:56,584342820+00:00 cmd: /usr/bin/env -i CUDA_CACHE_DISABLE=1 CUDA_CACHE_PATH=/home/bmarti44/.cache/glm53-flash/load-growth-001/state/cuda-cache CUDA_HOME=/usr/local/cuda-13.0 CUDA_VISIBLE_DEVICES=0 FLASHINFER_DISABLE_JIT=1 GLM53_EXL3_BF16_SHARD_FIX=1 HF_HUB_OFFLINE=1 HOME=/home/bmarti44/.cache/glm53-flash/load-growth-001/state LANG=C.UTF-8 MAX_JOBS=2 NVCC_THREADS=1 NVIDIA_TF32_OVERRIDE=0 PATH=/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 TOKENIZERS_PARALLELISM=false TORCH_COMPILE_DISABLE=1 TORCH_EXTENSIONS_DIR=/home/bmarti44/.cache/glm53-flash/load-growth-001/state/torch-extensions TRANSFORMERS_OFFLINE=1 TRITON_CACHE_DIR=/home/bmarti44/.cache/glm53-flash/load-growth-001/state/triton /home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3 -I -B /home/bmarti44/.cache/glm53-flash/load-growth-001/code/scripts/38_guard_glm53_probe.py --output /home/bmarti44/.cache/glm53-flash/load-growth-001/identity -- /home/bmarti44/.cache/glm53-flash/load-growth-001/code/scripts/43_probe_glm53_growth.py --metadata /home/bmarti44/.cache/glm53-flash/processor-metadata-002 --output /home/bmarti44/.cache/glm53-flash/load-growth-001/checks --pinned-growth --seed 1148146129390848175
+2026-09-09T15:34:56,589710805+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T15:34:56,594460724+00:00 candidate_provenance_enabled=0
+2026-09-09T15:34:56,600647096+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-load-growth-001-976197.service memory_high=72470233088 memory_max=76765200384 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121103072 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.503,"stable_samples_observed":3}
+2026-09-09T15:34:59,175787712+00:00 wrapper_pid=976238 engine_pid=976241 pgid=976238 (periodic sampler; actual cadence in samples.log)
+2026-09-09T15:35:28,496135230+00:00 cgroup_final current_bytes=1959481344 peak_bytes=2880344064 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+INFO 09-09 11:35:12 [exl3.py:69] GLM53_EXL3_BF16_SHARD_FIX=1: preserve BF16 shard geometry
+INFO 09-09 11:35:13 [weight_utils.py:858] Filesystem type for checkpoints: EXT4. Checkpoint size: 1.76 GiB. Available RAM: 112.10 GiB.
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/fla/utils/_device.py:100: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/fla/utils/_device.py:177: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+INFO 09-09 11:35:19 [exl3.py:2073] EXL3 MCG trellis engaged for routed experts: bits=2 experts_local=288 hidden=4096 intermediate_local=2048 fused_moe=exl3_moe concurrency=6 (no BF16 expert reconstruct at load)
+INFO 09-09 11:35:20 [weight_utils.py:858] Filesystem type for checkpoints: EXT4. Checkpoint size: 1.76 GiB. Available RAM: 110.00 GiB.
+INFO 09-09 11:35:25 [exl3.py:2073] EXL3 MCG trellis engaged for routed experts: bits=2 experts_local=288 hidden=4096 intermediate_local=2048 fused_moe=exl3_moe concurrency=6 (no BF16 expert reconstruct at load)
+{"verdict": "PASS", "failure": null, "qualification": "model_free_two_MoE_layers_incremental_storage_only", "model_loaded": false, "actual_input_tokens_processed": 0, "context_capability": "not measured", "performance": "not measured", "raw_sha256": "0d4b0e8940372e6b002e6243a8d82fa21532171559b0fb6650e20c81bc26fd06"}
+{"verdict": "PASS", "qualification": "Python_probe_identity_only", "identity_samples": 109, "probe_exit_code": 0, "live_process_group_after": [], "raw_sha256": "2b89c4dba1e6aedaa3ff5d1b2e165c42426fda5da50eb941ebd9fbe6eb397b06", "failure": null}
+2026-09-09T15:35:28,547461407+00:00 safety_artifact_verified name=samples.log sha256=21ac1f850d6091fdb059f31188a8dfd4ea287e500b72520a5cb85da0eded7b73 size=18534
+2026-09-09T15:35:28,556114443+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T15:35:28,561656828+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   120341332 kB

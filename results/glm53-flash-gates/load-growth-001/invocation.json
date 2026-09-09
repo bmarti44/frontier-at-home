@@ -1,0 +1,52 @@
+{
+  "command": [
+    "/usr/bin/bash",
+    "/home/bmarti44/spark-deepseek-v4-flash/results/glm52-gates/harness/glm_cgroup_run.sh",
+    "--tag",
+    "glm53-load-growth-001",
+    "--",
+    "/usr/bin/env",
+    "-i",
+    "CUDA_CACHE_DISABLE=1",
+    "CUDA_CACHE_PATH=/home/bmarti44/.cache/glm53-flash/load-growth-001/state/cuda-cache",
+    "CUDA_HOME=/usr/local/cuda-13.0",
+    "CUDA_VISIBLE_DEVICES=0",
+    "FLASHINFER_DISABLE_JIT=1",
+    "GLM53_EXL3_BF16_SHARD_FIX=1",
+    "HF_HUB_OFFLINE=1",
+    "HOME=/home/bmarti44/.cache/glm53-flash/load-growth-001/state",
+    "LANG=C.UTF-8",
+    "MAX_JOBS=2",
+    "NVCC_THREADS=1",
+    "NVIDIA_TF32_OVERRIDE=0",
+    "PATH=/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "TOKENIZERS_PARALLELISM=false",
+    "TORCH_COMPILE_DISABLE=1",
+    "TORCH_EXTENSIONS_DIR=/home/bmarti44/.cache/glm53-flash/load-growth-001/state/torch-extensions",
+    "TRANSFORMERS_OFFLINE=1",
+    "TRITON_CACHE_DIR=/home/bmarti44/.cache/glm53-flash/load-growth-001/state/triton",
+    "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3",
+    "-I",
+    "-B",
+    "/home/bmarti44/.cache/glm53-flash/load-growth-001/code/scripts/38_guard_glm53_probe.py",
+    "--output",
+    "/home/bmarti44/.cache/glm53-flash/load-growth-001/identity",
+    "--",
+    "/home/bmarti44/.cache/glm53-flash/load-growth-001/code/scripts/43_probe_glm53_growth.py",
+    "--metadata",
+    "/home/bmarti44/.cache/glm53-flash/processor-metadata-002",
+    "--output",
+    "/home/bmarti44/.cache/glm53-flash/load-growth-001/checks",
+    "--pinned-growth",
+    "--seed",
+    "1148146129390848175"
+  ],
+  "start_unix": 1788968096.5212817,
+  "freeze": {
+    "sha256": "f8764c21d532b2aaae47891ab0f9e33eb603d2791f2578d1893e062c52a63e57"
+  },
+  "randomness": {
+    "sha256": "7359397ebf830117a847ed1a6107ff18cc9edb4c1639ec48d1ccfd9177e4622e"
+  }
+}

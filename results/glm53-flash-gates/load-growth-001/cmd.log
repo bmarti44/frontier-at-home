@@ -1,0 +1,11 @@
+INFO 09-09 11:35:12 [exl3.py:69] GLM53_EXL3_BF16_SHARD_FIX=1: preserve BF16 shard geometry
+INFO 09-09 11:35:13 [weight_utils.py:858] Filesystem type for checkpoints: EXT4. Checkpoint size: 1.76 GiB. Available RAM: 112.10 GiB.
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/fla/utils/_device.py:100: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/fla/utils/_device.py:177: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+INFO 09-09 11:35:19 [exl3.py:2073] EXL3 MCG trellis engaged for routed experts: bits=2 experts_local=288 hidden=4096 intermediate_local=2048 fused_moe=exl3_moe concurrency=6 (no BF16 expert reconstruct at load)
+INFO 09-09 11:35:20 [weight_utils.py:858] Filesystem type for checkpoints: EXT4. Checkpoint size: 1.76 GiB. Available RAM: 110.00 GiB.
+INFO 09-09 11:35:25 [exl3.py:2073] EXL3 MCG trellis engaged for routed experts: bits=2 experts_local=288 hidden=4096 intermediate_local=2048 fused_moe=exl3_moe concurrency=6 (no BF16 expert reconstruct at load)
+{"verdict": "PASS", "failure": null, "qualification": "model_free_two_MoE_layers_incremental_storage_only", "model_loaded": false, "actual_input_tokens_processed": 0, "context_capability": "not measured", "performance": "not measured", "raw_sha256": "0d4b0e8940372e6b002e6243a8d82fa21532171559b0fb6650e20c81bc26fd06"}
+{"verdict": "PASS", "qualification": "Python_probe_identity_only", "identity_samples": 109, "probe_exit_code": 0, "live_process_group_after": [], "raw_sha256": "2b89c4dba1e6aedaa3ff5d1b2e165c42426fda5da50eb941ebd9fbe6eb397b06", "failure": null}

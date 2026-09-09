@@ -1,0 +1,372 @@
+{
+  "verdict": "PASS",
+  "qualification": "model_free_two_MoE_layers_incremental_storage_only",
+  "failure": null,
+  "host": {
+    "verdict": "PASS",
+    "qualification": "host_and_probe_identity_observations_only",
+    "unit": "glm52-glm53-load-growth-001-976197.service",
+    "minimum_mem_available_kib": 115304528,
+    "maximum_cgroup_peak_bytes": 2880344064,
+    "memory_samples": 102,
+    "identity_samples": 109,
+    "identity_pid": 976241,
+    "identity_start_ticks": 32089973,
+    "maximum_memory_sample_gap_seconds": 0.2942490577697754,
+    "maximum_identity_sample_gap_seconds": 1.1749720573425293,
+    "whole_system_swap_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "required_separate_checks": [
+      "frozen runtime and metadata inventories",
+      "post-freeze verified public seed",
+      "inner probe correctness",
+      "model qualification"
+    ]
+  },
+  "inner": {
+    "verdict": "PASS",
+    "failure": null,
+    "qualification": "model_free_two_MoE_layers_incremental_storage_only",
+    "model_loaded": false,
+    "actual_input_tokens_processed": 0,
+    "context_capability": "not measured",
+    "performance": "not measured",
+    "raw_sha256": "0d4b0e8940372e6b002e6243a8d82fa21532171559b0fb6650e20c81bc26fd06",
+    "tensor_checks": {
+      "layers_live": 2,
+      "tensors_checked_per_layer": 3456,
+      "bytes_checked_per_stage_per_layer": 1822559616,
+      "known_retained_bytes": 3947169792,
+      "known_incremental_bytes": 1822583808,
+      "retained_observation_delta": {
+        "process_kib": {
+          "Rss": 4500,
+          "Pss": 4500,
+          "Pss_Anon": 4500,
+          "Pss_File": 0
+        },
+        "cuda_allocated": 1822587392,
+        "cuda_reserved": 1832910848
+      },
+      "phases": [
+        {
+          "before_constructor": {
+            "process_kib": {
+              "Rss": 873732,
+              "Pss": 864006,
+              "Pss_Anon": 483088,
+              "Pss_File": 329526
+            },
+            "cuda_allocated": 0,
+            "cuda_reserved": 0,
+            "cuda_peak_allocated": 0,
+            "cuda_peak_reserved": 0,
+            "pinned_allocator": {
+              "active_bytes.allocated": 8388608,
+              "active_bytes.current": 8388608,
+              "active_bytes.freed": 0,
+              "active_bytes.peak": 8388608,
+              "active_requests.allocated": 1,
+              "active_requests.current": 1,
+              "active_requests.freed": 0,
+              "active_requests.peak": 1,
+              "allocated_bytes.allocated": 8388608,
+              "allocated_bytes.current": 8388608,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 8388608,
+              "allocations.allocated": 1,
+              "allocations.current": 1,
+              "allocations.freed": 0,
+              "allocations.peak": 1
+            }
+          },
+          "constructed": {
+            "process_kib": {
+              "Rss": 1022100,
+              "Pss": 1012376,
+              "Pss_Anon": 593548,
+              "Pss_File": 365388
+            },
+            "cuda_allocated": 1822564352,
+            "cuda_reserved": 1835008000,
+            "cuda_peak_allocated": 1822564352,
+            "cuda_peak_reserved": 1835008000,
+            "pinned_allocator": {
+              "active_bytes.allocated": 8388608,
+              "active_bytes.current": 8388608,
+              "active_bytes.freed": 0,
+              "active_bytes.peak": 8388608,
+              "active_requests.allocated": 1,
+              "active_requests.current": 1,
+              "active_requests.freed": 0,
+              "active_requests.peak": 1,
+              "allocated_bytes.allocated": 8388608,
+              "allocated_bytes.current": 8388608,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 8388608,
+              "allocations.allocated": 1,
+              "allocations.current": 1,
+              "allocations.freed": 0,
+              "allocations.peak": 1
+            }
+          },
+          "after_transfers": {
+            "process_kib": {
+              "Rss": 1041736,
+              "Pss": 1032012,
+              "Pss_Anon": 600188,
+              "Pss_File": 368140
+            },
+            "cuda_allocated": 1822564352,
+            "cuda_reserved": 1835008000,
+            "cuda_peak_allocated": 1824661504,
+            "cuda_peak_reserved": 1835008000,
+            "pinned_allocator": {
+              "active_bytes.allocated": 16780672,
+              "active_bytes.current": 16777216,
+              "active_bytes.freed": 3456,
+              "active_bytes.peak": 16777220,
+              "active_requests.allocated": 866,
+              "active_requests.current": 2,
+              "active_requests.freed": 864,
+              "active_requests.peak": 3,
+              "allocated_bytes.allocated": 16777220,
+              "allocated_bytes.current": 16777220,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 16777220,
+              "allocations.allocated": 3,
+              "allocations.current": 3,
+              "allocations.freed": 0,
+              "allocations.peak": 3
+            }
+          },
+          "after_finalization": {
+            "process_kib": {
+              "Rss": 1233300,
+              "Pss": 1223574,
+              "Pss_Anon": 779704,
+              "Pss_File": 377878
+            },
+            "cuda_allocated": 2124589568,
+            "cuda_reserved": 2136997888,
+            "cuda_peak_allocated": 2124589568,
+            "cuda_peak_reserved": 2136997888,
+            "pinned_allocator": {
+              "active_bytes.allocated": 16787608,
+              "active_bytes.current": 8388608,
+              "active_bytes.freed": 8399000,
+              "active_bytes.peak": 16777221,
+              "active_requests.allocated": 2606,
+              "active_requests.current": 1,
+              "active_requests.freed": 2605,
+              "active_requests.peak": 4,
+              "allocated_bytes.allocated": 16777221,
+              "allocated_bytes.current": 16777221,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 16777221,
+              "allocations.allocated": 4,
+              "allocations.current": 4,
+              "allocations.freed": 0,
+              "allocations.peak": 4
+            }
+          },
+          "retained": {
+            "process_kib": {
+              "Rss": 1233636,
+              "Pss": 1223912,
+              "Pss_Anon": 780040,
+              "Pss_File": 377880
+            },
+            "cuda_allocated": 2124589568,
+            "cuda_reserved": 2136997888,
+            "cuda_peak_allocated": 2124589568,
+            "cuda_peak_reserved": 2136997888,
+            "pinned_allocator": {
+              "active_bytes.allocated": 16787608,
+              "active_bytes.current": 8388608,
+              "active_bytes.freed": 8399000,
+              "active_bytes.peak": 16777221,
+              "active_requests.allocated": 2606,
+              "active_requests.current": 1,
+              "active_requests.freed": 2605,
+              "active_requests.peak": 4,
+              "allocated_bytes.allocated": 16777221,
+              "allocated_bytes.current": 16777221,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 16777221,
+              "allocations.allocated": 4,
+              "allocations.current": 4,
+              "allocations.freed": 0,
+              "allocations.peak": 4
+            }
+          }
+        },
+        {
+          "before_constructor": {
+            "process_kib": {
+              "Rss": 1233636,
+              "Pss": 1223910,
+              "Pss_Anon": 780040,
+              "Pss_File": 377878
+            },
+            "cuda_allocated": 2124589568,
+            "cuda_reserved": 2136997888,
+            "cuda_peak_allocated": 2124589568,
+            "cuda_peak_reserved": 2136997888,
+            "pinned_allocator": {
+              "active_bytes.allocated": 16787608,
+              "active_bytes.current": 8388608,
+              "active_bytes.freed": 8399000,
+              "active_bytes.peak": 16777221,
+              "active_requests.allocated": 2606,
+              "active_requests.current": 1,
+              "active_requests.freed": 2605,
+              "active_requests.peak": 4,
+              "allocated_bytes.allocated": 16777221,
+              "allocated_bytes.current": 16777221,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 16777221,
+              "allocations.allocated": 4,
+              "allocations.current": 4,
+              "allocations.freed": 0,
+              "allocations.peak": 4
+            }
+          },
+          "constructed": {
+            "process_kib": {
+              "Rss": 1233636,
+              "Pss": 1223912,
+              "Pss_Anon": 780040,
+              "Pss_File": 377880
+            },
+            "cuda_allocated": 3947153920,
+            "cuda_reserved": 3969908736,
+            "cuda_peak_allocated": 3947153920,
+            "cuda_peak_reserved": 3969908736,
+            "pinned_allocator": {
+              "active_bytes.allocated": 16787608,
+              "active_bytes.current": 8388608,
+              "active_bytes.freed": 8399000,
+              "active_bytes.peak": 16777221,
+              "active_requests.allocated": 2606,
+              "active_requests.current": 1,
+              "active_requests.freed": 2605,
+              "active_requests.peak": 4,
+              "allocated_bytes.allocated": 16777221,
+              "allocated_bytes.current": 16777221,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 16777221,
+              "allocations.allocated": 4,
+              "allocations.current": 4,
+              "allocations.freed": 0,
+              "allocations.peak": 4
+            }
+          },
+          "after_transfers": {
+            "process_kib": {
+              "Rss": 1238020,
+              "Pss": 1228296,
+              "Pss_Anon": 784424,
+              "Pss_File": 377880
+            },
+            "cuda_allocated": 3947153920,
+            "cuda_reserved": 3969908736,
+            "cuda_peak_allocated": 3949251072,
+            "cuda_peak_reserved": 3969908736,
+            "pinned_allocator": {
+              "active_bytes.allocated": 25179672,
+              "active_bytes.current": 16777216,
+              "active_bytes.freed": 8402456,
+              "active_bytes.peak": 16777221,
+              "active_requests.allocated": 3471,
+              "active_requests.current": 2,
+              "active_requests.freed": 3469,
+              "active_requests.peak": 4,
+              "allocated_bytes.allocated": 16777221,
+              "allocated_bytes.current": 16777221,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 16777221,
+              "allocations.allocated": 4,
+              "allocations.current": 4,
+              "allocations.freed": 0,
+              "allocations.peak": 4
+            }
+          },
+          "after_finalization": {
+            "process_kib": {
+              "Rss": 1238076,
+              "Pss": 1228352,
+              "Pss_Anon": 784480,
+              "Pss_File": 377880
+            },
+            "cuda_allocated": 3947176960,
+            "cuda_reserved": 3969908736,
+            "cuda_peak_allocated": 3947176960,
+            "cuda_peak_reserved": 3969908736,
+            "pinned_allocator": {
+              "active_bytes.allocated": 25186608,
+              "active_bytes.current": 8388608,
+              "active_bytes.freed": 16798000,
+              "active_bytes.peak": 16777221,
+              "active_requests.allocated": 5211,
+              "active_requests.current": 1,
+              "active_requests.freed": 5210,
+              "active_requests.peak": 4,
+              "allocated_bytes.allocated": 16777221,
+              "allocated_bytes.current": 16777221,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 16777221,
+              "allocations.allocated": 4,
+              "allocations.current": 4,
+              "allocations.freed": 0,
+              "allocations.peak": 4
+            }
+          },
+          "retained": {
+            "process_kib": {
+              "Rss": 1238136,
+              "Pss": 1228412,
+              "Pss_Anon": 784540,
+              "Pss_File": 377880
+            },
+            "cuda_allocated": 3947176960,
+            "cuda_reserved": 3969908736,
+            "cuda_peak_allocated": 3947176960,
+            "cuda_peak_reserved": 3969908736,
+            "pinned_allocator": {
+              "active_bytes.allocated": 25186608,
+              "active_bytes.current": 8388608,
+              "active_bytes.freed": 16798000,
+              "active_bytes.peak": 16777221,
+              "active_requests.allocated": 5211,
+              "active_requests.current": 1,
+              "active_requests.freed": 5210,
+              "active_requests.peak": 4,
+              "allocated_bytes.allocated": 16777221,
+              "allocated_bytes.current": 16777221,
+              "allocated_bytes.freed": 0,
+              "allocated_bytes.peak": 16777221,
+              "allocations.allocated": 4,
+              "allocations.current": 4,
+              "allocations.freed": 0,
+              "allocations.peak": 4
+            }
+          }
+        }
+      ],
+      "model_loaded": false,
+      "full_load_fit": "not measured"
+    }
+  },
+  "model_loaded": false,
+  "model_fidelity": "not measured",
+  "context_capability": "not measured",
+  "performance": "not measured",
+  "end_unix": 1788968143.76464,
+  "generated_cache_inventory": {
+    "path": "generated-cache-inventory.json",
+    "sha256": "53359fbba9a82359394124b8270239b663a80230f049d5b7e23a1bfccfe29722"
+  }
+}
