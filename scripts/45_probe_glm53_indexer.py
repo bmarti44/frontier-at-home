@@ -280,7 +280,7 @@ def run_native(metadata, output, seed, record):
             raw=np.zeros((2048,128),dtype='<u2')
             for row,(r,p) in enumerate(zip(config['row_requests'],config['positions'])):
                 raw[row]=fixture.bf16_bits(fixture.raw_value(int(r),int(p)%4))
-            hosts['keys'].copy_(torch.from_numpy(raw)); keys.copy_(hosts['keys'],non_blocking=True)
+            hosts['keys'].copy_(torch.from_numpy(raw)); keys.copy_(hosts['keys'].view(torch.bfloat16),non_blocking=True)
             # Capacity is fixed across cases, including CPU copies retained by metadata.
             start_values=np.zeros(5,dtype='<i4'); start_values[:n+1]=config['starts']
             end_values=np.zeros(4,dtype='<i4'); end_values[:n]=config['ends']
