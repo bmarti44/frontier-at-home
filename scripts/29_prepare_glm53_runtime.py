@@ -31,6 +31,8 @@ def main():
     parser.add_argument("--python", type=Path, required=True,
                         help="absolute Python from the isolated build environment")
     args = parser.parse_args()
+    args.source_root = args.source_root.resolve()
+    args.output = args.output.resolve()
     if not args.python.is_absolute() or not args.python.is_file():
         parser.error("--python must name an existing absolute interpreter")
     lock_path = ROOT / "configs/build-manifests/glm53-flash-sources.json"
@@ -51,6 +53,10 @@ def main():
     # Do not apply optional speculative or diagnostic patches to this baseline.
     for name in ("patch_glm53_sm121_nope.py", "patch_kpool_tail_positions.py"):
         command([args.python, recipe / name, "--source", vllm])
+    # The recipe's NoPE script also adds optional DFlash allocation and MTP
+    # changes. Preserve the exact original files in this no-spec baseline.
+    for relative in ("vllm/v1/core/kv_cache_utils.py", "vllm/models/glm5next/nvidia/mtp.py"):
+        (vllm / relative).write_bytes((args.source_root / "vllm" / relative).read_bytes())
     command([args.python, recipe / "patch_glm53_dense_exl3_quant_config.py", vllm / "vllm"])
     command([args.python, recipe / "patch_exllamav3_aarch64.py", exllama / "exllamav3/exllamav3_ext"])
     command([args.python, ROOT / "scripts/28_patch_glm53_frames.py", "--source", vllm])
@@ -60,7 +66,21 @@ def main():
     if text.count(old) != 1:
         raise ValueError("FlashInfer metadata anchor count is not one")
     requirements.write_text(text.replace(old, new))
-    command([args.python, ROOT / "scripts/tests/glm53_build_contract.py", "--source", vllm])
+    for relative, key, tag in (("CMakeLists.txt", "cutlass", "v4.4.2"),
+                               ("cmake/external_projects/triton_kernels.cmake", "triton_kernels", "v3.5.1")):
+        path = vllm / relative
+        text = path.read_text()
+        old = f'"{tag}"'
+        if text.count(old) != 1:
+            raise ValueError(f"{key}: transitive source anchor count is not one")
+        text = text.replace(old, f'"{lock["transitive_sources"][key]["revision"]}"')
+        if key == "cutlass":
+            if text.count("GIT_SHALLOW TRUE") != 1:
+                raise ValueError("CUTLASS shallow-clone anchor count is not one")
+            text = text.replace("GIT_SHALLOW TRUE", "GIT_SHALLOW FALSE")
+        path.write_text(text)
+    command([args.python, ROOT / "scripts/tests/glm53_build_contract.py", "--source", vllm,
+             "--pristine", args.source_root / "vllm"])
     command([args.python, ROOT / "scripts/tests/glm53_frame_contract.py", "--source", vllm])
     # Upstream patch backup copies are redundant with the preserved pristine
     # tree and diff. Only these named, newly generated files are removed.
