@@ -1,0 +1,14 @@
+test_metrics_scoring_memory_does_not_scale_with_log_length (scripts.tests.test_glm53_context_probe.ContextEvidenceTests.test_metrics_scoring_memory_does_not_scale_with_log_length) ... FAIL
+
+======================================================================
+FAIL: test_metrics_scoring_memory_does_not_scale_with_log_length (scripts.tests.test_glm53_context_probe.ContextEvidenceTests.test_metrics_scoring_memory_does_not_scale_with_log_length)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_context_probe.py", line 43, in test_metrics_scoring_memory_does_not_scale_with_log_length
+    self.assertLess(peak()-baseline,5*1024*1024,'scoring retained a growing metrics log in memory')
+AssertionError: 30189420 not less than 5242880 : scoring retained a growing metrics log in memory
+
+----------------------------------------------------------------------
+Ran 1 test in 3.979s
+
+FAILED (failures=1)

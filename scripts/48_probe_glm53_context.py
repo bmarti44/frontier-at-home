@@ -151,18 +151,24 @@ def score(out):
   results.append({'slot':slot,'checks':checks,'content':content,'reasoning':reasoning,'usage':usage,'first_ns':first,'finish_ns':terminal,'output_tokens_observed':len(outputs),'retrieval':completion})
   if first is not None:firsts.append(first)
   if terminal is not None:finishes.append(terminal)
- samples=[decode(line) for line in (out/'metrics.jsonl').read_text().splitlines()]
  overlap=len(firsts)==len(finishes)==4 and max(firsts)<min(finishes)
  try:
-  assert len(samples)>=3
-  assert all(type(r.get(k)) is int and r[k]>0 for r in samples for k in ('start_ns','end_ns'))
-  assert all(r['start_ns']<r['end_ns'] for r in samples)
-  assert all(a['end_ns']<b['start_ns'] for a,b in zip(samples,samples[1:]))
-  assert samples[0]['end_ns']<min(starts) and samples[-1]['start_ns']>max(ends)
-  assert all(metric(r['text'],name)==0 for r in (samples[0],samples[-1]) for name in ('num_requests_running','num_requests_waiting'))
-  preempt=[metric(r['text'],'num_preemptions_total') for r in samples]
-  no_preemption=bool(preempt) and max(preempt)==min(preempt)
-  common=overlap and any(r['start_ns']>=max(firsts) and r['end_ns']<=min(finishes) and metric(r['text'],'num_requests_running')==4 and metric(r['text'],'num_requests_waiting')==0 for r in samples)
+  count=0;previous_end=0;baseline_preempt=None;no_preemption=True;common=False
+  with (out/'metrics.jsonl').open() as samples:
+   for line in samples:
+    r=decode(line)
+    assert all(type(r.get(k)) is int and r[k]>0 for k in ('start_ns','end_ns'))
+    assert previous_end<r['start_ns']<r['end_ns']
+    preempt=metric(r['text'],'num_preemptions_total')
+    if count==0:
+     assert r['end_ns']<min(starts)
+     assert all(metric(r['text'],name)==0 for name in ('num_requests_running','num_requests_waiting'))
+     baseline_preempt=preempt
+    no_preemption=no_preemption and preempt==baseline_preempt
+    common=common or (overlap and r['start_ns']>=max(firsts) and r['end_ns']<=min(finishes) and metric(r['text'],'num_requests_running')==4 and metric(r['text'],'num_requests_waiting')==0)
+    count+=1;previous_end=r['end_ns']
+  assert count>=3 and r['start_ns']>max(ends)
+  assert all(metric(r['text'],name)==0 for name in ('num_requests_running','num_requests_waiting'))
  except (KeyError,AssertionError,ValueError):no_preemption=False;common=False
  checks={'four_valid_cases':len(results)==4 and len(set(response_ids))==4 and all(all(r['checks'].values()) for r in results),'generated_streams_overlap':overlap,'metrics_corrobates_four_running':common,'no_preemption':no_preemption,'aggregate_input_tokens':sum(len(read(out/f'{s}-input-token-ids.json')) for s in range(4))>=1000000}
  summary={'scope':'direct aggregate context API checks; host/freeze/lifecycle verdict remains separate','verdict':'PASS' if all(checks.values()) else 'FAIL','checks':checks,'cases':results,'full_qualification':'NO_RESULT until host/freeze/lifecycle checks and review'}

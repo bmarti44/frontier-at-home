@@ -1,0 +1,1 @@
+import json,resource,sys; before=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss; rows=[json.loads(line) for line in open(sys.argv[1]).read().splitlines()]; print(json.dumps({'rows':len(rows),'baseline_maxrss_kib':before,'peak_maxrss_kib':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}))
