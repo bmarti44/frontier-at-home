@@ -1,5 +1,5 @@
 """Synthetic scorer mutations only; none of these rows are model evidence."""
-import importlib.util,json,tempfile,unittest
+import importlib.util,json,subprocess,sys,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
 PATH=Path(__file__).resolve().parents[1]/'48_probe_glm53_context.py'
@@ -51,6 +51,13 @@ class ContextEvidenceTests(unittest.TestCase):
   rows=self.rows();rows[4]['chunk']['usage']['completion_tokens']=2;self.save(0,rows);self.reject()
  def test_wrong_launch(self):
   probe.write(self.out/'server-launch.json',{'arguments':[]});self.reject()
+ def test_nonfinite_unused_field(self):
+  rows=self.rows();rows[2]['invalid_extra']=float('nan');self.save(0,rows);self.reject()
+ def test_optimized_python_rejected(self):
+  for flag in ('-O','-OO'):
+   result=subprocess.run([sys.executable,'-I','-B',flag,str(PATH),'--help'],capture_output=True,text=True)
+   self.assertNotEqual(result.returncode,0)
+   self.assertIn('optimized Python is forbidden',result.stderr)
  def test_empty_binding_rejected(self):
   probe.write(self.out/'manifest.json',{'files':{},'sources':{}})
   with self.assertRaises(AssertionError):probe.verify(self.out)

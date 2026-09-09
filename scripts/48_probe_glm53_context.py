@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Direct four-slot GLM context probe using existing retrieval fixtures/scorer."""
-import argparse,concurrent.futures,hashlib,importlib.util,json,math,re,threading,time,urllib.request
+import argparse,concurrent.futures,hashlib,importlib.util,json,math,re,sys,threading,time,urllib.request
 from pathlib import Path
+if sys.flags.optimize:
+ raise RuntimeError('GLM context acceptance requires Python assertions; optimized Python is forbidden')
 ROOT=Path(__file__).resolve().parents[1]
 MODEL=Path('/home/bmarti44/.cache/glm53-flash/model-weights-001')
 DS=ROOT/'scripts/57_dsv4_context_probe.py'
@@ -10,7 +12,8 @@ spec=importlib.util.spec_from_file_location('retrieval',DS);retrieval=importlib.
 def sha(p):
  with Path(p).open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
 def write(p,value):Path(p).write_text(json.dumps(value,indent=2,allow_nan=False)+'\n')
-def read(p):return json.loads(Path(p).read_text(),parse_constant=lambda v:(_ for _ in ()).throw(ValueError(v)))
+def decode(text):return json.loads(text,parse_constant=lambda v:(_ for _ in ()).throw(ValueError(v)))
+def read(p):return decode(Path(p).read_text())
 def prepare(out,seed,server):
  from jinja2.sandbox import ImmutableSandboxedEnvironment
  from tokenizers import Tokenizer
@@ -80,13 +83,13 @@ def run(out,server):
       if not line.startswith(b'data:'):continue
       value=line[5:].strip()
       if value==b'[DONE]':event(kind='done');break
-      event(kind='chunk',chunk=json.loads(value))
+      event(kind='chunk',chunk=decode(value))
    except Exception as error:event(kind='error',error=str(error),body=error.read().decode() if hasattr(error,'read') else None)
    event(kind='end')
  monitor=threading.Thread(target=metrics);monitor.start()
  try:
   assert ready.wait(35),'metrics baseline timed out'
-  baseline=json.loads((out/'metrics.jsonl').read_text().splitlines()[0])
+  baseline=decode((out/'metrics.jsonl').read_text().splitlines()[0])
   assert metric(baseline['text'],'num_requests_running')==0 and metric(baseline['text'],'num_requests_waiting')==0
   with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:list(pool.map(stream,range(4)))
  finally:stop.set();monitor.join(timeout=35)
@@ -139,7 +142,7 @@ def parse_stream(rows,ids):
 def score(out):
  verify(out);check_launch(read(out/'server-launch.json'));results=[];firsts=[];finishes=[];starts=[];ends=[];response_ids=[]
  for slot in range(4):
-  rows=[json.loads(line) for line in (out/f'{slot}-raw.jsonl').read_text().splitlines()]
+  rows=[decode(line) for line in (out/f'{slot}-raw.jsonl').read_text().splitlines()]
   ids=read(out/f'{slot}-input-token-ids.json');fixture=read(out/f'{slot}-fixture.json')
   content,reasoning,usage,finish,first,terminal,rid,outputs=parse_stream(rows,ids)
   starts.append(rows[0]['monotonic_ns']);ends.append(rows[-1]['monotonic_ns']);response_ids.append(rid)
@@ -148,7 +151,7 @@ def score(out):
   results.append({'slot':slot,'checks':checks,'content':content,'reasoning':reasoning,'usage':usage,'first_ns':first,'finish_ns':terminal,'output_tokens_observed':len(outputs),'retrieval':completion})
   if first is not None:firsts.append(first)
   if terminal is not None:finishes.append(terminal)
- samples=[json.loads(line) for line in (out/'metrics.jsonl').read_text().splitlines()]
+ samples=[decode(line) for line in (out/'metrics.jsonl').read_text().splitlines()]
  overlap=len(firsts)==len(finishes)==4 and max(firsts)<min(finishes)
  try:
   assert len(samples)>=3

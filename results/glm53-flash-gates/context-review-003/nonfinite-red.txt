@@ -1,0 +1,19 @@
+.......F.......
+======================================================================
+FAIL: test_nonfinite_unused_field (test_glm53_context_probe.ContextEvidenceTests.test_nonfinite_unused_field)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_context_probe.py", line 55, in test_nonfinite_unused_field
+    rows=self.rows();rows[2]['invalid_extra']=float('nan');self.save(0,rows);self.reject()
+                                                                             ^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_context_probe.py", line 27, in reject
+    self.assertEqual(result['verdict'],'FAIL')
+AssertionError: 'PASS' != 'FAIL'
+- PASS
++ FAIL
+
+
+----------------------------------------------------------------------
+Ran 15 tests in 4.250s
+
+FAILED (failures=1)
