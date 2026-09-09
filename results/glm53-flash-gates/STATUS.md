@@ -9,11 +9,18 @@ compared, and their whole-shard digests remain metadata only.
 The [real-shard InstantTensor smoke](real-loader-smoke-001/README.md) passed:
 1,280 tensors agreed after GPU transfer. The existing AIO loader supplies
 persistent pinned staging; no replacement loader is needed.
-The [first full-model startup](server-bringup-001/README.md) loaded the weights
-but failed during cache allocation with NVIDIA memory errors. The 18 GiB
-watchdog stopped it, and the host recovered. A bounded retry selects native
-`--skip-mm-profiling`, preserving full media support and the requested four
-262,144-token slots. No real response has been obtained yet.
+The first seven full-media startup attempts are preserved as failures. The
+selected weights load, but the complete server has not served a response yet.
+The attempts identified excessive media warm-up, expandable virtual-address
+reservations, unreleased warm-up memory, native prebuilt-cache selection, and
+optional autotuning allocations. The small startup cleanup has no verified
+high/critical finding in focused review. Native attention loading and the
+release sampling build have passed their preparation checks.
+
+The immediate retry uses text/tools mode, 128-token prefill chunks, prepared
+kernels and native default tactics, retaining four 262,144-token slots and the
+explicit cache budget. Images/video remain pending a fit within the memory
+floor. This follows the owner's request to get a usable model running first.
 
 `scripts/47_run_glm53_dev.py` starts a separate authenticated local endpoint
 under the existing inference lock, cgroup and memory watchdog. This is model

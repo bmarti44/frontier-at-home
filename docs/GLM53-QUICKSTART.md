@@ -12,7 +12,7 @@ Start the optional local server from the repository:
 ```bash
 GLM53_RUN="$HOME/.cache/glm53-flash/server-$(date +%Y%m%d-%H%M%S)"
 python3 scripts/47_run_glm53_dev.py --start --output "$GLM53_RUN" \
-  --skip-mm-profiling --prefill-batch 512 --standard-cuda-allocator \
+  --text-only --skip-mm-profiling --prefill-batch 128 --standard-cuda-allocator \
   --release-warmup-cache --prepared-flashinfer --skip-autotune
 ```
 
@@ -24,6 +24,6 @@ and requires the other large model to be stopped and memory to recover first.
 
 This is a manual development server with a 2.5-hour safety timeout. It does not
 change reboot defaults or authorize the production switch. The existing memory
-watchdog and containment remain active. The model supports the configured text,
-tool and media routes; current measured results are in
+watchdog and containment remain active. This initial recipe enables text and tools. Images and video remain pending
+a startup configuration that stays within the memory floor. Current results are in
 [GLM status](../results/glm53-flash-gates/STATUS.md).
