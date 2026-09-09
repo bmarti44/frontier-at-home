@@ -1,4 +1,8 @@
-# Indexer replay write guard acceptance
+# Indexer replay write guard acceptance — deferred
+
+Owner directed simplification before implementation. This guard is deferred;
+the proposed tests are retained in `deferred-indexer-write-guard-test.py` and
+are not part of the active test suite. No guard was implemented or installed.
 
 New evidence-only component; production selection remains off. No changes to
 the frozen numerical probes, loaders, fixture or existing service boundary.
