@@ -113,7 +113,7 @@ redact_matches() {
 # recorded GLM-5.3 dependency attempts and exact line formats.
 readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001|build-vllm-exl3-002|native-smoke-00[1234567]|cache-preflight-00[12])/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
 
-readonly GLM53_PROBE_DONE_DIGEST_ALLOWLIST='^results/glm53-flash-gates/(native-smoke-00[4567]|cache-preflight-002)/wrapper\.log:[0-9]+:SAFE_RUN_DONE rc=0 killed=no dir=/home/bmarti44/\.local/state/glm52-crashlog/[0-9]{8}-[0-9]{6}-glm53-(native-smoke-00[4567]|cache-preflight-002) main_sha256=[0-9a-f]{64} samples_sha256=[0-9a-f]{64} kernel_sha256=[0-9a-f]{64}$'
+readonly GLM53_PROBE_DONE_DIGEST_ALLOWLIST='^results/glm53-flash-gates/(native-smoke-00[4567]|cache-preflight-002)/wrapper\.log:[0-9]+:SAFE_RUN_DONE rc=[01] killed=no dir=/home/bmarti44/\.local/state/glm52-crashlog/[0-9]{8}-[0-9]{6}-glm53-(native-smoke-00[4567]|cache-preflight-002) main_sha256=[0-9a-f]{64} samples_sha256=[0-9a-f]{64} kernel_sha256=[0-9a-f]{64}$'
 
 filter_glm53_native_log_digests() {
   python3 - 3<&0 <<'PY_NATIVE'
