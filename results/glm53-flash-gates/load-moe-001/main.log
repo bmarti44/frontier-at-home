@@ -1,0 +1,23 @@
+2026-09-09T15:07:42,974197887+00:00 SAFE_RUN start tag=glm53-load-moe-001 vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 timeout_s=600 allow_cgroup_high=0
+2026-09-09T15:07:42,979415435+00:00 cmd: /usr/bin/env -i CUDA_CACHE_DISABLE=1 CUDA_CACHE_PATH=/home/bmarti44/.cache/glm53-flash/load-moe-001/state/cuda-cache CUDA_HOME=/usr/local/cuda-13.0 CUDA_VISIBLE_DEVICES=0 FLASHINFER_DISABLE_JIT=1 GLM53_EXL3_BF16_SHARD_FIX=1 HF_HUB_OFFLINE=1 HOME=/home/bmarti44/.cache/glm53-flash/load-moe-001/state LANG=C.UTF-8 MAX_JOBS=2 NVCC_THREADS=1 NVIDIA_TF32_OVERRIDE=0 PATH=/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 TOKENIZERS_PARALLELISM=false TORCH_COMPILE_DISABLE=1 TORCH_EXTENSIONS_DIR=/home/bmarti44/.cache/glm53-flash/load-moe-001/state/torch-extensions TRANSFORMERS_OFFLINE=1 TRITON_CACHE_DIR=/home/bmarti44/.cache/glm53-flash/load-moe-001/state/triton /home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3 -I -B /home/bmarti44/.cache/glm53-flash/load-moe-001/code/scripts/38_guard_glm53_probe.py --output /home/bmarti44/.cache/glm53-flash/load-moe-001/identity -- /home/bmarti44/.cache/glm53-flash/load-moe-001/code/scripts/42_probe_glm53_load.py --metadata /home/bmarti44/.cache/glm53-flash/processor-metadata-002 --output /home/bmarti44/.cache/glm53-flash/load-moe-001/checks --case moe --pinned-stream --seed 17797078517021613244
+2026-09-09T15:07:42,986544300+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T15:07:42,991003639+00:00 candidate_provenance_enabled=0
+2026-09-09T15:07:42,997908135+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-load-moe-001-963406.service memory_high=72499593216 memory_max=76794560512 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121131116 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.525,"stable_samples_observed":3}
+2026-09-09T15:07:45,564440240+00:00 wrapper_pid=963460 engine_pid=963463 pgid=963460 (periodic sampler; actual cadence in samples.log)
+2026-09-09T15:08:07,038582920+00:00 cgroup_final current_bytes=1952542720 peak_bytes=2853257216 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+INFO 09-09 11:07:58 [exl3.py:69] GLM53_EXL3_BF16_SHARD_FIX=1: preserve BF16 shard geometry
+INFO 09-09 11:07:59 [weight_utils.py:858] Filesystem type for checkpoints: EXT4. Checkpoint size: 1.76 GiB. Available RAM: 113.05 GiB.
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/fla/utils/_device.py:100: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/fla/utils/_device.py:177: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+INFO 09-09 11:08:04 [exl3.py:2073] EXL3 MCG trellis engaged for routed experts: bits=2 experts_local=288 hidden=4096 intermediate_local=2048 fused_moe=exl3_moe concurrency=6 (no BF16 expert reconstruct at load)
+{"verdict": "PASS", "failure": null, "qualification": "model_free_component_load_storage_only", "case": "moe", "model_loaded": false, "actual_input_tokens_processed": 0, "context_capability": "not measured", "performance": "not measured", "raw_sha256": "cbdee18aaae208f08db5182642af9dabc98c332ddcae27c2f71818b194471b54"}
+{"verdict": "PASS", "qualification": "Python_probe_identity_only", "identity_samples": 80, "probe_exit_code": 0, "live_process_group_after": [], "raw_sha256": "43de78b1aee10a753bcd685ee21f86709e482c95de5f018d5f94f9dc3aa77d19", "failure": null}
+2026-09-09T15:08:07,077337028+00:00 safety_artifact_verified name=samples.log sha256=f3b77d47213390e6abca0ad579323e5f563e18ff7a597b622231f696016aa040 size=13661
+2026-09-09T15:08:07,087944398+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T15:08:07,092647913+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   121228944 kB

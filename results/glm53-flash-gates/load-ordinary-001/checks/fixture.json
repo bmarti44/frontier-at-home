@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "qualification": "generated_synthetic_input_only",
+  "case": "ordinary",
+  "seed": 17259192682203841248,
+  "generator_sha256": "33d6f82b68fd9bf44b800a3992ec4960b3079df4cc25f2c8e30fa99b0f0ecbf3",
+  "inventory": {
+    "schema_version": 1,
+    "files": [
+      {
+        "path": "weights.safetensors",
+        "size_bytes": 1335894464,
+        "sha256": "5cc2d5626dc96662c7414b4e8ee9d1aa3a76559948a26e8467a2cb9ca8d9c74c"
+      }
+    ]
+  },
+  "selection": {
+    "model.language_model.embed_tokens.weight": {
+      "file": "weights.safetensors",
+      "dtype": "torch.bfloat16",
+      "shape": [
+        154880,
+        4096
+      ],
+      "sha256": "0702e32558c11f4bf318e0c258700f3de70df7d300c41fbf345810f6227dca3d"
+    }
+  },
+  "excluded": {
+    "model.language_model.layers.45.input_layernorm.weight": {
+      "dtype": "torch.bfloat16",
+      "shape": [
+        4096
+      ],
+      "sha256": "eb971cd3284ceb024d71f5242d1b5c2593b6374c196980802f783882672b9ef4"
+    },
+    "model.language_model.layers.0.self_attn.q_proj.weight": {
+      "dtype": "torch.bfloat16",
+      "shape": [
+        8192,
+        4096
+      ],
+      "sha256": "29e72ad103c7f6b57c21a94d6a6a1dc922a3449d7f8d22ae9b973378c819ded6"
+    }
+  }
+}

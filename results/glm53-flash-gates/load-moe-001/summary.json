@@ -1,0 +1,62 @@
+{
+  "verdict": "PASS",
+  "qualification": "model_free_component_load_storage_only",
+  "failure": null,
+  "host": {
+    "verdict": "PASS",
+    "qualification": "host_and_probe_identity_observations_only",
+    "unit": "glm52-glm53-load-moe-001-963406.service",
+    "minimum_mem_available_kib": 118024240,
+    "maximum_cgroup_peak_bytes": 2853257216,
+    "memory_samples": 75,
+    "identity_samples": 80,
+    "identity_pid": 963463,
+    "identity_start_ticks": 31926613,
+    "maximum_memory_sample_gap_seconds": 0.2948770523071289,
+    "maximum_identity_sample_gap_seconds": 1.1654331684112549,
+    "whole_system_swap_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "required_separate_checks": [
+      "frozen runtime and metadata inventories",
+      "post-freeze verified public seed",
+      "inner probe correctness",
+      "model qualification"
+    ]
+  },
+  "inner": {
+    "verdict": "PASS",
+    "failure": null,
+    "qualification": "model_free_component_load_storage_only",
+    "case": "moe",
+    "model_loaded": false,
+    "actual_input_tokens_processed": 0,
+    "context_capability": "not measured",
+    "performance": "not measured",
+    "raw_sha256": "cbdee18aaae208f08db5182642af9dabc98c332ddcae27c2f71818b194471b54",
+    "tensor_checks": {
+      "case": "moe",
+      "tensors_checked": 3456,
+      "bytes_checked_per_stage": 1822559616,
+      "constructor_parameter_bytes": 1822563072,
+      "retained_unique_bytes": 2124585984,
+      "minimum_transfer_peak_bytes": 1824660224,
+      "minimum_finalization_peak_bytes": 2124585984,
+      "new_trellis_storages": 0,
+      "bf16_clone_storages": 0,
+      "model_loaded": false,
+      "full_load_fit": "not measured"
+    }
+  },
+  "model_loaded": false,
+  "model_fidelity": "not measured",
+  "context_capability": "not measured",
+  "performance": "not measured",
+  "end_unix": 1788966502.0920656,
+  "case": "moe",
+  "generated_cache_inventory": {
+    "path": "generated-cache-inventory.json",
+    "sha256": "224b322943137e6f941063edfde73176018ef17194e09846191dc10b0e28fe2d"
+  }
+}

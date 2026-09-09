@@ -1,0 +1,22 @@
+2026-09-09T15:09:42,455276998+00:00 SAFE_RUN start tag=glm53-load-kda-001 vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 timeout_s=600 allow_cgroup_high=0
+2026-09-09T15:09:42,460293970+00:00 cmd: /usr/bin/env -i CUDA_CACHE_DISABLE=1 CUDA_CACHE_PATH=/home/bmarti44/.cache/glm53-flash/load-kda-001/state/cuda-cache CUDA_HOME=/usr/local/cuda-13.0 CUDA_VISIBLE_DEVICES=0 FLASHINFER_DISABLE_JIT=1 GLM53_EXL3_BF16_SHARD_FIX=1 HF_HUB_OFFLINE=1 HOME=/home/bmarti44/.cache/glm53-flash/load-kda-001/state LANG=C.UTF-8 MAX_JOBS=2 NVCC_THREADS=1 NVIDIA_TF32_OVERRIDE=0 PATH=/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 TOKENIZERS_PARALLELISM=false TORCH_COMPILE_DISABLE=1 TORCH_EXTENSIONS_DIR=/home/bmarti44/.cache/glm53-flash/load-kda-001/state/torch-extensions TRANSFORMERS_OFFLINE=1 TRITON_CACHE_DIR=/home/bmarti44/.cache/glm53-flash/load-kda-001/state/triton /home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3 -I -B /home/bmarti44/.cache/glm53-flash/load-kda-001/code/scripts/38_guard_glm53_probe.py --output /home/bmarti44/.cache/glm53-flash/load-kda-001/identity -- /home/bmarti44/.cache/glm53-flash/load-kda-001/code/scripts/42_probe_glm53_load.py --metadata /home/bmarti44/.cache/glm53-flash/processor-metadata-002 --output /home/bmarti44/.cache/glm53-flash/load-kda-001/checks --case kda --pinned-stream --seed 13057542692350869621
+2026-09-09T15:09:42,467197571+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T15:09:42,471473837+00:00 candidate_provenance_enabled=0
+2026-09-09T15:09:42,479631056+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-load-kda-001-965348.service memory_high=72445067264 memory_max=76740034560 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121077964 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.475,"stable_samples_observed":3}
+2026-09-09T15:09:45,052819370+00:00 wrapper_pid=965389 engine_pid=965392 pgid=965389 (periodic sampler; actual cadence in samples.log)
+2026-09-09T15:09:55,722979265+00:00 cgroup_final current_bytes=128450560 peak_bytes=875417600 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+INFO 09-09 11:09:53 [exl3.py:69] GLM53_EXL3_BF16_SHARD_FIX=1: preserve BF16 shard geometry
+INFO 09-09 11:09:53 [weight_utils.py:858] Filesystem type for checkpoints: EXT4. Checkpoint size: 0.11 GiB. Available RAM: 114.62 GiB.
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/fla/utils/_device.py:100: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/fla/utils/_device.py:177: UserWarning: Triton is not supported on current platform, roll back to CPU.
+  _cpu_device_warning()
+{"verdict": "PASS", "failure": null, "qualification": "model_free_component_load_storage_only", "case": "kda", "model_loaded": false, "actual_input_tokens_processed": 0, "context_capability": "not measured", "performance": "not measured", "raw_sha256": "4523a16530f8fed2fed0dba9cd0b708ff0bf3259d709cdef4718280738c85e28"}
+{"verdict": "PASS", "qualification": "Python_probe_identity_only", "identity_samples": 39, "probe_exit_code": 0, "live_process_group_after": [], "raw_sha256": "60723753a3003889fb0b2c6ed5b6f22dd4ef3e10ca3ab49c16d14afaead25786", "failure": null}
+2026-09-09T15:09:55,773644490+00:00 safety_artifact_verified name=samples.log sha256=f23a41c28de253d75aca7f962aec2e34eac3fcc0a5084d7315326685c1d6144b size=6599
+2026-09-09T15:09:55,783545841+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T15:09:55,788528077+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   121150416 kB
