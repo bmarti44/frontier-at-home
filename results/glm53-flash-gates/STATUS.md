@@ -10,9 +10,10 @@ tokens were processed and no weight payload has been downloaded or loaded.
 
 MLA001 completed all five analytic attention cases with exact output agreement
 and passed host/identity checks. Its combined verdict remains **NO_RESULT**:
-kernels generated after freeze require separately frozen replay. The sealed
-FlashInfer loader closed review at candidate 2 / campaign round 34; replay
-orchestration is the next gate. Prior failures remain unchanged.
+kernels generated after freeze require separately frozen replay. MLA replay001 then passed the separate frozen confirmation: all outputs exact,
+complete before/after inventories, BLS seed and host/identity/cleanup checks.
+The sealed loader and replay reviews closed through campaign round 35. Prior
+failures remain unchanged.
 
 The optional profile requests 1,048,576 aggregate tokens in four 262,144-token
 slots. Production activation remains rejected; the default and rollback state
@@ -34,7 +35,7 @@ are unchanged. Performance is **not yet measured**.
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
-The latest completed scoped CPU audit has 183 passing tests; these include
+The latest completed scoped CPU audit has 184 passing tests; these include
 admission, media, existing profiles, switching and the model-free harness. Three source-function tests cover 48 sampler combinations, four
 within-cap comparisons, and three actual loader/metadata cases.
 
@@ -121,7 +122,7 @@ probes failed and are preserved; requested mount properties are not evidence
 of enforcement on this host.
 
 The three clean builds, runtime inventory, bounded native checks and cache
-allocation are complete. Finish frozen attention replay, remaining KDA/indexer
+allocation are complete. Finish remaining KDA/indexer
 kernels and the measured full workspace envelope before downloading weights.
 Resolve existing plugin environment reads and diagnostic overhead before any
 production qualification. Complete the Python-specific monitored lifecycle,
