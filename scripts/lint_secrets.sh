@@ -316,6 +316,10 @@ if w7_cache_pass_raw:
         "generated_text_sha256",
         "logit_sequence_sha256",
     })
+if display_path == "results/glm53-flash-gates/model-layout-001/raw.jsonl":
+    allowlist.update({"header_sha256", "shard_sha256_expected"})
+if display_path == "results/glm53-flash-gates/model-layout-001/manifest.json":
+    allowlist.add("overlay_sha256")
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -838,6 +842,22 @@ self_test() {
   fi
   if printf '%s\n' "$glm53_digest_line extra=$fake_secret" | scan_stream >/dev/null 2>&1; then
     echo 'self-test failed: GLM install digest allowance is too broad' >&2
+    return 1
+  fi
+  local layout_path='results/glm53-flash-gates/model-layout-001/raw.jsonl'
+  if ! is_checksum_file "$layout_path" ||
+      ! printf '{"header_sha256":"%s","shard_sha256_expected":"%s"}\n' "$fake_secret" "$fake_secret" |
+        scan_digest_json "$layout_path" >/dev/null 2>&1; then
+    echo 'self-test failed: GLM metadata digests rejected' >&2
+    return 1
+  fi
+  if printf '{"header_sha256":"%s","secret":"%s"}\n' "$fake_secret" "$fake_secret" |
+      scan_digest_json "$layout_path" >/dev/null 2>&1 ||
+     printf '{"header_sha256":"%s0"}\n' "$fake_secret" |
+      scan_digest_json "$layout_path" >/dev/null 2>&1 ||
+     printf '{"header_sha256":"%s"}\n' "$fake_secret" |
+      scan_digest_json 'results/dsv4-cold-load/self-test.json' >/dev/null 2>&1; then
+    echo 'self-test failed: GLM metadata digest allowance escaped field, length or path' >&2
     return 1
   fi
   printf '%s\n' 'self-test passed'

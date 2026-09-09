@@ -18,6 +18,7 @@ before state, lock, or engine changes. Performance is **not yet measured**.
 | Source preparation | `7babbb1d` | 1 plus focused medium fixes | 6 | Relative paths, extra DFlash/MTP scope and mutable transitive tags closed |
 | NVIDIA wheel metadata repair | `65c4448b` | 1 | 7 | Independent RECORD/payload check; zero critical/high |
 | Contained build driver | `d3b2df87` | 1 plus focused Rust fix | 8 | Two CUDA/C++/Cargo jobs, pinned Rust, locked Cargo resolution |
+| Standalone runtime packager | `4a69041d` | 1 plus focused low alias fix `29b9e4bf` | 10 | Both reviewers: zero critical/high; six tests pass; relocation/permissions pending |
 | Triton-only sealed cache | `994c6666` | 1 plus focused low regression | 9 | Both reviewers: zero critical/high; uninstalled and default-off |
 
 Review approvals cover these components only. They do not qualify a runtime,
@@ -73,6 +74,18 @@ Dependency attempts are retained individually:
 - `dependencies-004`: NO_RESULT for containment; resolver produced its hash
   file but exited before the wrapper's process-group observation. The failed
   wrapper result is not a successful contained attempt.
+
+## Model metadata audit
+
+`model-layout-001` independently hashes both complete indexes and validates
+132 bounded shard-header reads against sizes, tensor shapes, offsets and full
+shard coverage. The pinned overlay plan replaces 315 BF16 tensors with 1,260
+EXL3 tensors across 191 module keys. Overlay payload is 3,539,957,996 bytes;
+it replaces 14,361,296,896 bytes, an estimated resident reduction of
+10,821,338,900 bytes before allocator/runtime costs. This is metadata only: no
+weight payload was downloaded and no memory-fit or fidelity result is claimed.
+Full metadata inputs remain in the local `model-layout-001` archive, bound by
+the committed closed inventory; the complete overlay plan is committed.
 
 ## Remaining gates
 
