@@ -7,18 +7,16 @@ The requested capacity is **four slots of 262,144 tokens each**, totaling
 1,048,576 tokens. Configuration and short answers do not establish that all
 four slots can process their maximum inputs; that test remains separate.
 
-Start the optional local server from the repository:
+Start the optional local server from the repository (the launcher now defaults
+to the settings that passed the text/tool checks):
 
 ```bash
-GLM53_RUN="$HOME/.cache/glm53-flash/server-$(date +%Y%m%d-%H%M%S)"
-python3 scripts/47_run_glm53_dev.py --start --output "$GLM53_RUN" \
-  --text-only --skip-mm-profiling --prefill-batch 128 --standard-cuda-allocator \
-  --release-warmup-cache --prepared-flashinfer --skip-autotune
+python3 scripts/47_run_glm53_dev.py --start
 ```
 
 The launcher verifies the pinned weights, uses the prepared runtime, and writes
-its random API key to `$GLM53_RUN/api-key` with owner-only permissions. Use that
-key in the `Authorization: Bearer ...` header. The output directory also holds
+its random API key to `api-key` inside the printed output directory with owner-only permissions. Use that
+key in the `Authorization: Bearer ...` header. Use `--output /path/to/a/new/run` to choose that directory. It also holds
 the exact launch settings and logs. The launcher uses the shared inference lock
 and requires the other large model to be stopped and memory to recover first.
 
