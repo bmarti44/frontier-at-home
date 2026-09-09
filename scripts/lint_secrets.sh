@@ -129,6 +129,9 @@ def unique(items):
 for line in os.fdopen(3, encoding="utf-8"):
     match = prefix.fullmatch(line.rstrip("\n"))
     if match:
+        if match[1].startswith('results/glm53-flash-gates/mla-replay-001/main.log:'):
+            line = re.sub(r'(--sealed-manifest-sha256 )[0-9a-f]{64}(?= --seed [0-9]+\n?$)',
+                          r'\1[public SHA256]', line)
         try:
             value = json.loads(match[2], object_pairs_hook=unique)
             if isinstance(value, dict):
@@ -354,6 +357,14 @@ glm53_layout_fields = {
     "results/glm53-flash-gates/model-layout-001/manifest.json": {"overlay_sha256"},
 }.get(display_path, set())
 allowlist.update(glm53_layout_fields)
+if display_path == ('results/glm53-flash-gates/mla-replay-001/kernels/triton/'
+                    'KSIE2NFVR3AS6JOEOQNB7WMNWU5RVR5B4PND3Y7LN2QJQIBXXQEA/_convert_req_index_to_global_index_kernel.json'):
+    allowlist.add('hash')
+glm53_replay_arguments = {
+    'results/glm53-flash-gates/mla-replay-001/identity/manifest.json': 'argv',
+    'results/glm53-flash-gates/mla-replay-001/invocation.json': 'command',
+    'results/glm53-flash-gates/mla-replay-001/manifest.json': 'probe_arguments_without_seed',
+}.get(display_path)
 hex64 = re.compile(r"[0-9a-fA-F]{64}")
 raw = os.fdopen(3, encoding="utf-8").read()
 try:
@@ -440,7 +451,11 @@ def walk(value, path, allowed_string=False):
                     walk(
                         element,
                         f"{item_path}[{index}]",
-                        leaf_allowed and isinstance(element, str),
+                        (leaf_allowed and isinstance(element, str)) or
+                        (path == '$' and key == glm53_replay_arguments and index > 0 and
+                         item[index - 1] == '--sealed-manifest-sha256' and
+                         item.count('--sealed-manifest-sha256') == 1 and
+                         isinstance(element, str) and hex64.fullmatch(element) is not None),
                     )
             else:
                 walk(item, item_path, leaf_allowed and isinstance(item, str))
@@ -909,6 +924,19 @@ self_test() {
     fi
   done
   local native_log_prefix='results/glm53-flash-gates/native-smoke-001/cmd.log:1:'
+  local replay_argv_path='results/glm53-flash-gates/mla-replay-001/identity/manifest.json'
+  if ! printf '{"argv":["--sealed-manifest-sha256","%s"]}\n' "$fake_secret" | scan_digest_json "$replay_argv_path" >/dev/null 2>&1 ||
+     printf '{"argv":["--different","%s"]}\n' "$fake_secret" | scan_digest_json "$replay_argv_path" >/dev/null 2>&1 ||
+     printf '{"argv":["--sealed-manifest-sha256","%s","%s"]}\n' "$fake_secret" "$fake_secret" | scan_digest_json "$replay_argv_path" >/dev/null 2>&1 ||
+     printf '{"argv":["--sealed-manifest-sha256","%s"]}\n' "$fake_secret" | scan_digest_json 'unrelated.json' >/dev/null 2>&1; then
+    echo 'self-test failed: replay argument digest scope escaped' >&2; return 1
+  fi
+  local replay_command="results/glm53-flash-gates/mla-replay-001/main.log:2:cmd: probe --sealed-manifest-sha256 $fake_secret --seed 123"
+  if ! printf '%s\n' "$replay_command" | scan_stream >/dev/null 2>&1 ||
+     printf '%s extra=%s\n' "$replay_command" "$fake_secret" | scan_stream >/dev/null 2>&1 ||
+     printf '%s\n' "unrelated.log:2:cmd: probe --sealed-manifest-sha256 $fake_secret --seed 123" | scan_stream >/dev/null 2>&1; then
+    echo 'self-test failed: replay command digest scope escaped' >&2; return 1
+  fi
   if ! printf '%s{"raw_sha256":"%s","test_output_sha256":"%s"}\n' "$native_log_prefix" "$fake_secret" "$fake_secret" | scan_stream >/dev/null 2>&1; then
     echo 'self-test failed: native summary digests rejected' >&2; return 1
   fi
