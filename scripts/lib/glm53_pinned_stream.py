@@ -5,6 +5,7 @@ not retain the temporary or any view. Actual module finalization/peak checks are
 separate; this adapter does not pin the plugin's internal pointer-table copies.
 """
 import hashlib
+import copy
 import math
 from pathlib import Path
 import re
@@ -87,6 +88,9 @@ def stream_selected_weights(root, inventory, selection, consume, record, *, enab
     if not enabled: return
     require(callable(consume) and callable(record), 'synchronous consumer and recorder required')
     require(type(pinned_capacity) is int and 0 < pinned_capacity <= MAX_PINNED_BYTES, 'invalid pinned capacity')
+    # Detach once before any callback; both geometry and digest checks use
+    # this snapshot rather than caller-owned containers.
+    selection = copy.deepcopy(selection)
     inputs = selected_weights(root, inventory, selection)
     import torch
     staging = torch.empty(pinned_capacity, dtype=torch.uint8, pin_memory=True)
