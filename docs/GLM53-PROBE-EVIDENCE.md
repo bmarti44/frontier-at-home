@@ -123,7 +123,20 @@ runner binds the accepted manifest and randomness bytes before launch and checks
 them again afterward. It requires the exact round chosen by the frozen fetch
 algorithm, and validates native/cache raw schemas and inner identity bindings.
 
-The source-only freezer is in
-`results/glm53-flash-gates/probe-runner-preparation-001/freeze.py`. It requires a
+The active source-only freezer is `scripts/39_freeze_glm53_probe.py`.
+The original freezer remains archived in probe-runner-preparation-001. It requires a
 clean repository and a fresh attempt directory. Review closure is recorded in
 `probe-runner-review-002.md` (candidate 2 / campaign round 27).
+
+
+## Frozen MLA replay
+
+The MLA preparation attempt remains NO_RESULT. A distinct `mla-replay` kind
+copies its verified compiled artifacts byte-identically into a new read-only
+bundle. Only absolute paths in Triton group metadata are relocated, before the
+new freeze and public seed. Complete bundle inventories are checked at startup
+and after cleanup. The explicit `--sealed-kernels` selection installs reviewed
+Triton cache rejection and the preloaded FlashInfer Nvcc loader; it records a
+hash-bound selection receipt before the first analytic case. Missing or altered
+receipts fail the controller. This remains a model-free constant-cache result,
+not general attention fidelity, processed context or a serving cache sandbox.

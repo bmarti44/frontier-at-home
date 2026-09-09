@@ -1,13 +1,22 @@
 # GLM-5.3-Flash CUDA status
 
-Integration is **in preparation**, not serving-qualified. No GLM-5.3 weights
-have been downloaded or loaded. The first contained ExLlamaV3 CUDA wheel build passed, its archive RECORD
-validated, and installation passed the 205-package dependency check. The ExLlamaV3 extension also imports successfully with GPUs hidden and exposes
-the fused MoE entry point (`exllama-import-001`); no kernel was executed. The
-pinned vLLM build is running; no serving runtime is qualified. The optional profile
-requests 1,048,576 aggregate tokens in four 262,144-token slots; the default
-and recorded previous profile are unchanged. Production activation rejects
-before state, lock, or engine changes. Performance is **not yet measured**.
+Integration is **in preparation**, not serving-qualified. All three pinned
+CUDA builds and the 207-package dependency check passed. The packaged runtime
+has 61,353 independently inventoried files. Native007 passed fourteen synthetic
+kernel checks and the complete host/identity/freeze gate. Cache003 allocated
+9,565,306,880 physical bytes, held four full reservations, rejected a fifth and
+passed host/identity/freeze checks. These are model-free results: zero input
+tokens were processed and no weight payload has been downloaded or loaded.
+
+MLA001 completed all five analytic attention cases with exact output agreement
+and passed host/identity checks. Its combined verdict remains **NO_RESULT**:
+kernels generated after freeze require separately frozen replay. The sealed
+FlashInfer loader closed review at candidate 2 / campaign round 34; replay
+orchestration is the next gate. Prior failures remain unchanged.
+
+The optional profile requests 1,048,576 aggregate tokens in four 262,144-token
+slots. Production activation remains rejected; the default and rollback state
+are unchanged. Performance is **not yet measured**.
 
 ## Frozen component reviews
 
@@ -25,8 +34,8 @@ before state, lock, or engine changes. Performance is **not yet measured**.
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
-The complete admission/media/existing profile/switch suite has 89 passing
-tests. Three source-function tests cover 48 sampler combinations, four
+The latest completed scoped CPU audit has 183 passing tests; these include
+admission, media, existing profiles, switching and the model-free harness. Three source-function tests cover 48 sampler combinations, four
 within-cap comparisons, and three actual loader/metadata cases.
 
 ## Reproduced source findings
@@ -111,10 +120,9 @@ DeepGEMM, CuTe and Inductor closure remain. Two user-systemd read-only namespace
 probes failed and are preserved; requested mount properties are not evidence
 of enforcement on this host.
 
-Finish clean-building the pinned runtime with
-at most two jobs after a stable 110 GiB start-memory check. Freeze source
-patches, packages, native extensions, interpreter and loader dependencies;
-verify imports and bounded native-kernel parity before downloading weights.
+The three clean builds, runtime inventory, bounded native checks and cache
+allocation are complete. Finish frozen attention replay, remaining KDA/indexer
+kernels and the measured full workspace envelope before downloading weights.
 Resolve existing plugin environment reads and diagnostic overhead before any
 production qualification. Complete the Python-specific monitored lifecycle,
 measured memory envelope, artifact identity, 100-case paired fidelity,
