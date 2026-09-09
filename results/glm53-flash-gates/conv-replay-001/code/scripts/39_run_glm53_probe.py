@@ -1,0 +1,519 @@
+#!/usr/bin/env python3
+"""Run a frozen model-free native/cache probe; never qualifies a serving model."""
+import argparse
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import random
+import re
+import stat
+import subprocess
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts/lib'))
+from glm53_contract import sha256_file, strict_json, verify_inventory
+from glm53_host_evidence import object_text, read, require, score_host_observations
+from glm53_probe_capture import capture_wrapper, inference_lock, write
+
+LOAD_KINDS = ('load-moe', 'load-kda', 'load-mla', 'load-ordinary')
+
+CONTROL_ENV = {'HOME': '/home/bmarti44', 'USER': 'bmarti44', 'LOGNAME': 'bmarti44',
+               'LANG': 'C.UTF-8', 'PATH': '/usr/bin:/bin', 'XDG_RUNTIME_DIR': '/run/user/1000',
+               'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus'}
+
+
+def native_ids():
+    return ['test_exl3_linear_basic', 'test_exl3_linear_mixed_mul1', 'test_exl3_linear_tp_slicing'] + [
+        f'native_moe_k{bits}_width{width}' for bits in (2, 3, 4) for width in (1024, 2048)] + [
+        'reject_' + bad for bad in ('rows', 'width', 'negative_limit', 'nan_limit', 'strided_pointers')]
+
+
+def score_inner(output, kind, seed, binding):
+    root = output / 'checks'
+    summary, manifest = strict_json(root / 'summary.json'), strict_json(root / 'manifest.json')
+    require(summary['verdict'] == 'PASS' and summary['model_loaded'] is False and manifest['seed'] == seed, 'inner verdict or seed mismatch')
+    require(all(manifest.get(key) == value for key, value in binding.items() if key not in ('native_extensions', 'cache_layer_types')), 'frozen inner proof binding mismatch')
+    raw = read(root / 'raw.jsonl')
+    require(hashlib.sha256(raw).hexdigest() == summary['raw_sha256'], 'inner raw digest mismatch')
+    rows = [object_text(line) for line in raw.splitlines()]
+    require(not any(r.get('event') == 'failure' for r in rows), 'inner failure record')
+    times = [r.get('time_unix') for r in rows]
+    require(times and all(type(t) in (int, float) and math.isfinite(t) for t in times) and
+            all(b > a for a, b in zip(times, times[1:])), 'invalid inner timestamps')
+    if kind == 'native':
+        require(summary['qualification'] == 'synthetic_native_smoke_only' and summary['checks_completed'] == 14 and
+                summary['test_output_sha256'] == sha256_file(root / 'assertion-output.log'), 'native completion mismatch')
+        require(len(rows) == 31, 'native raw record count mismatch')
+        extensions = binding['native_extensions']
+        require(set(extensions) == {'exllamav3_ext', 'vllm_exl3_c'}, 'native extension binding missing')
+        for row, name in zip(rows[:2], ('exllamav3_ext', 'vllm_exl3_c')):
+            require(set(row) == {'time_unix', 'native_extension', 'path', 'sha256'} and
+                    row['native_extension'] == name and {'path': row['path'], 'sha256': row['sha256']} == extensions[name],
+                    'native extension provenance mismatch')
+        require(set(rows[2]) == {'time_unix', 'check_order'}, 'native order schema mismatch')
+        for row in rows[3:]:
+            keys = {'time_unix', 'event', 'check_id'}
+            if row.get('event') == 'start': keys.add('global_torch_seed')
+            require(set(row) == keys, 'native raw schema mismatch')
+            if row.get('event') == 'start':
+                value = int.from_bytes(hashlib.sha256(json.dumps([seed, row['check_id']], separators=(',', ':')).encode()).digest()[:8], 'big') % 2**63
+                require(type(row['global_torch_seed']) is int and row['global_torch_seed'] == value, 'native fixture RNG mismatch')
+        order = native_ids(); random.Random(seed).shuffle(order)
+        require([r['check_order'] for r in rows if 'check_order' in r] == [order], 'native fixture order mismatch')
+        require([(r.get('event'), r.get('check_id')) for r in rows if 'event' in r] ==
+                [(event, name) for name in order for event in ('start', 'pass')], 'native check coverage mismatch')
+    elif kind in ('mla', 'mla-replay'):
+        require(summary['qualification'] == 'model_free_MLA_constant_cache_falsifier_only' and
+                summary['actual_input_tokens_processed'] == 0, 'MLA qualification mismatch')
+        summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed, replay=kind == 'mla-replay')}
+        if kind == 'mla-replay':
+            receipt = strict_json(root / 'sealed-selection.json')
+            bundle = binding['sealed_kernels']; cache_root = bundle['root']
+            expected = {'selection': 'sealed_MLA_replay', 'bundle': bundle,
+                'triton_cache_root': cache_root + '/triton',
+                'flashinfer': {'selection': 'sealed_FlashInfer_Nvcc', 'modules': [
+                    {'name': 'sparse_mla_sm120', 'path': cache_root + '/flashinfer/sparse_mla_sm120/sparse_mla_sm120.so'}]},
+                'time_unix': receipt.get('time_unix')}
+            require(receipt == expected and type(receipt['time_unix']) in (int, float) and
+                    math.isfinite(receipt['time_unix']) and 0 < receipt['time_unix'] < times[0], 'invalid sealed MLA startup receipt')
+            summary['sealed_selection'] = receipt
+    elif kind in ('kda', 'kda-replay'):
+        require(summary['qualification'] == 'model_free_KDA_analytic_falsifier_only' and
+                summary['actual_input_tokens_processed'] == 0, 'KDA qualification mismatch')
+        summary = {**summary, 'tensor_checks': validate_kda_rows(root, rows, seed, replay=kind == 'kda-replay')}
+        if kind == 'kda-replay':
+            receipt = strict_json(root / 'sealed-selection.json')
+            bundle = binding['sealed_kernels']
+            expected = {'selection': 'sealed_KDA_replay', 'bundle': bundle,
+                'triton_cache_root': bundle['root'] + '/triton', 'retuning': 'rejected',
+                'disk_autotune_cache': True, 'time_unix': receipt.get('time_unix')}
+            require(receipt == expected and receipt['disk_autotune_cache'] is True and
+                    type(receipt['time_unix']) in (int, float) and math.isfinite(receipt['time_unix']) and
+                    0 < receipt['time_unix'] < times[0], 'invalid sealed KDA startup receipt')
+            summary['sealed_selection'] = receipt
+    elif kind in ('conv', 'conv-replay'):
+        require(summary['qualification'] == 'model_free_convolution_analytic_falsifier_only' and
+                type(summary['actual_input_tokens_processed']) is int and summary['actual_input_tokens_processed'] == 0, 'convolution qualification mismatch')
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('frozen_conv_scorer', Path(__file__).parent / '44_probe_glm53_conv.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        summary = {**summary, 'tensor_checks': module.score_capture(root, rows, seed, replay=kind == 'conv-replay')}
+        if kind == 'conv-replay':
+            receipt = strict_json(root / 'sealed-selection.json')
+            validate_conv_receipt(receipt, binding['sealed_kernels'], times[0])
+            summary['sealed_selection'] = receipt
+    elif kind == 'growth':
+        require(summary['qualification'] == 'model_free_two_MoE_layers_incremental_storage_only' and
+                type(summary['actual_input_tokens_processed']) is int and summary['actual_input_tokens_processed'] == 0, 'growth qualification mismatch')
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('frozen_growth_scorer', Path(__file__).parent / '43_probe_glm53_growth.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        summary = {**summary, 'tensor_checks': module.score_capture(root, rows, seed)}
+    elif kind in LOAD_KINDS:
+        case = kind.removeprefix('load-')
+        require(summary['qualification'] == 'model_free_component_load_storage_only' and
+                summary['case'] == case and summary['actual_input_tokens_processed'] == 0, 'load qualification mismatch')
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('frozen_load_scorer', Path(__file__).parent / '42_probe_glm53_load.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        summary = {**summary, 'tensor_checks': module.score_capture(root, rows, case, seed)}
+    elif kind == 'cache':
+        require(summary['qualification'] == 'model_free_cache_allocation_only' and summary['actual_input_tokens_processed'] == 0, 'cache qualification mismatch')
+        validate_cache_rows(rows, seed, binding['cache_layer_types'])
+    else:
+        raise ValueError('unknown probe kind')
+    return summary
+
+
+def validate_conv_receipt(receipt, bundle, first_time):
+    expected = {'selection': 'sealed_convolution_replay', 'bundle': bundle,
+                'triton_cache_root': bundle['root'] + '/triton', 'retuning': 'rejected',
+                'time_unix': receipt.get('time_unix')}
+    require(receipt == expected and type(receipt['time_unix']) in (int, float) and
+            math.isfinite(receipt['time_unix']) and 0 < receipt['time_unix'] < first_time,
+            'invalid sealed convolution startup receipt')
+
+
+def validate_mla_rows(root, rows, seed, replay=False):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('frozen_mla_scorer', Path(__file__).parent / '40_probe_glm53_mla.py')
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    order, requests = module.case_order(seed), module.request_order(seed)
+    require(len(rows) == 11 and rows[0] == {'time_unix': rows[0].get('time_unix'), 'event': 'configured',
+        'backend': 'FlashInferMLASparseSM120Impl', 'cache_bytes': 687865856, 'request_order': requests,
+        'case_order': order, 'addressed_last_position': 262143, 'pinned_staging': True}, 'MLA geometry or order mismatch')
+    require(type(rows[0]['cache_bytes']) is int and type(rows[0]['addressed_last_position']) is int and
+            rows[0]['pinned_staging'] is True and all(type(v) is int for v in rows[0]['request_order'] + rows[0]['case_order']),
+            'MLA geometry types changed')
+    artifacts = {f'output-{count}.bf16.gz' for count in order}
+    if replay: artifacts.add('sealed-selection.json')
+    require({p.name for p in root.iterdir()} == artifacts | {'manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log'},
+            'MLA artifact coverage mismatch')
+    checks = []
+    for index, count in enumerate(order):
+        start, output = rows[1 + 2 * index:3 + 2 * index]
+        require(set(start) == {'time_unix', 'event', 'query_rows', 'fixture_seed', 'query_sha256'} and
+                start['event'] == 'start' and type(start['query_rows']) is int and start['query_rows'] == count and
+                type(start['fixture_seed']) is int and start['fixture_seed'] == module.fixture_seed(seed, count) and
+                isinstance(start['query_sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', start['query_sha256']), 'MLA fixture mismatch')
+        require(set(output) == {'time_unix', 'event', 'query_rows', 'file', 'sha256', 'uncompressed_bytes',
+                               'cuda_elapsed_ms', 'cuda_peak_allocated', 'cuda_memory_reserved'} and
+                output['event'] == 'output' and type(output['query_rows']) is int and output['query_rows'] == count and
+                output['file'] == f'output-{count}.bf16.gz', 'MLA output schema mismatch')
+        require(type(output['uncompressed_bytes']) is int and output['uncompressed_bytes'] == count * 65536 and
+                all(type(output[k]) is int for k in ('cuda_peak_allocated', 'cuda_memory_reserved')) and
+                687865856 <= output['cuda_peak_allocated'] <= output['cuda_memory_reserved'] and
+                type(output['cuda_elapsed_ms']) in (int, float) and math.isfinite(output['cuda_elapsed_ms']) and
+                output['cuda_elapsed_ms'] > 0, 'invalid MLA output accounting')
+        checks.append({'query_rows': count, **module.score_tensor(root / output['file'], output['sha256'], count, requests)})
+    return checks
+
+
+def validate_kda_rows(root, rows, seed, replay=False):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('frozen_kda_scorer', Path(__file__).parent / '41_probe_glm53_kda.py')
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    order, requests = module.case_order(seed), module.request_order(seed)
+    require(len(rows) == 11 and rows[0] == {'time_unix': rows[0].get('time_unix'), 'event': 'configured',
+        'case_order': order, 'request_order': requests, 'state_shape': [5, 64, 128, 128], 'pinned_staging': True,
+        'pinned_staging_scope': 'probe_owned_buffers_only'}, 'KDA geometry or order mismatch')
+    require(rows[0]['pinned_staging'] is True and all(type(v) is int for name in
+        ('case_order', 'request_order', 'state_shape') for v in rows[0][name]), 'KDA geometry types changed')
+    files = {f'{kind}-{count}.{dtype}.gz' for count in order for kind, dtype in (('output', 'bf16'), ('state', 'fp32'))}
+    artifacts = files | {'manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log'}
+    if replay: artifacts.add('sealed-selection.json')
+    require({p.name for p in root.iterdir()} == artifacts, 'KDA artifact coverage mismatch')
+    checks = []
+    for index, count in enumerate(order):
+        start, output = rows[1 + 2 * index:3 + 2 * index]
+        require(set(start) == {'time_unix', 'event', 'query_rows'} and start['event'] == 'start' and
+                type(start['query_rows']) is int and start['query_rows'] == count, 'KDA start schema mismatch')
+        require(set(output) == {'time_unix', 'event', 'query_rows', 'artifacts', 'cuda_elapsed_ms',
+                               'cuda_peak_allocated', 'cuda_memory_reserved'} and output['event'] == 'output' and
+                type(output['query_rows']) is int and output['query_rows'] == count, 'KDA output schema mismatch')
+        require(type(output['cuda_elapsed_ms']) in (int, float) and math.isfinite(output['cuda_elapsed_ms']) and
+                output['cuda_elapsed_ms'] > 0 and type(output['cuda_peak_allocated']) is int and
+                type(output['cuda_memory_reserved']) is int and
+                20971520 <= output['cuda_peak_allocated'] <= output['cuda_memory_reserved'], 'invalid KDA allocation or timing')
+        names = [f'output-{count}.bf16.gz', f'state-{count}.fp32.gz']
+        artifacts = output['artifacts']
+        require(isinstance(artifacts, list) and len(artifacts) == 2 and all(
+            isinstance(item, dict) and set(item) == {'file', 'sha256'} and item['file'] == name and
+            isinstance(item['sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', item['sha256'])
+            for item, name in zip(artifacts, names)), 'KDA artifact schema mismatch')
+        checks.append({'query_rows': count, **module.score_tensors(*(root / name for name in names),
+            [item['sha256'] for item in artifacts], count, seed)})
+    return checks
+
+
+def validate_cache_rows(rows, seed, layer_types):
+    expected_events = ['normalized', 'allocated_and_zeroed', 'scheduler_normalized'] + ['reserve'] * 4 + ['fifth_rejected', 'restored']
+    require([r.get('event') for r in rows] == expected_events, 'cache event coverage mismatch')
+    def fields(row, names):
+        require(set(row) == {'time_unix', 'event', *names}, 'cache raw schema mismatch')
+    normalized, allocation, scheduler = rows[:3]
+    fields(normalized, {'attention_block_tokens', 'mamba_block_tokens', 'mamba_shapes', 'mamba_dtypes', 'layout', 'groups', 'shared_pool_blocks'})
+    require(normalized['attention_block_tokens'] == 8704 and normalized['mamba_block_tokens'] == 262144 and
+            normalized['mamba_shapes'] == [[3, 24576], [64, 128, 128]] and normalized['mamba_dtypes'] == ['torch.bfloat16', 'torch.float32'] and
+            normalized['layout'] == 'LBHNC' and normalized['shared_pool_blocks'] == 145, 'cache normalized geometry mismatch')
+    require(len(layer_types) == 45 and layer_types.count('linear_attention') == 34 and layer_types.count('deepseek_sparse_attention') == 11, 'cache model layer coverage mismatch')
+    mla, tail, mamba = set(), set(), set()
+    for i, kind in enumerate(layer_types):
+        prefix = f'model.language_model.layers.{i}.self_attn'
+        if kind == 'linear_attention': mamba.add(prefix)
+        else: mla.update((prefix + '.attn', prefix + '.indexer.k_cache')); tail.add(prefix + '.indexer.tail_cache')
+    groups = normalized['groups']
+    require(isinstance(groups, list) and len(groups) == 6 and
+            all(set(g) == {'layers', 'spec'} and isinstance(g['spec'], str) and g['spec'] and isinstance(g['layers'], list) for g in groups), 'cache group schema mismatch')
+    require([len(g['layers']) for g in groups] == [22, 11, 9, 9, 8, 8] and set(groups[0]['layers']) == mla and set(groups[1]['layers']) == tail and
+            set(name for g in groups[2:] for name in g['layers']) == mamba, 'cache group layer coverage mismatch')
+    fields(allocation, {'unique_backing_bytes', 'storage_count', 'layer_views', 'cuda_memory_allocated', 'cuda_memory_reserved', 'cuda_peak_allocated'})
+    require(all(type(allocation[k]) is int and allocation[k] >= 0 for k in ('unique_backing_bytes', 'storage_count', 'layer_views', 'cuda_memory_allocated', 'cuda_memory_reserved', 'cuda_peak_allocated')) and
+            allocation['unique_backing_bytes'] == 9565306880 and allocation['storage_count'] == 1 and allocation['layer_views'] == 67 and
+            9565306880 <= allocation['cuda_memory_allocated'] <= min(allocation['cuda_memory_reserved'], allocation['cuda_peak_allocated']), 'cache backing observation mismatch')
+    fields(scheduler, {'scheduler_block_tokens', 'hash_block_tokens'})
+    require(scheduler['scheduler_block_tokens'] == scheduler['hash_block_tokens'] == 4456448, 'cache scheduler normalization mismatch')
+    order = [f'cache-preflight-{i}' for i in range(5)]; random.Random(seed).shuffle(order)
+    all_ids = set()
+    for i, row in enumerate(rows[3:7]):
+        fields(row, {'request_id', 'block_ids', 'free_blocks'})
+        require(row['request_id'] == order[i] and type(row['free_blocks']) is int and row['free_blocks'] == 144 - 36 * (i + 1), 'cache request order or accounting mismatch')
+        groups = row['block_ids']
+        require(isinstance(groups, list) and all(isinstance(g, list) for g in groups) and [len(g) for g in groups] == [31, 1, 1, 1, 1, 1], 'cache reservation geometry mismatch')
+        ids = [value for group in groups for value in group]
+        require(all(type(value) is int and 0 < value < 145 for value in ids) and len(set(ids)) == 36 and not all_ids.intersection(ids), 'cache physical ID coverage mismatch')
+        all_ids.update(ids)
+    require(all_ids == set(range(1, 145)), 'cache physical coverage incomplete')
+    fields(rows[7], {'live_requests', 'distinct_blocks'}); fields(rows[8], {'free_blocks'})
+    require(rows[7]['live_requests'] == 4 and rows[7]['distinct_blocks'] == 144 and rows[8]['free_blocks'] == 144, 'cache completion accounting mismatch')
+
+
+def wrapper_environment(lock_environment):
+    return {**CONTROL_ENV, **lock_environment, 'GLM_SAFE_RUN_AS_CURRENT_USER': '1', 'GLM_SAFE_MIN_START_GIB': '110',
+            'GLM_SAFE_KILL_FLOOR_GIB': '40', 'GLM_SAFE_TIMEOUT_S': '600', 'GLM_SAFE_DONE_DIGESTS': '1'}
+
+
+def verify_accepted_inputs(output, accepted):
+    require(all(sha256_file(output / name) == digest for name, digest in accepted.items()), 'accepted manifest or randomness changed')
+
+
+CODE_FILES = (
+    'scripts/39_run_glm53_probe.py', 'scripts/38_guard_glm53_probe.py',
+    'scripts/35_smoke_glm53_native.py', 'scripts/37_probe_glm53_cache.py', 'scripts/40_probe_glm53_mla.py',
+    'scripts/41_probe_glm53_kda.py', 'scripts/42_probe_glm53_load.py',
+    'scripts/lib/glm53_pinned_stream.py', 'scripts/lib/glm53_load_fixture.py',
+    'configs/decision-specs/glm53-load-preflight.json',
+    'scripts/lib/glm53_conv_replay.py', 'configs/decision-specs/glm53-conv-replay.json',
+    'scripts/44_probe_glm53_conv.py', 'configs/decision-specs/glm53-conv-preflight.json',
+    'scripts/43_probe_glm53_growth.py', 'configs/decision-specs/glm53-load-growth.json',
+    'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
+    'scripts/lib/glm53_runtime_jit.py', 'scripts/lib/glm53_mla_replay.py', 'scripts/lib/glm53_kda_replay.py',
+    'configs/build-manifests/glm53-flash-sources.json', 'configs/decision-specs/glm53-cache-preflight.json',
+    'configs/decision-specs/glm53-mla-preflight.json',
+    'configs/decision-specs/glm53-mla-replay.json', 'configs/decision-specs/glm53-flashinfer-sealed.json',
+    'configs/decision-specs/glm53-kda-preflight.json', 'configs/decision-specs/glm53-kda-replay.json',
+    'scripts/103_verify_drand_receipt_bundle.mjs')
+
+
+def verify_frozen(output, manifest):
+    require(set(manifest['code']) == set(CODE_FILES), 'incomplete code hash coverage')
+    require({str(p.relative_to(output / 'code')) for p in (output / 'code').rglob('*') if p.is_file()} == set(CODE_FILES), 'unexpected frozen code files')
+    for name, row in manifest['code'].items():
+        require(sha256_file(output / 'code' / name) == row['sha256'], 'frozen code changed: ' + name)
+    if manifest.get('kind') in ('conv', 'conv-replay'):
+        args = manifest['probe_arguments_without_seed']
+        require(args[-5:-4] == ['--pinned-convolution'] if manifest['kind'] == 'conv-replay' else args[-1:] == ['--pinned-convolution'], 'convolution startup selection mismatch')
+    if manifest.get('kind') == 'conv-replay':
+        from glm53_conv_replay import verify_bundle
+        verify_bundle(output / 'kernels', manifest['sealed_kernels'])
+        require(manifest['environment']['TRITON_CACHE_DIR'] == str(output / 'kernels/triton') and
+                manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1', 'sealed convolution environment mismatch')
+    if manifest.get('kind') == 'growth':
+        require(manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1' and
+                manifest['probe_arguments_without_seed'][-1:] == ['--pinned-growth'], 'growth startup selection mismatch')
+    if manifest.get('kind') in LOAD_KINDS:
+        require(manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1' and
+                manifest['probe_arguments_without_seed'][-3:] == ['--case', manifest['kind'].removeprefix('load-'), '--pinned-stream'],
+                'component load startup selection mismatch')
+    if manifest.get('kind') == 'mla-replay':
+        from glm53_mla_replay import verify_bundle
+        verify_bundle(output / 'kernels', manifest['sealed_kernels'])
+        require(manifest['environment']['TRITON_CACHE_DIR'] == str(output / 'kernels/triton') and
+                manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1', 'sealed MLA environment mismatch')
+    if manifest.get('kind') == 'kda-replay':
+        from glm53_kda_replay import verify_bundle
+        verify_bundle(output / 'kernels', manifest['sealed_kernels'])
+        require(manifest['environment']['TRITON_CACHE_DIR'] == str(output / 'kernels/triton') and
+                manifest['environment']['TRITON_CACHE_AUTOTUNING'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1', 'sealed KDA environment mismatch')
+    if manifest.get('kind') == 'mla':
+        require({p.name for p in (output / 'tools').iterdir()} == {'ninja'} and
+                not (output / 'tools/ninja').is_symlink() and str(output / 'tools/ninja') in manifest['tools'],
+                'preparatory JIT tool coverage mismatch')
+    for name, row in manifest['tools'].items():
+        require(sha256_file(Path(name)) == row['sha256'], 'frozen tool changed: ' + name)
+    for name, row in manifest['orchestration'].items():
+        require(sha256_file(output / name) == row['sha256'], 'frozen orchestration changed: ' + name)
+    for name, row in manifest['external_files'].items():
+        require(sha256_file(Path(name)) == row['sha256'], 'frozen fixture or metadata changed: ' + name)
+    runtime = manifest['runtime']; inventory = Path(runtime['manifest'])
+    require(sha256_file(inventory) == runtime['sha256'], 'runtime inventory changed')
+    verify_inventory(Path(runtime['root']), strict_json(inventory))
+
+
+def verify_beacon(output, manifest, receipt=None):
+    if receipt is None: receipt = object_text(read(output / 'randomness.json'))
+    require(type(receipt['round']) is int and receipt['round'] > 0, 'invalid public round')
+    chosen_round = int((manifest['frozen_at_unix'] - 1595431050) // 30) + 2
+    require(receipt['round'] == chosen_round and receipt['frozen_at_unix'] == manifest['frozen_at_unix'], 'beacon round or freeze reference changed')
+    publication = 1595431050 + (receipt['round'] - 1) * 30
+    require(publication > manifest['frozen_at_unix'] and receipt['publication_unix'] == publication, 'beacon precedes freeze')
+    require(receipt['seed'] == int(receipt['randomness'][:16], 16), 'seed derivation mismatch')
+    node = manifest['node']
+    require(node in manifest['tools'] and 'scripts/103_verify_drand_receipt_bundle.mjs' in manifest['code'], 'verifier is not frozen')
+    result = subprocess.run([node, str(output / 'code/scripts/103_verify_drand_receipt_bundle.mjs'), str(receipt['round']),
+                             receipt['randomness'], receipt['signature'], receipt['previous_signature']],
+                            env={'PATH': '/usr/bin:/bin', 'HOME': '/nonexistent'}, capture_output=True, text=True, timeout=30)
+    write(output / 'launch-beacon-verification.json', {'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr})
+    require(result.returncode == 0 and result.stdout == 'DRAND_BLS_RECEIPT_OK\n', 'BLS verification failed')
+    return receipt
+
+
+def probe_verdict(kind, failure):
+    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'conv-replay', 'growth', *LOAD_KINDS), 'unknown probe kind')
+    if failure is not None: return 'FAIL'
+    return 'NO_RESULT' if kind in ('mla', 'kda', 'conv') else 'PASS'
+
+
+def validate_load_state(record):
+    for row in record['entries']:
+        require(row['type'] == 'directory' or (row['type'] == 'file' and
+                row['path'] == '.humming/tmp/lock/launcher.lock' and row['size_bytes'] == 0 and
+                row['sha256'] == hashlib.sha256(b'').hexdigest()), 'component load created unqualified runtime artifact')
+
+
+def generated_cache_inventory(root):
+    """Post-run preparation record only; this does not freeze executed binaries."""
+    def snapshot():
+        result = {}
+        def visit(path):
+            value = path.lstat()
+            result[path.relative_to(root).as_posix()] = (
+                value.st_dev, value.st_ino, value.st_mode, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+            if stat.S_ISDIR(value.st_mode):
+                # Unlike Path.rglob, scandir propagates unreadable-directory errors.
+                with os.scandir(path) as entries:
+                    children = sorted(entry.name for entry in entries)
+                for name in children: visit(path / name)
+        visit(root)
+        return result
+    before = snapshot(); entries = []
+    require(stat.S_ISDIR(before['.'][2]), 'generated cache root is not a directory')
+    for name, identity in before.items():
+        path = root / name; mode = identity[2]
+        if stat.S_ISDIR(mode): entries.append({'path': name, 'type': 'directory'})
+        elif stat.S_ISREG(mode): entries.append({'path': name, 'type': 'file', 'size_bytes': identity[3], 'sha256': sha256_file(path)})
+        elif stat.S_ISLNK(mode): entries.append({'path': name, 'type': 'symlink', 'target': os.readlink(path)})
+        else: raise ValueError('special file in generated cache: ' + name)
+    require(snapshot() == before, 'generated cache changed during inventory')
+    return {'schema_version': 1, 'qualification': 'post_run_JIT_preparation_inventory_only',
+            'frozen_before_execution': False, 'root': str(root), 'entries': entries}
+
+
+def run(output):
+    require(not sys.flags.optimize and sys.flags.isolated and sys.dont_write_bytecode, 'runner requires unoptimized isolated -I -B Python')
+    require(dict(os.environ) == CONTROL_ENV, 'controller requires the declared clean environment')
+    input_bytes = {name: read(output / name) for name in ('manifest.json', 'randomness.json')}
+    accepted = {name: hashlib.sha256(data).hexdigest() for name, data in input_bytes.items()}
+    manifest = object_text(input_bytes['manifest.json'])
+    require(Path(__file__).resolve() == output / 'code/scripts/39_run_glm53_probe.py', 'run the frozen runner copy')
+    expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py',
+                     'mla': '40_probe_glm53_mla.py', 'mla-replay': '40_probe_glm53_mla.py', 'kda': '41_probe_glm53_kda.py', 'kda-replay': '41_probe_glm53_kda.py'}
+    expected_kind['conv-replay'] = '44_probe_glm53_conv.py'
+    expected_kind['conv'] = '44_probe_glm53_conv.py'
+    expected_kind['growth'] = '43_probe_glm53_growth.py'
+    expected_kind.update({kind: '42_probe_glm53_load.py' for kind in LOAD_KINDS})
+    kind = manifest['kind']; require(kind in expected_kind, 'unknown probe kind')
+    python = Path(manifest['runtime']['root']) / 'bin/python3'
+    require(Path(sys.executable).resolve() == python.resolve(), 'controller must use frozen packaged interpreter')
+    guard = output / 'code/scripts/38_guard_glm53_probe.py'
+    probe = output / 'code/scripts' / expected_kind[kind]
+    safety = manifest['safety']
+    require(safety == {'minimum_start_gib': 110, 'kill_floor_gib': 40, 'timeout_seconds': 600}, 'probe safety configuration changed')
+    failure = None; host = None; inner = None
+    with inference_lock() as lock_environment:
+        try:
+            verify_frozen(output, manifest)
+            receipt = verify_beacon(output, manifest, object_text(input_bytes['randomness.json']))
+            verify_accepted_inputs(output, accepted)
+            arguments = [*manifest['probe_arguments_without_seed'], '--seed', str(receipt['seed'])]
+            command = ['/usr/bin/env', '-i', *(k + '=' + v for k, v in sorted(manifest['environment'].items())),
+                       str(python), '-I', '-B', str(guard), '--output', str(output / 'identity'), '--', str(probe), *arguments]
+            wrapper = Path(manifest['wrapper'])
+            require(str(wrapper) in manifest['tools'] and str(python) in manifest['tools'] and
+                    'scripts/38_guard_glm53_probe.py' in manifest['code'] and 'scripts/' + probe.name in manifest['code'], 'launch inputs not frozen')
+            environment = wrapper_environment(lock_environment)
+            write(output / 'invocation.json', {'command': ['/usr/bin/bash', str(wrapper), '--tag', manifest['tag'], '--', *command],
+                  'start_unix': time.time(), 'freeze': {'sha256': sha256_file(output / 'manifest.json')},
+                  'randomness': {'sha256': sha256_file(output / 'randomness.json')}})
+            capture_wrapper(output, wrapper, manifest['tag'], command, environment, 600)
+            binding = {'scorer_sha256': manifest['code']['scripts/' + probe.name]['sha256'],
+                       'binary_sha256': manifest['tools'][str(python)]['sha256']}
+            if kind == 'native':
+                binding.update(expected_checks=14, test_hashes=manifest['native_test_hashes'], native_extensions=manifest['native_extensions'],
+                               source_revision=strict_json(output / 'code/configs/build-manifests/glm53-flash-sources.json')['sources']['vllm-exl3']['revision'])
+            elif kind in ('mla', 'mla-replay'):
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-mla-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'])
+                if kind == 'mla-replay':
+                    binding.update(sealed_kernels=manifest['sealed_kernels'],
+                                   replay_decision=manifest['code']['configs/decision-specs/glm53-mla-replay.json'])
+            elif kind in ('kda', 'kda-replay'):
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-kda-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'])
+                if kind == 'kda-replay':
+                    binding.update(sealed_kernels=manifest['sealed_kernels'],
+                                   replay_decision=manifest['code']['configs/decision-specs/glm53-kda-replay.json'])
+            elif kind in ('conv', 'conv-replay'):
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-conv-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'], startup_selection='pinned_convolution')
+                if kind == 'conv-replay':
+                    binding.update(sealed_kernels=manifest['sealed_kernels'],
+                                   replay_decision=manifest['code']['configs/decision-specs/glm53-conv-replay.json'])
+            elif kind == 'growth':
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-load-growth.json'],
+                               metadata=manifest['cache_metadata_hashes'])
+            elif kind in LOAD_KINDS:
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-load-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'], case=kind.removeprefix('load-'))
+            else:
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-cache-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'], cache_layer_types=manifest['cache_layer_types'])
+            inner = score_inner(output, kind, receipt['seed'], binding)
+            host = score_host_observations(output, {
+                'binary_sha256': manifest['tools'][str(python)]['sha256'], 'executable': str(python.resolve()),
+                'guard': str(guard), 'guard_sha256': manifest['code']['scripts/38_guard_glm53_probe.py']['sha256'],
+                'probe': str(probe), 'probe_sha256': manifest['code']['scripts/' + probe.name]['sha256'],
+                'probe_arguments': arguments,
+                'environment_sha256': hashlib.sha256(b'\0'.join(sorted(os.fsencode(k + '=' + v) for k, v in manifest['environment'].items()))).hexdigest(),
+                'unit_prefix': 'glm52-' + manifest['tag'] + '-', 'maximum_sample_gap_seconds': 2.0, **safety})
+            identities = [object_text(line) for line in read(output / 'identity/raw.jsonl').splitlines()]
+            inner_rows = [object_text(line) for line in read(output / 'checks/raw.jsonl').splitlines()]
+            require(identities[0]['time_unix'] <= inner_rows[0]['time_unix'] <= inner_rows[-1]['time_unix'] <= identities[-2]['time_unix'], 'inner probe timestamps escape identity window')
+            if kind in ('mla-replay', 'kda-replay', 'conv-replay'):
+                require(identities[0]['time_unix'] <= inner['sealed_selection']['time_unix'], 'sealed selection escapes identity window')
+        except BaseException as error:
+            failure = repr(error)
+        finally:
+            try:
+                verify_frozen(output, manifest)
+                verify_accepted_inputs(output, accepted)
+            except Exception as error: failure = failure or repr(error)
+            generated = None
+            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'conv-replay', 'growth', *LOAD_KINDS):
+                try:
+                    cache_path = output / 'generated-cache-inventory.json'
+                    state_inventory = generated_cache_inventory(output / 'state')
+                    write(cache_path, state_inventory)
+                    if kind in (*LOAD_KINDS, 'growth', 'conv-replay'): validate_load_state(state_inventory)
+                    generated = {'path': cache_path.name, 'sha256': sha256_file(cache_path)}
+                except Exception as error: failure = failure or repr(error)
+            summary = {'verdict': probe_verdict(kind, failure),
+                       'qualification': ('preparatory_' + kind.upper() + '_JIT_falsifier_only') if kind in ('mla', 'kda', 'conv') else 'model_free_' + kind + '_probe_only',
+                       'failure': failure, 'host': host, 'inner': inner, 'model_loaded': False,
+                       'model_fidelity': 'not measured', 'context_capability': 'not measured', 'performance': 'not measured', 'end_unix': time.time()}
+            if kind in ('mla', 'kda', 'conv'):
+                summary.update(kernel_binary_qualification='NO_RESULT', generated_cache_inventory=generated,
+                               confirmation_required='prewarm, freeze compiled kernels, seal replay and obtain a new public seed')
+            if kind == 'mla-replay':
+                summary.update(qualification='model_free_frozen_MLA_constant_cache_replay_only',
+                               kernel_binary_qualification=probe_verdict(kind, failure), sealed_kernels=manifest['sealed_kernels'],
+                               generated_cache_inventory=generated)
+            if kind == 'kda-replay':
+                summary.update(qualification='model_free_frozen_KDA_selected_configurations_only',
+                               kernel_binary_qualification=probe_verdict(kind, failure), sealed_kernels=manifest['sealed_kernels'],
+                               generated_cache_inventory=generated)
+            if kind == 'conv-replay':
+                summary.update(qualification='model_free_frozen_convolution_replay_only',
+                               kernel_binary_qualification=probe_verdict(kind, failure), sealed_kernels=manifest['sealed_kernels'],
+                               generated_cache_inventory=generated)
+            if kind == 'growth':
+                summary.update(qualification='model_free_two_MoE_layers_incremental_storage_only', generated_cache_inventory=generated)
+            if kind in LOAD_KINDS:
+                summary.update(qualification='model_free_component_load_storage_only', case=kind.removeprefix('load-'),
+                               generated_cache_inventory=generated)
+            write(output / 'summary.json', summary)
+    print(json.dumps(summary)); return 0 if failure is None else 1
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument('directory', type=Path)
+    raise SystemExit(run(parser.parse_args().directory.resolve()))

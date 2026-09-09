@@ -1,0 +1,136 @@
+{
+  "verdict": "PASS",
+  "qualification": "model_free_frozen_convolution_replay_only",
+  "failure": null,
+  "host": {
+    "verdict": "PASS",
+    "qualification": "host_and_probe_identity_observations_only",
+    "unit": "glm52-glm53-conv-replay-001-992147.service",
+    "minimum_mem_available_kib": 116341316,
+    "maximum_cgroup_peak_bytes": 3531386880,
+    "memory_samples": 54,
+    "identity_samples": 59,
+    "identity_pid": 992191,
+    "identity_start_ticks": 32306403,
+    "maximum_memory_sample_gap_seconds": 0.2963712215423584,
+    "maximum_identity_sample_gap_seconds": 0.964693546295166,
+    "whole_system_swap_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "required_separate_checks": [
+      "frozen runtime and metadata inventories",
+      "post-freeze verified public seed",
+      "inner probe correctness",
+      "model qualification"
+    ]
+  },
+  "inner": {
+    "verdict": "PASS",
+    "failure": null,
+    "qualification": "model_free_convolution_analytic_falsifier_only",
+    "model_loaded": false,
+    "actual_input_tokens_processed": 0,
+    "context_capability": "not measured",
+    "performance": "not measured",
+    "raw_sha256": "425d4a17b681258ca728b243c325e7efc46aec54642b7e3dbcb5ab78ef97d478",
+    "tensor_checks": [
+      {
+        "case": "decode-1",
+        "elements": 24576,
+        "maximum_absolute_error": 0.0002434849739074707,
+        "mismatched_elements": 0,
+        "state_bytes_checked": 737280,
+        "input_bytes_checked": 49792,
+        "nonfinite_elements": 0
+      },
+      {
+        "case": "prefill-1",
+        "elements": 50331648,
+        "maximum_absolute_error": 0.0002434849739074707,
+        "mismatched_elements": 0,
+        "state_bytes_checked": 737280,
+        "input_bytes_checked": 101974016,
+        "nonfinite_elements": 0
+      },
+      {
+        "case": "decode-4",
+        "elements": 98304,
+        "maximum_absolute_error": 0.0002434849739074707,
+        "mismatched_elements": 0,
+        "state_bytes_checked": 737280,
+        "input_bytes_checked": 199168,
+        "nonfinite_elements": 0
+      },
+      {
+        "case": "prefill-ragged",
+        "elements": 50331648,
+        "maximum_absolute_error": 0.0002434849739074707,
+        "mismatched_elements": 0,
+        "state_bytes_checked": 737280,
+        "input_bytes_checked": 101974016,
+        "nonfinite_elements": 0
+      },
+      {
+        "case": "decode-3",
+        "elements": 73728,
+        "maximum_absolute_error": 0.0002434849739074707,
+        "mismatched_elements": 0,
+        "state_bytes_checked": 737280,
+        "input_bytes_checked": 149376,
+        "nonfinite_elements": 0
+      },
+      {
+        "case": "prefill-4",
+        "elements": 50331648,
+        "maximum_absolute_error": 0.0002434849739074707,
+        "mismatched_elements": 0,
+        "state_bytes_checked": 737280,
+        "input_bytes_checked": 101974016,
+        "nonfinite_elements": 0
+      },
+      {
+        "case": "prefill-ragged-fresh",
+        "elements": 50331648,
+        "maximum_absolute_error": 0.0004513859748840332,
+        "mismatched_elements": 0,
+        "state_bytes_checked": 737280,
+        "input_bytes_checked": 101974016,
+        "nonfinite_elements": 0
+      },
+      {
+        "case": "decode-2",
+        "elements": 49152,
+        "maximum_absolute_error": 0.0002434849739074707,
+        "mismatched_elements": 0,
+        "state_bytes_checked": 737280,
+        "input_bytes_checked": 99584,
+        "nonfinite_elements": 0
+      }
+    ],
+    "sealed_selection": {
+      "time_unix": 1788970263.3816113,
+      "selection": "sealed_convolution_replay",
+      "bundle": {
+        "root": "/home/bmarti44/.cache/glm53-flash/conv-replay-001/kernels",
+        "sha256": "ef415e644495b80c9ebe79ee12e6a4c453381e672247a82a88c3fde5696aff7d"
+      },
+      "triton_cache_root": "/home/bmarti44/.cache/glm53-flash/conv-replay-001/kernels/triton",
+      "retuning": "rejected"
+    }
+  },
+  "model_loaded": false,
+  "model_fidelity": "not measured",
+  "context_capability": "not measured",
+  "performance": "not measured",
+  "end_unix": 1788970293.351759,
+  "kernel_binary_qualification": "PASS",
+  "sealed_kernels": {
+    "root": "/home/bmarti44/.cache/glm53-flash/conv-replay-001/kernels",
+    "sha256": "ef415e644495b80c9ebe79ee12e6a4c453381e672247a82a88c3fde5696aff7d"
+  },
+  "generated_cache_inventory": {
+    "path": "generated-cache-inventory.json",
+    "sha256": "351598f972350c6fa42c21eeeabc96b0fbda11ae6d4d24c64ff594d9830a0af2"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "qualification": "FlashInfer_Nvcc_startup_loader_contract_only",
+  "selection": "activate_flashinfer(enabled=True)",
+  "default_enabled": false,
+  "acceptance": {
+    "pinned_runtime_tests": "all pass",
+    "compiler_and_build_writer_calls": 0,
+    "frozen_warm_hit": "exact bound path loaded once and cached handle reused",
+    "missing_corrupt_unknown_or_unloadable": "reject without compiler fallback",
+    "disabled": "no imports, loads or entry point changes"
+  },
+  "scope": "Nvcc JitSpec loader only, not CuTe, DeepGEMM or full serving qualification",
+  "prerequisites": "Bind complete runtime and cache inventories before public randomness; keep cache immutable to the engine and verify inventories before and after replay."
+}

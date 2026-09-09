@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "qualification": "model_free_frozen_convolution_replay_only",
+  "preparation": "conv-preflight-001",
+  "reference_contract": "glm53-conv-preflight.json",
+  "acceptance": "All eight original cases and every original output/state/input check; frozen runtime, code, model metadata and compiled cache before a new verified public seed; host, process identity, cleanup and before/after hash checks must all pass.",
+  "cache": "Copy every inventoried Triton artifact byte-for-byte except relocation of verified group child paths; reject symlinks, extra/missing files, writable bundle, changed bytes, unbound children, compilation, native build fallback and retuning. No autotune inputs are expected for these plain JIT kernels.",
+  "staging": "Unchanged persistent pinned probe buffers and retained pinned upstream metadata.",
+  "not_established": ["full model memory fit", "full-model fidelity", "actual long-context token processing", "production performance", "general kernel input coverage"]
+}
