@@ -1,0 +1,20 @@
+...Triton cache error: compiled module helper.so could not be loaded
+.................................................................E........................................................................
+======================================================================
+ERROR: test_parent_sigterm_cleans_wrapper_before_releasing_lock (test_glm53_probe_capture.CaptureTests.test_parent_sigterm_cleans_wrapper_before_releasing_lock)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_capture.py", line 119, in test_parent_sigterm_cleans_wrapper_before_releasing_lock
+    parent.send_signal(signal.SIGTERM); parent.wait(timeout=10)
+                                        ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 1264, in wait
+    return self._wait(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 2045, in _wait
+    raise TimeoutExpired(self.args, timeout)
+subprocess.TimeoutExpired: Command '['/usr/bin/python3', '/tmp/tmp50upb34d/worker.py', '/home/bmarti44/spark-deepseek-v4-flash/scripts/lib', '/tmp/tmp50upb34d']' timed out after 10 seconds
+
+----------------------------------------------------------------------
+Ran 141 tests in 16.714s
+
+FAILED (errors=1)
