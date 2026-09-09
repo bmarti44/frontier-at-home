@@ -44,7 +44,7 @@ are unchanged. Performance is **not yet measured**.
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
-The latest completed scoped CPU audit has 235 passing tests; these include
+The latest completed scoped CPU audit has 246 passing tests; these include
 admission, media, existing profiles, switching and the model-free harness. Three source-function tests cover 48 sampler combinations, four
 within-cap comparisons, and three actual loader/metadata cases.
 
@@ -161,6 +161,15 @@ freeze. The separate [sealed replay001](conv-replay-001/README.md) passed all ei
 cases with unchanged compiled inputs, full host/identity/cleanup checks and no
 new runtime artifacts. Both reviews closed at campaign44; 235 scoped CPU tests
 pass. The independent execution review confirmed the narrow kernel result.
+
+The independent [indexer CPU reference](indexer-fixture-review-001.md) passed both
+persistent reviews at candidate 1 / campaign 45. It covers request-specific
+scores, complete physical cache/tail bytes, unordered top-k selections and exact
+valid logits. The native post-projection probe is implemented and its
+[246-test audit](indexer-probe-audit-001/README.md) passes; candidate 1 / campaign
+46 is under review. No GPU indexer execution has occurred. The preparation route
+freezes CUDA compiler inputs and DeepGEMM settings, retains generated kernels,
+and cannot claim sealed-kernel qualification.
 
 Next: finish indexer and vision workspace probes. Do not multiply fresh-process RSS by
 layer count or add it blindly to CUDA allocations. The synthetic input was
