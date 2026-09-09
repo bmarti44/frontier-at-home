@@ -19,6 +19,7 @@
   "env": {
    "PYTHONNOUSERSITE": "1",
    "PYTHONDONTWRITEBYTECODE": "1",
+   "TORCH_COMPILE_DISABLE": "1",
    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
    "NVIDIA_TF32_OVERRIDE": "0"
   },
@@ -32,6 +33,7 @@
    "--max-model-len", "262144", "--max-num-seqs", "4",
    "--max-num-batched-tokens", "2048",
    "--compilation-config", "{\"mode\":0}",
+   "--logprobs-mode", "raw_logprobs",
    "--kv-cache-dtype", "fp8",
    "--no-enable-prefix-caching",
    "--enable-auto-tool-choice", "--tool-call-parser", "glm47",
