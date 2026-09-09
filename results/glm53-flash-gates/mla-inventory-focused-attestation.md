@@ -1,0 +1,1 @@
+The persistent gap reviewer independently closed the medium unreadable-directory issue at21745658. All three generated-cache inventory tests passed on packaged Python, including access-error and mutation rejection. This focused attestation did not re-review frozencomponents or the separate Ninja preparation change. No reviewerGPU activity.

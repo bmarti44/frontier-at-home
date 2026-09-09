@@ -1,0 +1,26 @@
+2026-09-09T12:42:28,611499574+00:00 SAFE_RUN start tag=glm53-mla-preflight-001 vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 timeout_s=600 allow_cgroup_high=0
+2026-09-09T12:42:28,616790292+00:00 cmd: /usr/bin/env -i CUDA_CACHE_PATH=/home/bmarti44/.cache/glm53-flash/mla-preflight-001/state/cuda-cache CUDA_HOME=/usr/local/cuda-13.0 CUDA_VISIBLE_DEVICES=0 GLM53_EXL3_BF16_SHARD_FIX=1 HF_HUB_OFFLINE=1 HOME=/home/bmarti44/.cache/glm53-flash/mla-preflight-001/state LANG=C.UTF-8 MAX_JOBS=2 NVCC_THREADS=1 NVIDIA_TF32_OVERRIDE=0 PATH=/home/bmarti44/.cache/glm53-flash/mla-preflight-001/tools:/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 TOKENIZERS_PARALLELISM=false TORCH_COMPILE_DISABLE=1 TORCH_EXTENSIONS_DIR=/home/bmarti44/.cache/glm53-flash/mla-preflight-001/state/torch-extensions TRANSFORMERS_OFFLINE=1 TRITON_CACHE_DIR=/home/bmarti44/.cache/glm53-flash/mla-preflight-001/state/triton /home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3 -I -B /home/bmarti44/.cache/glm53-flash/mla-preflight-001/code/scripts/38_guard_glm53_probe.py --output /home/bmarti44/.cache/glm53-flash/mla-preflight-001/identity -- /home/bmarti44/.cache/glm53-flash/mla-preflight-001/code/scripts/40_probe_glm53_mla.py --metadata /home/bmarti44/.cache/glm53-flash/processor-metadata-002 --output /home/bmarti44/.cache/glm53-flash/mla-preflight-001/checks --seed 17641670271357809122
+2026-09-09T12:42:28,622926452+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T12:42:28,628433219+00:00 candidate_provenance_enabled=0
+2026-09-09T12:42:28,635561126+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-mla-preflight-001-908265.service memory_high=72479670272 memory_max=76774637568 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121112264 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.516,"stable_samples_observed":3}
+2026-09-09T12:42:31,213474348+00:00 wrapper_pid=908306 engine_pid=908309 pgid=908306 (periodic sampler; actual cadence in samples.log)
+2026-09-09T12:43:17,229618207+00:00 cgroup_final current_bytes=8859648 peak_bytes=1851670528 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+INFO 09-09 08:42:38 [exl3.py:69] GLM53_EXL3_BF16_SHARD_FIX=1: preserve BF16 shard geometry
+INFO 09-09 08:42:48 [model.py:684] Resolved architecture: Glm5NextForConditionalGeneration
+INFO 09-09 08:42:48 [model.py:2021] Using max model len 262144
+WARNING 09-09 08:42:48 [model.py:981] Model does not support mm_device_do_normalize, forcing mm_device_do_normalize = False.
+INFO 09-09 08:42:49 [cache.py:335] Using fp8 data type to store kv cache. It reduces the GPU memory footprint and boosts the performance. Meanwhile, it may cause accuracy drop without a proper scaling factor
+INFO 09-09 08:42:49 [scheduler.py:242] Chunked prefill is enabled with max_num_batched_tokens=2048.
+WARNING 09-09 08:42:49 [vllm.py:1345] TORCH_COMPILE_DISABLE is set, disabling torch.compile. This is equivalent to setting -cc.mode=none
+INFO 09-09 08:42:49 [vllm.py:694] Auto-enabling VLLM_USE_BREAKABLE_CUDAGRAPH=1. Set VLLM_USE_BREAKABLE_CUDAGRAPH=0 to opt out.
+INFO 09-09 08:42:49 [kernel.py:369] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'])
+INFO 09-09 08:42:49 [compilation.py:329] Enabled custom fusions: norm_quant, act_quant
+{"verdict": "PASS", "failure": null, "qualification": "model_free_MLA_constant_cache_falsifier_only", "model_loaded": false, "actual_input_tokens_processed": 0, "context_capability": "not measured", "performance": "not measured", "raw_sha256": "077968c33cf73149a2e0b8ea43f62d402f4a030387a8733ae70d5f750ad57cb2"}
+{"verdict": "PASS", "qualification": "Python_probe_identity_only", "identity_samples": 172, "probe_exit_code": 0, "live_process_group_after": [], "raw_sha256": "30fe949bba1e5225e730afef43f608e0a0268f9c379d4fbf3af94be9deeb4c1b", "failure": null}
+2026-09-09T12:43:17,269214745+00:00 safety_artifact_verified name=samples.log sha256=e29a8239f96c9e108776fd3f67597554d7a798bcee2d775b2ebd61d198aef32f size=28495
+2026-09-09T12:43:17,279727845+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T12:43:17,285241059+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   120628360 kB
