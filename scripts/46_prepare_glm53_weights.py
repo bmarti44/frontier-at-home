@@ -4,6 +4,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -66,10 +67,42 @@ def selected_digest(fd, segments):
     return h.hexdigest()
 
 
+def range_groups(segments):
+    groups=[]
+    for a,b,_ in sorted(segments):
+        if groups and a-groups[-1][1]<=(8<<20) and max(b,groups[-1][1])-groups[-1][0]<=(128<<20):
+            groups[-1][1]=max(b,groups[-1][1])
+        else:groups.append([a,b])
+    return groups
+
+
+def download_dense_ranges(url, sink, segments, size):
+    """Read pinned selected ranges twice; do not claim a whole-shard hash."""
+    ranges=[];written=0
+    for first,last in range_groups(segments):
+        def fetch(arm):
+            request=urllib.request.Request(url+f'&selected_range={first}-{last-1}&verification={arm}',
+                headers={'Range':f'bytes={first}-{last-1}'})
+            with urllib.request.urlopen(request,timeout=120) as response:
+                if response.status!=206 or response.headers.get('Content-Range')!=f'bytes {first}-{last-1}/{size}':
+                    raise ValueError('exact pinned byte range required')
+                data=response.read(last-first+1)
+            if len(data)!=last-first:raise ValueError('short or excessive dense range')
+            return data
+        data=fetch(1);reference=fetch(2)
+        if data!=reference:raise ValueError('independent dense range reads differ')
+        source_digest=hashlib.sha256(data).hexdigest();del reference
+        selected=[(a-first,b-first,out) for a,b,out in segments if first<=a and b<=last]
+        written+=stream_selected(io.BytesIO(data),sink,selected,last-first,source_digest)
+        ranges.append({'first':first,'last_exclusive':last,'sha256':source_digest})
+    if written!=sum(b-a for a,b,_ in segments):raise ValueError('dense range coverage mismatch')
+    return written,ranges
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--workers',type=int,choices=(1,2),default=2)
+    parser.add_argument('--workers',type=int,choices=(1,2,4),default=4)
     args=parser.parse_args(); target=args.output.resolve()
     layout=BASE/'model-layout-001'
     sys.path.insert(0,str(ROOT/'scripts/lib'))
@@ -129,7 +162,13 @@ def main():
     if shutil.disk_usage(target).free < required-existing+(8<<30): raise ValueError('insufficient disk reserve')
     binding={'script_sha256':digest(__file__),'layout_sha256':digest(layout/'overlay-plan.json'),'payload_bytes':selected_bytes,'tensors':len(wmap),'jobs':len(jobs)}
     previous=target/'download-manifest.json'
-    if previous.exists() and json.loads(previous.read_text())!=binding: raise ValueError('download candidate changed')
+    if previous.exists():
+        prior=json.loads(previous.read_text())
+        if {k:v for k,v in prior.items() if k!='script_sha256'}!={k:v for k,v in binding.items() if k!='script_sha256'}:
+            raise ValueError('download selection changed')
+        if prior!=binding:
+            with (target/'download-script-history.jsonl').open('a') as history:
+                history.write(json.dumps({'time_unix':time.time(),'previous':prior,'current':binding})+'\n')
     write_json(previous,binding)
     for name,(prefix,size) in headers.items():
         p=target/name
@@ -150,11 +189,16 @@ def main():
                 print(json.dumps({'event':'resumed','pack':label,'file':filename}),flush=True);return
             started=time.time();url=f"https://huggingface.co/{api['id']}/resolve/{api['sha']}/{filename}?full_verified_download=1"
             print(json.dumps({'event':'start','pack':label,'file':filename,'time_unix':started}),flush=True)
-            with urllib.request.urlopen(url,timeout=120) as response:
-                if response.status!=200: raise ValueError('full shard response required')
-                written=stream_selected(response,sink.fileno(),segments,entry['size'],entry['lfs']['sha256'])
+            ranges=None
+            if label=='dense':written,ranges=download_dense_ranges(url,sink.fileno(),segments,entry['size'])
+            else:
+                with urllib.request.urlopen(url,timeout=120) as response:
+                    if response.status!=200: raise ValueError('full shard response required')
+                    written=stream_selected(response,sink.fileno(),segments,entry['size'],entry['lfs']['sha256'])
             os.fsync(sink.fileno())
             record={'pack':label,'file':filename,'source_bytes':entry['size'],'selected_bytes':written,'upstream_sha256':entry['lfs']['sha256'],'selected_sha256':selected_digest(sink.fileno(),segments),'start_unix':started,'end_unix':time.time()}
+            record['verification']='full_upstream_sha256' if ranges is None else 'pinned_selected_ranges_read_twice; whole upstream hash is metadata only'
+            if ranges is not None:record['ranges']=ranges
             write_json(record_path,record);print(json.dumps({'event':'complete',**record}),flush=True)
     failures=[]
     with ThreadPoolExecutor(max_workers=args.workers) as pool:

@@ -3,7 +3,9 @@
 Current priority, owner correction 2026-09-09: simplify and obtain a real model
 response. Additional indexer cache-guard work is deferred. The selected real
 weights are downloading through `scripts/46_prepare_glm53_weights.py`; complete
-upstream shards are hashed while excluded tensors are omitted from disk. The
+main-model shards are hashed while excluded tensors are omitted from disk.
+The dense overlay uses selected pinned ranges read twice and compared, avoiding
+a full second weight pack; its whole-shard digests remain metadata only. The
 final pack remains 84,696,019,172 tensor bytes with no new quantization.
 
 The [real-shard InstantTensor smoke](real-loader-smoke-001/README.md) passed:

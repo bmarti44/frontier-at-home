@@ -5,6 +5,7 @@ import io
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec=importlib.util.spec_from_file_location('weight_download',Path(__file__).resolve().parents[1]/'46_prepare_glm53_weights.py')
 api=importlib.util.module_from_spec(spec);spec.loader.exec_module(api)
@@ -15,6 +16,24 @@ class SmallReads(io.BytesIO):
 
 
 class WeightDownloadTests(unittest.TestCase):
+    def test_dense_range_two_reads_and_exact_content_range(self):
+        source=bytes(range(128));segments=[(0,8,0),(5,36,8),(113,128,39)]
+        class Response(io.BytesIO):
+            status=206
+            headers={'Content-Range':'bytes 0-127/128'}
+        with tempfile.TemporaryFile() as output:
+            with patch.object(api.urllib.request,'urlopen',side_effect=lambda *a,**kw:Response(source)) as calls:
+                count,ranges=api.download_dense_ranges('https://example.invalid/pinned?x=1',output.fileno(),segments,len(source))
+                self.assertEqual(calls.call_count,2);self.assertEqual(count,54)
+                output.seek(0);self.assertEqual(output.read(),source[:8]+source[5:36]+source[113:])
+            with patch.object(api.urllib.request,'urlopen',side_effect=[Response(source),Response(source[:-1]+b'x')]):
+                with self.assertRaisesRegex(ValueError,'reads differ'):
+                    api.download_dense_ranges('https://example.invalid/pinned?x=1',output.fileno(),segments,len(source))
+            Response.headers={'Content-Range':'bytes 1-128/129'}
+            with patch.object(api.urllib.request,'urlopen',return_value=Response(source)):
+                with self.assertRaisesRegex(ValueError,'exact pinned'):
+                    api.download_dense_ranges('https://example.invalid/pinned?x=1',output.fileno(),segments,len(source))
+
     def test_exact_overlapping_and_split_source_ranges(self):
         source=bytes(range(128)); segments=[(0,8,0),(5,36,8),(5,36,39),(113,128,70)]
         with tempfile.TemporaryFile() as output:
