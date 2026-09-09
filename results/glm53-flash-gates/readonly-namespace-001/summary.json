@@ -1,0 +1,21 @@
+{
+  "kind": "user_systemd_readonly_namespace_probe",
+  "command": [
+    "systemd-run",
+    "--user",
+    "--wait",
+    "--collect",
+    "--pipe",
+    "--quiet",
+    "--unit=glm53-readonly-probe-001",
+    "-p",
+    "ReadOnlyPaths=/home/bmarti44/.cache/glm53-flash/readonly-namespace-001",
+    "/usr/bin/python3",
+    "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/readonly-namespace-001/probe.py"
+  ],
+  "exit_code": 3,
+  "sentinel_unchanged": false,
+  "verdict": "FAIL",
+  "model_loaded": false,
+  "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}
