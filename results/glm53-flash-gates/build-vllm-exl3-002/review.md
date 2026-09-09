@@ -1,0 +1,1 @@
+BF16 geometry candidate1, campaign round15: both persistent reviewers reported zero verified high or critical findings at source candidate6b1ebaad. Both independently passed six real CPU constructor tests and verified default-off/import-time flag behavior. Native forward and full-model correctness remain unqualified.
