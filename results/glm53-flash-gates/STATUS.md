@@ -173,9 +173,14 @@ numeric conversion of uint16 staging during BF16 key reload. All captured valid
 logits matched in a separate postmortem, which does not replace the failed verdict.
 The one-line bit-preserving copy correction has a [249-test audit](indexer-probe-audit-004/README.md)
 and passed both [focused reviews](indexer-probe-review-004.md) as candidate 4 /
-campaign 49. The next contained run requires a fresh freeze and public seed. Both failed attempts,
-their raw captures and generated kernels remain preserved. No complete indexer
-kernel result exists yet. Preparation cannot claim sealed-kernel qualification.
+campaign 49. Both failed attempts, their raw captures and generated kernels remain preserved.
+The corrected [preparation003](indexer-preflight-003/README.md) passed all six
+synthetic cases and host checks: 268,434,423 valid logits matched byte-for-byte,
+as did all cache, tail and selected-index checks. It remains **NO_RESULT**
+because this run generated kernels after freeze. The lossless archive was
+restored and rescored with the frozen scorer; all 89 captured files and 65
+generated state files match their originals. Separate sealed confirmation is
+next; this is not a full-model or context-capability result.
 
 Next: finish indexer and vision workspace probes. Do not multiply fresh-process RSS by
 layer count or add it blindly to CUDA allocations. The synthetic input was
