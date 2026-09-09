@@ -1,6 +1,18 @@
 # GLM-5.3-Flash / CUDA qualification campaign
 
-Status: PREPARING — no GLM-5.3 model has been loaded or qualified here.
+Status: IDENTITY GATE PAUSED — no GLM-5.3 model has been loaded or qualified here.
+
+The optional estimated profile and pinned runtime builds are prepared. Native
+attempt 003 passed fourteen synthetic kernel assertions, but continuous Python
+identity for attempts 001–003 is `NO_RESULT`. The identity guard retains high I1
+at gate candidate 2 / campaign round 19; `AGENTS.md` requires a pause after two
+consecutive candidates fail to reduce blocking findings. A local proposed fix is
+ready for owner direction; no subsequent hardware run has taken place.
+
+Independent host-evidence scoring reached review closure at gate candidate 2 /
+campaign round 21; see `host-evidence-review-002.md` and
+[`docs/GLM53-PROBE-EVIDENCE.md`](../../docs/GLM53-PROBE-EVIDENCE.md) for the capture
+contract. This does not resume the identity gate or qualify the model.
 
 Target: one ARM64 DGX Spark, 1,048,576 aggregate context tokens in four
 262,144-token slots; text, reasoning, tools, four images or one video sampled
