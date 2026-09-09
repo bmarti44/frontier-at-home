@@ -142,9 +142,10 @@ def capture_wrapper(root, wrapper, tag, command, environment, timeout):
                         except FileNotFoundError: break
                         except OSError as error:
                             failure = failure or repr(error)
-                            if not (root / 'cleanup-observation-error.json').exists():
-                                try: write(root / 'cleanup-observation-error.json', {'failure': repr(error), 'time_unix': time.time()})
-                                except OSError: pass
+                            try:
+                                if not (root / 'cleanup-observation-error.json').exists():
+                                    write(root / 'cleanup-observation-error.json', {'failure': repr(error), 'time_unix': time.time()})
+                            except OSError: pass
                         time.sleep(0.2)
                     try:
                         capture_unit(root / 'unit-after.json', unit)
