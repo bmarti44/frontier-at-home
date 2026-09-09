@@ -109,5 +109,18 @@ class PinnedStreamTests(unittest.TestCase):
         self.assertEqual(consumed,[])
         self.assertFalse(torch.cuda.is_initialized())
 
+    def test_callback_cannot_change_frozen_later_digest(self):
+        torch=self.torch; original_empty=torch.empty
+        signs='model.layers.3.signs'; correct=self.selection[signs]['sha256']
+        self.selection[signs]['sha256']='0'*64
+        def empty(*a,**k):
+            k.pop('pin_memory',None); k['device']='cpu'; return original_empty(*a,**k)
+        def consume(name,tensor):self.selection[signs]['sha256']=correct
+        with patch.object(torch,'empty',side_effect=empty),patch.object(torch.Tensor,'is_pinned',return_value=True), \
+             patch.object(torch.cuda,'Event',return_value=MagicMock()),patch.object(torch.cuda,'synchronize'):
+            with self.assertRaisesRegex(ValueError,'source tensor digest mismatch'):
+                self.api.stream_selected_weights(self.root,self.inventory,self.selection,
+                    consume,lambda row:None,enabled=True,pinned_capacity=7)
+
 
 if __name__=='__main__':unittest.main()
