@@ -40,13 +40,14 @@ def reserve_four(manager, requests, seed, record):
         groups = blocks.get_block_ids()
         require([len(group) for group in groups] == [31, 1, 1, 1, 1, 1], "unexpected reservation group coverage")
         ids = [block for group in groups for block in group]
-        require(all(type(block) is int and block > 0 for block in ids), "null or invalid physical block")
+        require(all(type(block) is int and 0 < block < 145 for block in ids), "physical block outside allocated backing")
         require(len(set(ids)) == 36 and not all_ids.intersection(ids), "reservation blocks must be distinct")
         all_ids.update(ids)
         snapshots[identity(request)] = [list(group) for group in groups]
         free = manager.block_pool.get_num_free_blocks()
         require(free == 144 - 36 * (index + 1), "incorrect live pool accounting")
         record({"event": "reserve", "request_id": identity(request), "block_ids": groups, "free_blocks": free})
+    require(all_ids == set(range(1, 145)), "physical backing coverage is incomplete")
     fifth = manager.allocate_slots(order[4], num_new_tokens=262144, full_sequence_must_fit=True)
     require(fifth is None, "fifth full request must reject")
     require(manager.block_pool.get_num_free_blocks() == 0, "fifth rejection changed pool capacity")
