@@ -52,7 +52,7 @@ class ConvProbeTests(unittest.TestCase):
         return paths, [hashlib.sha256(p.read_bytes()).hexdigest() for p in paths]
 
     def test_every_output_state_and_input_byte_is_scored(self):
-        for case in ('decode-2', 'prefill-ragged'):
+        for case in ('decode-2', 'prefill-ragged', 'prefill-ragged-fresh'):
             paths, hashes = self.capture(case)
             result = self.api.score_tensors(paths, hashes, 123, case, channels=16)
             self.assertEqual(result['mismatched_elements'], 0)
@@ -64,6 +64,39 @@ class ConvProbeTests(unittest.TestCase):
             paths[0].write_bytes(paths[0].read_bytes() + gzip.compress(b'extra'))
             hashes[0] = hashlib.sha256(paths[0].read_bytes()).hexdigest()
             with self.assertRaises(ValueError): self.api.score_tensors(paths, hashes, 123, case, channels=16)
+
+    def test_complete_capture_semantic_mutations(self):
+        import copy
+        from unittest.mock import patch
+        a = self.api; seed = 123
+        with patch.object(a, 'CHANNELS', 16):
+            rows = [{'time_unix': 100., 'event': 'configured', 'case_order': a.case_order(seed), 'slots': a.slots(seed),
+                     'pinned_staging': True, **a.geometry()}]
+            for case in a.case_order(seed):
+                paths, hashes = self.capture(case)
+                names = [f'{kind}-{case}.bf16.gz' for kind in ('output', 'state', 'input')]
+                for p, name in zip(paths, names): p.rename(self.root / name)
+                decode = case.startswith('decode')
+                rows.extend([{'time_unix': 100. + len(rows), 'event': 'start', 'case': case},
+                             {'time_unix': 101. + len(rows), 'event': 'output', 'case': case,
+                              'artifacts': [{'file': n, 'sha256': h} for n, h in zip(names, hashes)],
+                              'cuda_elapsed_ms': 1., 'cuda_peak_allocated': 100000000, 'cuda_memory_reserved': 120000000,
+                              'input_stride': [336, 1], 'state_stride': [48, 1, 16], 'output_alias': decode,
+                              'metadata': None if decode else {'programs': sum((n+7)//8 for n in a.CASES[case]),
+                                  'pinned': True, 'gpu_shapes': [[2048], [2048]], 'host_dtypes': ['torch.int64', 'torch.int32']}}])
+            for name in ('manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log'): (self.root/name).write_text('{}')
+            self.assertEqual(len(a.score_capture(self.root, rows, seed)), 8)
+            for index, key, value in ((0, 'slots', [1,1,1,1]), (0, 'pinned_staging', 1), (1, 'case', 'missing'),
+                                      (2, 'cuda_peak_allocated', 0), (2, 'cuda_elapsed_ms', float('nan')),
+                                      (2, 'output_alias', not rows[2]['output_alias']), (2, 'state_stride', [48,3,1]),
+                                      (2, 'artifacts', [{'file': '../escape', 'sha256': 'a'*64}]),
+                                      (2, 'time_unix', 0)):
+                changed = copy.deepcopy(rows); changed[index][key] = value
+                with self.assertRaises(ValueError): a.score_capture(self.root, changed, seed)
+            prefill = next(i for i,r in enumerate(rows) if r.get('metadata'))
+            changed = copy.deepcopy(rows); changed[prefill]['metadata']['pinned'] = False
+            with self.assertRaises(ValueError): a.score_capture(self.root, changed, seed)
+            with self.assertRaises(ValueError): a.score_capture(self.root, rows[:-1], seed)
 
     def test_preparation_verdict_and_missing_capture_rejected(self):
         spec = importlib.util.spec_from_file_location('conv_runner', Path(__file__).resolve().parents[1] / '39_run_glm53_probe.py')

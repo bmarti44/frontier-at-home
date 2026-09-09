@@ -14,10 +14,10 @@ import time
 ROOT = Path('/home/bmarti44/spark-deepseek-v4-flash')
 BASE = Path('/home/bmarti44/.cache/glm53-flash')
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'load-moe', 'load-kda', 'load-mla', 'load-ordinary', 'growth'))
+parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'load-moe', 'load-kda', 'load-mla', 'load-ordinary', 'growth', 'conv'))
 parser.add_argument('attempt')
 args = parser.parse_args()
-if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight', 'kda-replay': 'kda-replay', 'growth': 'load-growth', **{f'load-{case}': f'load-{case}' for case in ('moe', 'kda', 'mla', 'ordinary')}}[args.kind] + r'-[0-9]{3}', args.attempt):
+if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight', 'kda-replay': 'kda-replay', 'growth': 'load-growth', 'conv': 'conv-preflight', **{f'load-{case}': f'load-{case}' for case in ('moe', 'kda', 'mla', 'ordinary')}}[args.kind] + r'-[0-9]{3}', args.attempt):
     raise ValueError('invalid fresh attempt name')
 if subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True):
     raise ValueError('repository source is not clean')
@@ -84,7 +84,7 @@ if args.kind == 'kda-replay':
                                    runner.strict_json(preparation / 'generated-cache-inventory.json'))
     environment.update(TRITON_CACHE_DIR=str(output / 'kernels/triton'), TRITON_CACHE_AUTOTUNING='1', CUDA_CACHE_DISABLE='1')
 jit_tools = []
-if args.kind == 'kda':
+if args.kind in ('kda', 'conv'):
     jit_tools = [Path('/usr/bin/gcc').resolve(), Path('/usr/bin/g++').resolve(),
                  Path('/usr/local/cuda-13.0/bin/nvcc')]
 if args.kind == 'mla':
@@ -121,7 +121,7 @@ for name in ('exllamav3_ext', 'vllm_exl3_c'):
     paths = list((runtime / 'lib/python3.12/site-packages').glob(name + '.*.so'))
     if len(paths) != 1: raise ValueError('native extension inventory mismatch')
     native_extensions[name] = {'path': str(paths[0]), 'sha256': sha(paths[0])}
-manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.upper() + '_JIT_falsifier_only') if args.kind in ('mla', 'kda') else 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
+manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.upper() + '_JIT_falsifier_only') if args.kind in ('mla', 'kda', 'conv') else 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
             'tag': 'glm53-' + args.attempt,
             'source_revision': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
             'runtime': {'root': str(runtime), 'manifest': str(inventory), 'sha256': sha(inventory), 'files': len(identities)},
@@ -139,6 +139,8 @@ manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.up
                 str(prepared if args.kind == 'native' else metadata), '--output', str(output / 'checks')],
             'seed_rule': 'uint64 from first16 hex characters of BLS-verified post-freeze drand randomness',
             'model_weights': 'none', 'frozen_at_unix': time.time()}
+if args.kind == 'conv':
+    manifest['probe_arguments_without_seed'].append('--pinned-convolution')
 if args.kind == 'growth':
     manifest.update(qualification='model_free_two_MoE_layers_incremental_storage_only')
     manifest['probe_arguments_without_seed'].append('--pinned-growth')
