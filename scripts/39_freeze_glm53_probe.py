@@ -14,10 +14,10 @@ import time
 ROOT = Path('/home/bmarti44/spark-deepseek-v4-flash')
 BASE = Path('/home/bmarti44/.cache/glm53-flash')
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay'))
+parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda'))
 parser.add_argument('attempt')
 args = parser.parse_args()
-if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay'}[args.kind] + r'-[0-9]{3}', args.attempt):
+if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight'}[args.kind] + r'-[0-9]{3}', args.attempt):
     raise ValueError('invalid fresh attempt name')
 if subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True):
     raise ValueError('repository source is not clean')
@@ -66,6 +66,9 @@ if args.kind == 'mla-replay':
                                    runner.strict_json(preparation / 'generated-cache-inventory.json'))
     environment.update(TRITON_CACHE_DIR=str(output / 'kernels/triton'), FLASHINFER_DISABLE_JIT='1', CUDA_CACHE_DISABLE='1')
 jit_tools = []
+if args.kind == 'kda':
+    jit_tools = [Path('/usr/bin/gcc').resolve(), Path('/usr/bin/g++').resolve(),
+                 Path('/usr/local/cuda-13.0/bin/nvcc')]
 if args.kind == 'mla':
     jit_directory = output / 'tools'; jit_directory.mkdir()
     ninja_source = BASE / 'runtime/bin/ninja'
@@ -100,7 +103,7 @@ for name in ('exllamav3_ext', 'vllm_exl3_c'):
     paths = list((runtime / 'lib/python3.12/site-packages').glob(name + '.*.so'))
     if len(paths) != 1: raise ValueError('native extension inventory mismatch')
     native_extensions[name] = {'path': str(paths[0]), 'sha256': sha(paths[0])}
-manifest = {'schema_version': 1, 'qualification': 'preparatory_MLA_JIT_falsifier_only' if args.kind == 'mla' else 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
+manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.upper() + '_JIT_falsifier_only') if args.kind in ('mla', 'kda') else 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
             'tag': 'glm53-' + args.attempt,
             'source_revision': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
             'runtime': {'root': str(runtime), 'manifest': str(inventory), 'sha256': sha(inventory), 'files': len(identities)},

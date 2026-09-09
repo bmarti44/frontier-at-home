@@ -79,6 +79,10 @@ def score_inner(output, kind, seed, binding):
             require(receipt == expected and type(receipt['time_unix']) in (int, float) and
                     math.isfinite(receipt['time_unix']) and 0 < receipt['time_unix'] < times[0], 'invalid sealed MLA startup receipt')
             summary['sealed_selection'] = receipt
+    elif kind == 'kda':
+        require(summary['qualification'] == 'model_free_KDA_analytic_falsifier_only' and
+                summary['actual_input_tokens_processed'] == 0, 'KDA qualification mismatch')
+        summary = {**summary, 'tensor_checks': validate_kda_rows(root, rows, seed)}
     elif kind == 'cache':
         require(summary['qualification'] == 'model_free_cache_allocation_only' and summary['actual_input_tokens_processed'] == 0, 'cache qualification mismatch')
         validate_cache_rows(rows, seed, binding['cache_layer_types'])
@@ -119,6 +123,40 @@ def validate_mla_rows(root, rows, seed, replay=False):
                 type(output['cuda_elapsed_ms']) in (int, float) and math.isfinite(output['cuda_elapsed_ms']) and
                 output['cuda_elapsed_ms'] > 0, 'invalid MLA output accounting')
         checks.append({'query_rows': count, **module.score_tensor(root / output['file'], output['sha256'], count, requests)})
+    return checks
+
+
+def validate_kda_rows(root, rows, seed):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('frozen_kda_scorer', Path(__file__).parent / '41_probe_glm53_kda.py')
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    order, requests = module.case_order(seed), module.request_order(seed)
+    require(len(rows) == 11 and rows[0] == {'time_unix': rows[0].get('time_unix'), 'event': 'configured',
+        'case_order': order, 'request_order': requests, 'state_shape': [5, 64, 128, 128], 'pinned_staging': True}, 'KDA geometry or order mismatch')
+    require(rows[0]['pinned_staging'] is True and all(type(v) is int for name in
+        ('case_order', 'request_order', 'state_shape') for v in rows[0][name]), 'KDA geometry types changed')
+    files = {f'{kind}-{count}.{dtype}.gz' for count in order for kind, dtype in (('output', 'bf16'), ('state', 'fp32'))}
+    require({p.name for p in root.iterdir()} == files | {'manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log'}, 'KDA artifact coverage mismatch')
+    checks = []
+    for index, count in enumerate(order):
+        start, output = rows[1 + 2 * index:3 + 2 * index]
+        require(set(start) == {'time_unix', 'event', 'query_rows'} and start['event'] == 'start' and
+                type(start['query_rows']) is int and start['query_rows'] == count, 'KDA start schema mismatch')
+        require(set(output) == {'time_unix', 'event', 'query_rows', 'artifacts', 'cuda_elapsed_ms',
+                               'cuda_peak_allocated', 'cuda_memory_reserved'} and output['event'] == 'output' and
+                type(output['query_rows']) is int and output['query_rows'] == count, 'KDA output schema mismatch')
+        require(type(output['cuda_elapsed_ms']) in (int, float) and math.isfinite(output['cuda_elapsed_ms']) and
+                output['cuda_elapsed_ms'] > 0 and type(output['cuda_peak_allocated']) is int and
+                type(output['cuda_memory_reserved']) is int and
+                20971520 <= output['cuda_peak_allocated'] <= output['cuda_memory_reserved'], 'invalid KDA allocation or timing')
+        names = [f'output-{count}.bf16.gz', f'state-{count}.fp32.gz']
+        artifacts = output['artifacts']
+        require(isinstance(artifacts, list) and len(artifacts) == 2 and all(
+            isinstance(item, dict) and set(item) == {'file', 'sha256'} and item['file'] == name and
+            isinstance(item['sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', item['sha256'])
+            for item, name in zip(artifacts, names)), 'KDA artifact schema mismatch')
+        checks.append({'query_rows': count, **module.score_tensors(*(root / name for name in names),
+            [item['sha256'] for item in artifacts], count, seed)})
     return checks
 
 
@@ -176,11 +214,13 @@ def verify_accepted_inputs(output, accepted):
 CODE_FILES = (
     'scripts/39_run_glm53_probe.py', 'scripts/38_guard_glm53_probe.py',
     'scripts/35_smoke_glm53_native.py', 'scripts/37_probe_glm53_cache.py', 'scripts/40_probe_glm53_mla.py',
+    'scripts/41_probe_glm53_kda.py',
     'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
     'scripts/lib/glm53_runtime_jit.py', 'scripts/lib/glm53_mla_replay.py',
     'configs/build-manifests/glm53-flash-sources.json', 'configs/decision-specs/glm53-cache-preflight.json',
     'configs/decision-specs/glm53-mla-preflight.json',
     'configs/decision-specs/glm53-mla-replay.json', 'configs/decision-specs/glm53-flashinfer-sealed.json',
+    'configs/decision-specs/glm53-kda-preflight.json',
     'scripts/103_verify_drand_receipt_bundle.mjs')
 
 
@@ -229,9 +269,9 @@ def verify_beacon(output, manifest, receipt=None):
 
 
 def probe_verdict(kind, failure):
-    require(kind in ('native', 'cache', 'mla', 'mla-replay'), 'unknown probe kind')
+    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda'), 'unknown probe kind')
     if failure is not None: return 'FAIL'
-    return 'NO_RESULT' if kind == 'mla' else 'PASS'
+    return 'NO_RESULT' if kind in ('mla', 'kda') else 'PASS'
 
 
 def generated_cache_inventory(root):
@@ -270,7 +310,7 @@ def run(output):
     manifest = object_text(input_bytes['manifest.json'])
     require(Path(__file__).resolve() == output / 'code/scripts/39_run_glm53_probe.py', 'run the frozen runner copy')
     expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py',
-                     'mla': '40_probe_glm53_mla.py', 'mla-replay': '40_probe_glm53_mla.py'}
+                     'mla': '40_probe_glm53_mla.py', 'mla-replay': '40_probe_glm53_mla.py', 'kda': '41_probe_glm53_kda.py'}
     kind = manifest['kind']; require(kind in expected_kind, 'unknown probe kind')
     python = Path(manifest['runtime']['root']) / 'bin/python3'
     require(Path(sys.executable).resolve() == python.resolve(), 'controller must use frozen packaged interpreter')
@@ -306,6 +346,9 @@ def run(output):
                 if kind == 'mla-replay':
                     binding.update(sealed_kernels=manifest['sealed_kernels'],
                                    replay_decision=manifest['code']['configs/decision-specs/glm53-mla-replay.json'])
+            elif kind == 'kda':
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-kda-preflight.json'],
+                               metadata=manifest['cache_metadata_hashes'])
             else:
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-cache-preflight.json'],
                                metadata=manifest['cache_metadata_hashes'], cache_layer_types=manifest['cache_layer_types'])
@@ -330,17 +373,17 @@ def run(output):
                 verify_accepted_inputs(output, accepted)
             except Exception as error: failure = failure or repr(error)
             generated = None
-            if kind in ('mla', 'mla-replay'):
+            if kind in ('mla', 'mla-replay', 'kda'):
                 try:
                     cache_path = output / 'generated-cache-inventory.json'
                     write(cache_path, generated_cache_inventory(output / 'state'))
                     generated = {'path': cache_path.name, 'sha256': sha256_file(cache_path)}
                 except Exception as error: failure = failure or repr(error)
             summary = {'verdict': probe_verdict(kind, failure),
-                       'qualification': 'preparatory_MLA_JIT_falsifier_only' if kind == 'mla' else 'model_free_' + kind + '_probe_only',
+                       'qualification': ('preparatory_' + kind.upper() + '_JIT_falsifier_only') if kind in ('mla', 'kda') else 'model_free_' + kind + '_probe_only',
                        'failure': failure, 'host': host, 'inner': inner, 'model_loaded': False,
                        'model_fidelity': 'not measured', 'context_capability': 'not measured', 'performance': 'not measured', 'end_unix': time.time()}
-            if kind == 'mla':
+            if kind in ('mla', 'kda'):
                 summary.update(kernel_binary_qualification='NO_RESULT', generated_cache_inventory=generated,
                                confirmation_required='prewarm, freeze compiled kernels, seal replay and obtain a new public seed')
             if kind == 'mla-replay':
