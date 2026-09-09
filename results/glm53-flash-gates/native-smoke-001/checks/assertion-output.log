@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "/home/bmarti44/.cache/glm53-flash/native-smoke-001/code/scripts/35_smoke_glm53_native.py", line 137, in main
+    function(*arguments)
+  File "/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/tests/test_exl3_linear.py", line 120, in test_exl3_linear_basic
+    y = method.apply(layer, xin)
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime/lib/python3.12/site-packages/vllm_exl3/exl3.py", line 3055, in apply
+    y = torch.ops.vllm.exl3_linear_forward(x, name)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime/lib/python3.12/site-packages/torch/_ops.py", line 1279, in __call__
+    return self._op(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime/lib/python3.12/site-packages/vllm_exl3/exl3.py", line 2434, in _exl3_linear_forward_op
+    return layer.quant_method._apply_impl(layer, x)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.cache/glm53-flash/native-runtime-001/runtime/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1967, in __getattr__
+    raise AttributeError(
+AttributeError: 'Module' object has no attribute 'quant_method'

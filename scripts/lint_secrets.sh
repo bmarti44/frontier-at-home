@@ -111,11 +111,38 @@ redact_matches() {
 
 # Public package hashes and wrapper artifact receipts, restricted to the two
 # recorded GLM-5.3 dependency attempts and exact line formats.
-readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001)/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001|native-smoke-00[12])/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+
+filter_glm53_native_log_digests() {
+  python3 - 3<&0 <<'PY_NATIVE'
+import json, os, re
+prefix = re.compile(r"^(results/glm53-flash-gates/native-smoke-00[12]/(?:cmd|main)\.log:[0-9]+:)(.*)$")
+def unique(items):
+    value = {}
+    for key, item in items:
+        if key in value:
+            raise ValueError("duplicate key")
+        value[key] = item
+    return value
+for line in os.fdopen(3, encoding="utf-8"):
+    match = prefix.fullmatch(line.rstrip("\n"))
+    if match:
+        try:
+            value = json.loads(match[2], object_pairs_hook=unique)
+            if isinstance(value, dict):
+                for key in ("raw_sha256", "test_output_sha256"):
+                    if isinstance(value.get(key), str) and re.fullmatch(r"[0-9a-f]{64}", value[key]):
+                        value[key] = "[public SHA256]"
+                line = match[1] + json.dumps(value) + "\n"
+        except (ValueError, TypeError):
+            pass
+    print(line, end="")
+PY_NATIVE
+}
 
 scan_stream() {
   local matches
-  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_DEPENDENCY_DIGEST_ALLOWLIST" || true)"
+  matches="$(filter_glm53_native_log_digests | grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_DEPENDENCY_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1
@@ -476,6 +503,10 @@ scan_digest_file() {
     # not JSON. It remains subject to gitleaks plus the non-digest secret scan;
     # only the generic 64-hex structural parser is inapplicable.
     scripts/103_verify_drand_receipt_bundle.mjs) cat >/dev/null ;;
+    results/glm53-flash-gates/native-smoke-00[12]/code/scripts/103_verify_drand_receipt_bundle.mjs)
+      cmp -s - "$(git rev-parse --show-toplevel)/scripts/103_verify_drand_receipt_bundle.mjs" || {
+        echo 'copied GLM verifier differs from reviewed bundle' >&2; return 1;
+      } ;;
     MANIFEST|*/MANIFEST|*.sha256) scan_digest_manifest "$display_path" ;;
     results/glm52-goal/evidence/glm-diagnostic-*/*/*.log|results/glm52-goal/evidence/glm-diagnostic-*/success/process.identity) scan_public_evidence_log "$display_path" ;;
     *) scan_digest_json "$display_path" ;;
@@ -856,6 +887,21 @@ self_test() {
       return 1
     fi
   done
+  local native_log_prefix='results/glm53-flash-gates/native-smoke-001/cmd.log:1:'
+  if ! printf '%s{"raw_sha256":"%s","test_output_sha256":"%s"}\n' "$native_log_prefix" "$fake_secret" "$fake_secret" | scan_stream >/dev/null 2>&1; then
+    echo 'self-test failed: native summary digests rejected' >&2; return 1
+  fi
+  if printf '%s{"raw_sha256":"%s0"}\n' "$native_log_prefix" "$fake_secret" | scan_stream >/dev/null 2>&1 ||
+     printf '%s{"raw_sha256":"%s","secret":"%s"}\n' "$native_log_prefix" "$fake_secret" "$fake_secret" | scan_stream >/dev/null 2>&1 ||
+     printf '%s{"raw_sha256":"%s","raw_sha256":"%s"}\n' "$native_log_prefix" "$fake_secret" "$fake_secret" | scan_stream >/dev/null 2>&1 ||
+     printf 'unrelated.log:1:{"raw_sha256":"%s"}\n' "$fake_secret" | scan_stream >/dev/null 2>&1; then
+    echo 'self-test failed: native summary digest scope escaped' >&2; return 1
+  fi
+  local copied_verifier='results/glm53-flash-gates/native-smoke-001/code/scripts/103_verify_drand_receipt_bundle.mjs'
+  if ! cat scripts/103_verify_drand_receipt_bundle.mjs | scan_digest_file "$copied_verifier" >/dev/null 2>&1 ||
+     printf '%s' "$fake_secret" | scan_digest_file "$copied_verifier" >/dev/null 2>&1; then
+    echo 'self-test failed: copied verifier identity check' >&2; return 1
+  fi
   local layout_path='results/glm53-flash-gates/model-layout-001/raw.jsonl'
   if ! is_checksum_file "$layout_path" ||
       ! printf '{"header_sha256":"%s","shard_sha256_expected":"%s"}\n' "$fake_secret" "$fake_secret" |
