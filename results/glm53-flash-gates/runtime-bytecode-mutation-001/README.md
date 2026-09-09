@@ -1,0 +1,3 @@
+CPU test children omitted -B and rewrote 45 packaged Python bytecode files. Native005 rejected the runtime inventory before writing a manifest. The subsequent beacon command failed on the missing manifest before network access. No GPU run occurred. Mutated bytes and full hash comparison are preserved here before restoration.
+
+Acceptance for the focused correction: add isolated no-bytecode flags to the three test child invocations; restore only byte-verified original files from native-runtime-001; pass the complete packaged CPU suite and verify the complete closed runtime002 inventory before and after. No production code or prior verdict changes.
