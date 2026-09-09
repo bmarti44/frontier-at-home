@@ -1,0 +1,46 @@
+test_alternative_generation_routes_cannot_bypass_media_policy (test_glm53_runtime_policy.MediaAdmission.test_alternative_generation_routes_cannot_bypass_media_policy) ... ok
+test_disguised_and_cross_type_media_never_reaches_engine (test_glm53_runtime_policy.MediaAdmission.test_disguised_and_cross_type_media_never_reaches_engine) ... FAIL
+test_limits_apply_across_all_messages (test_glm53_runtime_policy.MediaAdmission.test_limits_apply_across_all_messages) ... ok
+test_malformed_duplicate_or_oversized_body_fails_before_engine (test_glm53_runtime_policy.MediaAdmission.test_malformed_duplicate_or_oversized_body_fails_before_engine) ... ok
+test_processor_overrides_and_multiple_completions_are_rejected (test_glm53_runtime_policy.MediaAdmission.test_processor_overrides_and_multiple_completions_are_rejected) ... ok
+test_valid_text_images_or_video_reaches_engine_byte_identically (test_glm53_runtime_policy.MediaAdmission.test_valid_text_images_or_video_reaches_engine_byte_identically) ... ok
+
+======================================================================
+FAIL: test_disguised_and_cross_type_media_never_reaches_engine (test_glm53_runtime_policy.MediaAdmission.test_disguised_and_cross_type_media_never_reaches_engine)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_runtime_policy.py", line 87, in test_disguised_and_cross_type_media_never_reaches_engine
+    self.assertEqual(await self.invoke(request), ([], 400))
+AssertionError: Tuples differ: ([b'{"model": "glm-5.3-flash", "messages": [481 chars] 200) != ([], 400)
+
+First differing element 0:
+[b'{"model": "glm-5.3-flash", "messages": [475 chars]}]}']
+[]
+
++ ([], 400)
+- ([b'{"model": "glm-5.3-flash", "messages": [{"role": "user", "content": [{"t'
+-   b'ype": "text", "text": "Describe."}, {"type": "image_url", "image_url": {'
+-   b'"url": "https://example.invalid/i"}}, {"type": "image_url", "image_url":'
+-   b' {"url": "https://example.invalid/i"}}, {"type": "image_url", "image_url'
+-   b'": {"url": "https://example.invalid/i"}}, {"type": "image_url", "image_u'
+-   b'rl": {"url": "https://example.invalid/i"}}, {"type": "text", "uuid": "sy'
+-   b'nthetic-uuid", "image_url": "https://example.invalid/media", "text": "De'
+-   b'scribe."}]}]}'],
+-  200)
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.015s
+
+FAILED (failures=1)
