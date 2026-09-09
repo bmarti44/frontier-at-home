@@ -1,0 +1,31 @@
+FE.F.
+======================================================================
+ERROR: test_fixture_seed_is_stable_per_case_and_public_seed (test_glm53_native_smoke.NativeSmokeTests.test_fixture_seed_is_stable_per_case_and_public_seed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_native_smoke.py", line 57, in test_fixture_seed_is_stable_per_case_and_public_seed
+    self.assertEqual(smoke.fixture_seed(123, "case_a"), smoke.fixture_seed(123, "case_a"))
+                     ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_native_smoke' has no attribute 'fixture_seed'
+
+======================================================================
+FAIL: test_extracted_assertions_survive_optimized_python (test_glm53_native_smoke.NativeSmokeTests.test_extracted_assertions_survive_optimized_python)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_native_smoke.py", line 34, in test_extracted_assertions_survive_optimized_python
+    self.assertEqual(result.returncode, 0, result.stderr)
+AssertionError: 1 != 0 : required assertion was removed
+
+
+======================================================================
+FAIL: test_optimized_runner_rejects_before_output_or_source_access (test_glm53_native_smoke.NativeSmokeTests.test_optimized_runner_rejects_before_output_or_source_access)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_native_smoke.py", line 42, in test_optimized_runner_rejects_before_output_or_source_access
+    self.assertIn("optimized Python", result.stderr)
+AssertionError: 'optimized Python' not found in 'fatal: cannot change to \'/tmp/tmpgzcpsu2h/missing/vllm-exl3\': No such file or directory\nTraceback (most recent call last):\n  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/35_smoke_glm53_native.py", line 148, in <module>\n    main()\n  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/35_smoke_glm53_native.py", line 75, in main\n    original = subprocess.check_output(["git", "-C", str(plugin), "show", revision + ":tests/" + name])\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/lib/python3.12/subprocess.py", line 466, in check_output\n    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/lib/python3.12/subprocess.py", line 571, in run\n    raise CalledProcessError(retcode, process.args,\nsubprocess.CalledProcessError: Command \'[\'git\', \'-C\', \'/tmp/tmpgzcpsu2h/missing/vllm-exl3\', \'show\', \'6b26e5c9d35a455f61ee5b5529151ff2e5c08103:tests/test_exl3_linear.py\']\' returned non-zero exit status 128.\n'
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.495s
+
+FAILED (failures=2, errors=1)
