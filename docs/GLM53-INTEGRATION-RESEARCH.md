@@ -235,3 +235,19 @@ capacity estimates and build success are not substitutes.[^9]
 [^13]: Brandon Music, [BF16 teacher-logit dataset](https://huggingface.co/datasets/brandonmusic/GLM-5.3-Flash-BF16-Teacher-Logits) and [publication commit describing its receipts](https://huggingface.co/brandonmusic/GLM-5.3-Flash-tr3-4bpw/commit/4739eb1bcfd478e8a32da6358908567bc3a9ac51), September 2026.
 [^14]: Local repository, [runtime dependency lock](../configs/build-manifests/glm53-runtime-dependencies.json), [NVIDIA repair manifest](../results/glm53-flash-gates/wheel-repair-001/manifest.json), and individually retained dependency/install attempts.
 [^15]: Rust project, [Cargo configuration: build jobs](https://doc.rust-lang.org/cargo/reference/config.html#buildjobs), accessed September 8, 2026; local [Rust artifact lock](../configs/build-manifests/glm53-rust-toolchain.json).
+
+
+## KDA staging follow-up, 2026-09-09
+
+The pinned KDA helper still derives chunk counts through `.tolist()` and builds
+pageable CPU indices before copying them back to CUDA. Our four 512-row
+preparation sequences produce 32x2 indices; the probe receipt now explicitly
+covers only its own pinned buffers. This is not large-serving acceptance.
+
+[Upstream PR 51540](https://github.com/vllm-project/vllm/pull/51540) proposes
+passing host-derived non-speculative chunk indices through the KDA call. The
+public PR was open when checked; its author reports index equality checks and
+no Kimi hardware run. It is a candidate to evaluate against this pinned GLM
+path, not an inherited correctness or performance result. Before large serving,
+qualify persistent pinned staging or provide the repository-required measured
+justification. Preserve the current bounded preparation result separately.
