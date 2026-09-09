@@ -1,0 +1,376 @@
+Building wheel...
+running bdist_wheel
+running build
+running build_py
+creating build/lib.linux-aarch64-cpython-312/vllm_exl3
+copying src/vllm_exl3/__init__.py -> build/lib.linux-aarch64-cpython-312/vllm_exl3
+copying src/vllm_exl3/dequant.py -> build/lib.linux-aarch64-cpython-312/vllm_exl3
+copying src/vllm_exl3/exl3.py -> build/lib.linux-aarch64-cpython-312/vllm_exl3
+creating build/lib.linux-aarch64-cpython-312/glm53_exl3_plugin
+copying src/glm53_exl3_plugin/__init__.py -> build/lib.linux-aarch64-cpython-312/glm53_exl3_plugin
+copying src/glm53_exl3_plugin/exl3.py -> build/lib.linux-aarch64-cpython-312/glm53_exl3_plugin
+running egg_info
+creating src/vllm_exl3.egg-info
+writing src/vllm_exl3.egg-info/PKG-INFO
+writing dependency_links to src/vllm_exl3.egg-info/dependency_links.txt
+writing entry points to src/vllm_exl3.egg-info/entry_points.txt
+writing top-level names to src/vllm_exl3.egg-info/top_level.txt
+writing manifest file 'src/vllm_exl3.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+adding license file 'NOTICE'
+adding license file 'THIRD_PARTY_NOTICES.md'
+writing manifest file 'src/vllm_exl3.egg-info/SOURCES.txt'
+warning: build_py: byte-compiling is disabled, skipping.
+
+running build_ext
+building 'vllm_exl3_c' extension
+creating /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc
+[1/6] c++ -MMD -MF /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/bindings.o.d -pthread -fno-strict-overflow -Wsign-compare -Wunreachable-code -DNDEBUG -g -O3 -Wall -O3 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fPIC -fPIC -I/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda-13.0/include -I/home/bmarti44/.cache/glm53-flash/runtime/include -I/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12 -c -c /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/bindings.cpp -o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/bindings.o -O3 -std=c++17 -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=vllm_exl3_c
+In file included from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/InferenceMode.h:4,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/TensorImpl.h:9,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/ATen/core/TensorBody.h:21,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/ATen/core/Tensor.h:4,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/ATen/Tensor.h:4,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/autograd/function_hook.h:4,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/autograd/cpp_hook.h:3,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/autograd/variable.h:7,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/autograd/autograd.h:4,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/api/include/torch/autograd.h:4,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/api/include/torch/all.h:8,
+                 from /home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/extension.h:6,
+                 from /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/bindings.cpp:1:
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:89:33: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   89 |   bool view_replay_enabled_ : 1 = false;
+      |                                 ^
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:90:45: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   90 |   bool grad_layout_enforcement_enabled_ : 1 = true;
+      |                                             ^
+[2/6] /usr/local/cuda-13.0/bin/nvcc -MD -MF /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_fat_gemm.o.d -I/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda-13.0/include -I/home/bmarti44/.cache/glm53-flash/runtime/include -I/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12 -c -c /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_fat_gemm.cu -o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_fat_gemm.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''"'"'-fPIC'"'"'' -O3 -std=c++17 -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=vllm_exl3_c -gencode=arch=compute_121a,code=sm_121a
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(12): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half4") that is explicitly defaulted on its first declaration
+      __attribute__((device)) half4() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(24): warning #20012-D: __device__ annotation is ignored on a non-virtual function("bfloat164") that is explicitly defaulted on its first declaration
+      __attribute__((device)) bfloat164() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(38): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half8") that is explicitly defaulted on its first declaration
+       __attribute__((device)) half8() = default;
+                      ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(12): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half4") that is explicitly defaulted on its first declaration
+      __attribute__((device)) half4() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(24): warning #20012-D: __device__ annotation is ignored on a non-virtual function("bfloat164") that is explicitly defaulted on its first declaration
+      __attribute__((device)) bfloat164() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(38): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half8") that is explicitly defaulted on its first declaration
+       __attribute__((device)) half8() = default;
+                      ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:89:33: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   89 |   bool view_replay_enabled_ : 1 = false;
+      |                                 ^
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:90:45: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   90 |   bool grad_layout_enforcement_enabled_ : 1 = true;
+      |                                             ^
+[3/6] /usr/local/cuda-13.0/bin/nvcc -MD -MF /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_gemm.o.d -I/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda-13.0/include -I/home/bmarti44/.cache/glm53-flash/runtime/include -I/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12 -c -c /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_gemm.cu -o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_gemm.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''"'"'-fPIC'"'"'' -O3 -std=c++17 -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=vllm_exl3_c -gencode=arch=compute_121a,code=sm_121a
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:89:33: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   89 |   bool view_replay_enabled_ : 1 = false;
+      |                                 ^
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:90:45: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   90 |   bool grad_layout_enforcement_enabled_ : 1 = true;
+      |                                             ^
+[4/6] /usr/local/cuda-13.0/bin/nvcc -MD -MF /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_gemv.o.d -I/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda-13.0/include -I/home/bmarti44/.cache/glm53-flash/runtime/include -I/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12 -c -c /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_gemv.cu -o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_gemv.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''"'"'-fPIC'"'"'' -O3 -std=c++17 -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=vllm_exl3_c -gencode=arch=compute_121a,code=sm_121a
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(12): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half4") that is explicitly defaulted on its first declaration
+      __attribute__((device)) half4() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(24): warning #20012-D: __device__ annotation is ignored on a non-virtual function("bfloat164") that is explicitly defaulted on its first declaration
+      __attribute__((device)) bfloat164() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(38): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half8") that is explicitly defaulted on its first declaration
+       __attribute__((device)) half8() = default;
+                      ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(12): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half4") that is explicitly defaulted on its first declaration
+      __attribute__((device)) half4() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(24): warning #20012-D: __device__ annotation is ignored on a non-virtual function("bfloat164") that is explicitly defaulted on its first declaration
+      __attribute__((device)) bfloat164() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(38): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half8") that is explicitly defaulted on its first declaration
+       __attribute__((device)) half8() = default;
+                      ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:89:33: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   89 |   bool view_replay_enabled_ : 1 = false;
+      |                                 ^
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:90:45: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   90 |   bool grad_layout_enforcement_enabled_ : 1 = true;
+      |                                             ^
+[5/6] /usr/local/cuda-13.0/bin/nvcc -MD -MF /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.o.d -I/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda-13.0/include -I/home/bmarti44/.cache/glm53-flash/runtime/include -I/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12 -c -c /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu -o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''"'"'-fPIC'"'"'' -O3 -std=c++17 -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=vllm_exl3_c -gencode=arch=compute_121a,code=sm_121a
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu:16: warning: "__global__" redefined
+   16 | #define __global__ __device__
+      | 
+In file included from /usr/local/cuda-13.0/include/device_types.h:59,
+                 from /usr/local/cuda-13.0/include/builtin_types.h:56,
+                 from /usr/local/cuda-13.0/include/cuda_runtime.h:90,
+                 from <command-line>:
+/usr/local/cuda-13.0/include/crt/host_defines.h:219: note: this is the location of the previous definition
+  219 | #define __global__ \
+      | 
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu:17: warning: "__launch_bounds__" redefined
+   17 | #define __launch_bounds__(...)
+      | 
+/usr/local/cuda-13.0/include/crt/host_defines.h:188: note: this is the location of the previous definition
+  188 | #define __launch_bounds__(...) \
+      | 
+In file included from /home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant/exl3_gemv_kernel.cuh:27,
+                 from /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu:18:
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant/exl3_kernel_map.cuh:17: warning: "EXL3_GEMM_ARGS" redefined
+   17 | #define EXL3_GEMM_ARGS \
+      | 
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu:9: note: this is the location of the previous definition
+    9 | #define EXL3_GEMM_ARGS const half*, const uint16_t*, void*, const int, const int, const int, int*, const half*, half*, const half*
+      | 
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu:16: warning: "__global__" redefined
+   16 | #define __global__ __device__
+      | 
+In file included from /usr/local/cuda-13.0/include/device_types.h:59,
+                 from /usr/local/cuda-13.0/include/builtin_types.h:56,
+                 from /usr/local/cuda-13.0/include/cuda_runtime.h:90,
+                 from <command-line>:
+/usr/local/cuda-13.0/include/crt/host_defines.h:219: note: this is the location of the previous definition
+  219 | #define __global__ \
+      | 
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu:17: warning: "__launch_bounds__" redefined
+   17 | #define __launch_bounds__(...)
+      | 
+/usr/local/cuda-13.0/include/crt/host_defines.h:188: note: this is the location of the previous definition
+  188 | #define __launch_bounds__(...) \
+      | 
+In file included from /home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant/exl3_gemv_kernel.cuh:27,
+                 from /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu:18:
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant/exl3_kernel_map.cuh:17: warning: "EXL3_GEMM_ARGS" redefined
+   17 | #define EXL3_GEMM_ARGS \
+      | 
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu:9: note: this is the location of the previous definition
+    9 | #define EXL3_GEMM_ARGS const half*, const uint16_t*, void*, const int, const int, const int, int*, const half*, half*, const half*
+      | 
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(12): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half4") that is explicitly defaulted on its first declaration
+      __attribute__((device)) half4() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(24): warning #20012-D: __device__ annotation is ignored on a non-virtual function("bfloat164") that is explicitly defaulted on its first declaration
+      __attribute__((device)) bfloat164() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(38): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half8") that is explicitly defaulted on its first declaration
+       __attribute__((device)) half8() = default;
+                      ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(12): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half4") that is explicitly defaulted on its first declaration
+      __attribute__((device)) half4() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(24): warning #20012-D: __device__ annotation is ignored on a non-virtual function("bfloat164") that is explicitly defaulted on its first declaration
+      __attribute__((device)) bfloat164() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(38): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half8") that is explicitly defaulted on its first declaration
+       __attribute__((device)) half8() = default;
+                      ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu(137): warning #177-D: variable "tid" was declared but never referenced
+      const int tid = blockIdx.x * blockDim.x + threadIdx.x;
+                ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu(256): warning #177-D: variable "group" was declared but never referenced
+      const int group = blockIdx.x;
+                ^
+          detected during instantiation of "void launch_batched<BITS,CB>(const at::Tensor &, const at::Tensor &, const at::Tensor &, const at::Tensor &, const at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &, int, int, int, int) [with BITS=2, CB=1]" at line 364
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.cu(257): warning #177-D: variable "groups" was declared but never referenced
+      const int groups = (size_n + COLS - 1) / COLS;
+                ^
+          detected during instantiation of "void launch_batched<BITS,CB>(const at::Tensor &, const at::Tensor &, const at::Tensor &, const at::Tensor &, const at::Tensor &, at::Tensor &, at::Tensor &, at::Tensor &, int, int, int, int) [with BITS=2, CB=1]" at line 364
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:89:33: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   89 |   bool view_replay_enabled_ : 1 = false;
+      |                                 ^
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:90:45: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   90 |   bool grad_layout_enforcement_enabled_ : 1 = true;
+      |                                             ^
+[6/6] /usr/local/cuda-13.0/bin/nvcc -MD -MF /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_moe.o.d -I/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext -I/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/quant -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include -I/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda-13.0/include -I/home/bmarti44/.cache/glm53-flash/runtime/include -I/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/include/python3.12 -c -c /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_moe.cu -o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_moe.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''"'"'-fPIC'"'"'' -O3 -std=c++17 -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=vllm_exl3_c -gencode=arch=compute_121a,code=sm_121a
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(12): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half4") that is explicitly defaulted on its first declaration
+      __attribute__((device)) half4() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(24): warning #20012-D: __device__ annotation is ignored on a non-virtual function("bfloat164") that is explicitly defaulted on its first declaration
+      __attribute__((device)) bfloat164() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(38): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half8") that is explicitly defaulted on its first declaration
+       __attribute__((device)) half8() = default;
+                      ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(89): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool view_replay_enabled_ : 1 = false;
+                                  ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h(90): warning #3306-D: a default bit-field initializer is a C++20 feature
+    bool grad_layout_enforcement_enabled_ : 1 = true;
+                                              ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(12): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half4") that is explicitly defaulted on its first declaration
+      __attribute__((device)) half4() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(24): warning #20012-D: __device__ annotation is ignored on a non-virtual function("bfloat164") that is explicitly defaulted on its first declaration
+      __attribute__((device)) bfloat164() = default;
+                     ^
+
+/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext/util.cuh(38): warning #20012-D: __device__ annotation is ignored on a non-virtual function("half8") that is explicitly defaulted on its first declaration
+       __attribute__((device)) half8() = default;
+                      ^
+
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:89:33: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   89 |   bool view_replay_enabled_ : 1 = false;
+      |                                 ^
+/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/include/c10/core/AutogradState.h:90:45: warning: default member initializers for bit-fields only available with ‘-std=c++20’ or ‘-std=gnu++20’ [-Wc++20-extensions]
+   90 |   bool grad_layout_enforcement_enabled_ : 1 = true;
+      |                                             ^
+c++ -pthread -fno-strict-overflow -Wsign-compare -Wunreachable-code -DNDEBUG -g -O3 -Wall -O3 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fPIC -shared -Wl,-z,noexecstack -Wl,--exclude-libs,ALL /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/bindings.o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_fat_gemm.o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_gemm.o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/exl3_gemv.o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_batched.o /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/build/temp.linux-aarch64-cpython-312/home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3/csrc/p2b_moe.o -L/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/torch/lib -L/usr/local/cuda-13.0/lib64 -L/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib -lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda -o build/lib.linux-aarch64-cpython-312/vllm_exl3_c.cpython-312-aarch64-linux-gnu.so
+installing to build/bdist.linux-aarch64/wheel
+running install
+running install_lib
+creating build/bdist.linux-aarch64/wheel
+creating build/bdist.linux-aarch64/wheel/vllm_exl3
+copying build/lib.linux-aarch64-cpython-312/vllm_exl3/__init__.py -> build/bdist.linux-aarch64/wheel/./vllm_exl3
+copying build/lib.linux-aarch64-cpython-312/vllm_exl3/dequant.py -> build/bdist.linux-aarch64/wheel/./vllm_exl3
+copying build/lib.linux-aarch64-cpython-312/vllm_exl3/exl3.py -> build/bdist.linux-aarch64/wheel/./vllm_exl3
+creating build/bdist.linux-aarch64/wheel/glm53_exl3_plugin
+copying build/lib.linux-aarch64-cpython-312/glm53_exl3_plugin/__init__.py -> build/bdist.linux-aarch64/wheel/./glm53_exl3_plugin
+copying build/lib.linux-aarch64-cpython-312/glm53_exl3_plugin/exl3.py -> build/bdist.linux-aarch64/wheel/./glm53_exl3_plugin
+copying build/lib.linux-aarch64-cpython-312/vllm_exl3_c.cpython-312-aarch64-linux-gnu.so -> build/bdist.linux-aarch64/wheel/.
+running install_egg_info
+warning: install_lib: byte-compiling is disabled, skipping.
+
+Copying src/vllm_exl3.egg-info to build/bdist.linux-aarch64/wheel/./vllm_exl3-0.4.0-py3.12.egg-info
+running install_scripts
+creating build/bdist.linux-aarch64/wheel/vllm_exl3-0.4.0.dist-info/WHEEL
+creating '/home/bmarti44/.cache/glm53-flash/build-vllm-exl3-001/wheels/.tmp-x0b4h87e/vllm_exl3-0.4.0-cp312-cp312-linux_aarch64.whl' and adding 'build/bdist.linux-aarch64/wheel' to it
+adding 'vllm_exl3_c.cpython-312-aarch64-linux-gnu.so'
+adding 'glm53_exl3_plugin/__init__.py'
+adding 'glm53_exl3_plugin/exl3.py'
+adding 'vllm_exl3/__init__.py'
+adding 'vllm_exl3/dequant.py'
+adding 'vllm_exl3/exl3.py'
+adding 'vllm_exl3-0.4.0.dist-info/licenses/LICENSE'
+adding 'vllm_exl3-0.4.0.dist-info/licenses/NOTICE'
+adding 'vllm_exl3-0.4.0.dist-info/licenses/THIRD_PARTY_NOTICES.md'
+adding 'vllm_exl3-0.4.0.dist-info/METADATA'
+adding 'vllm_exl3-0.4.0.dist-info/WHEEL'
+adding 'vllm_exl3-0.4.0.dist-info/entry_points.txt'
+adding 'vllm_exl3-0.4.0.dist-info/top_level.txt'
+adding 'vllm_exl3-0.4.0.dist-info/RECORD'
+removing build/bdist.linux-aarch64/wheel
+Successfully built /home/bmarti44/.cache/glm53-flash/build-vllm-exl3-001/wheels/vllm_exl3-0.4.0-cp312-cp312-linux_aarch64.whl

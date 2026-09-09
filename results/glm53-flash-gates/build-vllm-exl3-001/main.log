@@ -1,0 +1,39 @@
+2026-09-09T04:39:49,955552635+00:00 SAFE_RUN start tag=glm53-build-vllm-exl3 vlimit_kb=419430400 kill_floor_gib=18 min_start_gib=110 timeout_s=9000 allow_cgroup_high=0
+2026-09-09T04:39:49,969581050+00:00 cmd: /usr/bin/env -i CMAKE_BUILD_PARALLEL_LEVEL=2 CUDA_HOME=/usr/local/cuda-13.0 EXL3_EXT_INCLUDE=/home/bmarti44/.cache/glm53-flash/build-source-004/exllamav3/exllamav3/exllamav3_ext FLASHINFER_CUDA_ARCH_LIST=12.1a HOME=/home/bmarti44 LANG=C.UTF-8 MAKEFLAGS=-j2 MAX_JOBS=2 NVCC_THREADS=1 PATH=/home/bmarti44/.cache/glm53-flash/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 TORCH_CUDA_ARCH_LIST=12.1a VLLM_TARGET_DEVICE=cuda VLLM_USE_PRECOMPILED=0 VLLM_USE_PRECOMPILED_RUST=0 /home/bmarti44/.local/bin/uv build --wheel --no-build-isolation --no-cache --python /home/bmarti44/.cache/glm53-flash/runtime/bin/python3 --out-dir /home/bmarti44/.cache/glm53-flash/build-vllm-exl3-001/wheels /home/bmarti44/.cache/glm53-flash/build-source-004/vllm-exl3
+2026-09-09T04:39:49,975784900+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T04:39:49,980838279+00:00 candidate_provenance_enabled=0
+2026-09-09T04:39:49,986849856+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-build-vllm-exl3-818413.service memory_high=95996084224 memory_max=100291051520 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121010524 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.414,"stable_samples_observed":3}
+2026-09-09T04:39:52,578836442+00:00 wrapper_pid=818464 engine_pid=818470 pgid=818464 (periodic sampler; actual cadence in samples.log)
+2026-09-09T04:40:53,801804373+00:00 cgroup_final current_bytes=46006272 peak_bytes=5310418944 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+copying build/lib.linux-aarch64-cpython-312/glm53_exl3_plugin/exl3.py -> build/bdist.linux-aarch64/wheel/./glm53_exl3_plugin
+copying build/lib.linux-aarch64-cpython-312/vllm_exl3_c.cpython-312-aarch64-linux-gnu.so -> build/bdist.linux-aarch64/wheel/.
+running install_egg_info
+warning: install_lib: byte-compiling is disabled, skipping.
+
+Copying src/vllm_exl3.egg-info to build/bdist.linux-aarch64/wheel/./vllm_exl3-0.4.0-py3.12.egg-info
+running install_scripts
+creating build/bdist.linux-aarch64/wheel/vllm_exl3-0.4.0.dist-info/WHEEL
+creating '/home/bmarti44/.cache/glm53-flash/build-vllm-exl3-001/wheels/.tmp-x0b4h87e/vllm_exl3-0.4.0-cp312-cp312-linux_aarch64.whl' and adding 'build/bdist.linux-aarch64/wheel' to it
+adding 'vllm_exl3_c.cpython-312-aarch64-linux-gnu.so'
+adding 'glm53_exl3_plugin/__init__.py'
+adding 'glm53_exl3_plugin/exl3.py'
+adding 'vllm_exl3/__init__.py'
+adding 'vllm_exl3/dequant.py'
+adding 'vllm_exl3/exl3.py'
+adding 'vllm_exl3-0.4.0.dist-info/licenses/LICENSE'
+adding 'vllm_exl3-0.4.0.dist-info/licenses/NOTICE'
+adding 'vllm_exl3-0.4.0.dist-info/licenses/THIRD_PARTY_NOTICES.md'
+adding 'vllm_exl3-0.4.0.dist-info/METADATA'
+adding 'vllm_exl3-0.4.0.dist-info/WHEEL'
+adding 'vllm_exl3-0.4.0.dist-info/entry_points.txt'
+adding 'vllm_exl3-0.4.0.dist-info/top_level.txt'
+adding 'vllm_exl3-0.4.0.dist-info/RECORD'
+removing build/bdist.linux-aarch64/wheel
+Successfully built /home/bmarti44/.cache/glm53-flash/build-vllm-exl3-001/wheels/vllm_exl3-0.4.0-cp312-cp312-linux_aarch64.whl
+2026-09-09T04:40:53,851957220+00:00 safety_artifact_verified name=samples.log sha256=979836cd938b217ca490f5162761d506b31861e5ddd0a994f9bdec4820f40720 size=37907
+2026-09-09T04:40:53,861572084+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T04:40:53,866232851+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   117623272 kB
