@@ -79,7 +79,7 @@ class CacheRunnerTests(unittest.TestCase):
         self.rows=[{'event':'normalized','attention_block_tokens':8704,'mamba_block_tokens':262144,
                     'mamba_shapes':[[3,24576],[64,128,128]],'mamba_dtypes':['torch.bfloat16','torch.float32'],
                     'layout':'LBHNC','shared_pool_blocks':145,'groups':[{'layers':g,'spec':'synthetic'} for g in [mla,tail,mamba[:9],mamba[9:18],mamba[18:26],mamba[26:]]]},
-                   {'event':'allocated_and_zeroed','unique_backing_bytes':9565304320,'layer_views':67,'cuda_memory_allocated':9565304320,'cuda_memory_reserved':9565304320,'cuda_peak_allocated':9565304320},
+                   {'event':'allocated_and_zeroed','unique_backing_bytes':9565306880,'storage_count':1,'layer_views':67,'cuda_memory_allocated':9565306880,'cuda_memory_reserved':9565306880,'cuda_peak_allocated':9565306880},
                    {'event':'scheduler_normalized','scheduler_block_tokens':4456448,'hash_block_tokens':4456448}]
         for i,name in enumerate(order[:4]):
             ids=list(range(i*36+1,(i+1)*36+1))
@@ -87,6 +87,16 @@ class CacheRunnerTests(unittest.TestCase):
         self.rows += [{'event':'fifth_rejected','live_requests':4,'distinct_blocks':144},{'event':'restored','free_blocks':144}]
         for i,row in enumerate(self.rows):row['time_unix']=1700000000+i*0.01
         self.seal()
+    def test_page_rounded_storage_is_required(self):
+        original = dict(self.rows[1])
+        for size in (9565304320, 9565306880 - 4096, 9565306880 + 4096):
+            self.rows[1] = {**original, 'unique_backing_bytes': size}; self.seal()
+            with self.assertRaisesRegex(ValueError, 'backing'):
+                runner.score_inner(self.root, 'cache', self.seed, self.binding)
+        self.rows[1] = {**original, 'storage_count': 2}; self.seal()
+        with self.assertRaisesRegex(ValueError, 'backing'):
+            runner.score_inner(self.root, 'cache', self.seed, self.binding)
+
     def seal(self):
         p=self.root/'checks';(p/'raw.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in self.rows))
         (p/'manifest.json').write_text(json.dumps({'seed':self.seed,**{k:v for k,v in self.binding.items() if k not in ('native_extensions','cache_layer_types')}}))
