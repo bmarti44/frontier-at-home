@@ -106,6 +106,13 @@ def score_inner(output, kind, seed, binding):
             receipt = strict_json(root / 'sealed-selection.json')
             validate_conv_receipt(receipt, binding['sealed_kernels'], times[0])
             summary['sealed_selection'] = receipt
+    elif kind == 'indexer':
+        require(summary['qualification'] == 'model_free_post_projection_indexer_falsifier_only' and
+                type(summary['actual_input_tokens_processed']) is int and summary['actual_input_tokens_processed'] == 0, 'indexer qualification mismatch')
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('frozen_indexer_scorer', Path(__file__).parent / '45_probe_glm53_indexer.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        summary = {**summary, 'tensor_checks': module.score_capture(root, rows, seed)}
     elif kind == 'growth':
         require(summary['qualification'] == 'model_free_two_MoE_layers_incremental_storage_only' and
                 type(summary['actual_input_tokens_processed']) is int and summary['actual_input_tokens_processed'] == 0, 'growth qualification mismatch')
@@ -268,6 +275,7 @@ CODE_FILES = (
     'scripts/lib/glm53_pinned_stream.py', 'scripts/lib/glm53_load_fixture.py',
     'configs/decision-specs/glm53-load-preflight.json',
     'scripts/lib/glm53_conv_replay.py', 'configs/decision-specs/glm53-conv-replay.json',
+    'scripts/45_probe_glm53_indexer.py', 'scripts/lib/glm53_indexer_fixture.py', 'configs/decision-specs/glm53-indexer-preflight.json',
     'scripts/44_probe_glm53_conv.py', 'configs/decision-specs/glm53-conv-preflight.json',
     'scripts/43_probe_glm53_growth.py', 'configs/decision-specs/glm53-load-growth.json',
     'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
@@ -284,6 +292,11 @@ def verify_frozen(output, manifest):
     require({str(p.relative_to(output / 'code')) for p in (output / 'code').rglob('*') if p.is_file()} == set(CODE_FILES), 'unexpected frozen code files')
     for name, row in manifest['code'].items():
         require(sha256_file(output / 'code' / name) == row['sha256'], 'frozen code changed: ' + name)
+    if manifest.get('kind') == 'indexer':
+        require(manifest['probe_arguments_without_seed'][-1:] == ['--pinned-indexer'], 'indexer startup selection mismatch')
+        require(all(manifest['environment'].get(k) == v for k,v in indexer_environment(output).items()), 'indexer JIT environment mismatch')
+        inputs = output / 'jit-input-inventory.json'
+        require(sha256_file(inputs) == manifest['jit_inputs']['sha256'] and strict_json(inputs) == indexer_jit_inventory(), 'indexer compiler input inventory changed')
     if manifest.get('kind') in ('conv', 'conv-replay'):
         args = manifest['probe_arguments_without_seed']
         require(args[-5:-4] == ['--pinned-convolution'] if manifest['kind'] == 'conv-replay' else args[-1:] == ['--pinned-convolution'], 'convolution startup selection mismatch')
@@ -348,9 +361,9 @@ def verify_beacon(output, manifest, receipt=None):
 
 
 def probe_verdict(kind, failure):
-    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'conv-replay', 'growth', *LOAD_KINDS), 'unknown probe kind')
+    require(kind in ('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'conv-replay', 'indexer', 'growth', *LOAD_KINDS), 'unknown probe kind')
     if failure is not None: return 'FAIL'
-    return 'NO_RESULT' if kind in ('mla', 'kda', 'conv') else 'PASS'
+    return 'NO_RESULT' if kind in ('mla', 'kda', 'conv', 'indexer') else 'PASS'
 
 
 def validate_load_state(record):
@@ -388,6 +401,30 @@ def generated_cache_inventory(root):
             'frozen_before_execution': False, 'root': str(root), 'entries': entries}
 
 
+
+def indexer_environment(output):
+    return {'DG_JIT_CACHE_DIR':str(output / 'state/deep-gemm'), 'DG_JIT_USE_NVRTC':'0',
+            'DG_JIT_NVCC_COMPILER':'/usr/local/cuda-13.0/bin/nvcc', 'DG_JIT_CPP_STANDARD':'20',
+            'DG_JIT_DEBUG':'0', 'DG_JIT_PTXAS_VERBOSE':'0', 'DG_JIT_PTXAS_CHECK':'0',
+            'DG_JIT_WITH_LINEINFO':'0', 'DG_JIT_DUMP_ASM':'0', 'DG_JIT_DUMP_PTX':'0', 'DG_JIT_DUMP_SASS':'0',
+            'DG_JIT_PRINT_COMPILER_COMMAND':'0', 'VLLM_SPARSE_INDEXER_MAX_LOGITS_MB':'512',
+            'FLASHINFER_DISABLE_JIT':'1', 'CUDA_CACHE_DISABLE':'1'}
+
+
+def indexer_jit_inventory():
+    roots=('/usr/local/cuda-13.0/bin', '/usr/local/cuda-13.0/nvvm', '/usr/local/cuda-13.0/targets/sbsa-linux/include')
+    entries=[]
+    for root in roots:
+        path=Path(root); require(path.is_dir() and not path.is_symlink(), 'unexpected CUDA input root')
+        inventory=generated_cache_inventory(path)
+        for item in inventory['entries']:
+            if item['type']=='symlink':
+                require((path/item['path']).resolve().is_relative_to(path), 'CUDA input link escapes inventory')
+        entries.append({'root':root,'entries':inventory['entries']})
+    return {'schema_version':1,'qualification':'pre_frozen_CUDA_compiler_and_headers_only',
+            'installed_DeepGEMM_and_CUTLASS_headers':'covered_by_complete_runtime_inventory','roots':entries}
+
+
 def run(output):
     require(not sys.flags.optimize and sys.flags.isolated and sys.dont_write_bytecode, 'runner requires unoptimized isolated -I -B Python')
     require(dict(os.environ) == CONTROL_ENV, 'controller requires the declared clean environment')
@@ -399,6 +436,7 @@ def run(output):
                      'mla': '40_probe_glm53_mla.py', 'mla-replay': '40_probe_glm53_mla.py', 'kda': '41_probe_glm53_kda.py', 'kda-replay': '41_probe_glm53_kda.py'}
     expected_kind['conv-replay'] = '44_probe_glm53_conv.py'
     expected_kind['conv'] = '44_probe_glm53_conv.py'
+    expected_kind['indexer'] = '45_probe_glm53_indexer.py'
     expected_kind['growth'] = '43_probe_glm53_growth.py'
     expected_kind.update({kind: '42_probe_glm53_load.py' for kind in LOAD_KINDS})
     kind = manifest['kind']; require(kind in expected_kind, 'unknown probe kind')
@@ -448,6 +486,10 @@ def run(output):
                 if kind == 'conv-replay':
                     binding.update(sealed_kernels=manifest['sealed_kernels'],
                                    replay_decision=manifest['code']['configs/decision-specs/glm53-conv-replay.json'])
+            elif kind == 'indexer':
+                binding.update(decision=manifest['code']['configs/decision-specs/glm53-indexer-preflight.json'],
+                               fixture=manifest['code']['scripts/lib/glm53_indexer_fixture.py'],
+                               metadata=manifest['cache_metadata_hashes'], startup_selection='pinned_indexer')
             elif kind == 'growth':
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-load-growth.json'],
                                metadata=manifest['cache_metadata_hashes'])
@@ -478,7 +520,7 @@ def run(output):
                 verify_accepted_inputs(output, accepted)
             except Exception as error: failure = failure or repr(error)
             generated = None
-            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'conv-replay', 'growth', *LOAD_KINDS):
+            if kind in ('mla', 'mla-replay', 'kda', 'kda-replay', 'conv', 'conv-replay', 'indexer', 'growth', *LOAD_KINDS):
                 try:
                     cache_path = output / 'generated-cache-inventory.json'
                     state_inventory = generated_cache_inventory(output / 'state')
@@ -487,10 +529,10 @@ def run(output):
                     generated = {'path': cache_path.name, 'sha256': sha256_file(cache_path)}
                 except Exception as error: failure = failure or repr(error)
             summary = {'verdict': probe_verdict(kind, failure),
-                       'qualification': ('preparatory_' + kind.upper() + '_JIT_falsifier_only') if kind in ('mla', 'kda', 'conv') else 'model_free_' + kind + '_probe_only',
+                       'qualification': ('preparatory_' + kind.upper() + '_JIT_falsifier_only') if kind in ('mla', 'kda', 'conv', 'indexer') else 'model_free_' + kind + '_probe_only',
                        'failure': failure, 'host': host, 'inner': inner, 'model_loaded': False,
                        'model_fidelity': 'not measured', 'context_capability': 'not measured', 'performance': 'not measured', 'end_unix': time.time()}
-            if kind in ('mla', 'kda', 'conv'):
+            if kind in ('mla', 'kda', 'conv', 'indexer'):
                 summary.update(kernel_binary_qualification='NO_RESULT', generated_cache_inventory=generated,
                                confirmation_required='prewarm, freeze compiled kernels, seal replay and obtain a new public seed')
             if kind == 'mla-replay':

@@ -14,10 +14,10 @@ import time
 ROOT = Path('/home/bmarti44/spark-deepseek-v4-flash')
 BASE = Path('/home/bmarti44/.cache/glm53-flash')
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'load-moe', 'load-kda', 'load-mla', 'load-ordinary', 'growth', 'conv', 'conv-replay'))
+parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay', 'kda', 'kda-replay', 'load-moe', 'load-kda', 'load-mla', 'load-ordinary', 'growth', 'conv', 'conv-replay', 'indexer'))
 parser.add_argument('attempt')
 args = parser.parse_args()
-if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight', 'kda-replay': 'kda-replay', 'growth': 'load-growth', 'conv': 'conv-preflight', 'conv-replay': 'conv-replay', **{f'load-{case}': f'load-{case}' for case in ('moe', 'kda', 'mla', 'ordinary')}}[args.kind] + r'-[0-9]{3}', args.attempt):
+if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay', 'kda': 'kda-preflight', 'kda-replay': 'kda-replay', 'growth': 'load-growth', 'indexer': 'indexer-preflight', 'conv': 'conv-preflight', 'conv-replay': 'conv-replay', **{f'load-{case}': f'load-{case}' for case in ('moe', 'kda', 'mla', 'ordinary')}}[args.kind] + r'-[0-9]{3}', args.attempt):
     raise ValueError('invalid fresh attempt name')
 if subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True):
     raise ValueError('repository source is not clean')
@@ -50,6 +50,9 @@ environment = {'HOME': str(state), 'PATH': f'{runtime}/bin:/usr/local/cuda-13.0/
                'TOKENIZERS_PARALLELISM': 'false'}
 if args.kind in (*runner.LOAD_KINDS, 'growth'):
     environment.update(FLASHINFER_DISABLE_JIT='1', CUDA_CACHE_DISABLE='1')
+if args.kind == 'indexer':
+    environment.update(runner.indexer_environment(output))
+    (output / 'jit-input-inventory.json').write_text(json.dumps(runner.indexer_jit_inventory(), indent=2) + '\n')
 sealed_kernels = None
 if args.kind == 'mla-replay':
     from glm53_mla_replay import prepare_bundle
@@ -100,7 +103,7 @@ if args.kind == 'conv-replay':
                                    runner.strict_json(preparation / 'generated-cache-inventory.json'))
     environment.update(TRITON_CACHE_DIR=str(output / 'kernels/triton'), FLASHINFER_DISABLE_JIT='1', CUDA_CACHE_DISABLE='1')
 jit_tools = []
-if args.kind in ('kda', 'conv'):
+if args.kind in ('kda', 'conv', 'indexer'):
     jit_tools = [Path('/usr/bin/gcc').resolve(), Path('/usr/bin/g++').resolve(),
                  Path('/usr/local/cuda-13.0/bin/nvcc')]
 if args.kind == 'mla':
@@ -137,7 +140,7 @@ for name in ('exllamav3_ext', 'vllm_exl3_c'):
     paths = list((runtime / 'lib/python3.12/site-packages').glob(name + '.*.so'))
     if len(paths) != 1: raise ValueError('native extension inventory mismatch')
     native_extensions[name] = {'path': str(paths[0]), 'sha256': sha(paths[0])}
-manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.upper() + '_JIT_falsifier_only') if args.kind in ('mla', 'kda', 'conv') else 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
+manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.upper() + '_JIT_falsifier_only') if args.kind in ('mla', 'kda', 'conv', 'indexer') else 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
             'tag': 'glm53-' + args.attempt,
             'source_revision': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
             'runtime': {'root': str(runtime), 'manifest': str(inventory), 'sha256': sha(inventory), 'files': len(identities)},
@@ -155,6 +158,9 @@ manifest = {'schema_version': 1, 'qualification': ('preparatory_' + args.kind.up
                 str(prepared if args.kind == 'native' else metadata), '--output', str(output / 'checks')],
             'seed_rule': 'uint64 from first16 hex characters of BLS-verified post-freeze drand randomness',
             'model_weights': 'none', 'frozen_at_unix': time.time()}
+if args.kind == 'indexer':
+    manifest['probe_arguments_without_seed'].append('--pinned-indexer')
+    manifest['jit_inputs'] = {'sha256': sha(output / 'jit-input-inventory.json')}
 if args.kind in ('conv', 'conv-replay'):
     manifest['probe_arguments_without_seed'].append('--pinned-convolution')
 if args.kind == 'growth':
