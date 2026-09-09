@@ -1,0 +1,27 @@
+test_gpu_cache_hit_and_miss_do_not_enter_compiler_stages (__main__.ActualSourceContract.test_gpu_cache_hit_and_miss_do_not_enter_compiler_stages) ... ok
+test_native_load_failure_cannot_fall_through_to_a_compiler (__main__.ActualSourceContract.test_native_load_failure_cannot_fall_through_to_a_compiler) ... Triton cache error: compiled module helper.so could not be loaded
+FAIL
+
+======================================================================
+FAIL: test_native_load_failure_cannot_fall_through_to_a_compiler (__main__.ActualSourceContract.test_native_load_failure_cannot_fall_through_to_a_compiler)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_jit_contract.py", line 63, in test_native_load_failure_cannot_fall_through_to_a_compiler
+    rb.compile_module_from_src("synthetic source", "helper")
+  File "/home/bmarti44/.cache/glm53-flash/runtime/lib/python3.12/site-packages/triton/runtime/build.py", line 93, in compile_module_from_src
+    so = _build(name, src_path, tmpdir, library_dirs or [], include_dirs or [], libraries or [], ccflags or [])
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/unittest/mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/unittest/mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/.local/share/uv/python/cpython-3.12.13-linux-aarch64-gnu/lib/python3.12/unittest/mock.py", line 1198, in _execute_mock_call
+    raise effect
+AssertionError: compiler entered
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.022s
+
+FAILED (failures=1)
