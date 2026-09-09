@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_probability_semantics_and_direct_dynamo_disable_are_explicit (test_glm53_contract.Glm53ProfileContract.test_probability_semantics_and_direct_dynamo_disable_are_explicit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_contract.py", line 80, in test_probability_semantics_and_direct_dynamo_disable_are_explicit
+    self.assertIn("--logprobs-mode", argv)
+AssertionError: '--logprobs-mode' not found in ['-I', '-B', '-m', 'vllm.entrypoints.openai.api_server', '--model', '{model}', '--served-model-name', 'glm-5.3-flash', 'default', '--host', '127.0.0.1', '--port', '{port}', '--quantization', 'exl3', '--max-model-len', '262144', '--max-num-seqs', '4', '--max-num-batched-tokens', '2048', '--compilation-config', '{"mode":0}', '--kv-cache-dtype', 'fp8', '--no-enable-prefix-caching', '--enable-auto-tool-choice', '--tool-call-parser', 'glm47', '--reasoning-parser', 'glm45', '--middleware', 'glm53_runtime_policy.MediaPolicyMiddleware', '--limit-mm-per-prompt', '{"image":4,"video":1}', '--media-io-kwargs', '{"video":{"num_frames":16,"max_frames":16}}', '--mm-processor-kwargs', '{"max_frames":16,"max_frame_count_dynamic":16}', '--default-chat-template-kwargs', '{"reasoning_effort":"low","clear_thinking":true}']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (failures=1)

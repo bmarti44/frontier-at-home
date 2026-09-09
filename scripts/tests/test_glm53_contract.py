@@ -74,6 +74,13 @@ class Glm53ProfileContract(unittest.TestCase):
         index = argv.index("--compilation-config")
         self.assertEqual(json.loads(argv[index + 1]), {"mode": 0})
 
+    def test_probability_semantics_and_direct_dynamo_disable_are_explicit(self):
+        profile = self.profile()
+        argv = profile["launch"]["args"]
+        self.assertIn("--logprobs-mode", argv)
+        self.assertEqual(argv[argv.index("--logprobs-mode") + 1], "raw_logprobs")
+        self.assertEqual(profile["launch"]["env"].get("TORCH_COMPILE_DISABLE"), "1")
+
     def test_render_rejects_mismatched_topology(self):
         p = self.profile()
         p["serving"]["request_context_cap"] = 1048576
