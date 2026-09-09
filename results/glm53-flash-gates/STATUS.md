@@ -1,22 +1,24 @@
 # GLM-5.3-Flash CUDA status
 
 Current priority, owner correction 2026-09-09: simplify and obtain a real model
-response. Additional indexer cache-guard work is deferred. The selected real
-weights are downloading through `scripts/46_prepare_glm53_weights.py`; complete
-main-model shards are hashed while excluded tensors are omitted from disk.
-The dense overlay uses selected pinned ranges read twice and compared, avoiding
-a full second weight pack; its whole-shard digests remain metadata only. The
-final pack remains 84,696,019,172 tensor bytes with no new quantization.
+response. Additional indexer cache-guard work is deferred. Weight preparation
+completed: 84,696,019,172 tensor bytes, with no new quantization. Selected
+main-model shards passed full source hashes; dense ranges were read twice and
+compared, and their whole-shard digests remain metadata only.
 
 The [real-shard InstantTensor smoke](real-loader-smoke-001/README.md) passed:
-1,280 tensors / 675,022,080 bytes agreed after GPU transfer, identity monitoring
-passed, no new swap occurred and containment was removed. The existing AIO
-loader supplies persistent pinned staging; no replacement loader is needed.
-The full model has not yet loaded. `scripts/47_run_glm53_dev.py` prepares a
-separate authenticated local server with four 262,144-token slots, an explicit
-cache budget and the existing inference lock, cgroup and memory watchdog.
-Its first `--text-only` run is a bring-up smoke, not multimodal qualification.
-Qwen remains the recorded default. Production admission remains closed.
+1,280 tensors agreed after GPU transfer. The existing AIO loader supplies
+persistent pinned staging; no replacement loader is needed.
+The [first full-model startup](server-bringup-001/README.md) loaded the weights
+but failed during cache allocation with NVIDIA memory errors. The 18 GiB
+watchdog stopped it, and the host recovered. A bounded retry selects native
+`--skip-mm-profiling`, preserving full media support and the requested four
+262,144-token slots. No real response has been obtained yet.
+
+`scripts/47_run_glm53_dev.py` starts a separate authenticated local endpoint
+under the existing inference lock, cgroup and memory watchdog. This is model
+bring-up, not context or performance qualification. Qwen remains the recorded
+default. Production admission remains closed.
 
 The component history below describes earlier model-free work.
 
@@ -25,8 +27,8 @@ CUDA builds and the 207-package dependency check passed. The packaged runtime
 has 61,353 independently inventoried files. Native007 passed fourteen synthetic
 kernel checks and the complete host/identity/freeze gate. Cache003 allocated
 9,565,306,880 physical bytes, held four full reservations, rejected a fifth and
-passed host/identity/freeze checks. These are model-free results: zero input
-tokens were processed and no model weight payload has been downloaded or loaded.
+passed host/identity/freeze checks. Those earlier results are model-free: zero input tokens were processed during
+those attempts. Real-weight bring-up is reported above.
 
 MLA001 completed all five analytic attention cases with exact output agreement
 and passed host/identity checks. Its combined verdict remains **NO_RESULT**:
