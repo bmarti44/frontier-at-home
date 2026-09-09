@@ -54,6 +54,24 @@ class MLARunnerTests(unittest.TestCase):
         self.assertEqual(runner.probe_verdict('cache', None), 'PASS')
         with self.assertRaises(ValueError): runner.probe_verdict('unknown', None)
 
+    def test_replay_requires_exact_startup_selection_receipt(self):
+        kernels = {'root': str(self.root / 'kernels'), 'sha256': 'f' * 64}
+        self.binding.update(sealed_kernels=kernels, replay_decision={'sha256': '1' * 64})
+        self.seal()
+        receipt = {'selection': 'sealed_MLA_replay', 'bundle': kernels,
+            'triton_cache_root': kernels['root'] + '/triton',
+            'flashinfer': {'selection': 'sealed_FlashInfer_Nvcc', 'modules': [
+                {'name': 'sparse_mla_sm120', 'path': kernels['root'] + '/flashinfer/sparse_mla_sm120/sparse_mla_sm120.so'}]},
+            'time_unix': self.rows[0]['time_unix'] - 0.1}
+        with self.assertRaises((ValueError, FileNotFoundError)):
+            runner.score_inner(self.root, 'mla-replay', self.seed, self.binding)
+        path = self.checks / 'sealed-selection.json'; path.write_text(json.dumps(receipt))
+        self.assertEqual(runner.score_inner(self.root, 'mla-replay', self.seed, self.binding)['verdict'], 'PASS')
+        for key, value in (('bundle', {**kernels, 'sha256': '0' * 64}), ('selection', 'JIT'),
+                           ('time_unix', self.rows[0]['time_unix'] + 1), ('flashinfer', {})):
+            path.write_text(json.dumps({**receipt, key: value}))
+            with self.assertRaises(ValueError): runner.score_inner(self.root, 'mla-replay', self.seed, self.binding)
+
     def test_complete_bundle_scores_every_output(self):
         result = runner.score_inner(self.root, 'mla', self.seed, self.binding)
         self.assertEqual(sum(row['elements'] for row in result['tensor_checks']), (2048 + 1 + 2 + 3 + 4) * 32768)
