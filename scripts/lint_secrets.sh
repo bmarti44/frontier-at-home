@@ -111,12 +111,12 @@ redact_matches() {
 
 # Public package hashes and wrapper artifact receipts, restricted to the two
 # recorded GLM-5.3 dependency attempts and exact line formats.
-readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001|native-smoke-00[12])/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
+readonly GLM53_DEPENDENCY_DIGEST_ALLOWLIST='^results/glm53-flash-gates/dependencies-00[45]/(cmd|main)\.log:[0-9]+:    --hash=sha256:[0-9a-f]{64}( \\)?$|^results/glm53-flash-gates/(dependencies-00[35]|install-(binary|source)-00[12]|build-(exllamav3|vllm|vllm-exl3)-001|build-vllm-exl3-002|native-smoke-00[123])/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$'
 
 filter_glm53_native_log_digests() {
   python3 - 3<&0 <<'PY_NATIVE'
 import json, os, re
-prefix = re.compile(r"^(results/glm53-flash-gates/native-smoke-00[12]/(?:cmd|main)\.log:[0-9]+:)(.*)$")
+prefix = re.compile(r"^(results/glm53-flash-gates/native-smoke-00[123]/(?:cmd|main)\.log:[0-9]+:)(.*)$")
 def unique(items):
     value = {}
     for key, item in items:
@@ -507,7 +507,7 @@ scan_digest_file() {
     # not JSON. It remains subject to gitleaks plus the non-digest secret scan;
     # only the generic 64-hex structural parser is inapplicable.
     scripts/103_verify_drand_receipt_bundle.mjs) cat >/dev/null ;;
-    results/glm53-flash-gates/native-smoke-00[12]/code/scripts/103_verify_drand_receipt_bundle.mjs)
+    results/glm53-flash-gates/native-smoke-00[123]/code/scripts/103_verify_drand_receipt_bundle.mjs)
       cmp -s - "$(git rev-parse --show-toplevel)/scripts/103_verify_drand_receipt_bundle.mjs" || {
         echo 'copied GLM verifier differs from reviewed bundle' >&2; return 1;
       } ;;
