@@ -22,7 +22,8 @@ class KDARunnerTests(unittest.TestCase):
         fixture = KDAProbeTests(); fixture.setUp(); self.addCleanup(fixture.doCleanups)
         root = fixture.root; seed = 123; api = fixture.api
         rows = [{'event': 'configured', 'case_order': api.case_order(seed), 'request_order': api.request_order(seed),
-                 'state_shape': [5, 64, 128, 128], 'pinned_staging': True}]
+                 'state_shape': [5, 64, 128, 128], 'pinned_staging': True,
+                 'pinned_staging_scope': 'probe_owned_buffers_only'}]
         for count in api.case_order(seed):
             paths, digests = fixture.capture(count, seed)
             names = [f'output-{count}.bf16.gz', f'state-{count}.fp32.gz']
@@ -35,7 +36,8 @@ class KDARunnerTests(unittest.TestCase):
         for name in ('manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log'): (root / name).write_text('{}')
         checks = runner.validate_kda_rows(root, rows, seed)
         self.assertEqual(len(checks), 5)
-        for index, key, value in ((0, 'pinned_staging', 1), (0, 'request_order', [0, 0, 0, 0]),
+        for index, key, value in ((0, 'pinned_staging', 1), (0, 'pinned_staging_scope', 'all_host_device_copies'),
+                                   (0, 'request_order', [0, 0, 0, 0]),
                                    (1, 'query_rows', 0), (2, 'cuda_elapsed_ms', float('inf')),
                                    (2, 'artifacts', [{'file': '../output.gz', 'sha256': 'a' * 64}])):
             changed = json.loads(json.dumps(rows)); changed[index][key] = value
