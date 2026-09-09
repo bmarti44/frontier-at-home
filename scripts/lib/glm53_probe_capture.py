@@ -103,7 +103,9 @@ def capture_wrapper(root, wrapper, tag, command, environment, timeout):
     process = None; pidfd = None; failure = None; unit = None; cgroup = None
     try:
         with (root / 'wrapper.log').open('xb') as log:
-            prior_mask = signal.pthread_sigmask(signal.SIG_BLOCK, CLEANUP_SIGNALS)
+            deferred = []
+            handlers = {number: signal.signal(number, lambda number, frame: deferred.append(number))
+                        for number in CLEANUP_SIGNALS}
             try:
                 process = subprocess.Popen(['/usr/bin/bash', str(wrapper), '--tag', tag, '--', *command],
                                            env=environment, stdout=log, stderr=subprocess.STDOUT,
@@ -112,7 +114,8 @@ def capture_wrapper(root, wrapper, tag, command, environment, timeout):
                 cgroup = Path('/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice') / unit
                 pidfd = os.pidfd_open(process.pid)
             finally:
-                signal.pthread_sigmask(signal.SIG_SETMASK, prior_mask)
+                for number, handler in handlers.items(): signal.signal(number, handler)
+            if deferred: raise InterruptedError(f'probe controller received signal {deferred[0]} during launch')
             deadline = time.monotonic() + timeout + 120
             while process.poll() is None:
                 identity_raw = root / 'identity/raw.jsonl'
