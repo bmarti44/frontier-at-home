@@ -8,7 +8,7 @@
  "purpose": "Optional GLM-5.3-Flash: 1M total in four 262K slots; estimated and not launch-authorized",
  "status": {
   "state": "estimated",
-  "basis": "results/glm53-flash-gates/PLAN.md; conservative unmeasured memory reservation, no model load or qualification"
+  "basis": "results/glm53-flash-gates/PLAN.md and source-audit-001; EXL3 weights and FP8 KV require paired fidelity qualification; conservative unmeasured memory reservation, no model load"
  },
  "engine": "vllm-exl3-glm53",
  "artifact_roles": {"model": "exl3-k2-densek4"},
@@ -31,7 +31,11 @@
    "--quantization", "exl3",
    "--max-model-len", "262144", "--max-num-seqs", "4",
    "--max-num-batched-tokens", "2048",
-   "--kv-cache-dtype", "auto",
+   "--kv-cache-dtype", "fp8",
+   "--no-enable-prefix-caching",
+   "--enable-auto-tool-choice", "--tool-call-parser", "glm47",
+   "--reasoning-parser", "glm45",
+   "--middleware", "glm53_runtime_policy.MediaPolicyMiddleware",
    "--limit-mm-per-prompt", "{\"image\":4,\"video\":1}",
    "--media-io-kwargs", "{\"video\":{\"num_frames\":16}}",
    "--mm-processor-kwargs", "{\"max_frames\":16,\"max_frame_count_dynamic\":16}",
