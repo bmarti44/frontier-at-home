@@ -15,6 +15,13 @@ complete before/after inventories, BLS seed and host/identity/cleanup checks.
 The sealed loader and replay reviews closed through campaign round 35. Prior
 failures remain unchanged.
 
+KDA preparation001 failed on raw nested metadata access; the pinned configuration
+normalizer correction closed in campaign round 37. Preparation002 then passed
+all five analytic cases and host/identity/cleanup checks. It remains NO_RESULT
+because its compiled kernels were generated after freeze. Frozen KDA replay is
+under review in round 38; seven finite autotune winners and four failed trials
+are preserved separately from authoritative output evidence.
+
 The optional profile requests 1,048,576 aggregate tokens in four 262,144-token
 slots. Production activation remains rejected; the default and rollback state
 are unchanged. Performance is **not yet measured**.
@@ -35,7 +42,7 @@ are unchanged. Performance is **not yet measured**.
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
-The latest completed scoped CPU audit has 184 passing tests; these include
+The latest completed scoped CPU audit has 201 passing tests; these include
 admission, media, existing profiles, switching and the model-free harness. Three source-function tests cover 48 sampler combinations, four
 within-cap comparisons, and three actual loader/metadata cases.
 
