@@ -64,10 +64,21 @@ def score_inner(output, kind, seed, binding):
         require([r['check_order'] for r in rows if 'check_order' in r] == [order], 'native fixture order mismatch')
         require([(r.get('event'), r.get('check_id')) for r in rows if 'event' in r] ==
                 [(event, name) for name in order for event in ('start', 'pass')], 'native check coverage mismatch')
-    elif kind == 'mla':
+    elif kind in ('mla', 'mla-replay'):
         require(summary['qualification'] == 'model_free_MLA_constant_cache_falsifier_only' and
                 summary['actual_input_tokens_processed'] == 0, 'MLA qualification mismatch')
-        summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed)}
+        summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed, replay=kind == 'mla-replay')}
+        if kind == 'mla-replay':
+            receipt = strict_json(root / 'sealed-selection.json')
+            bundle = binding['sealed_kernels']; cache_root = bundle['root']
+            expected = {'selection': 'sealed_MLA_replay', 'bundle': bundle,
+                'triton_cache_root': cache_root + '/triton',
+                'flashinfer': {'selection': 'sealed_FlashInfer_Nvcc', 'modules': [
+                    {'name': 'sparse_mla_sm120', 'path': cache_root + '/flashinfer/sparse_mla_sm120/sparse_mla_sm120.so'}]},
+                'time_unix': receipt.get('time_unix')}
+            require(receipt == expected and type(receipt['time_unix']) in (int, float) and
+                    math.isfinite(receipt['time_unix']) and 0 < receipt['time_unix'] < times[0], 'invalid sealed MLA startup receipt')
+            summary['sealed_selection'] = receipt
     elif kind == 'cache':
         require(summary['qualification'] == 'model_free_cache_allocation_only' and summary['actual_input_tokens_processed'] == 0, 'cache qualification mismatch')
         validate_cache_rows(rows, seed, binding['cache_layer_types'])
@@ -76,7 +87,7 @@ def score_inner(output, kind, seed, binding):
     return summary
 
 
-def validate_mla_rows(root, rows, seed):
+def validate_mla_rows(root, rows, seed, replay=False):
     import importlib.util
     spec = importlib.util.spec_from_file_location('frozen_mla_scorer', Path(__file__).parent / '40_probe_glm53_mla.py')
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
@@ -88,6 +99,7 @@ def validate_mla_rows(root, rows, seed):
             rows[0]['pinned_staging'] is True and all(type(v) is int for v in rows[0]['request_order'] + rows[0]['case_order']),
             'MLA geometry types changed')
     artifacts = {f'output-{count}.bf16.gz' for count in order}
+    if replay: artifacts.add('sealed-selection.json')
     require({p.name for p in root.iterdir()} == artifacts | {'manifest.json', 'summary.json', 'raw.jsonl', 'traceback.log'},
             'MLA artifact coverage mismatch')
     checks = []
@@ -165,8 +177,10 @@ CODE_FILES = (
     'scripts/39_run_glm53_probe.py', 'scripts/38_guard_glm53_probe.py',
     'scripts/35_smoke_glm53_native.py', 'scripts/37_probe_glm53_cache.py', 'scripts/40_probe_glm53_mla.py',
     'scripts/lib/glm53_contract.py', 'scripts/lib/glm53_host_evidence.py', 'scripts/lib/glm53_probe_capture.py',
+    'scripts/lib/glm53_runtime_jit.py', 'scripts/lib/glm53_mla_replay.py',
     'configs/build-manifests/glm53-flash-sources.json', 'configs/decision-specs/glm53-cache-preflight.json',
     'configs/decision-specs/glm53-mla-preflight.json',
+    'configs/decision-specs/glm53-mla-replay.json', 'configs/decision-specs/glm53-flashinfer-sealed.json',
     'scripts/103_verify_drand_receipt_bundle.mjs')
 
 
@@ -175,6 +189,12 @@ def verify_frozen(output, manifest):
     require({str(p.relative_to(output / 'code')) for p in (output / 'code').rglob('*') if p.is_file()} == set(CODE_FILES), 'unexpected frozen code files')
     for name, row in manifest['code'].items():
         require(sha256_file(output / 'code' / name) == row['sha256'], 'frozen code changed: ' + name)
+    if manifest.get('kind') == 'mla-replay':
+        from glm53_mla_replay import verify_bundle
+        verify_bundle(output / 'kernels', manifest['sealed_kernels'])
+        require(manifest['environment']['TRITON_CACHE_DIR'] == str(output / 'kernels/triton') and
+                manifest['environment']['FLASHINFER_DISABLE_JIT'] == '1' and
+                manifest['environment']['CUDA_CACHE_DISABLE'] == '1', 'sealed MLA environment mismatch')
     if manifest.get('kind') == 'mla':
         require({p.name for p in (output / 'tools').iterdir()} == {'ninja'} and
                 not (output / 'tools/ninja').is_symlink() and str(output / 'tools/ninja') in manifest['tools'],
@@ -209,7 +229,7 @@ def verify_beacon(output, manifest, receipt=None):
 
 
 def probe_verdict(kind, failure):
-    require(kind in ('native', 'cache', 'mla'), 'unknown probe kind')
+    require(kind in ('native', 'cache', 'mla', 'mla-replay'), 'unknown probe kind')
     if failure is not None: return 'FAIL'
     return 'NO_RESULT' if kind == 'mla' else 'PASS'
 
@@ -249,7 +269,8 @@ def run(output):
     accepted = {name: hashlib.sha256(data).hexdigest() for name, data in input_bytes.items()}
     manifest = object_text(input_bytes['manifest.json'])
     require(Path(__file__).resolve() == output / 'code/scripts/39_run_glm53_probe.py', 'run the frozen runner copy')
-    expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py', 'mla': '40_probe_glm53_mla.py'}
+    expected_kind = {'native': '35_smoke_glm53_native.py', 'cache': '37_probe_glm53_cache.py',
+                     'mla': '40_probe_glm53_mla.py', 'mla-replay': '40_probe_glm53_mla.py'}
     kind = manifest['kind']; require(kind in expected_kind, 'unknown probe kind')
     python = Path(manifest['runtime']['root']) / 'bin/python3'
     require(Path(sys.executable).resolve() == python.resolve(), 'controller must use frozen packaged interpreter')
@@ -279,9 +300,12 @@ def run(output):
             if kind == 'native':
                 binding.update(expected_checks=14, test_hashes=manifest['native_test_hashes'], native_extensions=manifest['native_extensions'],
                                source_revision=strict_json(output / 'code/configs/build-manifests/glm53-flash-sources.json')['sources']['vllm-exl3']['revision'])
-            elif kind == 'mla':
+            elif kind in ('mla', 'mla-replay'):
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-mla-preflight.json'],
                                metadata=manifest['cache_metadata_hashes'])
+                if kind == 'mla-replay':
+                    binding.update(sealed_kernels=manifest['sealed_kernels'],
+                                   replay_decision=manifest['code']['configs/decision-specs/glm53-mla-replay.json'])
             else:
                 binding.update(decision=manifest['code']['configs/decision-specs/glm53-cache-preflight.json'],
                                metadata=manifest['cache_metadata_hashes'], cache_layer_types=manifest['cache_layer_types'])
@@ -296,6 +320,8 @@ def run(output):
             identities = [object_text(line) for line in read(output / 'identity/raw.jsonl').splitlines()]
             inner_rows = [object_text(line) for line in read(output / 'checks/raw.jsonl').splitlines()]
             require(identities[0]['time_unix'] <= inner_rows[0]['time_unix'] <= inner_rows[-1]['time_unix'] <= identities[-2]['time_unix'], 'inner probe timestamps escape identity window')
+            if kind == 'mla-replay':
+                require(identities[0]['time_unix'] <= inner['sealed_selection']['time_unix'], 'sealed selection escapes identity window')
         except BaseException as error:
             failure = repr(error)
         finally:
@@ -304,7 +330,7 @@ def run(output):
                 verify_accepted_inputs(output, accepted)
             except Exception as error: failure = failure or repr(error)
             generated = None
-            if kind == 'mla':
+            if kind in ('mla', 'mla-replay'):
                 try:
                     cache_path = output / 'generated-cache-inventory.json'
                     write(cache_path, generated_cache_inventory(output / 'state'))
@@ -317,6 +343,10 @@ def run(output):
             if kind == 'mla':
                 summary.update(kernel_binary_qualification='NO_RESULT', generated_cache_inventory=generated,
                                confirmation_required='prewarm, freeze compiled kernels, seal replay and obtain a new public seed')
+            if kind == 'mla-replay':
+                summary.update(qualification='model_free_frozen_MLA_constant_cache_replay_only',
+                               kernel_binary_qualification=probe_verdict(kind, failure), sealed_kernels=manifest['sealed_kernels'],
+                               generated_cache_inventory=generated)
             write(output / 'summary.json', summary)
     print(json.dumps(summary)); return 0 if failure is None else 1
 

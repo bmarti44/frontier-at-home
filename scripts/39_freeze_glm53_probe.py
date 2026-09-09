@@ -14,10 +14,10 @@ import time
 ROOT = Path('/home/bmarti44/spark-deepseek-v4-flash')
 BASE = Path('/home/bmarti44/.cache/glm53-flash')
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('kind', choices=('native', 'cache', 'mla'))
+parser.add_argument('kind', choices=('native', 'cache', 'mla', 'mla-replay'))
 parser.add_argument('attempt')
 args = parser.parse_args()
-if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight'}[args.kind] + r'-[0-9]{3}', args.attempt):
+if not re.fullmatch({'native': 'native-smoke', 'cache': 'cache-preflight', 'mla': 'mla-preflight', 'mla-replay': 'mla-replay'}[args.kind] + r'-[0-9]{3}', args.attempt):
     raise ValueError('invalid fresh attempt name')
 if subprocess.check_output(['git', '-C', str(ROOT), 'status', '--porcelain'], text=True):
     raise ValueError('repository source is not clean')
@@ -48,6 +48,23 @@ environment = {'HOME': str(state), 'PATH': f'{runtime}/bin:/usr/local/cuda-13.0/
                'TRITON_CACHE_DIR': str(state / 'triton'), 'TORCH_EXTENSIONS_DIR': str(state / 'torch-extensions'),
                'CUDA_CACHE_PATH': str(state / 'cuda-cache'), 'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1',
                'TOKENIZERS_PARALLELISM': 'false'}
+sealed_kernels = None
+if args.kind == 'mla-replay':
+    from glm53_mla_replay import prepare_bundle
+    preparation = BASE / 'mla-preflight-001'
+    retained = ROOT / 'results/glm53-flash-gates/mla-preflight-001'
+    for name in ('manifest.json', 'summary.json', 'generated-cache-inventory.json'):
+        if runner.sha256_file(preparation / name) != runner.sha256_file(retained / name):
+            raise ValueError('MLA preparation differs from committed evidence')
+        external_files.extend((preparation / name, retained / name))
+    prior = runner.strict_json(preparation / 'summary.json')
+    if prior['verdict'] != 'NO_RESULT' or prior['host']['verdict'] != 'PASS' or prior['inner']['verdict'] != 'PASS':
+        raise ValueError('MLA preparation did not complete analytic and host checks')
+    if runner.strict_json(preparation / 'manifest.json')['runtime']['sha256'] != runner.sha256_file(inventory):
+        raise ValueError('MLA preparation used another runtime')
+    sealed_kernels = prepare_bundle(preparation / 'state', output / 'kernels',
+                                   runner.strict_json(preparation / 'generated-cache-inventory.json'))
+    environment.update(TRITON_CACHE_DIR=str(output / 'kernels/triton'), FLASHINFER_DISABLE_JIT='1', CUDA_CACHE_DISABLE='1')
 jit_tools = []
 if args.kind == 'mla':
     jit_directory = output / 'tools'; jit_directory.mkdir()
@@ -101,5 +118,9 @@ manifest = {'schema_version': 1, 'qualification': 'preparatory_MLA_JIT_falsifier
                 str(prepared if args.kind == 'native' else metadata), '--output', str(output / 'checks')],
             'seed_rule': 'uint64 from first16 hex characters of BLS-verified post-freeze drand randomness',
             'model_weights': 'none', 'frozen_at_unix': time.time()}
+if sealed_kernels:
+    manifest.update(qualification='model_free_frozen_MLA_constant_cache_replay_only', sealed_kernels=sealed_kernels)
+    manifest['probe_arguments_without_seed'].extend(['--sealed-kernels', sealed_kernels['root'],
+                                                    '--sealed-manifest-sha256', sealed_kernels['sha256']])
 (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
 print(json.dumps({'directory': str(output), 'runtime_files_verified': len(identities), 'frozen_at_unix': manifest['frozen_at_unix']}))
