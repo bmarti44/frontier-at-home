@@ -14,7 +14,7 @@
  "artifact_roles": {"model": "exl3-k2-densek4"},
  "launch": {
   "mechanism": "systemd-run",
-  "user": "bmarti44",
+  "user": "dsv4",
   "log_name": "glm53-flash",
   "env": {
    "PYTHONNOUSERSITE": "1",
@@ -24,13 +24,14 @@
   },
   "diagnostics_unset": ["GLM_KPOOL_TAIL_BOUNDS", "VLLM_EXL3_PREFILL_SYNC"],
   "args": [
-   "-m", "vllm.entrypoints.openai.api_server",
+   "-I", "-B", "-m", "vllm.entrypoints.openai.api_server",
    "--model", "{model}",
-   "--served-model-name", "glm-5.3-flash",
+   "--served-model-name", "glm-5.3-flash", "default",
    "--host", "127.0.0.1", "--port", "{port}",
    "--quantization", "exl3",
    "--max-model-len", "262144", "--max-num-seqs", "4",
    "--max-num-batched-tokens", "2048",
+   "--compilation-config", "{\"mode\":0}",
    "--kv-cache-dtype", "fp8",
    "--no-enable-prefix-caching",
    "--enable-auto-tool-choice", "--tool-call-parser", "glm47",
@@ -45,7 +46,12 @@
  "containment": {
   "unit": "glm53-flash-engine",
   "memory_high": "90G", "memory_max": "96G",
-  "memory_swap_max": "0", "oom_policy": "kill", "kill_mode": "control-group"
+  "memory_swap_max": "0", "oom_policy": "kill", "kill_mode": "control-group",
+  "extra_properties": {
+   "Group": "dsv4", "SupplementaryGroups": "",
+   "CapabilityBoundingSet": "", "AmbientCapabilities": "",
+   "NoNewPrivileges": "yes"
+  }
  },
  "safety": {
   "kill_floor_gib": 18, "minimum_start_gib": 110,

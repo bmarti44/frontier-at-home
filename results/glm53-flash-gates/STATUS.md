@@ -22,7 +22,7 @@ before state, lock, or engine changes. Performance is **not yet measured**.
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
-The complete admission/media/existing profile/switch suite has 87 passing
+The complete admission/media/existing profile/switch suite has 89 passing
 tests. Three source-function tests cover 48 sampler combinations, four
 within-cap comparisons, and three actual loader/metadata cases.
 
@@ -49,7 +49,12 @@ dependencies are installed in an isolated managed Python 3.12.13 environment;
 `glm53-runtime-dependencies.json` records the expanded distribution lock.
 `uv pip check` passes after the explicitly recorded cuSPARSELt metadata repair.
 The original 195-package resolution remains preserved. These locks cannot
-authorize a launch.
+authorize a launch. The estimated profile selects the separate `dsv4` service
+account, isolated Python (`-I -B`), empty capabilities, and an explicit
+no-Inductor baseline. Its secondary API name `default` preserves client
+compatibility without changing the startup default. The current build venv
+is not yet a service-readable, frozen runtime; permission enforcement and
+worker startup remain unqualified.
 
 The NVIDIA repair preserves all library bytes and changes only WHEEL/RECORD;
 it asserts local Linux AArch64 packaging, not manylinux compatibility. An
