@@ -50,10 +50,13 @@ def live_group(pgid):
     return result
 
 
-def terminate_group(pgid):
+def terminate_group(pgid, leader_start_ticks):
     """Signal only identity-rechecked pidfds, including surviving descendants."""
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
+        anchor = process_stat(pgid)
+        require(anchor["start_ticks"] == leader_start_ticks and anchor["pgid"] == pgid and
+                anchor["ppid"] == os.getpid(), "cleanup group anchor changed")
         members = live_group(pgid)
         if not members:
             return []
@@ -71,6 +74,14 @@ def terminate_group(pgid):
                     os.close(descriptor)
         time.sleep(0.05)
     return live_group(pgid)
+
+
+def exit_observation(pid):
+    # Keep the leader waitable and its PID/PGID reserved through group cleanup.
+    value = os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+    if value is None:
+        return None
+    return value.si_status if value.si_code == os.CLD_EXITED else -value.si_status
 
 
 def snapshot(pid, expected, first=False):
@@ -101,12 +112,20 @@ def snapshot(pid, expected, first=False):
 def child():
     ready, release = int(sys.argv[2]), int(sys.argv[3])
     target = Path(sys.argv[4]).resolve(strict=True)
+    os.set_inheritable(ready, False)
+    os.set_inheritable(release, False)
     os.write(ready, b"R")
-    os.close(ready)
     require(os.read(release, 1) == b"G", "parent did not release verified child")
-    os.close(release)
     sys.argv = [str(target), *sys.argv[5:]]
-    runpy.run_path(str(target), run_name="__main__")
+    try:
+        runpy.run_path(str(target), run_name="__main__")
+    except SystemExit as error:
+        if error.code is not None and error.code != 0:
+            raise
+    os.write(ready, b"C")
+    require(os.read(release, 1) == b"E", "parent did not verify probe completion")
+    os.close(ready)
+    os.close(release)
 
 
 def main():
@@ -138,6 +157,7 @@ def main():
                     qualification="Python_probe_identity_only", period_seconds=0.25, start_unix=time.time())
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     process = None
+    leader_start_ticks = None
     samples = 0
     failure = None
     survivors = []
@@ -147,6 +167,7 @@ def main():
             raw.flush()
         try:
             process = subprocess.Popen(argv, env=environment, pass_fds=(ready_write, release_read), start_new_session=True)
+            leader_start_ticks = process_stat(process.pid)["start_ticks"]
             os.close(ready_write); ready_write = None
             os.close(release_read); release_read = None
             require(bool(select.select([ready_read], [], [], 10)[0]) and os.read(ready_read, 1) == b"R", "child readiness timeout or missing handshake")
@@ -154,24 +175,35 @@ def main():
             expected["start_ticks"] = value["start_ticks"]
             record(value); samples += 1
             os.write(release_write, b"G")
-            os.close(release_write); release_write = None
-            while process.poll() is None:
-                time.sleep(0.25)
-                if process.poll() is not None:
+            completed = False
+            while exit_observation(process.pid) is None:
+                readable = select.select([ready_read], [], [], 0.25)[0]
+                if readable:
+                    marker = os.read(ready_read, 1)
+                    if marker != b"C" and exit_observation(process.pid) is None:
+                        try:
+                            snapshot(process.pid, expected)
+                        except (FileNotFoundError, ProcessLookupError):
+                            pass
+                    require(marker == b"C", "missing verified completion handshake")
+                    value = snapshot(process.pid, expected)
+                    value["completion_verified"] = True
+                    record(value); samples += 1
+                    completed = True
+                    os.write(release_write, b"E")
+                    os.close(release_write); release_write = None
                     break
                 try:
                     value = snapshot(process.pid, expected)
                 except (FileNotFoundError, ProcessLookupError):
-                    # A confirmed exit during a sample is distinct from an
-                    # identity contradiction while the process remains live.
-                    if process.poll() is not None:
-                        break
-                    if process_stat(process.pid)["state"] in ("Z", "X"):
-                        process.wait(timeout=2)
-                        break
-                    raise
+                    raise ValueError("process exited without verified completion")
                 record(value); samples += 1
-            require(process.returncode == 0, f"probe exit status {process.returncode}")
+            require(completed, "missing verified completion handshake")
+            deadline = time.monotonic() + 5
+            while exit_observation(process.pid) is None and time.monotonic() < deadline:
+                time.sleep(0.05)
+            result = exit_observation(process.pid)
+            require(result == 0, f"probe exit status {result}")
             require(samples >= 2, "insufficient continuous identity coverage")
             survivors = live_group(process.pid)
             require(not survivors, "surviving probe descendant")
@@ -183,7 +215,11 @@ def main():
                 if descriptor is not None:
                     os.close(descriptor)
             if process is not None:
-                survivors = terminate_group(process.pid)
+                try:
+                    require(leader_start_ticks is not None, "missing cleanup group anchor")
+                    survivors = terminate_group(process.pid, leader_start_ticks)
+                except Exception as error:
+                    failure = failure or repr(error)
                 try:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:

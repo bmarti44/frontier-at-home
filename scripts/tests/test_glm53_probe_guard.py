@@ -54,6 +54,12 @@ class ProbeGuardTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("completion", summary["failure"])
 
+    def test_normal_zero_system_exit_gets_verified_completion(self):
+        result, summary, rows = self.run_probe("import time\ntime.sleep(0.35)\nraise SystemExit(0)\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(summary["verdict"], "PASS")
+        self.assertEqual(sum(row.get("completion_verified", False) for row in rows), 1)
+
     def test_immediate_exit_cannot_substitute_for_verified_completion(self):
         result, summary, _ = self.run_probe("import os,time\ntime.sleep(0.35)\nos._exit(0)\n")
         self.assertNotEqual(result.returncode, 0)
