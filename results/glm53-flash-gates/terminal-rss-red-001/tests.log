@@ -1,0 +1,30 @@
+.................F....E
+======================================================================
+ERROR: test_zero_rss_suffix_after_terminal_identity_with_verified_cleanup (test_glm53_host_evidence.HostEvidenceTests.test_zero_rss_suffix_after_terminal_identity_with_verified_cleanup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_host_evidence.py", line 95, in test_zero_rss_suffix_after_terminal_identity_with_verified_cleanup
+    self.assertEqual(score_host_observations(self.root, self.expected)["verdict"], "PASS")
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_host_evidence.py", line 206, in score_host_observations
+    require(all(row["eng_rss_kb"] > 0 and row["cgroup_current_bytes"] <= row["cgroup_peak_bytes"] <= peak for row in samples), "invalid sampled memory accounting")
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_host_evidence.py", line 24, in require
+    raise ValueError(message)
+ValueError: invalid sampled memory accounting
+
+======================================================================
+FAIL: test_terminal_zero_rss_does_not_waive_exit_or_cleanup (test_glm53_host_evidence.HostEvidenceTests.test_terminal_zero_rss_does_not_waive_exit_or_cleanup)
+----------------------------------------------------------------------
+ValueError: invalid sampled memory accounting
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_host_evidence.py", line 122, in test_terminal_zero_rss_does_not_waive_exit_or_cleanup
+    with self.assertRaisesRegex(ValueError, "identity verdict"):
+AssertionError: "identity verdict" does not match "invalid sampled memory accounting"
+
+----------------------------------------------------------------------
+Ran 23 tests in 0.035s
+
+FAILED (failures=1, errors=1)
