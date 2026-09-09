@@ -2,8 +2,8 @@
 
 This protocol covers the synthetic native checks and the cache allocator probe.
 It does not establish model fidelity, processed context, serving performance, or
-permission to launch a production profile. The Python identity review remains
-paused; implementing this additional evidence component does not resume it.
+permission to launch a production profile. The owner resumed the Python identity review; its correction is now reviewed.
+A fresh hardware attempt must establish the combined verdict described below.
 
 An authoritative probe verdict requires **all** of the following:
 
@@ -73,9 +73,9 @@ prefix, and disable network metadata fallback. The selected diagnostic flags,
 including the temporary BF16 geometry candidate flag where required, belong in
 the frozen environment and its digest.
 
-The identity guard must receive both independent review closure and a new freeze
-before this invocation can become authoritative. Its local proposed correction
-has not received that closure. Previous native attempts 001–003 therefore remain
+The identity correction received both persistent reviewers' closure at candidate
+3 / campaign round 22. The raw capture component closed at candidate 3 / campaign
+round 25. Both require a new freeze before an invocation becomes authoritative. Previous native attempts 001–003 therefore remain
 `NO_RESULT` for continuous Python identity despite attempt 003's fourteen passing
 inner kernel assertions.
 
