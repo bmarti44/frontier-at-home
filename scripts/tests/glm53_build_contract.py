@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fail before CUDA compilation if vLLM metadata rejects the pinned runtime."""
 import argparse
+import importlib.util
 from importlib.metadata import version
 from pathlib import Path
 import re
@@ -11,6 +12,16 @@ from packaging.requirements import Requirement
 
 def suite(source, pristine=None):
     class MetadataContract(unittest.TestCase):
+        def test_rust_builds_cannot_re_resolve_cargo_lock(self):
+            spec = importlib.util.spec_from_file_location("candidate_build_rust", source / "tools/build_rust.py")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            extensions = module.rust_extensions(optional=False)
+            self.assertEqual(len(extensions), 2)
+            for extension in extensions:
+                with self.subTest(target=extension.target):
+                    self.assertIn("--locked", extension.args or [])
+
         def test_flashinfer_requirement_accepts_installed_pinned_distribution(self):
             rows = (source / "requirements/cuda.txt").read_text().splitlines()
             requirements = [Requirement(row) for row in rows
