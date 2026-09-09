@@ -1,0 +1,105 @@
+{
+  "request": {
+    "model": "glm-5.3-flash",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Reply with the word OK."
+      }
+    ],
+    "temperature": 0,
+    "max_tokens": 64,
+    "return_token_ids": true,
+    "chat_template_kwargs": {
+      "reasoning_effort": "low",
+      "clear_thinking": true
+    }
+  },
+  "local_rendered": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>Reply with the word OK.<|assistant|><think>",
+  "local_token_ids": [
+    154822,
+    154824,
+    154826,
+    25062,
+    287,
+    29905,
+    371,
+    25,
+    12035,
+    154827,
+    20795,
+    448,
+    279,
+    3409,
+    10397,
+    13,
+    154828,
+    154841
+  ],
+  "response": {
+    "id": "chatcmpl-bdbf3a1625981045",
+    "object": "chat.completion",
+    "created": 1788984239,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "OK",
+          "refusal": null,
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "reasoning": null
+        },
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": [
+          154842,
+          3925,
+          154827
+        ],
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-4c37b3ab",
+    "usage": {
+      "prompt_tokens": 18,
+      "total_tokens": 21,
+      "completion_tokens": 3,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      }
+    },
+    "prompt_logprobs": null,
+    "prompt_token_ids": [
+      154822,
+      154824,
+      154826,
+      25062,
+      287,
+      29905,
+      371,
+      25,
+      12035,
+      154827,
+      20795,
+      448,
+      279,
+      3409,
+      10397,
+      13,
+      154828,
+      154841
+    ],
+    "prompt_text": null,
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "match": true
+}
