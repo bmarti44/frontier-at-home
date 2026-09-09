@@ -51,6 +51,11 @@ wrapper = ROOT / 'results/glm52-gates/harness/glm_cgroup_run.sh'
 tools = [runtime / 'bin/python3', Path('/usr/bin/git'), Path('/usr/bin/bash'), node, wrapper,
          ROOT / 'results/glm52-gates/harness/glm_safe_run.sh', ROOT / 'scripts/03_memory_guard.py']
 sha = runner.sha256_file
+native_extensions = {}
+for name in ('exllamav3_ext', 'vllm_exl3_c'):
+    paths = list((runtime / 'lib/python3.12/site-packages').glob(name + '.*.so'))
+    if len(paths) != 1: raise ValueError('native extension inventory mismatch')
+    native_extensions[name] = {'path': str(paths[0]), 'sha256': sha(paths[0])}
 manifest = {'schema_version': 1, 'qualification': 'model_free_' + args.kind + '_probe_only', 'kind': args.kind,
             'tag': 'glm53-' + args.attempt,
             'source_revision': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),
@@ -59,6 +64,8 @@ manifest = {'schema_version': 1, 'qualification': 'model_free_' + args.kind + '_
             'tools': {str(path): {'sha256': sha(path)} for path in tools},
             'orchestration': {name: {'sha256': sha(output / name)} for name in ('freeze.py', 'fetch-randomness.py')},
             'external_files': {str(path): {'sha256': sha(path)} for path in external_files},
+            'native_extensions': native_extensions,
+            'cache_layer_types': runner.strict_json(metadata / 'config.json')['text_config']['layer_types'],
             'native_test_hashes': {path.name: sha(path) for path in tests},
             'cache_metadata_hashes': {path.name: {'sha256': sha(path)} for path in metadata_files},
             'environment': environment, 'node': str(node), 'wrapper': str(wrapper),
