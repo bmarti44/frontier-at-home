@@ -1,0 +1,34 @@
+..EF........
+======================================================================
+ERROR: test_complete_cache_record_accepts (test_glm53_probe_runner.CacheRunnerTests.test_complete_cache_record_accepts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 105, in test_complete_cache_record_accepts
+    self.assertEqual(runner.score_inner(self.root,'cache',self.seed,self.binding)['verdict'],'PASS')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 67, in score_inner
+    validate_cache_rows(rows, seed, binding['cache_layer_types'])
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 94, in validate_cache_rows
+    fields(allocation, {'unique_backing_bytes', 'layer_views', 'cuda_memory_allocated', 'cuda_memory_reserved', 'cuda_peak_allocated'})
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 77, in fields
+    require(set(row) == {'time_unix', 'event', *names}, 'cache raw schema mismatch')
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_host_evidence.py", line 24, in require
+    raise ValueError(message)
+ValueError: cache raw schema mismatch
+
+======================================================================
+FAIL: test_page_rounded_storage_is_required (test_glm53_probe_runner.CacheRunnerTests.test_page_rounded_storage_is_required)
+----------------------------------------------------------------------
+ValueError: cache raw schema mismatch
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 94, in test_page_rounded_storage_is_required
+    with self.assertRaisesRegex(ValueError, 'backing'):
+AssertionError: "backing" does not match "cache raw schema mismatch"
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.014s
+
+FAILED (failures=1, errors=1)
