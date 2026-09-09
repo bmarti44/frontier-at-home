@@ -18,6 +18,7 @@ before state, lock, or engine changes. Performance is **not yet measured**.
 | Source preparation | `7babbb1d` | 1 plus focused medium fixes | 6 | Relative paths, extra DFlash/MTP scope and mutable transitive tags closed |
 | NVIDIA wheel metadata repair | `65c4448b` | 1 | 7 | Independent RECORD/payload check; zero critical/high |
 | Contained build driver | `d3b2df87` | 1 plus focused Rust fix | 8 | Two CUDA/C++/Cargo jobs, pinned Rust, locked Cargo resolution |
+| Triton-only sealed cache | `994c6666` | 1 plus focused low regression | 9 | Both reviewers: zero critical/high; uninstalled and default-off |
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
@@ -69,6 +70,14 @@ Dependency attempts are retained individually:
   wrapper result is not a successful contained attempt.
 
 ## Remaining gates
+
+The [runtime-compilation audit](jit-audit-001.md) identifies an additional
+large-load admission requirement: prewarm/freeze the actual selected kernels
+and reject cache misses before compilation. Fourteen Triton cache/control-flow
+tests pass, but worker startup wiring, cache immutability, FlashInfer AOT,
+DeepGEMM, CuTe and Inductor closure remain. Two user-systemd read-only namespace
+probes failed and are preserved; requested mount properties are not evidence
+of enforcement on this host.
 
 Finish clean-building the pinned runtime with
 at most two jobs after a stable 110 GiB start-memory check. Freeze source
