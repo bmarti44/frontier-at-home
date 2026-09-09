@@ -2,7 +2,8 @@
 
 Integration is **in preparation**, not serving-qualified. No GLM-5.3 weights
 have been downloaded or loaded. The first contained ExLlamaV3 CUDA wheel build passed, its archive RECORD
-validated, and installation passed the 205-package dependency check. The
+validated, and installation passed the 205-package dependency check. The ExLlamaV3 extension also imports successfully with GPUs hidden and exposes
+the fused MoE entry point (`exllama-import-001`); no kernel was executed. The
 pinned vLLM build is running; no serving runtime is qualified. The optional profile
 requests 1,048,576 aggregate tokens in four 262,144-token slots; the default
 and recorded previous profile are unchanged. Production activation rejects
