@@ -203,7 +203,7 @@ def score_host_observations(directory, expected):
     require(minimum >= floor * 2**20, "whole-host memory floor failed")
     require(all(row["mem_avail_kb"] * 1024 <= total for row in samples), "impossible host memory sample")
     require(all(row["cgroup_swap_current_bytes"] == 0 for row in samples), "unexpected cgroup swap")
-    require(all(row["eng_rss_kb"] > 0 and row["cgroup_current_bytes"] <= row["cgroup_peak_bytes"] <= peak for row in samples), "invalid sampled memory accounting")
+    require(all(row["cgroup_current_bytes"] <= row["cgroup_peak_bytes"] <= peak for row in samples), "invalid sampled memory accounting")
     require(all(b["cgroup_peak_bytes"] >= a["cgroup_peak_bytes"] for a, b in zip(samples, samples[1:])), "cgroup peak counter decreased")
 
     identity = obj(root / "identity/manifest.json")
@@ -252,6 +252,18 @@ def score_host_observations(directory, expected):
             type(summary["probe_exit_code"]) is int and summary["probe_exit_code"] == 0 and summary["failure"] is None and
             summary["live_process_group_after"] == [] and type(summary["identity_samples"]) is int and summary["identity_samples"] == len(identities) and
             summary["raw_sha256"] == hashlib.sha256(raw).hexdigest(), "identity verdict or raw digest mismatch")
+
+    # The wrapper may sample a reaped probe before it observes group cleanup.
+    # Keep those host/cgroup samples, but never accept RSS loss while the
+    # independently verified probe is still before its terminal acknowledgement.
+    require(any(row["eng_rss_kb"] > 0 for row in samples), "missing positive probe RSS coverage")
+    disappeared = False
+    for row in samples:
+        if row["eng_rss_kb"] == 0:
+            require(row["time"] > times[-2], "probe RSS vanished before terminal identity")
+            disappeared = True
+        else:
+            require(not disappeared, "probe RSS reappeared after disappearance")
 
     live, live_time = parse_unit(root / "unit-live.json", unit)
     require(live["LoadState"] == "loaded" and live["ActiveState"] == "active" and live["SubState"] == "running" and
