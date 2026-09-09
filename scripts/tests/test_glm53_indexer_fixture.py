@@ -29,8 +29,9 @@ class IndexerFixtureTests(unittest.TestCase):
         import numpy as np
         a = self.api; cfg = a.case_config(seed, case)
         result = np.full((len(cfg['positions']), 2048), -1, dtype='<i4')
+        tops = {(int(r),int(n)):a.top_history(seed,int(r),int(n)) for r,n in set(zip(cfg['row_requests'],cfg['history_counts']))}
         for i, (request, position, old_count) in enumerate(zip(cfg['row_requests'], cfg['positions'], cfg['history_counts'])):
-            pools = a.top_history(seed, int(request), int(old_count))
+            pools = tops[(int(request),int(old_count))]
             # Omit any one of the 512 and permute group order: native top-k is unsorted.
             chosen = np.roll(pools, i % 512)[:511][::-1]
             result[i, :2044] = (chosen[:, None]*4 + np.arange(4)).reshape(-1)
@@ -80,6 +81,26 @@ class IndexerFixtureTests(unittest.TestCase):
                 bits = a.bf16_bits(a.raw_value(int(request),phase)) if phase <= i else 0x4050
                 self.assertTrue(np.all(final[1][tail_block,0,phase] == bits))
                 self.assertTrue(np.all(final[1][tail_block,1,phase] == (0 if phase <= i else 0x4050)))
+
+    def test_prefill_and_valid_logits_contract(self):
+        import numpy as np
+        a = self.api
+        for case in ('prefill-1','prefill-4'):
+            indices = self.good_indices(7,case)
+            self.assertEqual(a.score_indices(indices,7,case)['rows'],2048)
+        for request in range(4):
+            old = 65408; values = a.valid_logits(7,request,old,65536)
+            np.testing.assert_array_equal(values[:old], ((a.ranks(7,request)[:old]+1)/65536).astype('<f4'))
+            vector,scale = a.compressed_key(request)
+            self.assertTrue(np.all(values[old:] == a.fp8_value(int(vector[0]))*scale))
+            self.assertLess(float(values[old]), float(np.partition(values[:old],-512)[-512]))
+            self.assertTrue(np.isfinite(values).all())
+        before, _ = a.cache_and_tail(7,'decode-4',final=False)
+        after, _ = a.cache_and_tail(7,'decode-4',final=True)
+        request = int(a.case_config(7,'decode-4')['row_requests'][3])
+        page = a.physical_blocks(7)[request][30]*34+3
+        allowed = np.zeros(before.shape,dtype='bool'); allowed[page,8064:8192] = True; allowed[page,8444:8448] = True
+        np.testing.assert_array_equal(before[~allowed],after[~allowed])
 
     def test_bf16_and_fp8_rounding_independent_known_values(self):
         a = self.api
