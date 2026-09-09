@@ -89,6 +89,20 @@ class HostEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "chronology|window|timestamp"):
             score_host_observations(self.root, self.expected)
 
+    def test_individual_wrapper_events_must_fit_probe_window(self):
+        path = self.root / "main.log"; original = path.read_text()
+        for event in ("SAFE_RUN start", "cgroup_verified", "wrapper_pid=", "cgroup_final", "SAFE_RUN end"):
+            with self.subTest(event=event):
+                path.write_text("\n".join(line.replace("2023-11-14", "2024-11-14") if event in line else line
+                                          for line in original.splitlines()) + "\n"); self.seal()
+                with self.assertRaisesRegex(ValueError, "chronology|cleanup"):
+                    score_host_observations(self.root, self.expected)
+
+    def test_wrapper_process_discovery_can_follow_initial_identity(self):
+        path = self.root / "main.log"
+        path.write_text(path.read_text().replace("22:13:19+00:00 wrapper_pid", "22:13:19.950000+00:00 wrapper_pid")); self.seal()
+        self.assertEqual(score_host_observations(self.root, self.expected)["verdict"], "PASS")
+
     def test_missing_or_changed_frozen_start_controls_reject(self):
         path = self.root / "main.log"; original = path.read_text()
         variants = ["\n".join(original.splitlines()[1:]) + "\n"]

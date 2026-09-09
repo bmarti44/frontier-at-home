@@ -79,6 +79,16 @@ def one(pattern, text, message):
     return matches[0]
 
 
+def record(marker, pattern, text, message):
+    # Count all records of this kind before validating success/field syntax.
+    # Failed or malformed records must not disappear behind a success-only regex.
+    lines = [line for line in text.splitlines() if re.search(r"(?:^|\s)" + re.escape(marker) + r"(?:=|\s|$)", line)]
+    require(len(lines) == 1, message)
+    match = re.fullmatch(pattern, lines[0])
+    require(match is not None, message)
+    return match
+
+
 def timestamp(text):
     value = datetime.fromisoformat(text)
     require(value.tzinfo is not None, "timestamp lacks timezone")
@@ -147,7 +157,7 @@ def score_host_observations(directory, expected):
     for name in ("binary_sha256", "guard_sha256", "probe_sha256", "environment_sha256"):
         require(isinstance(expected[name], str) and re.fullmatch(r"[0-9a-f]{64}", expected[name]), "invalid expected digest")
     logs = {name: read(root / name) for name in ("wrapper.log", "main.log", "samples.log", "kernel.log")}
-    done = one(r"^SAFE_RUN_DONE rc=0 killed=no dir=(\S+) main_sha256=([0-9a-f]{64}) samples_sha256=([0-9a-f]{64}) kernel_sha256=([0-9a-f]{64})$",
+    done = record("SAFE_RUN_DONE", r"SAFE_RUN_DONE rc=0 killed=no dir=(\S+) main_sha256=([0-9a-f]{64}) samples_sha256=([0-9a-f]{64}) kernel_sha256=([0-9a-f]{64})",
                logs["wrapper.log"].decode(), "missing successful digest-bound wrapper completion")
     for name, digest in zip(("main.log", "samples.log", "kernel.log"), done.groups()[1:]):
         require(hashlib.sha256(logs[name]).hexdigest() == digest, "wrapper raw log digest mismatch")
@@ -155,9 +165,15 @@ def score_host_observations(directory, expected):
     require("FATAL" not in main and not FAULTS.search(main), "fatal wrapper or GPU failure")
     require(bool(kernel.strip()) and not FAULTS.search(kernel) and
             not re.search(r"Failed to (?:read|open)|Permission denied|Cannot access|No journal files", kernel, re.I), "kernel fault or incomplete journal evidence")
-    one(r"^\S+ SAFE_RUN end rc=0 killed=no \(124=timeout, 137=SIGKILL/ENOMEM-adjacent\)$", main, "wrapper did not exit cleanly")
-    controls = one(r"^\S+ cgroup_verified path=(\S+) memory_high=([0-9]+) memory_max=([0-9]+) memory_swap_max=0 memory_oom_group=1$", main, "missing verified cgroup controls")
-    cgroup, high, maximum = controls.groups(); high, maximum = int(high), int(maximum)
+    launch = record("SAFE_RUN start", r"(\S+) SAFE_RUN start tag=(\S+) vlimit_kb=([1-9][0-9]*) kill_floor_gib=([0-9]+) min_start_gib=([0-9]+) timeout_s=([0-9]+) allow_cgroup_high=0", main, "missing or invalid wrapper start controls")
+    launch_time = timestamp(launch.group(1))
+    require(launch.group(2) == prefix.removeprefix("glm52-").removesuffix("-") and
+            tuple(map(int, launch.groups()[3:])) == (floor, start, timeout), "frozen wrapper start controls mismatch")
+    end = record("SAFE_RUN end", r"(\S+) SAFE_RUN end rc=0 killed=no \(124=timeout, 137=SIGKILL/ENOMEM-adjacent\)", main, "wrapper terminal exit missing, duplicated or failed")
+    end_time = timestamp(end.group(1))
+    controls = record("cgroup_verified", r"(\S+) cgroup_verified path=(\S+) memory_high=([0-9]+) memory_max=([0-9]+) memory_swap_max=0 memory_oom_group=1", main, "missing verified cgroup controls")
+    control_time = timestamp(controls.group(1))
+    cgroup, high, maximum = controls.groups()[1:]; high, maximum = int(high), int(maximum)
     unit = cgroup.rsplit("/", 1)[-1]
     require(re.fullmatch(re.escape(prefix) + r"[1-9][0-9]*\.service", unit), "wrong attempt cgroup identity")
     require(cgroup == "/user.slice/user-1000.slice/user@1000.service/app.slice/" + unit, "unexpected probe containment path")
@@ -167,13 +183,15 @@ def score_host_observations(directory, expected):
     starts = [object_text(line) for line in main.splitlines() if line.startswith('{"pass":')]
     require(len(starts) == 1 and starts[0].get("pass") is True and number(starts[0]["required_gib"]) == start and
             number(starts[0]["mem_available_gib"]) >= start and integer(starts[0]["stable_samples_observed"]) >= 3, "stable start-memory evidence missing")
-    process = one(r"^\S+ wrapper_pid=([0-9]+) engine_pid=([0-9]+) pgid=([0-9]+) .*", main, "missing sampled process identity")
-    wrapper_pid, engine_pid, pgid = map(int, process.groups())
+    process = record("wrapper_pid", r"(\S+) wrapper_pid=([0-9]+) engine_pid=([0-9]+) pgid=([0-9]+) .*", main, "missing sampled process identity")
+    process_time = timestamp(process.group(1))
+    wrapper_pid, engine_pid, pgid = map(int, process.groups()[1:])
     require(wrapper_pid == pgid and wrapper_pid != engine_pid and engine_pid > 0, "invalid sampled process identity")
-    final = one(r"^\S+ cgroup_final current_bytes=([0-9]+) peak_bytes=([0-9]+) swap_current_bytes=0 events=(.+)$", main, "missing final cgroup counters")
-    current, peak = int(final.group(1)), int(final.group(2))
+    final = record("cgroup_final", r"(\S+) cgroup_final current_bytes=([0-9]+) peak_bytes=([0-9]+) swap_current_bytes=0 events=(.+)", main, "missing final cgroup counters")
+    final_time = timestamp(final.group(1))
+    current, peak = int(final.group(2)), int(final.group(3))
     events = {}
-    for field in final.group(3).rstrip(",").split(","):
+    for field in final.group(4).rstrip(",").split(","):
         require(re.fullmatch(r"[a-z_]+ [0-9]+", field), "malformed cgroup event")
         key, value = field.split(); require(key not in events, "duplicate cgroup event"); events[key] = int(value)
     require({"low", "high", "max", "oom", "oom_kill", "oom_group_kill"} <= events.keys(), "missing cgroup event coverage")
@@ -225,6 +243,10 @@ def score_host_observations(directory, expected):
     require(identities[-1]["seccomp_filters"] > identities[0]["seccomp_filters"], "terminal exec filter count did not increase")
     require(times[0] >= number(identity["start_unix"]) and times[-1] - number(identity["start_unix"]) <= timeout and
             abs(host_times[0] - times[0]) <= gap and abs(host_times[-1] - times[-2]) <= gap, "host/identity sampling windows lack coverage")
+    require(launch_time <= control_time <= number(identity["start_unix"]) <= times[0] and
+            control_time <= process_time <= host_times[0] and abs(process_time - times[0]) <= gap and
+            max(host_times[-1], times[-1]) <= final_time <= end_time and final_time - times[-1] <= gap,
+            "wrapper timestamp chronology contradicts probe or memory windows")
     summary = obj(root / "identity/summary.json")
     require(summary["verdict"] == "PASS" and summary["qualification"] == "Python_probe_identity_only" and
             type(summary["probe_exit_code"]) is int and summary["probe_exit_code"] == 0 and summary["failure"] is None and
@@ -239,13 +261,13 @@ def score_host_observations(directory, expected):
     require(times[0] - gap <= live_time <= times[-1], "unit was not observed during probe lifetime")
     after, after_time = parse_unit(root / "unit-after.json", unit)
     require(after["LoadState"] in ("loaded", "not-found") and after["ActiveState"] == "inactive" and
-            after["MainPID"] == "0" and after["ControlGroup"] == "" and after_time >= times[-1], "unit cleanup was not verified")
+            after["MainPID"] == "0" and after["ControlGroup"] == "" and after_time >= end_time, "unit cleanup was not verified")
     cgroup_after = obj(root / "cgroup-after.json")
     require(cgroup_after["path"] == "/sys/fs/cgroup" + cgroup and cgroup_after["exists"] is False and
             number(cgroup_after["observed_at"]) >= after_time, "cgroup cleanup was not verified")
     swap_before, before_time = swap_snapshot(root / "swap-before.json")
     swap_after, swap_time = swap_snapshot(root / "swap-after.json")
-    require(before_time <= times[0] and swap_time >= number(cgroup_after["observed_at"]), "swap observations do not cover attempt")
+    require(before_time <= launch_time and swap_time >= number(cgroup_after["observed_at"]), "swap observations do not cover attempt")
     require(swap_before == swap_after, "unexpected whole-system swap counter delta")
     return {"verdict": "PASS", "qualification": "host_and_probe_identity_observations_only", "unit": unit,
             "minimum_mem_available_kib": minimum, "maximum_cgroup_peak_bytes": peak, "memory_samples": len(samples),

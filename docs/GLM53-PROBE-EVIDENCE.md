@@ -38,7 +38,7 @@ synthetic mutations and must never be used as qualification evidence.
 | `checks/manifest.json`, `checks/raw.jsonl`, `checks/summary.json` and probe logs | The inner native or cache probe; retain every required assertion and failure. |
 | `unit-live.json`, `unit-after.json` | Actual `systemctl --user show` command, return code, stdout, stderr and capture timestamp; use the exact argv returned by `unit_query(unit)`. |
 | `cgroup-after.json` | Direct post-stop observation of the exact `/sys/fs/cgroup` path. Only `ENOENT` means absent; permission or other observation errors fail. |
-| `swap-before.json`, `swap-after.json` | Unmodified `/proc/vmstat` text, source path and capture timestamp, covering the complete process/cleanup interval. |
+| `swap-before.json`, `swap-after.json` | Unmodified `/proc/vmstat` text, source path and capture timestamp, covering the interval from before wrapper start through cgroup cleanup. |
 | `summary.json` | Fixed combined verdict, unrounded observations, hashes and any failing assertion. |
 
 The unit records have keys `command`, `returncode`, `stdout`, `stderr` and
@@ -101,7 +101,12 @@ user cgroup. A production dsv4 service or another host requires its own lifecycl
 and containment qualification. It checks at least three external memory samples,
 periodic and final Python identity, at most two seconds between samples, matching
 sampling windows, zero new whole-system swap counters, clean cgroup event counters,
-and actual unit/cgroup teardown. Its minimum available-memory result comes from
+and actual unit/cgroup teardown. It requires exactly one wrapper start, end and
+completion record, validates the frozen tag, memory floors and timeout, and
+rejects contradictory or malformed terminal records. Wrapper control/process/final
+and end timestamps must agree with the identity, external sampling and cleanup
+windows. Process discovery may follow the first identity observation by the
+frozen sample gap, because the wrapper waits briefly before discovering its child. Its minimum available-memory result comes from
 the raw external samples; allocator self-reports do not supply that metric.
 
 The controller must reject output-recording errors and unexpected wrapper exit,
