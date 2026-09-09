@@ -53,8 +53,9 @@ class LoadScoreTests(unittest.TestCase):
     def test_complete_ordinary_record_and_mutations(self):
         import tempfile, json
         from unittest.mock import patch
-        api=self.api; size=1268776960; spec=api.tensor_specs('ordinary')[0]; name=spec['name']; digest='a'*64
-        storage={'device':'cuda:0','dtype':'torch.bfloat16','shape':[154880,4096],'stride':[4096,1],
+        api=self.api; spec=api.tensor_specs('ordinary')[0]; spec={**spec, 'shape':[2,4]}; size=16; name=spec['name']
+        digest=api.fixture_digest(7,spec)
+        storage={'device':'cuda:0','dtype':'torch.bfloat16','shape':[2,4],'stride':[4,1],
                  'storage_pointer':4096,'storage_bytes':size,'data_pointer':4096,'storage_offset':0}
         memory={'process_kib':{'Rss':1,'Pss':1,'Pss_Anon':1,'Pss_File':0},'cuda_allocated':size,
                 'cuda_reserved':size,'cuda_peak_allocated':size,'cuda_peak_reserved':size,
@@ -74,14 +75,11 @@ class LoadScoreTests(unittest.TestCase):
               {'event':'final_bytes','name':name,'sha256':digest,'storage':storage},
               {'event':'retained','pointer_tables':{},'shared_scratch':[],'tensor_cache':[],'handles':[],'memory':memory}]
         for i,row in enumerate(rows):row['time_unix']=i+1
-        with tempfile.TemporaryDirectory() as td, patch.object(api,'fixture_digest',return_value=digest):
-            root=Path(td); (root/'fixture').mkdir(); (root/'fixture/weights.safetensors').write_bytes(b'CPU scorer test only')
+        with tempfile.TemporaryDirectory() as td, patch.object(api,'tensor_specs',return_value=[spec]), \
+                patch.object(api,'parameter_layout',return_value={'weight':{'dtype':'torch.bfloat16','shape':[2,4]}}), \
+                patch.object(api,'EXCLUDED',[]):
+            root=Path(td); fixture=api.write_fixture(root/'fixture','ordinary',7)
             for filename in ('manifest.json','summary.json','raw.jsonl','traceback.log'): (root/filename).touch()
-            fixture={'schema_version':1,'qualification':'generated_synthetic_input_only','case':'ordinary','seed':7,
-                     'generator_sha256':api.sha256_file(api.ROOT/'scripts/lib/glm53_load_fixture.py'),
-                     'inventory':api.file_inventory(root/'fixture'),
-                     'selection':{name:{'file':'weights.safetensors','dtype':'torch.bfloat16','shape':spec['shape'],'sha256':digest}},
-                     'excluded':{s['name']:{'dtype':api.DTYPES[s['dtype']],'shape':s['shape'],'sha256':digest} for s in api.EXCLUDED}}
             (root/'fixture.json').write_text(json.dumps(fixture))
             self.assertEqual(api.score_capture(root,rows,'ordinary',7)['bytes_checked_per_stage'],size)
             mutations=[(4,'pinned',False),(4,'completed_reuses',chunks*2-1),(4,'device_sha256','b'*64),
@@ -90,7 +88,7 @@ class LoadScoreTests(unittest.TestCase):
             for index,key,value in mutations:
                 changed=copy.deepcopy(rows);changed[index][key]=value
                 with self.subTest(key=key), self.assertRaises(ValueError):api.score_capture(root,changed,'ordinary',7)
-            for index,key,value in [(7,'storage_pointer',8192),(7,'storage_offset',1),(3,'stride',[4095,1]),(3,'dtype',[]),
+            for index,key,value in [(7,'storage_pointer',8192),(7,'storage_offset',1),(3,'stride',[5,1]),(3,'dtype',[]),
                                     (7,'storage_bytes',size-1)]:
                 changed=copy.deepcopy(rows);changed[index]['storage'][key]=value
                 with self.subTest(key=key), self.assertRaises(ValueError):api.score_capture(root,changed,'ordinary',7)
@@ -98,5 +96,12 @@ class LoadScoreTests(unittest.TestCase):
                 with self.assertRaises(ValueError):api.score_capture(root,changed,'ordinary',7)
             changed=copy.deepcopy(rows);changed[8]['memory']['cuda_allocated']=float('nan')
             with self.assertRaises(ValueError):api.score_capture(root,changed,'ordinary',7)
-            fixture['excluded']={};(root/'fixture.json').write_text(json.dumps(fixture))
-            with self.assertRaises(ValueError):api.score_capture(root,rows,'ordinary',7)
+            changed=copy.deepcopy(rows)
+            for row in changed:
+                mem=row.get('memory',row)
+                for key in ('cuda_allocated','cuda_reserved','cuda_peak_allocated','cuda_peak_reserved'):
+                    if key in mem:mem[key]=0
+            with self.subTest(finding='H1'), self.assertRaises(ValueError):api.score_capture(root,changed,'ordinary',7)
+            path=root/'fixture/weights.safetensors';path.chmod(0o644);path.write_bytes(b'invalid retained payload')
+            fixture['inventory']=api.file_inventory(root/'fixture');(root/'fixture.json').write_text(json.dumps(fixture))
+            with self.subTest(finding='H2'), self.assertRaises(ValueError):api.score_capture(root,rows,'ordinary',7)
