@@ -1,0 +1,23 @@
+E
+======================================================================
+ERROR: test_glm53_mla_probe (unittest.loader._FailedTest.test_glm53_mla_probe)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_glm53_mla_probe
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/unittest/loader.py", line 394, in _find_test_path
+    module = self._get_module_from_name(name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/loader.py", line 337, in _get_module_from_name
+    __import__(name)
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_mla_probe.py", line 13, in <module>
+    SPEC.loader.exec_module(probe)
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1128, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1186, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/home/bmarti44/spark-deepseek-v4-flash/scripts/40_probe_glm53_mla.py'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)
