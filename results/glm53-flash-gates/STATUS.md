@@ -172,7 +172,8 @@ actual decode-2 and failed exact tail bytes. Its 256 mismatches were traced to
 numeric conversion of uint16 staging during BF16 key reload. All captured valid
 logits matched in a separate postmortem, which does not replace the failed verdict.
 The one-line bit-preserving copy correction has a [249-test audit](indexer-probe-audit-004/README.md)
-and is under focused review as candidate 4 / campaign 49. Both failed attempts,
+and passed both [focused reviews](indexer-probe-review-004.md) as candidate 4 /
+campaign 49. The next contained run requires a fresh freeze and public seed. Both failed attempts,
 their raw captures and generated kernels remain preserved. No complete indexer
 kernel result exists yet. Preparation cannot claim sealed-kernel qualification.
 
