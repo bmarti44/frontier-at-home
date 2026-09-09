@@ -47,6 +47,22 @@ class ActualSourceContract(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "sealed.*compil"):
                 rb._build("must-not-compile")
 
+    def test_retained_original_loader_alias_cannot_compile_after_load_error(self):
+        from contextlib import ExitStack
+        original_loader = rb.compile_module_from_src
+        with ExitStack() as stack:
+            for obj, field in ((rb, "compile_module_from_src"), (cc.knobs.cache, "manager_class"),
+                               (cc.knobs.cache, "remote_manager_class"), (cc.knobs.compilation, "always_compile"),
+                               (cc.knobs.compilation, "override"), (cc.knobs.compilation, "dump_ir")):
+                stack.enter_context(mock.patch.object(obj, field, getattr(obj, field)))
+            # A mutation that removes the guard must still never execute a compiler in this test.
+            stack.enter_context(mock.patch.object(rb, "_build", side_effect=AssertionError("compiler entered")))
+            stack.enter_context(mock.patch.object(rb, "get_cache_manager", return_value=SimpleNamespace(get_file=lambda name: "synthetic")))
+            stack.enter_context(mock.patch.object(rb, "_load_module_from_path", side_effect=ImportError("synthetic unloadable helper")))
+            policy.activate_triton(self.factory(), enabled=True)
+            with self.assertRaisesRegex(RuntimeError, "sealed.*compil"):
+                original_loader("synthetic source", "helper")
+
     def test_gpu_cache_hit_and_miss_do_not_enter_compiler_stages(self):
         key = base64.b32encode(hashlib.sha256(b"synthetic-cache-key").digest()).decode().rstrip("=")
         self.directory.rename(self.root / key)
