@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import runpy
 import secrets
+import stat
 import shutil
 import subprocess
 import sys
@@ -24,9 +25,9 @@ def sha(path):
 def reuse_prepared_kernels(state):
     """Copy existing warm caches; keep preparation evidence untouched."""
     sources=[]
-    for attempt in ('mla-preflight-001','kda-preflight-002','conv-preflight-001','indexer-preflight-003','sampling-preparation-003','server-bringup-007'):
+    for attempt in ('mla-preflight-001','kda-preflight-002','conv-preflight-001','indexer-preflight-003','sampling-preparation-003','server-bringup-001','server-bringup-007','server-bringup-008'):
         source=BASE/attempt/'state'
-        for subtree in ('triton','.cache/flashinfer','.cache/vllm/modelinfos','deep-gemm'):
+        for subtree in ('triton','.cache/flashinfer','.cache/vllm/modelinfos','deep-gemm','.tilelang/cache'):
             if (source/subtree).exists():
                 shutil.copytree(source/subtree,state/subtree,dirs_exist_ok=True)
         sources.append(source)
@@ -41,6 +42,19 @@ def reuse_prepared_kernels(state):
             if not relocated.is_file() or sha(old)!=sha(relocated):raise ValueError('prepared kernel copy mismatch')
             children[name]=str(relocated)
         group.write_text(json.dumps({'child_paths':children})+'\n')
+
+
+def launch_key(path):
+    if path is None:return secrets.token_urlsafe(32)
+    descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+    with os.fdopen(descriptor) as stream:
+        info=os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode&0o077:
+            raise ValueError('API key file must be an owner-only regular file')
+        value=stream.read(258).strip()
+        if not 32<=len(value)<=256 or any(c not in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-' for c in value):
+            raise ValueError('invalid API key file')
+        return value
 
 
 def serve(directory):
@@ -64,10 +78,12 @@ def main():
     parser.add_argument('--release-warmup-cache',action=argparse.BooleanOptionalAction,default=True,help='Release unused startup allocations before reserving the full KV cache')
     parser.add_argument('--prepared-flashinfer',action=argparse.BooleanOptionalAction,default=True,help='Use existing compiled FlashInfer libraries through its native cache provider')
     parser.add_argument('--skip-autotune',action=argparse.BooleanOptionalAction,default=True,help='Use native default FlashInfer tactics without optional startup tuning')
+    parser.add_argument('--api-key-file',type=Path,help='Reuse an existing owner-only API key when replacing the local server')
     args=parser.parse_args()
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
     model=args.model.resolve(); output=args.output.resolve()
+    api_key=launch_key(args.api_key_file)
     inventory=json.loads((model/'inventory.json').read_text())
     for row in inventory['files']:
         path=model/row['path']
@@ -83,12 +99,13 @@ def main():
     shutil.copyfile(__file__,output/'server.py')
     reuse_prepared_kernels(output/'state')
     descriptor=os.open(output/'api-key',os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-    with os.fdopen(descriptor,'w') as key:key.write(secrets.token_urlsafe(32)+'\n')
+    with os.fdopen(descriptor,'w') as key:key.write(api_key+'\n')
     profile=json.loads((ROOT/'configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json').read_text())
     arguments=[value.replace('{model}',str(model)).replace('{port}',str(args.port)) for value in profile['launch']['args'][4:]]
     arguments[arguments.index('--max-num-batched-tokens')+1]=str(args.prefill_batch)
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
-                '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320']
+                '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320',
+                '--mm-processor-cache-gb','0']
     if args.skip_autotune:arguments+=['--kernel-config','{"enable_flashinfer_autotune":false}']
     if args.release_warmup_cache:arguments+=['--worker-cls','glm53_worker.WarmupCleanupWorker']
     if args.text_only:arguments+=['--language-model-only']
