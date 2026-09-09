@@ -56,6 +56,7 @@ class HostEvidenceTests(unittest.TestCase):
         (self.root / "samples.log").write_text("".join(samples))
         (self.root / "kernel.log").write_text("-- No entries --\n")
         (self.root / "main.log").write_text(
+            "2023-11-14T22:13:17.900000+00:00 SAFE_RUN start tag=glm53-native-smoke-004 vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 timeout_s=600 allow_cgroup_high=0\n"
             f"2023-11-14T22:13:18+00:00 cgroup_verified path={self.cg} memory_high=68719476736 memory_max=73014444032 memory_swap_max=0 memory_oom_group=1\n"
             'MemTotal: 125483612 kB\nMemAvailable: 120000000 kB\n'
             '{"pass":true,"required_gib":110.0,"mem_available_gib":114.441,"stable_samples_observed":3}\n'
@@ -69,7 +70,7 @@ class HostEvidenceTests(unittest.TestCase):
             write_json(self.root / name, {"command": unit_query(self.unit), "returncode": 0, "observed_at": self.base + delta,
                        "stdout": "".join(f"{k}={v}\n" for k, v in values.items()), "stderr": ""})
         write_json(self.root / "cgroup-after.json", {"path": "/sys/fs/cgroup" + self.cg, "exists": False, "observed_at": self.base + 2.2})
-        for name, delta in (("swap-before.json", -1), ("swap-after.json", 2.3)):
+        for name, delta in (("swap-before.json", -3), ("swap-after.json", 2.3)):
             write_json(self.root / name, {"path": "/proc/vmstat", "observed_at": self.base + delta, "text": "pswpin 10\npswpout 20\n"})
         self.seal()
 
@@ -81,6 +82,38 @@ class HostEvidenceTests(unittest.TestCase):
         if path.exists():
             summary = json.loads(path.read_text()); summary["raw_sha256"] = digest(self.root / "identity/raw.jsonl"); write_json(path, summary)
         (self.root / "wrapper.log").write_text(f"SAFE_RUN_DONE rc=0 killed=no dir=/raw/crash main_sha256={digest(self.root / 'main.log')} samples_sha256={digest(self.root / 'samples.log')} kernel_sha256={digest(self.root / 'kernel.log')}\n")
+
+    def test_stale_wrapper_chronology_rejects(self):
+        path = self.root / "main.log"
+        path.write_text(path.read_text().replace("2023-11-14", "2000-11-14")); self.seal()
+        with self.assertRaisesRegex(ValueError, "chronology|window|timestamp"):
+            score_host_observations(self.root, self.expected)
+
+    def test_missing_or_changed_frozen_start_controls_reject(self):
+        path = self.root / "main.log"; original = path.read_text()
+        variants = ["\n".join(original.splitlines()[1:]) + "\n"]
+        variants += [original.replace(old, new) for old, new in (
+            ("kill_floor_gib=40", "kill_floor_gib=0"), ("min_start_gib=110", "min_start_gib=1"),
+            ("timeout_s=600", "timeout_s=601"), ("allow_cgroup_high=0", "allow_cgroup_high=1"),
+            ("tag=glm53-native-smoke-004", "tag=glm53-native-smoke-003"))]
+        for text in variants:
+            with self.subTest(text=text.splitlines()[0]):
+                path.write_text(text); self.seal()
+                with self.assertRaisesRegex(ValueError, "start|controls"):
+                    score_host_observations(self.root, self.expected)
+
+    def test_contradictory_or_malformed_terminal_records_reject(self):
+        for name, failure in (("wrapper.log", "SAFE_RUN_DONE rc=124 killed=timeout dir=/failed\n"),
+                              ("main.log", "2023-11-14T22:13:22+00:00 SAFE_RUN end rc=124 killed=timeout (124=timeout, 137=SIGKILL/ENOMEM-adjacent)\n"),
+                              ("wrapper.log", "SAFE_RUN_DONE malformed\n"),
+                              ("main.log", "2023-11-14T22:13:22+00:00 SAFE_RUN end malformed\n")):
+            with self.subTest(name=name, failure=failure):
+                path = self.root / name; original = path.read_text()
+                path.write_text(original + failure)
+                if name == "main.log": self.seal()
+                with self.assertRaisesRegex(ValueError, "completion|terminal|exit"):
+                    score_host_observations(self.root, self.expected)
+                path.write_text(original); self.seal()
 
     def test_complete_synthetic_bundle_scores_only_host_scope(self):
         result = score_host_observations(self.root, self.expected)
