@@ -1,0 +1,39 @@
+2026-09-09T02:20:29,017132333+00:00 SAFE_RUN start tag=glm53-install-source vlimit_kb=419430400 kill_floor_gib=18 min_start_gib=110 timeout_s=2400 allow_cgroup_high=0
+2026-09-09T02:20:29,022321360+00:00 cmd: /usr/bin/env MAX_JOBS=2 CMAKE_BUILD_PARALLEL_LEVEL=2 NVCC_THREADS=1 MAKEFLAGS=-j2 /home/bmarti44/.local/bin/uv pip install --python /home/bmarti44/.cache/glm53-flash/runtime/bin/python3 --require-hashes --no-deps --no-build-isolation -r /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements-source.lock
+2026-09-09T02:20:29,028983704+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T02:20:29,033083575+00:00 candidate_provenance_enabled=0
+2026-09-09T02:20:29,040331970+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-install-source-408400.service memory_high=96563363840 memory_max=100858331136 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121563704 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.933,"stable_samples_observed":3}
+2026-09-09T02:20:31,624483509+00:00 wrapper_pid=408467 engine_pid=408469 pgid=408467 (periodic sampler; actual cadence in samples.log)
+2026-09-09T02:20:34,711612463+00:00 cgroup_final current_bytes=188121088 peak_bytes=300904448 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+      ar: creating libaio.a
+      ar: creating liburing.a
+      ar: creating liburing-ffi.a
+      In file included from
+      /home/bmarti44/.cache/uv/sdists-v9/pypi/instanttensor/0.1.9/LTwXeZKYgNhvJda60Y6u8/src/csrc/third_party/pybind11/include/pybind11/detail/common.h:12,
+                       from
+      /home/bmarti44/.cache/uv/sdists-v9/pypi/instanttensor/0.1.9/LTwXeZKYgNhvJda60Y6u8/src/csrc/third_party/pybind11/include/pybind11/attr.h:13,
+                       from
+      /home/bmarti44/.cache/uv/sdists-v9/pypi/instanttensor/0.1.9/LTwXeZKYgNhvJda60Y6u8/src/csrc/third_party/pybind11/include/pybind11/detail/class.h:12,
+                       from
+      /home/bmarti44/.cache/uv/sdists-v9/pypi/instanttensor/0.1.9/LTwXeZKYgNhvJda60Y6u8/src/csrc/third_party/pybind11/include/pybind11/pybind11.h:12,
+                       from
+      /home/bmarti44/.cache/uv/sdists-v9/pypi/instanttensor/0.1.9/LTwXeZKYgNhvJda60Y6u8/src/csrc/instant_tensor/common.hpp:3,
+                       from
+      /home/bmarti44/.cache/uv/sdists-v9/pypi/instanttensor/0.1.9/LTwXeZKYgNhvJda60Y6u8/src/csrc/instant_tensor/loader.hpp:3,
+                       from csrc/loader_common.cpp:1:
+      /home/bmarti44/.cache/uv/sdists-v9/pypi/instanttensor/0.1.9/LTwXeZKYgNhvJda60Y6u8/src/csrc/third_party/pybind11/include/pybind11/conduit/wrap_include_python_h.h:44:10:
+      fatal error: Python.h: No such file or directory
+         44 | #include <Python.h>
+            |          ^~~~~~~~~~
+      compilation terminated.
+      error: command '/usr/bin/aarch64-linux-gnu-g++' failed with exit code 1
+
+      hint: This error likely indicates that you need to install a library
+      that provides "Python.h" for `instanttensor@0.1.9`
+2026-09-09T02:20:34,745291627+00:00 safety_artifact_verified name=samples.log sha256=14aacb9973b44f1b67ccffeeb987f113906a34b2da638d55505af4739311d0ab size=1998
+2026-09-09T02:20:34,753896730+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T02:20:34,759407038+00:00 SAFE_RUN end rc=1 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   121417236 kB

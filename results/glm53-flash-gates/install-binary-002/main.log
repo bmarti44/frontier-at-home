@@ -1,0 +1,39 @@
+2026-09-09T02:23:01,404743664+00:00 SAFE_RUN start tag=glm53-install-managed vlimit_kb=419430400 kill_floor_gib=18 min_start_gib=110 timeout_s=3600 allow_cgroup_high=0
+2026-09-09T02:23:01,409058191+00:00 cmd: /usr/bin/env MAX_JOBS=2 CMAKE_BUILD_PARALLEL_LEVEL=2 NVCC_THREADS=1 MAKEFLAGS=-j2 /home/bmarti44/.local/bin/uv pip install --python /home/bmarti44/.cache/glm53-flash/runtime/bin/python3 --require-hashes --no-deps --no-build --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cu130 -r /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements-binary.lock
+2026-09-09T02:23:01,415907974+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T02:23:01,419805347+00:00 candidate_provenance_enabled=0
+2026-09-09T02:23:01,427233869+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-install-managed-409536.service memory_high=96567558144 memory_max=100862525440 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121567260 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.934,"stable_samples_observed":3}
+2026-09-09T02:23:04,015147600+00:00 wrapper_pid=409603 engine_pid=409605 pgid=409603 (periodic sampler; actual cadence in samples.log)
+2026-09-09T02:23:04,353649462+00:00 cgroup_final current_bytes=65060864 peak_bytes=332111872 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+ + tokenizers==0.23.2
+ + tokenspeed-mla==0.1.8
+ + tokenspeed-triton==3.8.10.post20260906
+ + torch==2.13.0+cu130
+ + torch-c-dlpack-ext==0.1.5
+ + torchaudio==2.11.0+cu130
+ + torchcodec==0.16.0+cu130
+ + torchvision==0.28.0+cu130
+ + tqdm==4.70.0
+ + transformers==5.16.1
+ + triton==3.7.1
+ + truststore==0.10.4
+ + typer==0.27.2
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.4
+ + urllib3==2.7.0
+ + uvicorn==0.52.4
+ + uvloop==0.22.1
+ + vcs-versioning==2.3.4
+ + watchfiles==1.2.0
+ + websockets==17.1
+ + wheel==0.48.0
+ + xgrammar==0.2.6
+ + yarl==1.24.5
+ + z3-solver==4.15.4.0
+2026-09-09T02:23:04,395145780+00:00 safety_artifact_verified name=samples.log sha256=82d07f138321709f2db01323d46f446dfce94f7f83ac8d1836210495fc55eba0 size=183
+2026-09-09T02:23:04,405798425+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T02:23:04,411345356+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   121405076 kB

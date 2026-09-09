@@ -1,0 +1,21 @@
+2026-09-09T02:24:29,579459997+00:00 SAFE_RUN start tag=glm53-install-source2 vlimit_kb=419430400 kill_floor_gib=18 min_start_gib=110 timeout_s=2400 allow_cgroup_high=0
+2026-09-09T02:24:29,589370494+00:00 cmd: /usr/bin/env MAX_JOBS=2 CMAKE_BUILD_PARALLEL_LEVEL=2 NVCC_THREADS=1 MAKEFLAGS=-j2 /home/bmarti44/.local/bin/uv pip install --python /home/bmarti44/.cache/glm53-flash/runtime/bin/python3 --require-hashes --no-deps --no-build-isolation -r /home/bmarti44/.cache/glm53-flash/dependency-audit/requirements-source.lock
+2026-09-09T02:24:29,596474949+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T02:24:29,600524787+00:00 candidate_provenance_enabled=0
+2026-09-09T02:24:29,606996424+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-install-source2-410086.service memory_high=96520372224 memory_max=100815339520 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121520380 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.891,"stable_samples_observed":3}
+2026-09-09T02:24:32,181995645+00:00 wrapper_pid=410121 engine_pid=410129 pgid=410121 (periodic sampler; actual cadence in samples.log)
+2026-09-09T02:25:00,288533522+00:00 cgroup_final current_bytes=106512384 peak_bytes=757567488 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+Using Python 3.12.13 environment at: /home/bmarti44/.cache/glm53-flash/runtime
+Resolved 1 package in 0.85ms
+   Building instanttensor==0.1.9
+      Built instanttensor==0.1.9
+Prepared 1 package in 28.48s
+Installed 1 package in 0.71ms
+ + instanttensor==0.1.9
+2026-09-09T02:25:00,325450235+00:00 safety_artifact_verified name=samples.log sha256=6c4e8c0c921d065eaeac64e00bf7bc26a68cc86e8fa23bf0fee28c5b91cd379d size=17623
+2026-09-09T02:25:00,335146011+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T02:25:00,340775517+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   120681240 kB
