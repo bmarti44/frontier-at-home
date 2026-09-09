@@ -1,0 +1,40 @@
+W0909 01:10:37.452000 831801 site-packages/torch/utils/cpp_extension.py:178] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+test_aligned_quantized_layer_is_unchanged (__main__.main.<locals>.GeometryContract.test_aligned_quantized_layer_is_unchanged) ... ok
+test_cuda_was_not_initialized (__main__.main.<locals>.GeometryContract.test_cuda_was_not_initialized) ... ok
+test_mixed_bf16_shards_keep_exact_checkpoint_geometry (__main__.main.<locals>.GeometryContract.test_mixed_bf16_shards_keep_exact_checkpoint_geometry) ... 
+  test_mixed_bf16_shards_keep_exact_checkpoint_geometry (__main__.main.<locals>.GeometryContract.test_mixed_bf16_shards_keep_exact_checkpoint_geometry) (exl3_width=512) ... ERROR
+  test_mixed_bf16_shards_keep_exact_checkpoint_geometry (__main__.main.<locals>.GeometryContract.test_mixed_bf16_shards_keep_exact_checkpoint_geometry) (exl3_width=8192) ... ERROR
+test_mixed_unaligned_input_still_rejects (__main__.main.<locals>.GeometryContract.test_mixed_unaligned_input_still_rejects) ... ok
+test_standalone_padded_exl3_is_unchanged (__main__.main.<locals>.GeometryContract.test_standalone_padded_exl3_is_unchanged) ... ok
+test_unaligned_quantized_fused_shard_still_rejects (__main__.main.<locals>.GeometryContract.test_unaligned_quantized_fused_shard_still_rejects) ... ok
+
+======================================================================
+ERROR: test_mixed_bf16_shards_keep_exact_checkpoint_geometry (__main__.main.<locals>.GeometryContract.test_mixed_bf16_shards_keep_exact_checkpoint_geometry) (exl3_width=512)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_bf16_geometry_contract.py", line 37, in test_mixed_bf16_shards_keep_exact_checkpoint_geometry
+    layer = self.construct(shards, [3, 4, 5])
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_bf16_geometry_contract.py", line 30, in construct
+    method.create_weights(layer, inputs, shards, inputs, sum(shards), torch.bfloat16)
+  File "/home/bmarti44/.cache/glm53-flash/build-source-005/vllm-exl3/src/vllm_exl3/exl3.py", line 2640, in create_weights
+    raise NotImplementedError(
+NotImplementedError: EXL3 padded linear geometry is supported for single-shard layers without bf16 shards only: in=4096 out=[512, 512, 512, 64, 128, 128]
+
+======================================================================
+ERROR: test_mixed_bf16_shards_keep_exact_checkpoint_geometry (__main__.main.<locals>.GeometryContract.test_mixed_bf16_shards_keep_exact_checkpoint_geometry) (exl3_width=8192)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_bf16_geometry_contract.py", line 37, in test_mixed_bf16_shards_keep_exact_checkpoint_geometry
+    layer = self.construct(shards, [3, 4, 5])
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/glm53_bf16_geometry_contract.py", line 30, in construct
+    method.create_weights(layer, inputs, shards, inputs, sum(shards), torch.bfloat16)
+  File "/home/bmarti44/.cache/glm53-flash/build-source-005/vllm-exl3/src/vllm_exl3/exl3.py", line 2640, in create_weights
+    raise NotImplementedError(
+NotImplementedError: EXL3 padded linear geometry is supported for single-shard layers without bf16 shards only: in=4096 out=[8192, 8192, 8192, 64, 128, 128]
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+FAILED (errors=2)
