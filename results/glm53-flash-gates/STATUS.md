@@ -96,6 +96,11 @@ weight payload was downloaded and no memory-fit or fidelity result is claimed.
 Full metadata inputs remain in the local `model-layout-001` archive, bound by
 the committed closed inventory; the complete overlay plan is committed.
 
+The [reference metadata audit](reference-layout-001/README.md) records a
+`NO_RESULT` for native reference binding: no candidate captures or aligned
+reference result exist yet. It distinguishes the published panel roles, actual
+public coverage and post-final-norm replay semantics.
+
 ## Remaining gates
 
 The [runtime-compilation audit](jit-audit-001.md) identifies an additional
