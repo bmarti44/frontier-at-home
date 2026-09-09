@@ -19,7 +19,10 @@ including host/identity/seed/cleanup checks. The load-sizing census rules out
 a full-resident cache-off load at the 40 GiB floor; 18 GiB feasibility remains
 unmeasured.
 
-Next: bounded load-path sizing and remaining convolution/indexer workspace probes at
+Four full-geometry component load probes now PASS with exact byte/storage checks
+and complete containment evidence. No real model weights have been loaded.
+
+Next: incremental multi-layer load sizing and remaining convolution/indexer workspace probes at
 2048 prefill rows and decode batches 1–4, with maximum-position addressing;
 then the remaining JIT, model load, fidelity, context and service gates. No model
 weight payload has been downloaded or loaded. GLM remains estimated/disabled.

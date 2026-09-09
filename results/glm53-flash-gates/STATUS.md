@@ -6,7 +6,7 @@ has 61,353 independently inventoried files. Native007 passed fourteen synthetic
 kernel checks and the complete host/identity/freeze gate. Cache003 allocated
 9,565,306,880 physical bytes, held four full reservations, rejected a fifth and
 passed host/identity/freeze checks. These are model-free results: zero input
-tokens were processed and no weight payload has been downloaded or loaded.
+tokens were processed and no model weight payload has been downloaded or loaded.
 
 MLA001 completed all five analytic attention cases with exact output agreement
 and passed host/identity checks. Its combined verdict remains **NO_RESULT**:
@@ -130,6 +130,28 @@ cache and an 18 GiB floor, 9,891,630,876 bytes remain for all runtime, loading,
 allocator and workspace overhead; feasibility remains **NO_RESULT**. The next
 step is bounded actual module loading with persistent pinned staging and
 separate constructor/transfer/finalization memory observations.
+
+## Component loading
+
+All four separately frozen component probes pass: [288-expert MoE](load-moe-001/README.md),
+[mixed KDA](load-kda-001/README.md), [MLA](load-mla-001/README.md) and
+[full embedding](load-ordinary-001/README.md). They verify byte identity through
+persistent pinned staging, actual loaders and final native handles, exact storage
+relationships, phase memory observations and complete host/identity/hash/seed/
+cleanup. Both reviewers closed the two evidence defects at candidate2 / campaign41;
+220 scoped CPU tests pass. All attempts had zero new swap and no generated runtime
+artifacts. Inputs are synthetic, not model weights.
+
+The MoE component retains2,124,585,984 bytes, including288 MiB shared scratch,
+12 KiB GTensorCache and20,736 bytes of pointer tables. The full embedding transfer
+requires at least2,537,553,920 bytes of simultaneous destination and temporary
+storage; its actual allocation observations pass that lower bound. These are
+component costs, not a full-model fit or production-performance result.
+
+Next: measure incremental two-layer overhead and shared-cache reuse; finish
+convolution and indexer workspace probes. Do not multiply fresh-process RSS by
+layer count or add it blindly to CUDA allocations. The synthetic input was
+freshly generated, so these runs do not establish cold checkpoint I/O behavior.
 
 ## Remaining gates
 
