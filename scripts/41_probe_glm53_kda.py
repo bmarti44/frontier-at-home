@@ -113,7 +113,8 @@ def run_native(metadata, output, seed, record):
     a_log = torch.zeros((1, 1, 64, 1), device='cuda', dtype=torch.float32)
     bias = torch.zeros(64 * 128, device='cuda', dtype=torch.float32)
     record({'event': 'configured', 'case_order': case_order(seed), 'request_order': requests,
-            'state_shape': [5, 64, 128, 128], 'pinned_staging': all(t.is_pinned() for t in
+            'state_shape': [5, 64, 128, 128], 'pinned_staging_scope': 'probe_owned_buffers_only',
+            'pinned_staging': all(t.is_pinned() for t in
                 (pattern_host, order_host, seqlens_host, output_host, state_host))})
     for count in case_order(seed):
         state = torch.zeros((5, 64, 128, 128), device='cuda', dtype=torch.float32); state[0].fill_(3.25)

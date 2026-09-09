@@ -12,6 +12,7 @@
   "request_context_cap": 262144,
   "recurrent_state_dtype": "float32",
   "state_pool_shape": [5, 64, 128, 128],
+  "staging_scope": "Only the five probe-owned host buffers are pinned. Upstream prepare_chunk_indices still creates 32x2 CPU int64 indices and copies them to CUDA int32 for this bounded prefill fixture. This preparation is not approval for large serving; persistent staging or measured justification is required there.",
   "fixture": "One-hot q and k at head modulo 128; distinct per-head and request-scaled value pattern [0.5,-0.25,1,-2]; raw gate and beta zero; A_log and bias zero. Nonzero initial state at the selected key basis; null slot filled with 3.25. Public seed permutes cases and requests and selects the initial-state coefficient.",
   "reference": "n=1/sqrt(1+1e-6), r=exp(-2.5), a=r*(1-0.5*n*n), b=0.5*n. After t tokens the state coefficient is a**t*c0+b*(1-a**t)/(1-a); output is state*n/sqrt(128). All unselected state entries and the null slot must remain unchanged. This closed-form recurrence is independent of GPU outputs.",
   "acceptance": {"absolute_tolerance": 0.001, "relative_tolerance": 0.01, "mismatched_elements": 0, "nonfinite_elements": 0},

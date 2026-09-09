@@ -132,7 +132,8 @@ def validate_kda_rows(root, rows, seed):
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     order, requests = module.case_order(seed), module.request_order(seed)
     require(len(rows) == 11 and rows[0] == {'time_unix': rows[0].get('time_unix'), 'event': 'configured',
-        'case_order': order, 'request_order': requests, 'state_shape': [5, 64, 128, 128], 'pinned_staging': True}, 'KDA geometry or order mismatch')
+        'case_order': order, 'request_order': requests, 'state_shape': [5, 64, 128, 128], 'pinned_staging': True,
+        'pinned_staging_scope': 'probe_owned_buffers_only'}, 'KDA geometry or order mismatch')
     require(rows[0]['pinned_staging'] is True and all(type(v) is int for name in
         ('case_order', 'request_order', 'state_shape') for v in rows[0][name]), 'KDA geometry types changed')
     files = {f'{kind}-{count}.{dtype}.gz' for count in order for kind, dtype in (('output', 'bf16'), ('state', 'fp32'))}
