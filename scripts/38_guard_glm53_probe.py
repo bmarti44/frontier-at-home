@@ -8,11 +8,14 @@ the enclosing cgroup wrapper remains responsible for memory, timeout and escaped
 descendants. Never use this instrumentation for headline serving performance.
 """
 import argparse
+import ctypes
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import runpy
+import resource
 import select
 import signal
 import subprocess
@@ -84,7 +87,7 @@ def exit_observation(pid):
     return value.si_status if value.si_code == os.CLD_EXITED else -value.si_status
 
 
-def snapshot(pid, expected, first=False):
+def snapshot(pid, expected, first=False, terminal=False):
     before = process_stat(pid)
     if before["state"] in ("Z", "X"):
         raise ProcessLookupError("process exited during identity observation")
@@ -100,13 +103,58 @@ def snapshot(pid, expected, first=False):
     environment = (proc / "environ").read_bytes().split(b"\0")
     require(environment[-1] == b"" and sorted(environment[:-1]) == expected["environment_bytes"], "environment identity changed")
     require((proc / "cgroup").read_text() == expected["cgroup"], "cgroup identity changed")
+    status = dict(line.split(":", 1) for line in (proc / "status").read_text().splitlines())
+    filters = int(status["Seccomp_filters"].strip())
+    if terminal:
+        require(status["NoNewPrivs"].strip() == "1" and status["Seccomp"].strip() == "2" and
+                filters > expected["initial_seccomp_filters"], "terminal exec filter is missing")
     after = process_stat(pid)
     require(after["start_ticks"] == before["start_ticks"] and after["pgid"] == pid, "process identity changed during sample")
     for path, digest in expected["source_hashes"].items():
         require(sha(path) == digest, "frozen probe source changed")
     return {"event": "identity", "pid": pid, "start_ticks": before["start_ticks"], "pgid": pid,
             "cgroup": expected["cgroup"], "executable_verified": True, "argv_verified": True,
-            "environment_verified": True, "binary_sha256": expected["binary_sha256"]}
+            "environment_verified": True, "binary_sha256": expected["binary_sha256"],
+            "seccomp_filters": filters, "terminal_exec_filter_verified": terminal}
+
+
+def prohibit_terminal_exec():
+    """Deny replacement after the final sample, including every existing thread.
+
+    Installed only after the frozen probe has returned. Normal Python/C exit
+    handlers still run; an exec attempt terminates the process with SIGSYS.
+    This guard is selected only for evidence probes, never serving.
+    Linux UAPI: seccomp(2), SECCOMP_FILTER_FLAG_TSYNC, RET_KILL_PROCESS.
+    """
+    architectures = {
+        "aarch64": (0xC00000B7, 277, (221, 281)),
+        "x86_64": (0xC000003E, 317, (59, 322)),
+    }
+    require(platform.machine() in architectures, "unsupported terminal filter architecture")
+    arch, syscall, exec_calls = architectures[platform.machine()]
+
+    class Instruction(ctypes.Structure):
+        _fields_ = [("code", ctypes.c_ushort), ("jt", ctypes.c_ubyte), ("jf", ctypes.c_ubyte), ("k", ctypes.c_uint)]
+
+    class Program(ctypes.Structure):
+        _fields_ = [("len", ctypes.c_ushort), ("filter", ctypes.POINTER(Instruction))]
+
+    instructions = [(0x20, 0, 0, 4), (0x15, 1, 0, arch), (0x06, 0, 0, 0x80000000), (0x20, 0, 0, 0)]
+    if platform.machine() == "x86_64":
+        # This CPython uses the native ABI; reject all x32 syscall encodings.
+        instructions.extend([(0x45, 0, 1, 0x40000000), (0x06, 0, 0, 0x80000000)])
+    for number in exec_calls:
+        instructions.extend([(0x15, 0, 1, number), (0x06, 0, 0, 0x80000000)])
+    instructions.append((0x06, 0, 0, 0x7FFF0000))
+    filters = (Instruction * len(instructions))(*(Instruction(*row) for row in instructions))
+    program = Program(len(instructions), filters)
+    libc = ctypes.CDLL(None, use_errno=True)
+    libc.prctl.restype = ctypes.c_int
+    libc.syscall.restype = ctypes.c_long
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    require(libc.prctl(38, 1, 0, 0, 0) == 0, "cannot set no-new-privileges for terminal filter")
+    result = libc.syscall(ctypes.c_long(syscall), ctypes.c_uint(1), ctypes.c_uint(1), ctypes.byref(program))
+    require(result == 0, f"terminal filter synchronization failed: result={result} errno={ctypes.get_errno()}")
 
 
 def child():
@@ -122,6 +170,7 @@ def child():
     except SystemExit as error:
         if error.code is not None and error.code != 0:
             raise
+    prohibit_terminal_exec()
     os.write(ready, b"C")
     require(os.read(release, 1) == b"E", "parent did not verify probe completion")
     os.close(ready)
@@ -173,6 +222,7 @@ def main():
             require(bool(select.select([ready_read], [], [], 10)[0]) and os.read(ready_read, 1) == b"R", "child readiness timeout or missing handshake")
             value = snapshot(process.pid, expected, first=True)
             expected["start_ticks"] = value["start_ticks"]
+            expected["initial_seccomp_filters"] = value["seccomp_filters"]
             record(value); samples += 1
             os.write(release_write, b"G")
             completed = False
@@ -186,7 +236,7 @@ def main():
                         except (FileNotFoundError, ProcessLookupError):
                             pass
                     require(marker == b"C", "missing verified completion handshake")
-                    value = snapshot(process.pid, expected)
+                    value = snapshot(process.pid, expected, terminal=True)
                     value["completion_verified"] = True
                     record(value); samples += 1
                     completed = True
