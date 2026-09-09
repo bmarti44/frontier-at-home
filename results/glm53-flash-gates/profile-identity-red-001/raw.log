@@ -1,0 +1,35 @@
+.......F......F.
+======================================================================
+FAIL: test_default_api_alias_and_no_inductor_baseline_are_explicit (__main__.Glm53ProfileContract.test_default_api_alias_and_no_inductor_baseline_are_explicit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_contract.py", line 73, in test_default_api_alias_and_no_inductor_baseline_are_explicit
+    self.assertEqual(argv[index + 1:index + 3], ["glm-5.3-flash", "default"])
+AssertionError: Lists differ: ['glm-5.3-flash', '--host'] != ['glm-5.3-flash', 'default']
+
+First differing element 1:
+'--host'
+'default'
+
+- ['glm-5.3-flash', '--host']
+?                    ^^^^^
+
++ ['glm-5.3-flash', 'default']
+?                    ^^^^^^
+
+
+======================================================================
+FAIL: test_service_cannot_write_builder_owned_runtime_and_cache (__main__.Glm53ProfileContract.test_service_cannot_write_builder_owned_runtime_and_cache)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_contract.py", line 61, in test_service_cannot_write_builder_owned_runtime_and_cache
+    self.assertEqual(p["launch"]["user"], "dsv4")
+AssertionError: 'bmarti44' != 'dsv4'
+- bmarti44
++ dsv4
+
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.027s
+
+FAILED (failures=2)
