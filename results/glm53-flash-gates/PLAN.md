@@ -2,13 +2,19 @@
 
 Status: QUALIFYING MODEL-FREE RUNTIME — no GLM-5.3 model has been loaded or qualified here.
 
-The owner authorized resuming the identity review. Its prepared correction closed
-high I1 at candidate 3 / campaign round 22; see `probe-guard-review-003.md`.
-The raw capture component closed both high findings at candidate 3 / campaign
-round 25; see `probe-capture-review-003.md`. The host scorer remains signed off
-at candidate 2 / campaign round 21. A fresh frozen native run with full host and
-identity evidence is next; previous native attempts retain their identity
-`NO_RESULT`. The optional estimated profile and pinned runtime builds are ready.
+The owner authorized resuming the identity review. Identity, capture, runner,
+and packaged pidfd compatibility corrections are reviewed through campaign
+round 28. The terminal-RSS execution correction closed at candidate 1 / round
+29, with both persistent reviewers finding no high or critical issues and all
+158 scoped packaged CPU tests passing.
+
+Native004 failed outer pidfd capture. Native005 failed preparation when test
+children rewrote packaged bytecode; all 45 original files were restored from
+verified bytes, and the complete 61,353-file inventory passed before and after
+the corrected test suite. Native006 failed the scorer's terminal zero-RSS rule;
+its full observations and failed verdict remain immutable. Native007 is the
+fresh attempt after the reviewed correction. No model payload has been loaded.
+The cache allocation, model memory, fidelity, context and serving gates remain.
 
 Target: one ARM64 DGX Spark, 1,048,576 aggregate context tokens in four
 262,144-token slots; text, reasoning, tools, four images or one video sampled
