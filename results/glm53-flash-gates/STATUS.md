@@ -44,7 +44,7 @@ are unchanged. Performance is **not yet measured**.
 
 Review approvals cover these components only. They do not qualify a runtime,
 model, memory budget, fidelity choice, context capacity, or switching path.
-The latest completed scoped CPU audit has 248 passing tests; these include
+The latest completed scoped CPU audit has 249 passing tests; these include
 admission, media, existing profiles, switching and the model-free harness. Three source-function tests cover 48 sampler combinations, four
 within-cap comparisons, and three actual loader/metadata cases.
 
@@ -164,15 +164,17 @@ pass. The independent execution review confirmed the narrow kernel result.
 
 The independent [indexer CPU reference](indexer-fixture-review-001.md) passed both
 persistent reviews at candidate 1 / campaign 45. The native capture review
-closed two findings (memory consistency and FP32 APE) at candidate 2 / campaign
-47. The first contained [indexer attempt](indexer-preflight-001/README.md) then
-failed during circular imports before computation. It is preserved as FAIL,
-including a whole-host swap-in delta of one page and zero cgroup swap.
-The one-line import-order correction has a [248-test audit](indexer-probe-audit-003/README.md)
-and is under focused review as candidate 3 / campaign 48. No actual indexer
-kernel result exists yet. The preparation route freezes CUDA compiler inputs
-and DeepGEMM settings, retains generated kernels, and cannot claim sealed-kernel
-qualification.
+closed memory-consistency and FP32 APE findings at candidate 2 / campaign 47.
+The first contained [attempt](indexer-preflight-001/README.md) failed during
+circular imports before computation; the import correction closed at candidate
+3 / campaign 48. The [second attempt](indexer-preflight-002/README.md) reached
+actual decode-2 and failed exact tail bytes. Its 256 mismatches were traced to
+numeric conversion of uint16 staging during BF16 key reload. All captured valid
+logits matched in a separate postmortem, which does not replace the failed verdict.
+The one-line bit-preserving copy correction has a [249-test audit](indexer-probe-audit-004/README.md)
+and is under focused review as candidate 4 / campaign 49. Both failed attempts,
+their raw captures and generated kernels remain preserved. No complete indexer
+kernel result exists yet. Preparation cannot claim sealed-kernel qualification.
 
 Next: finish indexer and vision workspace probes. Do not multiply fresh-process RSS by
 layer count or add it blindly to CUDA allocations. The synthetic input was
