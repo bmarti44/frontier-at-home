@@ -1,0 +1,44 @@
+test_cgroup_permission_error_is_not_absence (test_glm53_probe_capture.CaptureTests.test_cgroup_permission_error_is_not_absence) ... ok
+test_cleanup_error_logging_failure_cannot_release_lock (test_glm53_probe_capture.CaptureTests.test_cleanup_error_logging_failure_cannot_release_lock) ... ERROR
+test_cleanup_observation_error_retains_lock_until_confirmed_absence (test_glm53_probe_capture.CaptureTests.test_cleanup_observation_error_retains_lock_until_confirmed_absence) ... ok
+test_cpu_wrapper_captures_raw_logs_and_holds_lock_through_cleanup (test_glm53_probe_capture.CaptureTests.test_cpu_wrapper_captures_raw_logs_and_holds_lock_through_cleanup) ... ok
+test_crash_copy_rejects_outside_path_and_duplicate_receipts (test_glm53_probe_capture.CaptureTests.test_crash_copy_rejects_outside_path_and_duplicate_receipts) ... ok
+test_failed_cpu_wrapper_keeps_logs_and_rejects (test_glm53_probe_capture.CaptureTests.test_failed_cpu_wrapper_keeps_logs_and_rejects) ... ok
+test_lock_symlink_rejects (test_glm53_probe_capture.CaptureTests.test_lock_symlink_rejects) ... ok
+test_parent_lock_is_real_and_excludes_second_opener (test_glm53_probe_capture.CaptureTests.test_parent_lock_is_real_and_excludes_second_opener) ... ok
+test_parent_sigterm_cleans_wrapper_before_releasing_lock (test_glm53_probe_capture.CaptureTests.test_parent_sigterm_cleans_wrapper_before_releasing_lock) ... ok
+test_unit_capture_preserves_failed_actual_query (test_glm53_probe_capture.CaptureTests.test_unit_capture_preserves_failed_actual_query) ... ok
+test_vmstat_capture_keeps_raw_text (test_glm53_probe_capture.CaptureTests.test_vmstat_capture_keeps_raw_text) ... ok
+
+======================================================================
+ERROR: test_cleanup_error_logging_failure_cannot_release_lock (test_glm53_probe_capture.CaptureTests.test_cleanup_error_logging_failure_cannot_release_lock)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_probe_capture.py", line 141, in capture_wrapper
+    try: cgroup.lstat()
+         ^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_capture.py", line 102, in observe
+    if len(attempts) == 1: raise PermissionError('cgroup unobservable')
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: cgroup unobservable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_capture.py", line 109, in test_cleanup_error_logging_failure_cannot_release_lock
+    self.run_cpu_wrapper(0)
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_capture.py", line 65, in run_cpu_wrapper
+    return capture.capture_wrapper(self.root, script, tag, [], {**os.environ, **environment}, 10)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_probe_capture.py", line 145, in capture_wrapper
+    if not (root / 'cleanup-observation-error.json').exists():
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_capture.py", line 106, in exists
+    if path.name == 'cleanup-observation-error.json': raise PermissionError('evidence unobservable')
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: evidence unobservable
+
+----------------------------------------------------------------------
+Ran 11 tests in 1.952s
+
+FAILED (errors=1)
