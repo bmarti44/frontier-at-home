@@ -1,0 +1,45 @@
+test_complete_native_record_accepts (test_glm53_probe_runner.RunnerTests.test_complete_native_record_accepts) ... ERROR
+test_missing_duplicate_reordered_or_failed_native_records_reject (test_glm53_probe_runner.RunnerTests.test_missing_duplicate_reordered_or_failed_native_records_reject) ... ERROR
+test_seed_and_unbound_raw_reject (test_glm53_probe_runner.RunnerTests.test_seed_and_unbound_raw_reject) ... ERROR
+test_stale_interpreter_or_probe_binding_rejects (test_glm53_probe_runner.RunnerTests.test_stale_interpreter_or_probe_binding_rejects) ... ERROR
+
+======================================================================
+ERROR: test_complete_native_record_accepts (test_glm53_probe_runner.RunnerTests.test_complete_native_record_accepts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 31, in test_complete_native_record_accepts
+    self.assertEqual(runner.score_inner(self.root,'native',self.seed,self.binding)['checks_completed'],14)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: score_inner() takes 3 positional arguments but 4 were given
+
+======================================================================
+ERROR: test_missing_duplicate_reordered_or_failed_native_records_reject (test_glm53_probe_runner.RunnerTests.test_missing_duplicate_reordered_or_failed_native_records_reject)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 38, in test_missing_duplicate_reordered_or_failed_native_records_reject
+    with self.assertRaises(ValueError):runner.score_inner(self.root,'native',self.seed,self.binding)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: score_inner() takes 3 positional arguments but 4 were given
+
+======================================================================
+ERROR: test_seed_and_unbound_raw_reject (test_glm53_probe_runner.RunnerTests.test_seed_and_unbound_raw_reject)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 47, in test_seed_and_unbound_raw_reject
+    with self.assertRaises(ValueError):runner.score_inner(self.root,'native',self.seed+1,self.binding)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: score_inner() takes 3 positional arguments but 4 were given
+
+======================================================================
+ERROR: test_stale_interpreter_or_probe_binding_rejects (test_glm53_probe_runner.RunnerTests.test_stale_interpreter_or_probe_binding_rejects)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_probe_runner.py", line 44, in test_stale_interpreter_or_probe_binding_rejects
+    with self.assertRaises(ValueError):runner.score_inner(self.root,'native',self.seed,self.binding)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: score_inner() takes 3 positional arguments but 4 were given
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+
+FAILED (errors=4)
