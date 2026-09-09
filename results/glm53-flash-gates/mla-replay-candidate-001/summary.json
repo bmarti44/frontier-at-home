@@ -1,0 +1,44 @@
+{
+  "verdict": "PASS",
+  "qualification": "CPU_pre_submission_audit_only",
+  "candidate_revision": "2e35d692",
+  "gate_candidate": 1,
+  "campaign_review_round": 35,
+  "tests": 184,
+  "failures": 0,
+  "unchanged_preparation_functions": {
+    "run_native": true,
+    "score_tensor": true,
+    "case_order": true,
+    "request_order": true,
+    "fixture_seed": true
+  },
+  "files": {
+    "scripts/lib/glm53_mla_replay.py": {
+      "sha256": "de6fa4eb23fd8aa53f7ce01fe2822abbcbd1531b421dd3e4acafce213c2715ab"
+    },
+    "scripts/39_freeze_glm53_probe.py": {
+      "sha256": "1bd89652e80af2451c21cdddf83e6bb2a0c4ff7c2145a6a10364d6f3ee699cd4"
+    },
+    "scripts/39_run_glm53_probe.py": {
+      "sha256": "bf27efd636a5bf45bc5f7e0828bfcea77624d35d2dd92cf11ca0145ffdd6a267"
+    },
+    "scripts/40_probe_glm53_mla.py": {
+      "sha256": "b61e4ddf81fd49fe999223b95e51f2b5f16f33e17f9d6dd915b3303a88532c21"
+    },
+    "scripts/tests/test_glm53_mla_replay.py": {
+      "sha256": "00d707521ca1f943502132598f6d153c933b79bf07677087bfeda4e825dd76ef"
+    },
+    "scripts/tests/test_glm53_mla_runner.py": {
+      "sha256": "2e3c600ac63396085a3ef767a099e4ac9c3b7af16498470f6b748663e35d4e44"
+    },
+    "configs/decision-specs/glm53-mla-replay.json": {
+      "sha256": "b6a1ed3ecd4835f697c04e479af081e32c28d9452c92b0946fb87273ee976e44"
+    }
+  },
+  "test_log": {
+    "sha256": "67b8053835fc9e3a2dd3861030c0dedcbb5d354fe57e2b8f70e2001679df7746"
+  },
+  "scan": "No fixture recognition, canned outputs, disabled assertions or timing manipulation in replay changes. Frozen Triton/FlashInfer/native/cache components are outside this review.",
+  "secret_lint_self_test": "PASS"
+}
