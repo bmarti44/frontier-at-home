@@ -1,0 +1,80 @@
+EEEEE.
+======================================================================
+ERROR: test_changed_rng_geometry_or_case_order_rejects (test_glm53_mla_runner.MLARunnerTests.test_changed_rng_geometry_or_case_order_rejects) (key='query_rows')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_mla_runner.py", line 60, in test_changed_rng_geometry_or_case_order_rejects
+    with self.assertRaises(ValueError): runner.score_inner(self.root, 'mla', self.seed, self.binding)
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 68, in score_inner
+    summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed)}
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 97, in validate_mla_rows
+    isinstance(start['query_sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', start['query_sha256']), 'MLA fixture mismatch')
+                                               ^^
+NameError: name 're' is not defined. Did you forget to import 're'
+
+======================================================================
+ERROR: test_changed_rng_geometry_or_case_order_rejects (test_glm53_mla_runner.MLARunnerTests.test_changed_rng_geometry_or_case_order_rejects) (key='file')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_mla_runner.py", line 60, in test_changed_rng_geometry_or_case_order_rejects
+    with self.assertRaises(ValueError): runner.score_inner(self.root, 'mla', self.seed, self.binding)
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 68, in score_inner
+    summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed)}
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 97, in validate_mla_rows
+    isinstance(start['query_sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', start['query_sha256']), 'MLA fixture mismatch')
+                                               ^^
+NameError: name 're' is not defined. Did you forget to import 're'
+
+======================================================================
+ERROR: test_changed_rng_geometry_or_case_order_rejects (test_glm53_mla_runner.MLARunnerTests.test_changed_rng_geometry_or_case_order_rejects) (key='uncompressed_bytes')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_mla_runner.py", line 60, in test_changed_rng_geometry_or_case_order_rejects
+    with self.assertRaises(ValueError): runner.score_inner(self.root, 'mla', self.seed, self.binding)
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 68, in score_inner
+    summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed)}
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 97, in validate_mla_rows
+    isinstance(start['query_sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', start['query_sha256']), 'MLA fixture mismatch')
+                                               ^^
+NameError: name 're' is not defined. Did you forget to import 're'
+
+======================================================================
+ERROR: test_complete_bundle_scores_every_output (test_glm53_mla_runner.MLARunnerTests.test_complete_bundle_scores_every_output)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_mla_runner.py", line 50, in test_complete_bundle_scores_every_output
+    result = runner.score_inner(self.root, 'mla', self.seed, self.binding)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 68, in score_inner
+    summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed)}
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 97, in validate_mla_rows
+    isinstance(start['query_sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', start['query_sha256']), 'MLA fixture mismatch')
+                                               ^^
+NameError: name 're' is not defined. Did you forget to import 're'
+
+======================================================================
+ERROR: test_hash_valid_wrong_tensor_rejects (test_glm53_mla_runner.MLARunnerTests.test_hash_valid_wrong_tensor_rejects)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_mla_runner.py", line 66, in test_hash_valid_wrong_tensor_rejects
+    with self.assertRaisesRegex(ValueError, 'output'): runner.score_inner(self.root, 'mla', self.seed, self.binding)
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 68, in score_inner
+    summary = {**summary, 'tensor_checks': validate_mla_rows(root, rows, seed)}
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/39_run_glm53_probe.py", line 97, in validate_mla_rows
+    isinstance(start['query_sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', start['query_sha256']), 'MLA fixture mismatch')
+                                               ^^
+NameError: name 're' is not defined. Did you forget to import 're'
+
+----------------------------------------------------------------------
+Ran 4 tests in 1.421s
+
+FAILED (errors=5)
