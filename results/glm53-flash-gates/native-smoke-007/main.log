@@ -1,0 +1,17 @@
+2026-09-09T12:05:51,337598817+00:00 SAFE_RUN start tag=glm53-native-smoke-007 vlimit_kb=419430400 kill_floor_gib=40 min_start_gib=110 timeout_s=600 allow_cgroup_high=0
+2026-09-09T12:05:51,343315521+00:00 cmd: /usr/bin/env -i CUDA_CACHE_PATH=/home/bmarti44/.cache/glm53-flash/native-smoke-007/state/cuda-cache CUDA_HOME=/usr/local/cuda-13.0 CUDA_VISIBLE_DEVICES=0 GLM53_EXL3_BF16_SHARD_FIX=1 HF_HUB_OFFLINE=1 HOME=/home/bmarti44/.cache/glm53-flash/native-smoke-007/state LANG=C.UTF-8 MAX_JOBS=2 NVCC_THREADS=1 NVIDIA_TF32_OVERRIDE=0 PATH=/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 TOKENIZERS_PARALLELISM=false TORCH_COMPILE_DISABLE=1 TORCH_EXTENSIONS_DIR=/home/bmarti44/.cache/glm53-flash/native-smoke-007/state/torch-extensions TRANSFORMERS_OFFLINE=1 TRITON_CACHE_DIR=/home/bmarti44/.cache/glm53-flash/native-smoke-007/state/triton /home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3 -I -B /home/bmarti44/.cache/glm53-flash/native-smoke-007/code/scripts/38_guard_glm53_probe.py --output /home/bmarti44/.cache/glm53-flash/native-smoke-007/identity -- /home/bmarti44/.cache/glm53-flash/native-smoke-007/code/scripts/35_smoke_glm53_native.py --prepared /home/bmarti44/.cache/glm53-flash/build-source-005 --output /home/bmarti44/.cache/glm53-flash/native-smoke-007/checks --seed 13195899353423434631
+2026-09-09T12:05:51,349261137+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T12:05:51,354713056+00:00 candidate_provenance_enabled=0
+2026-09-09T12:05:51,361031713+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-native-smoke-007-886522.service memory_high=72481767424 memory_max=76776734720 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   121113528 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.51,"stable_samples_observed":3}
+2026-09-09T12:05:53,937100977+00:00 wrapper_pid=886563 engine_pid=886566 pgid=886563 (periodic sampler; actual cadence in samples.log)
+2026-09-09T12:06:14,171503485+00:00 cgroup_final current_bytes=280244224 peak_bytes=2018721792 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+INFO 09-09 08:06:01 [exl3.py:69] GLM53_EXL3_BF16_SHARD_FIX=1: preserve BF16 shard geometry
+{"verdict": "PASS", "checks_completed": 14, "qualification": "synthetic_native_smoke_only", "model_loaded": false, "model_fidelity": "not measured", "context_capacity": "not measured", "performance": "not measured", "raw_sha256": "cfc3300763b24567e37998de019eae29fee454f3aa9e2fe9bf003c6513b3410e", "test_output_sha256": "4ceea5e114bf893299b9ad2dfbba1e319a1db829fc512f4fb4dac69983776902"}
+{"verdict": "PASS", "qualification": "Python_probe_identity_only", "identity_samples": 74, "probe_exit_code": 0, "live_process_group_after": [], "raw_sha256": "f274c696087a0bf2da0d0b27679ac050ba27de6b338f3d722264632a91512a72", "failure": null}
+2026-09-09T12:06:14,211901402+00:00 safety_artifact_verified name=samples.log sha256=a6895f489523ef822001f95d4568eed287518c51a6b01c893a77f2f90b9a5e49 size=12499
+2026-09-09T12:06:14,222886920+00:00 safety_artifact_verified name=kernel.log sha256=19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e size=17
+2026-09-09T12:06:14,227122420+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   120990168 kB
