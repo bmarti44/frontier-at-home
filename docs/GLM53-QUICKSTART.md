@@ -25,7 +25,7 @@ scripts/93_profile_serve.sh --profile glm-5.3-flash/cuda-spark-128g-agent-fast s
 
 For the full-context experimental configuration, replace `agent-fast` with
 `1m-experimental`. It configures four 262,144-token slots: 1,048,576 tokens in
-aggregate, not a million tokens in one request. Its prior direct context run
+aggregate, not a million tokens in one request. Its prior direct context runs
 failed; this profile remains unqualified. Only one model can run at a time.
 Start requires at least 110 GiB available; stop an existing model through its
 own lifecycle first. These commands preserve Qwen's recorded/reboot default
@@ -36,8 +36,11 @@ rejected. To choose an output directory or reuse a client key, invoke
 `python3 scripts/47_run_glm53_dev.py --start --profile <profile-id>` with
 `--output` or `--api-key-file`. The older development commands remain available.
 
-The new named lifecycle has passed synthetic regression tests; its first actual
-model launch is pending while the million-token campaign uses port 8015.
+The million-token named profile has been launched through this interface.
+Authentication and a completed reply passed, and stop removed the model and
+recovered memory. Its first stop exposed a guard-handshake error; the reviewed
+orderly-shutdown correction has passed real CPU guard tests, with native
+confirmation next. Full-context retrieval remains unqualified.
 
 The last agent preset ran in
 `/home/bmarti44/.cache/glm53-flash/server-20260909-201848`. It received SIGTERM

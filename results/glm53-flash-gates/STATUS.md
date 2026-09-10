@@ -1,9 +1,13 @@
 # GLM-5.3-Flash CUDA status
 
-Named experimental profiles now have executable start/status/stop wiring through
-`93_profile_serve.sh`; synthetic lifecycle checks pass, and a real profile launch
-is pending while the direct context campaign runs. See the
-[profile integration record](profile-integration-001/README.md).
+Named experimental profiles are executable through `93_profile_serve.sh`.
+The actual million-token profile passed start, status, native authentication and
+a completed reply; stop removed all model processes and recovered memory.
+Its first full lifecycle verdict remains FAIL because whole-group termination
+interrupted the guard's terminal handshake. The reviewed orderly API shutdown
+correction and native shutdown timeout passed five focused tests, including the
+real CPU guard, plus 17 existing profile regressions. Native confirmation is next.
+See [actual profile evidence](profile-launch-001/README.md).
 
 **The optional agent preset passed basic serving checks and is now stopped.**
 It received SIGTERM at 20:55 EDT on September 9; sender attribution is unknown.
@@ -29,7 +33,12 @@ production performance remains **not yet measured**.
 The original optional configuration remains available. Its separate four-slot
 context run **failed**: all four 250,128-token requests returned server errors
 after a CUDA illegal memory access and Xid31. No request completed. Raw evidence
-is preserved in [context-direct-003](context-direct-003/README.md). The exact-input synchronized replay is running in server019/context-direct-004 to localize the failure; no result is claimed yet.
+is preserved in [context-direct-003](context-direct-003/README.md). The synchronized replay processed 1,000,512 actual input tokens and generated
+four overlapping output streams, but [context-direct-004](context-direct-004/README.md)
+also failed: all four requests spent their 256-token allowance on reasoning and
+produced no final answer. No retrieval success or async-crash fix is claimed.
+The next native-profile attempt uses 2,048 output tokens and unchanged retrieval
+checks, with fixtures prepared before model loading and newly frozen prepared caches.
 Session 016's earlier memory-floor failure during repository publication also
 remains preserved alongside its successful functional snapshot.
 
@@ -256,9 +265,8 @@ restored and rescored with the frozen scorer; all 89 captured files and 65
 generated state files match their originals. Separate sealed confirmation is
 next; this is not a full-model or context-capability result.
 
-Next: finish indexer and vision workspace probes. Do not multiply fresh-process RSS by
-layer count or add it blindly to CUDA allocations. The synthetic input was
-freshly generated, so these runs do not establish cold checkpoint I/O behavior.
+These historical synthetic results do not establish cold checkpoint I/O behavior.
+Current full-model bring-up and failed direct-context attempts are recorded above.
 
 ## Remaining gates
 
@@ -270,12 +278,10 @@ DeepGEMM, CuTe and Inductor closure remain. Two user-systemd read-only namespace
 probes failed and are preserved; requested mount properties are not evidence
 of enforcement on this host.
 
-The three clean builds, runtime inventory, bounded native checks and cache
-allocation are complete. Convolution preparation and sealed confirmation are
-complete. Finish remaining indexer kernels and the measured full workspace envelope before downloading weights.
-Resolve existing plugin environment reads and diagnostic overhead before any
-production qualification. Complete the Python-specific monitored lifecycle,
-measured memory envelope, artifact identity, 100-case paired fidelity,
-four-slot aggregate occupancy, multimodal correctness, authenticated switching,
-rollback, soak and persistent runtime review. Owner adoption of any measured
-nonzero fidelity delta remains separate from passing statistical bounds.
+Weights are prepared and native serving has run. The remaining work is corrected
+native profile shutdown, direct full-context retrieval with complete frozen
+artifacts, the 100-case paired fidelity gate, and production switching/rollback
+and soak qualification. Public native reference coverage is still insufficient
+for the required fidelity gate. Owner adoption of any measured nonzero fidelity
+delta remains separate from passing statistical bounds. Qwen stays the default;
+qualified GLM production performance is not yet measured.
