@@ -25,3 +25,10 @@ alongside the candidate. Closed host/identity/numerical components were unchange
 The inherited campaign-global counter is not recoverable from the recent
 unnumbered gates; the last known historical round 49 is not reported as current.
 This gate has two candidates. No native payload was downloaded before sign-off.
+
+Preparation 001 then exposed an execution defect in the new freezer: historical
+packaging inventory selected instead of the existing profile inventory. Failure
+and RED are preserved under bf16-one-layer-preflight-001. Candidate 3 fixes only
+that selection and uses fresh attempt directory/tag002. Both persistent reviewers
+verified closure; no high/critical finding remains. Candidate 2 probe/controller,
+numerical code and closed host components stayed byte-identical.

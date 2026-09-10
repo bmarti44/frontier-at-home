@@ -1,0 +1,90 @@
+{
+  "reviewer": "/root/glm53_adversarial_reviewer",
+  "time_unix": 1789069580.210764,
+  "candidate": 3,
+  "source_revision": "b67e595c",
+  "scope": "Only freezer inventory-selection execution defect. Candidate2 closed components not reopened.",
+  "verdict": "PASS",
+  "assessment": "The selected profile/build inventory corrects the observed stale packaging inventory failure without altering runtime bytes or closed acceptance. No scoped high/critical finding.",
+  "review_score": {
+    "value": 5,
+    "out_of": 5,
+    "scope": "Inventory selection correction only"
+  },
+  "findings": [],
+  "source_bindings": {
+    "freeze.py": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/freeze.py",
+      "size_bytes": 7254,
+      "sha256": "b1725595ee2c1e245c9c874fada6aae57e1418c81f97018f74a46bab8410dc5c"
+    },
+    "test_runtime_inventory.py": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_runtime_inventory.py",
+      "size_bytes": 2045,
+      "sha256": "711d939cb7feb134e05b2f929411da20b569a3786e421757a9b5fc02dbf2e1b6"
+    },
+    "candidate3-preaudit.json": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/candidate3-preaudit.json",
+      "size_bytes": 993,
+      "sha256": "ca84fd43297010c150213bc99ec0820383f7c2a013ad66184f50e4f672376e18"
+    },
+    "candidate3-tests.txt": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/candidate3-tests.txt",
+      "size_bytes": 141,
+      "sha256": "e18ad37f6b1ce2122870098813fa1a2e177beccde2df704ab9fc2935e336a4c9"
+    }
+  },
+  "failure_bindings": {
+    "README.md": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-preflight-001/README.md",
+      "size_bytes": 1715,
+      "sha256": "fda2cefb2076af21e0fde87ddfb630069c1404037f97a75eea70dc5e32fa0a8e"
+    },
+    "manifest.json": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-preflight-001/manifest.json",
+      "size_bytes": 771,
+      "sha256": "632ee76fbe3900f5289bb4c966d9771e558e7a4239e084c74c9ed8e55692adda"
+    },
+    "restoration.json": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-preflight-001/restoration.json",
+      "size_bytes": 786,
+      "sha256": "3b6b338529690599fb07d2dd2e2881616c44f4a450e5da0a5f2706e73e9efd93"
+    },
+    "inventory-red.txt": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-preflight-001/inventory-red.txt",
+      "size_bytes": 5337,
+      "sha256": "4e191bef1724c68ad88e6a6041c81e0d39309308bd15363a6fd42379f92f1e76"
+    },
+    "attempt.tar.gz": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-preflight-001/attempt.tar.gz",
+      "size_bytes": 241024,
+      "sha256": "6312c36760a532f99ab4418f6c3644bca46c8311d9c17081574479bdb5a112b6"
+    }
+  },
+  "inventory": {
+    "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/profile-integration-001/inventories/runtime-inventory.json.gz",
+    "size_bytes": 3039617,
+    "sha256": "b31467c7ce44cce83bc3107098eff52c16a43f13624ac02240d443053f2ec2e8"
+  },
+  "independent_checks": {
+    "selection": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-one-layer-001-candidate3-selection-adversarial-check.json",
+      "size_bytes": 491,
+      "sha256": "80d6935f6bfb367b7686db06417c185936ab7b280f5790fd1077e0c8a2636a4f"
+    },
+    "normalized_rows": 61401,
+    "agent_and_experimental_profiles_select_same_inventory": true,
+    "all_48_restored_files_match_archive_and_selected_inventory": true,
+    "restored_byte_count": 655353,
+    "candidate2_probe_controller_tests_protocol_byte_identical": true
+  },
+  "test_attempt": {
+    "command": "packaged Python -I -B test_runtime_inventory.py",
+    "result": "NOT_RUN past admission: BlockingIOError at nonblocking inference lock before runtime verification. Lock was not bypassed.",
+    "full_runtime_validation_basis": "Retained restoration.json reports actual 61401-file verification and candidate3-preaudit records 41 passing tests. Reviewer independently verified selection, digest, normalization and 48 restored bytecode bytes, not another full runtime hash pass."
+  },
+  "limits": [
+    "Fresh freeze/public seed and actual execution remain separate.",
+    "No GPU/model/service action, payload download, production edit or inventory modification performed."
+  ]
+}
