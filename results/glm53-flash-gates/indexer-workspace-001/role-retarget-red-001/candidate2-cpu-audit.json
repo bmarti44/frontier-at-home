@@ -1,0 +1,234 @@
+{
+  "scope": "Candidate2 H1/H2 implementation pre-submission CPU audit only; independent review pending",
+  "time_unix": 1789081774.5529785,
+  "base_revision": "2695f698f51f00db60369a0b7811633e126d9ff3",
+  "original_candidate_revision": "7ed3dac2",
+  "genuine_review_red_revision": "2e06b9de",
+  "test_interpreter": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3 -I -B",
+  "tests": [
+    {
+      "file": "test_probe.py",
+      "count": 13,
+      "result": "PASS"
+    },
+    {
+      "file": "test_review.py",
+      "count": 12,
+      "result": "PASS"
+    }
+  ],
+  "total_tests_passed": 25,
+  "secret_lint_selftest": "PASS",
+  "diff_check": "PASS",
+  "scope_checks": {
+    "closed_files": [
+      {
+        "path": "results/glm53-flash-gates/indexer-workspace-001/native.py",
+        "size_bytes": 14355,
+        "sha256": "10c00f553ebdccdc89b24a40d486a4ebf1ef1d1e33e40f8658281fd221765875"
+      },
+      {
+        "path": "results/glm53-flash-gates/indexer-workspace-001/PROTOCOL.md",
+        "size_bytes": 6038,
+        "sha256": "fe68acf31790328b9a539bb683eed8724e7bbfd04296a3ffb9c0fe3ea663bed3"
+      },
+      {
+        "path": "results/glm53-flash-gates/indexer-workspace-001/cpu-audit.json",
+        "size_bytes": 4006,
+        "sha256": "9dda104ffc45596f0f7ab1632d2b5cee4cbda41f42cfdcded26e12d5827c8983"
+      },
+      {
+        "path": "scripts/45_probe_glm53_indexer.py",
+        "size_bytes": 27426,
+        "sha256": "c28511d493c60377dff243ad3eb3f01ae8f974f377781651c7128f346d237f6a"
+      },
+      {
+        "path": "scripts/lib/glm53_indexer_fixture.py",
+        "size_bytes": 7629,
+        "sha256": "e32685c620b2a5c0bfd9bafc4848ac50c3e95100ba4edd18e4fbb460a7e96185"
+      },
+      {
+        "path": "configs/profiles/glm-5.3-flash/cuda-spark-128g-1m-experimental.json",
+        "size_bytes": 5561,
+        "sha256": "e22a2607a2f2954f9b0fd6b088ec35dfb05e1653a4348d6786dab91b9e01a63a"
+      },
+      {
+        "path": "scripts/lib/glm53_host_evidence.py",
+        "size_bytes": 19695,
+        "sha256": "3aa5d347c6e352b1671d958671932d51db0243944b25e4648af9b9cdd6e4a84c"
+      },
+      {
+        "path": "scripts/lib/glm53_probe_capture.py",
+        "size_bytes": 9483,
+        "sha256": "1a16f739be521ac285722bc3fb52257752dcf1ca446955adea597e753b99b6fe"
+      },
+      {
+        "path": "scripts/38_guard_glm53_probe.py",
+        "size_bytes": 15671,
+        "sha256": "8c0170e56402c6a008049e299c26e466a3a7fe4465c2eec68663cd595f5aa5e3"
+      }
+    ],
+    "unchanged_original_probe_functions": [
+      "require",
+      "load_module",
+      "sha",
+      "read_json",
+      "write",
+      "fixture_api",
+      "arm_schedule",
+      "execute_schedule",
+      "call_specs",
+      "bounds",
+      "geometry",
+      "expected_metadata",
+      "expected_inputs",
+      "file_stream",
+      "compare_files",
+      "valid_logit_bytes",
+      "artifact_sizes",
+      "validate_memory",
+      "validate_rows",
+      "score_arm",
+      "read_json_line",
+      "compare_arms",
+      "main"
+    ],
+    "compiled_without_execution": [
+      "candidate1-review-witnesses.py",
+      "freeze.py",
+      "native.py",
+      "probe.py",
+      "run.py",
+      "test_probe.py",
+      "test_review.py"
+    ]
+  },
+  "changes": [
+    "H1 require selected external dependencies, runtime interpreter and normalized inventory binding before external commands",
+    "H2 bind exact host-verified identity artifacts and join every inner event within verified first/completion identities before comparison",
+    "Freeze correction protocol/test and explicit dependency role mapping",
+    "Update only original synthetic valid-manifest setup for required fields"
+  ],
+  "native_or_cuda_executed": false,
+  "runtime_or_profile_changed": false,
+  "committed_by_author": false,
+  "independent_review_pending": true,
+  "successful_preparation_kernel_qualification": "NO_RESULT",
+  "bindings": [
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate1-review-witnesses.py",
+      "sha256": "200fbc2cb665ae5ea4c3ae9f1746c8c50c0ea7d2f645466beeeaa6389ba8eb79",
+      "size_bytes": 4045
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/freeze.py",
+      "sha256": "51413b22d4b6b078c87d5b03d3a82de3b16383ba3d9fd6823eb8b3ac70f8ca47",
+      "size_bytes": 7308
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/native.py",
+      "sha256": "10c00f553ebdccdc89b24a40d486a4ebf1ef1d1e33e40f8658281fd221765875",
+      "size_bytes": 14355
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/probe.py",
+      "sha256": "329c238394b843a3623a4a891bb706bc5d3fd777e42931ab2bf50ab36ced0a45",
+      "size_bytes": 20485
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/run.py",
+      "sha256": "fb5476b744b7dcce6156d4d17903a819bebe4076fec829395b6cd39600c1a144",
+      "size_bytes": 9710
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/test_probe.py",
+      "sha256": "10596bcd87dbae43f7fc6509aa8b7225c1d8ea58a48b4b73b882e4320cc299c0",
+      "size_bytes": 9594
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/test_review.py",
+      "sha256": "1476c3287f9e8b0e09549f13d4de95b5e6a7e9aab552d84f020ad3832e982ac8",
+      "size_bytes": 11856
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/PROTOCOL.md",
+      "sha256": "fe68acf31790328b9a539bb683eed8724e7bbfd04296a3ffb9c0fe3ea663bed3",
+      "size_bytes": 6038
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/CORRECTION.md",
+      "sha256": "33de6de6892affa5dd3fbae78c1d377387b2a57257b7c1f9fd2df024e3b389a3",
+      "size_bytes": 2657
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/cpu-audit.json",
+      "sha256": "9dda104ffc45596f0f7ab1632d2b5cee4cbda41f42cfdcded26e12d5827c8983",
+      "size_bytes": 4006
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/review-red-001/initial.stderr",
+      "sha256": "bf43d12934c200a129bd8068487c147e915331d8c696c78bdcd06d3c47b1c498",
+      "size_bytes": 11246
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/review-red-001/initial.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/review-red-001/receipt.json",
+      "sha256": "cc2e75b1c992375b2be71717748b49c1c8761b79d4210f50b57b4d68b9eac661",
+      "size_bytes": 3811
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/review-red-001/stderr.txt",
+      "sha256": "b878f188d99214f61171d773f035a994a05ba63ae66831c3d5c96618f47fa84e",
+      "size_bytes": 15072
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/review-red-001/stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate2-audit/audit-assembly-first-error.txt",
+      "sha256": "405c242ba036bacd0b21070a04682d8d837f69477997185d7da275f7df8c2005",
+      "size_bytes": 261
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate2-audit/original-tests.stderr",
+      "sha256": "207d4396cdeb6959a19be532c44af04c8193e807883c47e9c4e20a6a03e90c8c",
+      "size_bytes": 112
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate2-audit/original-tests.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate2-audit/review-tests.stderr",
+      "sha256": "de8da7d9269ed800b271c7d19aff97b828b6d99ac8dca8d235680f1e89b318c2",
+      "size_bytes": 111
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate2-audit/review-tests.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate2-audit/scope.json",
+      "sha256": "cff51c011bc828daa90a9e0200f93723a1f2ba85e3e8e0093205f6b9b69184ac",
+      "size_bytes": 2369
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate2-audit/secret-lint.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    {
+      "path": "results/glm53-flash-gates/indexer-workspace-001/candidate2-audit/secret-lint.stdout",
+      "sha256": "d557c5b8a87676e45bca4cbaecde8ab1c77d74f125850c78d9f1a25ceb5dfcc4",
+      "size_bytes": 17
+    }
+  ]
+}

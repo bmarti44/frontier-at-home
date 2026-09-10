@@ -36,3 +36,12 @@ CPU tests. After fixes: run the complete focused CPU audit, commit clean source,
 obtain independent focused review, then create a new freeze/public seed before
 any contained preparation execution. Successful preparation remains NO_RESULT
 for kernel binary qualification and never automatically admits a large model.
+
+Root pre-submission H1 witness: each declared implicit dependency role can alias
+the already-bound node executable while omitting its actual executed file. The
+remaining closure fixes those five roles to the concrete native compiler/libc
+paths and the fixed non-authority wrapper/safe-wrapper/memory-guard paths used by
+this controller. Retargeting wrapper itself to an unrelated bound file also
+rejects. Preserve the six actual rejection-test failures before changing the
+implementation. Tests may read the small actual external dependency files for
+valid binding but never execute them. H2 and all numerical code remain unchanged.
