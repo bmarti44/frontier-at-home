@@ -1,0 +1,141 @@
+{
+  "scope": "Bounded first-window preparation/falsifier on optional aggregate-1M profile; not full durability, context, fidelity or production performance",
+  "verdict": "FAIL",
+  "formula": "soak-scheduler-002/PROTOCOL.md and candidate.py first-window checks, conjoined with host, identity, lifecycle and frozen-input conditions; all required conditions must pass. The full1800-second gate was not admitted.",
+  "client_summary": {
+    "scope": "First-window necessary-condition falsifier only; host checks required separately; not durability/context/fidelity/performance qualification",
+    "verdict": "PASS",
+    "requests": 20,
+    "admissions_per_worker": [
+      5,
+      5,
+      5,
+      5
+    ],
+    "drain_seconds": 303.226897276,
+    "four_generated_streams_overlap": true,
+    "qualified_production_performance": null
+  },
+  "checks": {
+    "fixed_first_window_gate": true,
+    "all_completed_requests_independently_rescored_correct": true,
+    "bounded_admission_and_drain": true,
+    "full_durability_not_admitted": true,
+    "whole_host_no_new_swap": true,
+    "whole_host_no_swap_io": false,
+    "watchdog_floor_at_least_18_gib": true,
+    "all_watchdog_cgroup_swap_samples_zero": true,
+    "cgroup_swap_peak_zero_before_stop": true,
+    "cgroup_no_limit_events": true,
+    "identity_guard_and_clean_descendants": true,
+    "operator_stop_and_wrapper_exit_zero": true,
+    "processes_gone": true,
+    "profile_stopped": true,
+    "memory_recovery_above_110_gib": true,
+    "default_proxy_and_guards_unchanged": true,
+    "kernel_journal_clear": true,
+    "post_runtime_model_verification": true,
+    "frozen_source_bindings_unchanged": true,
+    "frozen_compiled_inputs_unchanged": false
+  },
+  "source_revision": "0666626327125f338ce3027addf1aac1d302591a",
+  "request_observations": {
+    "completed": 20,
+    "input_tokens_per_request": 4224,
+    "admissions_per_worker": [
+      5,
+      5,
+      5,
+      5
+    ],
+    "admission_limit_seconds": 300,
+    "drain_completed_after_seconds": 303.226897276,
+    "all_final_answers_and_negative_controls_correct": true
+  },
+  "host": {
+    "watchdog_samples": 2232,
+    "minimum_available_gib": 18.259899139404297,
+    "maximum_cgroup_swap_bytes": 0,
+    "host_used_swap_kib_before_smoke_prestop_after": [
+      168560,
+      168560,
+      168560,
+      168560
+    ],
+    "swap_io_counters": [
+      {
+        "pswpin": 6315010,
+        "pswpout": 57487414
+      },
+      {
+        "pswpin": 6315011,
+        "pswpout": 57487414
+      },
+      {
+        "pswpin": 6315011,
+        "pswpout": 57487414
+      },
+      {
+        "pswpin": 6315011,
+        "pswpout": 57487414
+      }
+    ],
+    "identity_samples": 2432
+  },
+  "compiled_inputs": {
+    "verdict": "NO_RESULT",
+    "changed": [],
+    "missing": [],
+    "added": [
+      {
+        "path": ".config/vllm/usage_stats.json",
+        "size_bytes": 1580,
+        "sha256": "7a922bcc5cc2a59d2ef5b7f76fc0ab1c9555c9d737bc23d9c1415a1b3abc3d70"
+      },
+      {
+        "path": ".humming/tmp/lock/launcher.lock",
+        "size_bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/cuda-binaries/6cb4288b095b38cd11d4d7489310070486083a2a74674cf086fb62018b755242.cubin",
+        "size_bytes": 156488,
+        "sha256": "90e383ea3fd41b0ce4e086f876d6de74ce2fdfd73137447211494d520189d5b3"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/b23c9b6e8f7fb507dfc498a7453f3837ba50c64844b63b2fa0a287bdaedd7e10/device_kernel.cu",
+        "size_bytes": 23166,
+        "sha256": "8bf5fd952993ca5f4d64b37708c93a19d045c1770202aa499ac74c5bcbc9719a"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/b23c9b6e8f7fb507dfc498a7453f3837ba50c64844b63b2fa0a287bdaedd7e10/executable.so",
+        "size_bytes": 201376,
+        "sha256": "c97828b7de6f299286c8a13b3dbca1f98887263a473bf2def04ce1d3915998e0"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/b23c9b6e8f7fb507dfc498a7453f3837ba50c64844b63b2fa0a287bdaedd7e10/host_kernel.cu",
+        "size_bytes": 59113,
+        "sha256": "cc4077f05d474607612447d0a4d0ae04cf32d760d508532c3717f87634c49066"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/b23c9b6e8f7fb507dfc498a7453f3837ba50c64844b63b2fa0a287bdaedd7e10/params.pkl",
+        "size_bytes": 2207,
+        "sha256": "b58b705e1f0a8b09b6566ac0412302a6f20d219d6a08405ed9a6457f0d2f0073"
+      },
+      {
+        "path": "deep-gemm/cache/kernel.sm120_tf32_hc_prenorm_gemm.729b98c2bbd06c26472dc998f16b0693/kernel.cu",
+        "size_bytes": 346,
+        "sha256": "2205bece6d96d959ede380d4d0b64b659aec84b2ae8aa296c12084ef52686c69"
+      },
+      {
+        "path": "deep-gemm/cache/kernel.sm120_tf32_hc_prenorm_gemm.729b98c2bbd06c26472dc998f16b0693/kernel.cubin",
+        "size_bytes": 66536,
+        "sha256": "4382315cec37c78bdb79cb0890028fa4422757594439db2eba5007fc6b63101e"
+      }
+    ],
+    "interpretation": "New compiled inputs make this a preparation attempt; freeze/replay required for confirmation."
+  },
+  "full_durability": "NO_RESULT: host and frozen-input prerequisites not passed; no admission",
+  "full_model_qualification": "NO_RESULT: native100-case fidelity, direct context on changed scheduler and production switching remain pending",
+  "qualified_production_performance": null
+}
