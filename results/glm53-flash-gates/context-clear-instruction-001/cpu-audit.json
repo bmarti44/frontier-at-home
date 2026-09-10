@@ -1,0 +1,40 @@
+{
+  "scope": "CPU-only preparation with all-zero audit seed, not confirmation; no model request",
+  "verdict": "PASS",
+  "input_tokens": [
+    250128,
+    250128,
+    250128,
+    250128
+  ],
+  "short_input_tokens": 4224,
+  "sources": [
+    {
+      "path": "results/glm53-flash-gates/context-clear-instruction-001/prepare_inputs.py",
+      "sha256": "702a5290cb30729f60f8ea6a24b7b862d625c4ede4bf05868429c614c1e8cf4f"
+    },
+    {
+      "path": "results/glm53-flash-gates/context-clear-instruction-001/run_short.py",
+      "sha256": "9b3ae7ba3e985fd932e622a3dc71b6db0dbfe4312e9fdf03b3d214e988e8f113"
+    },
+    {
+      "path": "results/glm53-flash-gates/context-clear-instruction-001/freeze.py",
+      "sha256": "fa6dac18b96bb2db3fcbcbad621b9719a099e7e63dc3df19d9d3755651e26b44"
+    }
+  ],
+  "logs": [
+    {
+      "path": "/tmp/glm53-clear-instruction-cpu-audit002.stdout",
+      "sha256": "90b130f18c8ff72b47a446c72ca6ce5c2bec1d90e7198c212c76d31b7e1120bb"
+    },
+    {
+      "path": "/tmp/glm53-clear-instruction-cpu-audit002.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "inputs_manifest": {
+    "path": "/home/bmarti44/.cache/glm53-flash/context-clear-instruction-cpu-audit-002/manifest.json",
+    "sha256": "f58b14327fa9f4a5a5e7b528277952e2b830ae5b6c4236b174b14bb977254fc4"
+  },
+  "independent_review": "Adversarial reviewer independently re-rendered prompt IDs, checked fixture hashes/positions, unique records and absent controls."
+}

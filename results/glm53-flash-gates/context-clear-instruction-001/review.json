@@ -1,0 +1,37 @@
+{
+  "scope": "pre-submission instruction candidate1; no production source changes",
+  "verdict": "PASS",
+  "verified_high_critical_remaining": 0,
+  "reviews": [
+    {
+      "reviewer": "glm53_adversarial_reviewer",
+      "assessment": "Independent actual tokenizer/fixture audit passes;48/57 unchanged. No blocking instruction/rendering/scorer finding."
+    },
+    {
+      "reviewer": "glm53_gap_reviewer",
+      "assessment": "Short input binding defect reproduced with synthetic transport and closed before submission. Five admission mutations reject, unchanged synthetic stream passes, in-transport parent mutation fails."
+    }
+  ],
+  "gap_review": {
+    "path": "short-binding-review.tar.gz",
+    "sha256": "49b5d8fbfa9f1b9abee24bf8d94c4a15fc2c0809a88ad6beeab0c71aa5f9f440"
+  },
+  "files": [
+    {
+      "path": "admission-results.json",
+      "sha256": "dd2d00ea4825eb67d2f004945742447d43e58a912911ef7c11a33226b8707386"
+    },
+    {
+      "path": "attestation.json",
+      "sha256": "8d350b325f9b03984e09ce4f4614b569246471744135842147db2ce6a193d526"
+    },
+    {
+      "path": "original-synthetic-witness.json",
+      "sha256": "582fd839912e94c7e95ecb764bca1160103a658fbaa7239b89d2170b8a971ae2"
+    },
+    {
+      "path": "post-transport-results.json",
+      "sha256": "c190ded1b8cac8398419eddacf40bd949dc560155b3640a1d4eafd8fc93bf0cb"
+    }
+  ]
+}
