@@ -1,0 +1,14 @@
+{
+  "candidate": "c7a5a6dc",
+  "gate_candidate_count": 1,
+  "verdict": "FAIL",
+  "reviewers": ["glm53_adversarial_reviewer", "glm53_gap_reviewer"],
+  "open_high_findings": [
+    {"id": "H1", "assertion": "Unit observation failures must not report stopped; terminal unit states must still check descendants."},
+    {"id": "H2", "assertion": "Stop errors must not skip controller wait or restoration of signal handlers."},
+    {"id": "H3", "assertion": "Lifecycle registration, serialization and cancellation must cover preparation before hashes, cache copies and unit creation."}
+  ],
+  "open_critical_findings": [],
+  "local_verification": "review-red.txt: four new regressions fail on unchanged candidate; ten existing tests pass",
+  "proposed_fix": "Target only observed lifecycle defects; preserve frozen engine, scorer, current context replay and production default/admission."
+}

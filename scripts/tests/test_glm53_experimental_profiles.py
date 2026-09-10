@@ -163,4 +163,49 @@ class LifecycleRegression(unittest.TestCase):
                         api.authenticated_ready(snapshot,out)
             finally: server.shutdown();server.server_close();worker.join()
 
+
+
+class ReviewRegression(unittest.TestCase):
+    def setUp(self):
+        from unittest import mock
+        self.mock=mock;self.api=importlib.import_module('glm53_profile')
+
+    def test_unknown_unit_observation_raises(self):
+        with self.mock.patch.object(self.api.subprocess,'run',return_value=self.mock.Mock(returncode=1,stdout='',stderr='bus failed')):
+            with self.assertRaisesRegex(ValueError,'observe'):
+                self.api.unit_properties('test.service')
+
+    def test_terminal_unit_still_checks_descendants(self):
+        api=self.api
+        with self.mock.patch.object(api,'unit_properties',return_value={'ActiveState':'failed','InvocationID':'same'}), self.mock.patch.object(api,'check_group_empty',create=True,side_effect=ValueError('descendants')) as check:
+            with self.assertRaisesRegex(ValueError,'descendants'):
+                api.stop_unit({'unit':'test.service','invocation_id':'same','control_group':'/fake'})
+            check.assert_called_once()
+
+    def test_stop_error_cannot_skip_wait_or_restore_handlers(self):
+        import signal
+        api=self.api;before=signal.getsignal(signal.SIGTERM)
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp);child=self.mock.Mock(pid=4321);child.poll.return_value=None
+            with self.mock.patch.object(api,'lifecycle_path',return_value=out/'state.json'), self.mock.patch.object(api.subprocess,'Popen',return_value=child), self.mock.patch.object(api,'unit_properties',return_value={'ActiveState':'active','InvocationID':'fresh','ControlGroup':'/fake'}), self.mock.patch.object(api,'authenticated_ready',side_effect=ValueError('wrong model')), self.mock.patch.object(api,'stop_unit',side_effect=TimeoutError('stop timeout')):
+                try:
+                    with self.assertRaises(TimeoutError):
+                        api.run_contained(['wrapper','--tag','test'],{},out,{'profile_id':'test','safety':{'startup_timeout_seconds':10}})
+                    child.wait.assert_called_once_with(timeout=60)
+                    self.assertIs(signal.getsignal(signal.SIGTERM),before)
+                finally: signal.signal(signal.SIGTERM,before)
+
+    def test_preparation_registers_and_serializes_before_hashing(self):
+        api=self.api
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp);path=out/'state.json'
+            with self.mock.patch.object(api,'lifecycle_path',return_value=path):
+                with api.preparing_session({'profile_id':'test'},out):
+                    record=json.loads(path.read_text())
+                    self.assertEqual(record['phase'],'preparing')
+                    fd=api.open_identity(record['launcher'])
+                    import os;os.close(fd)
+                    with self.assertRaisesRegex(ValueError,'active launcher'):
+                        with api.preparing_session({'profile_id':'test'},out): pass
+
 if __name__ == '__main__': unittest.main()

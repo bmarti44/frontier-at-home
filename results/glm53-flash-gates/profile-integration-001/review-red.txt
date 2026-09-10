@@ -1,0 +1,41 @@
+........{"event": "ready", "profile": "glm-5.3-flash/cuda-spark-128g-agent-fast", "port": 8015, "output": "/tmp/tmp_6lkoe5x"}
+..EFFF
+======================================================================
+ERROR: test_preparation_registers_and_serializes_before_hashing (test_glm53_experimental_profiles.ReviewRegression.test_preparation_registers_and_serializes_before_hashing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 203, in test_preparation_registers_and_serializes_before_hashing
+    with api.preparing_session({'profile_id':'test'},out):
+         ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'glm53_profile' has no attribute 'preparing_session'
+
+======================================================================
+FAIL: test_stop_error_cannot_skip_wait_or_restore_handlers (test_glm53_experimental_profiles.ReviewRegression.test_stop_error_cannot_skip_wait_or_restore_handlers)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 194, in test_stop_error_cannot_skip_wait_or_restore_handlers
+    child.wait.assert_called_once_with(timeout=60)
+  File "/usr/lib/python3.12/unittest/mock.py", line 955, in assert_called_once_with
+    raise AssertionError(msg)
+AssertionError: Expected 'wait' to be called once. Called 0 times.
+
+======================================================================
+FAIL: test_terminal_unit_still_checks_descendants (test_glm53_experimental_profiles.ReviewRegression.test_terminal_unit_still_checks_descendants)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 181, in test_terminal_unit_still_checks_descendants
+    with self.assertRaisesRegex(ValueError,'descendants'):
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_unknown_unit_observation_raises (test_glm53_experimental_profiles.ReviewRegression.test_unknown_unit_observation_raises)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 175, in test_unknown_unit_observation_raises
+    with self.assertRaisesRegex(ValueError,'observe'):
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.564s
+
+FAILED (failures=3, errors=1)
