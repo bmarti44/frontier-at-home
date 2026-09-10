@@ -1,0 +1,22 @@
+FF
+======================================================================
+FAIL: test_api_exits_before_guard_and_whole_group_cleanup (test_glm53_profile_shutdown.ProfileShutdownTests.test_api_exits_before_guard_and_whole_group_cleanup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_profile_shutdown.py", line 30, in test_api_exits_before_guard_and_whole_group_cleanup
+    self.assertFalse(forced,'whole-unit stop raced the real guard completion')
+AssertionError: [True] is not false : whole-unit stop raced the real guard completion
+
+======================================================================
+FAIL: test_profiles_request_bounded_native_shutdown (test_glm53_profile_shutdown.ProfileShutdownTests.test_profiles_request_bounded_native_shutdown)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_profile_shutdown.py", line 45, in test_profiles_request_bounded_native_shutdown
+    self.assertIn('--shutdown-timeout',args);self.assertEqual(args[args.index('--shutdown-timeout')+1],'10')
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: '--shutdown-timeout' not found in ['-I', '-B', '-m', 'vllm.entrypoints.openai.api_server', '--model', '{model}', '--served-model-name', 'glm-5.3-flash', 'default', '--host', '127.0.0.1', '--port', '{port}', '--quantization', 'exl3', '--max-model-len', '65536', '--max-num-seqs', '4', '--max-num-batched-tokens', '512', '--compilation-config', '{"mode":0}', '--logprobs-mode', 'raw_logprobs', '--kv-cache-dtype', 'fp8', '--no-enable-prefix-caching', '--enable-auto-tool-choice', '--tool-call-parser', 'glm47', '--reasoning-parser', 'glm45', '--middleware', 'glm53_runtime_policy.MediaPolicyMiddleware', '--limit-mm-per-prompt', '{"image":{"count":4,"width":512,"height":512},"video":{"count":1,"num_frames":16,"width":512,"height":512}}', '--media-io-kwargs', '{"video":{"num_frames":16,"max_frames":16}}', '--mm-processor-kwargs', '{"max_frames":16,"max_frame_count_dynamic":16}', '--default-chat-template-kwargs', '{"reasoning_effort":"low","clear_thinking":true}', '--load-format', 'instanttensor', '--dtype', 'bfloat16', '--enforce-eager', '--enable-chunked-prefill', '--kv-cache-memory-bytes', '4294967296', '--mm-processor-cache-gb', '0', '--kernel-config', '{"enable_flashinfer_autotune":false}', '--worker-cls', 'glm53_worker.WarmupCleanupWorker', '--skip-mm-profiling']
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.482s
+
+FAILED (failures=2)

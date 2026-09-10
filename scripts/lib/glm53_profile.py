@@ -133,16 +133,84 @@ def bind_unit(record, props):
     return True
 
 
+def verify_guard_completion(record):
+    output=Path(record['output'])/'identity'
+    summary=strict_json(output/'summary.json')
+    if (summary.get('verdict')!='PASS' or summary.get('probe_exit_code')!=0
+            or summary.get('live_process_group_after')!=[]
+            or summary.get('raw_sha256')!=sha256_file(output/'raw.jsonl')):
+        raise ValueError('guard did not verify clean completion')
+
+
+def orderly_api_stop(record, timeout=30):
+    """Signal the verified API alone so its guard can finish the C/E handshake."""
+    output=Path(record['output']);identity=output/'identity'
+    # A unique run directory also serializes concurrent operator stop requests.
+    with (output/'shutdown.lock').open('a') as lock:
+        fcntl.flock(lock,fcntl.LOCK_EX)
+        props=unit_properties(record['unit'])
+        if props['ActiveState'] in ('inactive','failed'):
+            verify_guard_completion(record);return
+        if not bind_unit(record,props): raise ValueError('missing shutdown invocation')
+        manifest=strict_json(identity/'manifest.json');row=None
+        with (identity/'raw.jsonl').open() as stream:
+            for line in stream:
+                value=json.loads(line)
+                if value.get('event')=='identity': row=value
+                elif value.get('event')=='failure': raise ValueError('guard already failed')
+        if row is None or not all(row.get(k) is True for k in
+                ('executable_verified','argv_verified','environment_verified')):
+            raise ValueError('missing verified API identity')
+        expected=process_identity(row['pid'])
+        if (expected['start_ticks']!=row['start_ticks']
+                or expected['command']!=manifest['argv']
+                or expected['executable']!=manifest['executable']
+                or manifest['cgroup'].strip()!='0::'+record['control_group']
+                or row['cgroup']!=manifest['cgroup']):
+            raise ValueError('API shutdown identity mismatch')
+        fd=open_identity(expected)
+        try:
+            proc=Path('/proc')/str(expected['pid'])
+            if ((proc/'cgroup').read_text()!=manifest['cgroup']
+                    or sha256_file(proc/'exe')!=manifest['binary_sha256']
+                    or process_identity(expected['pid'])!=expected):
+                raise ValueError('API shutdown binary or cgroup mismatch')
+            signal.pidfd_send_signal(fd,signal.SIGTERM)
+        finally: os.close(fd)
+        deadline=time.monotonic()+timeout
+        while time.monotonic()<deadline:
+            props=unit_properties(record['unit'])
+            if props.get('InvocationID') and props['InvocationID']!=record['invocation_id']:
+                raise ValueError('systemd invocation identity mismatch')
+            if props['ActiveState'] in ('inactive','failed'):
+                verify_guard_completion(record);return
+            time.sleep(.1)
+        raise TimeoutError('orderly API shutdown timed out')
+
+
 def stop_unit(record):
     props = unit_properties(record['unit'])
+    shutdown_failure=None
     if props['ActiveState'] not in ('inactive','failed'):
         if not bind_unit(record,props):
             raise ValueError('cannot observe systemd invocation identity; refusing stop')
-        subprocess.run(['systemctl','--user','stop',record['unit']],check=True,timeout=60)
+        if record.get('ready'):
+            try: orderly_api_stop(record)
+            except (OSError,ValueError,KeyError,subprocess.SubprocessError) as error:
+                shutdown_failure=type(error).__name__+': '+str(error)
+        props=unit_properties(record['unit'])
+        if props['ActiveState'] not in ('inactive','failed'):
+            if not bind_unit(record,props): raise ValueError('missing shutdown invocation')
+            subprocess.run(['systemctl','--user','stop',record['unit']],check=True,timeout=60)
         props=unit_properties(record['unit'])
         if props['ActiveState'] not in ('inactive','failed'):
             raise ValueError('model unit survived stop')
     check_group_empty(record)
+    if record.get('ready'):
+        try: verify_guard_completion(record)
+        except (OSError,ValueError,KeyError) as error:
+            shutdown_failure=shutdown_failure or type(error).__name__+': '+str(error)
+        record['shutdown']={'clean':shutdown_failure is None,'failure':shutdown_failure}
 
 
 def save_record(path, record):
@@ -226,12 +294,15 @@ def lifecycle_action(name, action):
     try:
         if action=='stop':
             if active and record.get('invocation_id'): stop_unit(record)
+            shutdown_failed=record.get('shutdown',{}).get('clean') is False
             if launcher_live: signal.pidfd_send_signal(fd,signal.SIGTERM)
             wait_launcher(record,path)
             # A preparing controller may have created its unit before cancelling.
             final=strict_json(path)
             if final.get('unit'): stop_unit(final)
             active=launcher_live=False
+            if shutdown_failed or final.get('shutdown',{}).get('clean') is False:
+                raise ValueError('model stopped, but orderly guard shutdown failed')
     finally:
         if fd is not None: os.close(fd)
     state=('running' if record.get('ready') else 'starting') if active or launcher_live else 'stopped'
@@ -320,7 +391,7 @@ def run_contained(command, control, output, snapshot, session=None):
                         record.update(ready=True,readiness=readiness,phase='running');save_record(path,record)
                         print(json.dumps({'event':'ready','profile':snapshot['profile_id'],'port':snapshot['port'],'output':str(output)}),flush=True)
                 time.sleep(1)
-            return child.returncode
+            returncode=child.returncode
     except BaseException as error:
         record['failure']=type(error).__name__+': '+str(error);save_record(path,record)
         raise
@@ -335,3 +406,4 @@ def run_contained(command, control, output, snapshot, session=None):
                 if child is not None: wait_controller(child,record,path)
         finally:
             for signum,handler in previous.items(): signal.signal(signum,handler)
+    return 1 if record.get('shutdown',{}).get('clean') is False else returncode

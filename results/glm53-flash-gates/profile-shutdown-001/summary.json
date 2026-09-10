@@ -1,0 +1,40 @@
+{
+  "scope": "orderly shutdown sequencing; frozen guard unchanged",
+  "fixed_acceptance": "real CPU guard receives one verified completion and empty cleanup, no forced stop; identity mutations are never signaled; timeout forces cleanup and remains unclean; both profiles use native shutdown-timeout10",
+  "test_commit": "3008245e",
+  "genuine_red": true,
+  "tests_passed": 4,
+  "existing_profile_tests_passed": 17,
+  "verdict": "PASS",
+  "native_requalification": "pending",
+  "files": [
+    {
+      "path": "scripts/lib/glm53_profile.py",
+      "sha256": "539286ffa0b8b346fcdfe6aa54491f93c68fa37464249a1c0cfab4be0255bce5"
+    },
+    {
+      "path": "scripts/tests/test_glm53_profile_shutdown.py",
+      "sha256": "00d89d88b8c4c462119b9b515e2baf6a60f74254f96156fe365e60833ea577a6"
+    },
+    {
+      "path": "configs/profiles/glm-5.3-flash/cuda-spark-128g-agent-fast.json",
+      "sha256": "d42646f4cd0c4de5b76bc6cc5b2e12061c672b6ab8b01ec03b1b8935dd384d0f"
+    },
+    {
+      "path": "configs/profiles/glm-5.3-flash/cuda-spark-128g-1m-experimental.json",
+      "sha256": "3b7a4c5e3d55a6e240b72b9e5672e17ae357dc64268029ff27e45fe6cbdf482d"
+    },
+    {
+      "path": "results/glm53-flash-gates/profile-shutdown-001/green.txt",
+      "sha256": "7a8d6a580b44716b2b668854feca4c7366fe6a3a95c1565e816c2667f15ea149"
+    },
+    {
+      "path": "results/glm53-flash-gates/profile-shutdown-001/profile-regressions.txt",
+      "sha256": "1a5c0da2bb349d347d7b1b03559e3ea1868f049c9c390b04e00bcdbb41dfb588"
+    },
+    {
+      "path": "results/glm53-flash-gates/profile-shutdown-001/red.txt",
+      "sha256": "31b81482405d7b36132b8346c6c4f99382a9fec96102611749f40f7ba7f62123"
+    }
+  ]
+}
