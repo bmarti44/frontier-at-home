@@ -1,9 +1,10 @@
 # GLM-5.3-Flash CUDA status
 
-**GLM is runnable through named experimental profiles.** An earlier configuration
+**GLM has named experimental profiles; it is currently stopped.** An earlier configuration
 passed the direct aggregate million-token context check; the latest current-settings
 run failed its memory reserve. Qwen remains the recorded/reboot default.
-GLM is currently stopped. The corrected native reference probe passed one real
+The latest model-free workspace test failed its repeated-baseline byte comparison;
+runtime bytecode restoration is pending before another launch. The corrected native reference probe passed one real
 layer, including host monitoring and cleanup. Full model qualification remains incomplete.
 
 The [passive unloaded control](host-swap-accounting-001/unloaded-control-001/README.md)
@@ -124,9 +125,22 @@ launcher exit records are missing. Separate later observations verify cleanup,
 recovered memory, unchanged defaults and all 111 source/runtime/model bindings
 plus 2,486 prepared cache files. The attempt remains **FAIL**. Removing the known
 startup overlap did not close the memory gate; the serialized replay branch is
-**NO_RESULT**, with no further unchanged replay. A bounded model-free comparison
-of the existing indexer workspace limit is being prepared; its effect on output
-bytes and actual memory remains unverified.
+**NO_RESULT**, with no further unchanged replay.
+
+The [model-free workspace preparation](indexer-workspace-preparation-001/README.md)
+ran four fresh512MiB baseline arms. Their individual native/host checks passed;
+the one-request pair matched, but the four-request pair differed in ordered
+indices across48 rows. Cache, tail, valid logits and consumed pool sets matched;
+downstream attention equivalence remains unmeasured. The fixed protocol stopped
+before either64MiB candidate arm. The attempt is **FAIL** and smaller-workspace
+qualification is **NO_RESULT**. No buffer saving, speed or context claim follows.
+The original terminal host record is missing. Separate checks verified98 frozen
+bindings but found149 changed inventoried Python bytecode files and830 extras.
+All changed/extra bytes and exact original backup locations are preserved for
+restoration against the unchanged61,401-file inventory. All four processes and
+cgroups were gone and memory recovered. No profile/default changed. The next
+practical configuration under consideration restores the earlier128/32 scheduler
+while retaining the full million-token/four-slot target; it is not a new result.
 
 The [current-scheduler context adapter](context-scheduler-003/PROTOCOL.md) is also
 ready: it reuses the existing512/128 launch validator and unchanged direct-input,

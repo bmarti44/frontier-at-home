@@ -1,0 +1,78 @@
+{
+  "scope": "Model-free baseline repeatability falsifier only; no serving, quality, context or performance qualification",
+  "verdict": "FAIL",
+  "completed_arms": [
+    {
+      "index": 0,
+      "case": "prefill-1",
+      "arm": "baseline-a",
+      "budget_mib": 512,
+      "host_verdict": "PASS",
+      "inner_verdict": "PASS",
+      "minimum_available_kib": 116584404,
+      "memory_samples": 84,
+      "identity_samples": 89,
+      "wrapper_exit_code": 0
+    },
+    {
+      "index": 1,
+      "case": "prefill-1",
+      "arm": "baseline-b",
+      "budget_mib": 512,
+      "host_verdict": "PASS",
+      "inner_verdict": "PASS",
+      "minimum_available_kib": 117143956,
+      "memory_samples": 80,
+      "identity_samples": 86,
+      "wrapper_exit_code": 0
+    },
+    {
+      "index": 2,
+      "case": "prefill-4",
+      "arm": "baseline-a",
+      "budget_mib": 512,
+      "host_verdict": "PASS",
+      "inner_verdict": "PASS",
+      "minimum_available_kib": 116055856,
+      "memory_samples": 67,
+      "identity_samples": 70,
+      "wrapper_exit_code": 0
+    },
+    {
+      "index": 3,
+      "case": "prefill-4",
+      "arm": "baseline-b",
+      "budget_mib": 512,
+      "host_verdict": "PASS",
+      "inner_verdict": "PASS",
+      "minimum_available_kib": 116076056,
+      "memory_samples": 65,
+      "identity_samples": 69,
+      "wrapper_exit_code": 0
+    }
+  ],
+  "candidate_64mib_arms_started": false,
+  "controller_exit_code": 1,
+  "failure": "ValueError('ordered artifact bytes differ')",
+  "prefill_1_baseline_comparison": "PASS",
+  "prefill_4_baseline_comparison": "FAIL",
+  "order_diagnosis_file": "attempt/order-diagnosis.json",
+  "downstream_attention_equivalence": "NOT_MEASURED",
+  "minimum_available_kib": 116055856,
+  "formulas": {
+    "minimum_available_kib": "minimum of exact host-scorer minimum_mem_available_kib over all four arms"
+  },
+  "all_four_processes_and_cgroups_gone": true,
+  "original_terminal_host_record": "MISSING",
+  "separate_frozen_binding_check": {
+    "verdict": "PASS",
+    "files": 98
+  },
+  "original_runtime_inventory": "FAIL:149 changed inventoried bytecode files and830 extra bytecode files",
+  "original_61401_files_matched": 61252,
+  "original_file_errors": 149,
+  "archive_member_bytes_verified": 492,
+  "raw_lines": 630,
+  "profile_or_default_changed": false,
+  "smaller_workspace_qualification": "NO_RESULT: no candidate arm admitted; this branch stops without a new seed/retry"
+}

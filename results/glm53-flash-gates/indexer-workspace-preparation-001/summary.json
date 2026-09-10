@@ -1,0 +1,260 @@
+{
+  "verdict": "FAIL",
+  "checks": "FAIL",
+  "scope": "model-free512/64MiB synthetic workspace preparation; no serving, quality, context or performance qualification",
+  "failure": "ValueError('ordered artifact bytes differ')",
+  "completed_arms": 4,
+  "arms": [
+    {
+      "arm": {
+        "case": "prefill-1",
+        "arm": "baseline-a",
+        "budget_mib": 512
+      },
+      "root": "/home/bmarti44/.cache/glm53-flash/indexer-workspace-preparation-001/arms/0",
+      "host": {
+        "verdict": "PASS",
+        "qualification": "host_and_probe_identity_observations_only",
+        "unit": "glm52-glm53-idxws-ration-001-0-3075154.service",
+        "minimum_mem_available_kib": 116584404,
+        "maximum_cgroup_peak_bytes": 2337722368,
+        "memory_samples": 84,
+        "identity_samples": 89,
+        "identity_pid": 3075198,
+        "identity_start_ticks": 43559711,
+        "maximum_memory_sample_gap_seconds": 0.29472994804382324,
+        "maximum_identity_sample_gap_seconds": 0.2627577781677246,
+        "terminal_cleanup_seconds": 1.41694974899292,
+        "whole_system_swap_delta": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "required_separate_checks": [
+          "frozen runtime and metadata inventories",
+          "post-freeze verified public seed",
+          "inner probe correctness",
+          "model qualification"
+        ],
+        "identity_binding": {
+          "raw": {
+            "sha256": "79123fc2efba34d77107fa893c1b59ddf1e475b6b34313f509b887e962b1d86d"
+          },
+          "summary": {
+            "sha256": "9c9ca0c04a3892231b47cdcc9df90ce66bde72dd0364116dcd57636a965b78c1"
+          }
+        }
+      },
+      "inner": {
+        "verdict": "PASS",
+        "scope": "synthetic native arm only",
+        "case": "prefill-1",
+        "budget_mib": 512,
+        "raw_sha256": "0b8806e0fe6e852cc7901f18e3f47652bbe571018a2b1212b170662dda4a7031",
+        "artifacts": {
+          "indices.i32.gz": "44248f54ecfd06337a8c89dc6517650ea38a0bef9546cb8990a3cfeab98e9b0d",
+          "cache.u8.gz": "86d030c813c2736a7a2ee76045b534ff314a5c2732a1da25536a8d32ff4b4046",
+          "tail.bf16.gz": "cc89e5a0b06ffd46ffb7ad011aa87cd7537e5d379e25a47588d3123a641d1bd4",
+          "logits.f32.gz": "aa6667a5bdafce16b78357517154dc57d40896cad05ef4a32c989ccd50a14f34"
+        },
+        "memory": {
+          "cuda_allocated": 1481829888,
+          "cuda_reserved": 1988100096,
+          "cuda_peak_allocated": 1750789632,
+          "cuda_peak_reserved": 1988100096,
+          "device_free": 102397313024,
+          "device_total": 128495218688,
+          "workspace_bytes": 1385168896
+        }
+      }
+    },
+    {
+      "arm": {
+        "case": "prefill-1",
+        "arm": "baseline-b",
+        "budget_mib": 512
+      },
+      "root": "/home/bmarti44/.cache/glm53-flash/indexer-workspace-preparation-001/arms/1",
+      "host": {
+        "verdict": "PASS",
+        "qualification": "host_and_probe_identity_observations_only",
+        "unit": "glm52-glm53-idxws-ration-001-1-3076573.service",
+        "minimum_mem_available_kib": 117143956,
+        "maximum_cgroup_peak_bytes": 1740181504,
+        "memory_samples": 80,
+        "identity_samples": 86,
+        "identity_pid": 3076633,
+        "identity_start_ticks": 43562519,
+        "maximum_memory_sample_gap_seconds": 0.29660487174987793,
+        "maximum_identity_sample_gap_seconds": 0.2628049850463867,
+        "terminal_cleanup_seconds": 1.3160650730133057,
+        "whole_system_swap_delta": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "required_separate_checks": [
+          "frozen runtime and metadata inventories",
+          "post-freeze verified public seed",
+          "inner probe correctness",
+          "model qualification"
+        ],
+        "identity_binding": {
+          "raw": {
+            "sha256": "d7c2d9af5f421b74ab7314426b40f1050626eec9346443c3303ce382c1852ae8"
+          },
+          "summary": {
+            "sha256": "89d84978748cae91c359d1fdbeff41010150eb547fda5ba10c4f3d58893003b2"
+          }
+        }
+      },
+      "inner": {
+        "verdict": "PASS",
+        "scope": "synthetic native arm only",
+        "case": "prefill-1",
+        "budget_mib": 512,
+        "raw_sha256": "e6cf926d2ad3c5001174888c2cdb9e7926d4967514afb5358891a4ef8d1e01d3",
+        "artifacts": {
+          "indices.i32.gz": "92394e6cdb860c0fa66a0e994088c4b6be04cf21abfda7605a25d8ceb2d0537e",
+          "cache.u8.gz": "c0912b2e6db8cc96031773f2a1a478eace8975ea55440043ebbb4fc168673c0e",
+          "tail.bf16.gz": "97f12653654cfc7562da2cf8d67906bea5be7ad144cd3fd6184a87cd8612e162",
+          "logits.f32.gz": "e541c39a0cc2459a21b2b98560ce7a123a482bdb8e52c2aba4314d9d61499e8b"
+        },
+        "memory": {
+          "cuda_allocated": 1481829888,
+          "cuda_reserved": 1988100096,
+          "cuda_peak_allocated": 1750789632,
+          "cuda_peak_reserved": 1988100096,
+          "device_free": 102346395648,
+          "device_total": 128495218688,
+          "workspace_bytes": 1385168896
+        }
+      }
+    },
+    {
+      "arm": {
+        "case": "prefill-4",
+        "arm": "baseline-a",
+        "budget_mib": 512
+      },
+      "root": "/home/bmarti44/.cache/glm53-flash/indexer-workspace-preparation-001/arms/2",
+      "host": {
+        "verdict": "PASS",
+        "qualification": "host_and_probe_identity_observations_only",
+        "unit": "glm52-glm53-idxws-ration-001-2-3077910.service",
+        "minimum_mem_available_kib": 116055856,
+        "maximum_cgroup_peak_bytes": 1746092032,
+        "memory_samples": 67,
+        "identity_samples": 70,
+        "identity_pid": 3077954,
+        "identity_start_ticks": 43565299,
+        "maximum_memory_sample_gap_seconds": 0.29422998428344727,
+        "maximum_identity_sample_gap_seconds": 0.2659800052642822,
+        "terminal_cleanup_seconds": 1.4161243438720703,
+        "whole_system_swap_delta": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "required_separate_checks": [
+          "frozen runtime and metadata inventories",
+          "post-freeze verified public seed",
+          "inner probe correctness",
+          "model qualification"
+        ],
+        "identity_binding": {
+          "raw": {
+            "sha256": "ef7217d80854f6c734ae9a37bba89cdc6409ddd115ef859104bed9be67d8dc65"
+          },
+          "summary": {
+            "sha256": "74f06a7bab2b6a27fb1081de47a77f9d047c7aea44570adfeb600b42071acc87"
+          }
+        }
+      },
+      "inner": {
+        "verdict": "PASS",
+        "scope": "synthetic native arm only",
+        "case": "prefill-4",
+        "budget_mib": 512,
+        "raw_sha256": "3fc48a8c9d7ef9fbcc2962ad177093a717139e1e1145017db694318430faa560",
+        "artifacts": {
+          "indices.i32.gz": "e1fb6bfd33993dc4163f4ae9b627889f9cb2879dbcd912bf251c0095e678f1c5",
+          "cache.u8.gz": "02014bdf7964656aedc457437789277efa3740da022087cd431efc519b199ccd",
+          "tail.bf16.gz": "e17a64bc6c7a2a05e31b3d1d96fea238bd1336d4a65a2c69821d39604e341584",
+          "logits.f32.gz": "a37107d479a2c403657414838a05e7ed81297ceb3a8d5fce50786b0c965955f7"
+        },
+        "memory": {
+          "cuda_allocated": 1482628608,
+          "cuda_reserved": 3066036224,
+          "cuda_peak_allocated": 2556894720,
+          "cuda_peak_reserved": 3066036224,
+          "device_free": 101177729024,
+          "device_total": 128495218688,
+          "workspace_bytes": 1385168896
+        }
+      }
+    },
+    {
+      "arm": {
+        "case": "prefill-4",
+        "arm": "baseline-b",
+        "budget_mib": 512
+      },
+      "root": "/home/bmarti44/.cache/glm53-flash/indexer-workspace-preparation-001/arms/3",
+      "host": {
+        "verdict": "PASS",
+        "qualification": "host_and_probe_identity_observations_only",
+        "unit": "glm52-glm53-idxws-ration-001-3-3079034.service",
+        "minimum_mem_available_kib": 116076056,
+        "maximum_cgroup_peak_bytes": 1746935808,
+        "memory_samples": 65,
+        "identity_samples": 69,
+        "identity_pid": 3079096,
+        "identity_start_ticks": 43567632,
+        "maximum_memory_sample_gap_seconds": 0.29431605339050293,
+        "maximum_identity_sample_gap_seconds": 0.37876081466674805,
+        "terminal_cleanup_seconds": 1.2164392471313477,
+        "whole_system_swap_delta": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "required_separate_checks": [
+          "frozen runtime and metadata inventories",
+          "post-freeze verified public seed",
+          "inner probe correctness",
+          "model qualification"
+        ],
+        "identity_binding": {
+          "raw": {
+            "sha256": "9dc7aa9d87617d6dbc65eee72371386802d3abeadde222eac9a4c88e663af999"
+          },
+          "summary": {
+            "sha256": "a0d2e2c4685d27477a7c7d7e5705217d525016f149f9ca5c3be6fc4a20e27ea5"
+          }
+        }
+      },
+      "inner": {
+        "verdict": "PASS",
+        "scope": "synthetic native arm only",
+        "case": "prefill-4",
+        "budget_mib": 512,
+        "raw_sha256": "309267524421ee3324416ea0591407852e587db19bf1bd59afcc35c40ba38715",
+        "artifacts": {
+          "indices.i32.gz": "1c25bd97b0da4014cbf59088ae668f5ab20a0c9ca43956967ce5d0b85975ccc7",
+          "cache.u8.gz": "b842e08a8313250325f92be86dcce95154ec767c3847692d3b7f9164826ddd32",
+          "tail.bf16.gz": "cbde03cd7a9e02495caf6b445ce03e4a94b460e189e9095cae35f7a0809925cf",
+          "logits.f32.gz": "6754f7647c97bca121d1e23583d241b858cc77506754fd5fe1527686e71c14da"
+        },
+        "memory": {
+          "cuda_allocated": 1482628608,
+          "cuda_reserved": 3066036224,
+          "cuda_peak_allocated": 2556894720,
+          "cuda_peak_reserved": 3066036224,
+          "device_free": 101147693056,
+          "device_total": 128495218688,
+          "workspace_bytes": 1385168896
+        }
+      }
+    }
+  ],
+  "kernel_binary_qualification": "NO_RESULT: generated cache inventory is post-run only; prewarm/freeze/sealed replay required before any qualified binary claim",
+  "large_model_admission": false,
+  "time_unix": 1789082898.2941554
+}
