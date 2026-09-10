@@ -1,8 +1,10 @@
 # GLM-5.3-Flash CUDA status
 
-**GLM has named experimental profiles; it is currently stopped.** An earlier configuration
-passed the direct aggregate million-token context check; the latest current-settings
-run failed its memory reserve. Qwen remains the recorded/reboot default.
+**GLM has named experimental profiles; it is currently stopped.** The optional
+million-token profile has returned to 128-token batches and 32-token prompt chunks.
+An earlier configuration with that scheduler passed the direct context check;
+the subsequent larger-batch configuration failed its memory reserve. Fresh
+confirmation of the current settings is pending. Qwen remains the recorded/reboot default.
 The latest model-free workspace test failed its repeated-baseline byte comparison;
 the original runtime inventory passes again after exact bytecode restoration.
 The corrected native reference probe passed one real
@@ -142,14 +144,16 @@ All changed/extra bytes and exact original backup locations were preserved befor
 The149 originals were restored from hash-identical existing backups and830 extras
 quarantined; the unchanged61,401-file inventory then passed. This separate recovery
 does not revise the original attempt. All four processes and
-cgroups were gone and memory recovered. No profile/default changed. The next
-practical configuration under consideration restores the earlier128/32 scheduler
-while retaining the full million-token/four-slot target; it is not a new result.
+cgroups were gone and memory recovered. That workspace attempt changed no profile
+or default. The subsequent [declarative fallback](context-scheduler-128-001/PROTOCOL.md)
+restores only the earlier 128/32 scheduler in the existing million-token profile.
+All 18 profile tests and focused source review passed. The full million-token,
+four-slot target and all other settings remain; new hardware confirmation is pending.
 
-The [current-scheduler context adapter](context-scheduler-003/PROTOCOL.md) is also
-ready: it reuses the existing512/128 launch validator and unchanged direct-input,
-retrieval, stream and score code. A reviewed short-launch validation correction
-is included. This preparation is not a fresh million-token result.
+The earlier [512/128 context adapter](context-scheduler-003/PROTOCOL.md) remains
+archived. The 128/32 fallback selects the existing original context validator;
+the direct-input, retrieval and stream scorers remain unchanged. Neither source
+preparation is a fresh million-token result.
 
 A separate [small HTTP transfer diagnostic](bf16-transfer-001/attempt-001/README.md)
 passed byte equality, host safety and cleanup for four transfers of the same
