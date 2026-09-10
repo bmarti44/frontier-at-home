@@ -5,11 +5,18 @@ million-token context check passed.** Qwen remains the recorded/reboot default.
 GLM is currently stopped after the completed durability attempt. Full model
 qualification remains incomplete.
 
-The current full-context profile is the [next bounded scheduler candidate](soak-scheduler-001/PROTOCOL.md):
-256-token batches with a 64-token prompt-chunk cap per conversation, retaining
+The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
+512-token batches with a 128-token prompt-chunk cap per conversation, retaining
 all four 262,144-token slots and existing memory safeguards. Its first-window
-falsifier and fresh durability/direct-context confirmation are pending. The
-results below used the preceding scheduler configuration.
+falsifier and fresh durability/direct-context confirmation are pending.
+
+The [preceding 256/64 test](soak-native-004/README.md) returned 17 correct replies,
+but admissions were `[5,4,4,4]` against the required five per worker. The bounded
+window failed and no full-duration run was admitted. Host swap use stayed unchanged,
+but one page was read from swap; attribution is unknown. Fourteen generated kernel-
+cache files require freeze/replay for confirmation. Clean shutdown, host memory,
+identity, default/proxy/guard and post-run model/runtime checks passed. Both
+persistent reviewers verified the complete published archive and negative result.
 
 The [30-minute native durability attempt](soak-native-003/README.md) completed
 all 68 requests correctly and drained normally. Its fixed verdict is **FAIL**:

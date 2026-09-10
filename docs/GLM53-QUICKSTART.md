@@ -40,7 +40,7 @@ scripts/93_profile_serve.sh --profile glm-5.3-flash/cuda-spark-128g-1m-experimen
 Named profiles supply their exact settings and reject parameter overrides. The
 agent profile uses a 4 GiB KV reservation and 512-token prompt batches; the
 full-context profile uses a 9,565,304,320-byte reservation. Its current scheduler
-candidate uses 256-token batches and a 64-token prompt-chunk cap per conversation;
+candidate uses 512-token batches and a 128-token prompt-chunk cap per conversation;
 that candidate awaits qualification.
 To list the profiles this host can serve:
 
