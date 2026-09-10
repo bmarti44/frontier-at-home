@@ -1,0 +1,63 @@
+{
+  "scope": "read-only upstream and installed-source comparison; no engine change, build, restart or inference",
+  "verdict": "NO_RESULT",
+  "meaning": "No demonstrated fix for the local full-context failure; short-decode optimization identified for later measurement",
+  "time_unix": 1789000711.9675133,
+  "installed_base": "878631b6079d2cf9fb80830ef9cb41b43aded098",
+  "queried_glm_release_head": "4500c80c080328dfe62435d083f4063e00d987df",
+  "upstream_short_decode_commit": "f221389f16e02712b0e8bd82a485017a24a18453",
+  "checks": [
+    {
+      "check": "state_copy",
+      "path": "vllm/v1/worker/mamba_utils.py",
+      "sha256": "45bbb6a2ffe778f8900558687d90618d79df58a3049a4bdbd6e4f59a9192ff19",
+      "markers": [
+        "for token_idx in range(0, num_dst_tokens):",
+        "src_block_id != dest_block_id or token_bias == 0"
+      ],
+      "finding": "overlap-safe ordered copy already present",
+      "upstream_url": "https://github.com/vllm-project/vllm/pull/50729"
+    },
+    {
+      "check": "tail_positions",
+      "path": "vllm/v1/worker/gpu/model_states/mamba_hybrid.py",
+      "sha256": "5b1b3e5f4f08fa6202209fd90711bc7d98f9e076fcfee7f00a0c44b3ac963465",
+      "markers": [
+        "positions=input_batch.positions"
+      ],
+      "finding": "positions already forwarded by the installed recipe patch",
+      "upstream_url": "https://github.com/ZJY0516/vllm/pull/7"
+    },
+    {
+      "check": "tail_storage",
+      "path": "vllm/v1/attention/backends/mla/indexer.py",
+      "sha256": "934a84573e0d188c672de871dee4fbecc848fc080c8520c4c11c8c80f668a350",
+      "markers": [
+        "out = slot_mapping"
+      ],
+      "finding": "installed recipe uses in-place mapping instead of upstream builder-owned output; source distinction is not proof of equivalent graph behavior",
+      "upstream_url": "https://github.com/ZJY0516/vllm/pull/7"
+    },
+    {
+      "check": "sm120_alignment",
+      "path": "vllm/platforms/cuda.py",
+      "sha256": "b8d75d9585205f5eda0070447bb8a16f0678e29cf2f7509f09fb58ef95e85273",
+      "markers": [
+        "capability.major == 12",
+        "p for p in page_sizes if p == 64"
+      ],
+      "finding": "installed recipe already selects 64-wide pages on SM12x",
+      "upstream_url": "https://github.com/ZJY0516/vllm/commit/af282b77bbf5a334332746520430ef24ad124f53"
+    },
+    {
+      "check": "short_decode",
+      "path": "vllm/model_executor/layers/sparse_attn_indexer_kpool.py",
+      "sha256": "145fe3605cb90441d931d3266f13a687b9bf8730cf8786a6854c847a31783189",
+      "markers": [
+        "if current_platform.is_rocm() and _fill_short_decode_causal_indices("
+      ],
+      "finding": "upstream CUDA shortcut is absent; bounded performance candidate, no measured local gain or crash fix",
+      "upstream_url": "https://github.com/ZJY0516/vllm/pull/12"
+    }
+  ]
+}
