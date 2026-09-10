@@ -1,0 +1,13 @@
+{
+  "verdict": "NO_RESULT",
+  "hypothesis": "in-place circular tail slot mapping accidentally overwrites the full-attention slot mapping in eager execution",
+  "findings": [
+    "GLM grouping constructs a distinct tail KV group beside the attention group.",
+    "V2 BlockTables allocates slot_mappings[num_kv_cache_groups,max_num_batched_tokens].",
+    "V2 metadata assembly selects slot_mappings[i] separately for each KV group.",
+    "The compressed indexer mapping uses its own persistent compressed_slot_mapping_buffer.",
+    "The recipe tail mapper modifies only its selected group row, up to num_actual_tokens."
+  ],
+  "conclusion": "No source-supported cross-group slot-mapping alias was found. Do not apply upstream dedicated-tail-buffer change as an assumed eager crash fix. Dynamic lifetime/stream behavior is not established by this audit. Await exact-input synchronized replay.",
+  "reference": "https://github.com/ZJY0516/vllm/pull/7"
+}
