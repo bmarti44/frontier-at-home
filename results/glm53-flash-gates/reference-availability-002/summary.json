@@ -1,0 +1,45 @@
+{
+  "scope": "availability check of exactly two named datasets and one named report; metadata only",
+  "checked_unix": 1789011897.9791286,
+  "verdict": "NO_RESULT",
+  "native_100_case_reference_gap_closed": false,
+  "references": {
+    "brandon": {
+      "repo": "brandonmusic/GLM-5.3-Flash-BF16-Teacher-Logits",
+      "revision": "95f4fdd94bf29989db2e0d1054e4931f55edb6aa",
+      "revision_unchanged": true,
+      "url": "https://huggingface.co/datasets/brandonmusic/GLM-5.3-Flash-BF16-Teacher-Logits/tree/95f4fdd94bf29989db2e0d1054e4931f55edb6aa"
+    },
+    "malaiwah": {
+      "repo": "malaiwah/GLM-5.3-Flash-fidelity-suite-v1",
+      "revision": "6a6cea7adb38b5ff5d38979cbd4334b89fa4e069",
+      "revision_unchanged": true,
+      "url": "https://huggingface.co/datasets/malaiwah/GLM-5.3-Flash-fidelity-suite-v1/tree/6a6cea7adb38b5ff5d38979cbd4334b89fa4e069"
+    },
+    "local_inference_lab": {
+      "repository_head": "35ca7ced8796a99e6e68b5dee61881cdf7165a00",
+      "report_last_commit": "6a20a252e24f53376fdc593f7441e50bf5c297b6",
+      "url": "https://github.com/local-inference-lab/rtx6kpro/blob/35ca7ced8796a99e6e68b5dee61881cdf7165a00/kld/glm-5.3-flash-bf16-nvfp4.md",
+      "report_bytes_unchanged": true,
+      "prior_pinned_revision": "7a3e061cac32fea582e93022765d3137f2c87f3d",
+      "report": {
+        "sha256": "f39ae3522b4c2312dfdc437d2458d36ab0bab21ee3fe955495fc050ffe23daa9"
+      }
+    }
+  },
+  "findings": [
+    "Brandon unchanged: 25 final qualification logit files / 51,175 positions; 640 other logit files remain non-final roles and do not supply 100 final qualification cases.",
+    "Malaiwah unchanged: 512 public post-final-RMSNorm hidden-state captures, complete=false. These support head replay; the dataset card still reports nonzero live/replay BF16 discrepancy. No new aligned native 100-case rows were added.",
+    "Local Inference Lab report bytes unchanged: 256 held-out contexts discussed, exact live/replay check only for context-0000; full captures and per-position arrays remain unpublished in the named Git repository."
+  ],
+  "metadata_fetch_count": 11,
+  "downloaded_metadata_bytes": 1226671,
+  "tensor_payloads_downloaded": false,
+  "model_or_service_actions": false,
+  "prior_layout_manifest": {
+    "sha256": "91a4f61d890185903d99da8639ec7e8ebacfb5d558cc853140f918fd586fdb3f"
+  },
+  "prior_followup_manifest": {
+    "sha256": "79f41e48805b50831ef139df30810166b8e49ef3df970f03e3153a7b606dae3f"
+  }
+}

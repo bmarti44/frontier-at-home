@@ -1,0 +1,27 @@
+{
+  "scope": "actual experimental named-profile lifecycle; separate from failed direct-context semantics and production switching",
+  "verdict": "PASS",
+  "acceptance": "../profile-launch-001/ACCEPTANCE.md",
+  "formula": "PASS iff all six prospective lifecycle conditions and artifact checks pass; no performance statistics",
+  "checks": {
+    "named_start_ready_and_running": true,
+    "exact_native_profile_configuration": true,
+    "authentication_health_and_final_ready": true,
+    "host_memory_swap_and_identity": true,
+    "stop_and_cleanup": true,
+    "default_proxy_guard_unchanged": true,
+    "post_artifact_verification": true,
+    "prepared_cache_unchanged": true
+  },
+  "host": {
+    "samples": 15622,
+    "minimum_available_gib": 18.293609619140625,
+    "maximum_sample_gap_seconds": 0.3169891834259033,
+    "maximum_cgroup_swap_bytes": 0,
+    "identity_samples": 17373,
+    "recovered_available_gib": 115.76
+  },
+  "kernel_review": "Retained kernel journal and watchdog contain unrelated AppArmor denials; no Xid/OOM/crash. Both persistent reviewers independently checked terminal evidence.",
+  "context_verdict": "FAIL",
+  "qualified_production_performance": null
+}

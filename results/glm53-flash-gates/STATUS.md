@@ -1,13 +1,20 @@
 # GLM-5.3-Flash CUDA status
 
 Named experimental profiles are executable through `93_profile_serve.sh`.
-The actual million-token profile passed start, status, native authentication and
-a completed reply; stop removed all model processes and recovered memory.
-Its first full lifecycle verdict remains FAIL because whole-group termination
-interrupted the guard's terminal handshake. The reviewed orderly API shutdown
-correction and native shutdown timeout passed five focused tests, including the
-real CPU guard, plus 17 existing profile regressions. Native confirmation is next.
-See [actual profile evidence](profile-launch-001/README.md).
+The [second actual lifecycle](profile-launch-002/README.md) passed native start,
+status, authentication, completed READY, orderly stop, terminal guard, process
+cleanup and memory recovery. Qwen/default/proxy state stayed unchanged. The
+[first lifecycle FAIL](profile-launch-001/README.md) remains preserved.
+
+The [latest direct context attempt](context-direct-006/README.md) processed
+1,000,512 actual input tokens across four slots without a CUDA crash, but its
+fixed verdict is **FAIL**: three requests exhausted 2,048 output tokens in
+reasoning with no final answer; one passed retrieval and negative controls.
+All 2,463 prepared cache files remained unchanged; the host minimum was
+18.293609619140625 GiB, with zero cgroup swap and clean shutdown. This does not
+establish complete context capability or qualified performance. The next bounded
+candidate clarifies only the fixture output instruction under a fresh freeze
+and public seed, keeping model settings and retrieval checks unchanged.
 
 **The optional agent preset passed basic serving checks and is now stopped.**
 It received SIGTERM at 20:55 EDT on September 9; sender attribution is unknown.
@@ -37,8 +44,7 @@ is preserved in [context-direct-003](context-direct-003/README.md). The synchron
 four overlapping output streams, but [context-direct-004](context-direct-004/README.md)
 also failed: all four requests spent their 256-token allowance on reasoning and
 produced no final answer. No retrieval success or async-crash fix is claimed.
-The next native-profile attempt uses 2,048 output tokens and unchanged retrieval
-checks, with fixtures prepared before model loading and newly frozen prepared caches.
+The native follow-up006 and its failed final-answer result are recorded above.
 Session 016's earlier memory-floor failure during repository publication also
 remains preserved alongside its successful functional snapshot.
 
@@ -54,8 +60,8 @@ and both focused reviews pass. Its interrupted attempt remains preserved in
 [context-direct-002](context-direct-002/README.md).
 
 Qwen remains the recorded default. The original launch configures 1,048,576 aggregate
-tokens across four 262,144-token slots. Full-context processing has failed; paired fidelity, production switching and
-lifecycle qualification remain pending. Production
+tokens across four 262,144-token slots. Full-context final-answer qualification, paired fidelity and production switching
+remain pending. Experimental named-profile lifecycle has passed. Production
 admission is closed. Performance is **not yet measured**.
 
 The [native probability diagnostic](native-logprobs-001/README.md) passed exact
@@ -278,8 +284,7 @@ DeepGEMM, CuTe and Inductor closure remain. Two user-systemd read-only namespace
 probes failed and are preserved; requested mount properties are not evidence
 of enforcement on this host.
 
-Weights are prepared and native serving has run. The remaining work is corrected
-native profile shutdown, direct full-context retrieval with complete frozen
+Weights are prepared and native serving has run. The remaining work is direct full-context retrieval with complete frozen
 artifacts, the 100-case paired fidelity gate, and production switching/rollback
 and soak qualification. Public native reference coverage is still insufficient
 for the required fidelity gate. Owner adoption of any measured nonzero fidelity

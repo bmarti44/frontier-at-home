@@ -1,0 +1,183 @@
+{
+  "scope": "direct aggregate context API checks; host/freeze/lifecycle verdict remains separate",
+  "verdict": "FAIL",
+  "checks": {
+    "four_valid_cases": false,
+    "generated_streams_overlap": true,
+    "metrics_corrobates_four_running": true,
+    "no_preemption": true,
+    "aggregate_input_tokens": true
+  },
+  "cases": [
+    {
+      "slot": 0,
+      "checks": {
+        "completion": false,
+        "stream_and_tokens_valid": true,
+        "direct_size": true
+      },
+      "content": "",
+      "usage": {
+        "prompt_tokens": 250128,
+        "total_tokens": 252176,
+        "completion_tokens": 2048,
+        "completion_tokens_details": {
+          "reasoning_tokens": 2048
+        }
+      },
+      "first_ns": 367567684811031,
+      "finish_ns": 367775138482613,
+      "output_tokens_observed": 2048,
+      "retrieval": {
+        "checks": {
+          "stream_complete": true,
+          "finish_reason_stop": false,
+          "final_content_present": false,
+          "retrieval_in_final_content": false
+        },
+        "retrieval": {
+          "checks": {
+            "all_expected_once": false,
+            "ordered": false,
+            "negative_control": false,
+            "no_unexpected_record": false,
+            "absent_marker_not_hallucinated": true
+          },
+          "observed": [],
+          "pass": false
+        },
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pass": false
+      }
+    },
+    {
+      "slot": 1,
+      "checks": {
+        "completion": true,
+        "stream_and_tokens_valid": true,
+        "direct_size": true
+      },
+      "content": "RECORD_ALPHA_ec1e13692d7ebf43, RECORD_BRAVO_38a994878d6b9a28, RECORD_CHARLIE_25a9edde61e6a69c, NO_EXTRA_RECORD",
+      "usage": {
+        "prompt_tokens": 250128,
+        "total_tokens": 251712,
+        "completion_tokens": 1584,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1530
+        }
+      },
+      "first_ns": 367569025525573,
+      "finish_ns": 367733507779081,
+      "output_tokens_observed": 1584,
+      "retrieval": {
+        "checks": {
+          "stream_complete": true,
+          "finish_reason_stop": true,
+          "final_content_present": true,
+          "retrieval_in_final_content": true
+        },
+        "retrieval": {
+          "checks": {
+            "all_expected_once": true,
+            "ordered": true,
+            "negative_control": true,
+            "no_unexpected_record": true,
+            "absent_marker_not_hallucinated": true
+          },
+          "observed": [
+            "RECORD_ALPHA_ec1e13692d7ebf43",
+            "RECORD_BRAVO_38a994878d6b9a28",
+            "RECORD_CHARLIE_25a9edde61e6a69c"
+          ],
+          "pass": true
+        },
+        "content_sha256": "3d904f98d708e18996d80e2bf69ef4674b8e437e6ac7c6d453be223e8f2262e1",
+        "pass": true
+      }
+    },
+    {
+      "slot": 2,
+      "checks": {
+        "completion": false,
+        "stream_and_tokens_valid": true,
+        "direct_size": true
+      },
+      "content": "",
+      "usage": {
+        "prompt_tokens": 250128,
+        "total_tokens": 252176,
+        "completion_tokens": 2048,
+        "completion_tokens_details": {
+          "reasoning_tokens": 2048
+        }
+      },
+      "first_ns": 367568672833176,
+      "finish_ns": 367775272824282,
+      "output_tokens_observed": 2048,
+      "retrieval": {
+        "checks": {
+          "stream_complete": true,
+          "finish_reason_stop": false,
+          "final_content_present": false,
+          "retrieval_in_final_content": false
+        },
+        "retrieval": {
+          "checks": {
+            "all_expected_once": false,
+            "ordered": false,
+            "negative_control": false,
+            "no_unexpected_record": false,
+            "absent_marker_not_hallucinated": true
+          },
+          "observed": [],
+          "pass": false
+        },
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pass": false
+      }
+    },
+    {
+      "slot": 3,
+      "checks": {
+        "completion": false,
+        "stream_and_tokens_valid": true,
+        "direct_size": true
+      },
+      "content": "",
+      "usage": {
+        "prompt_tokens": 250128,
+        "total_tokens": 252176,
+        "completion_tokens": 2048,
+        "completion_tokens_details": {
+          "reasoning_tokens": 2048
+        }
+      },
+      "first_ns": 367569162327765,
+      "finish_ns": 367775348924560,
+      "output_tokens_observed": 2048,
+      "retrieval": {
+        "checks": {
+          "stream_complete": true,
+          "finish_reason_stop": false,
+          "final_content_present": false,
+          "retrieval_in_final_content": false
+        },
+        "retrieval": {
+          "checks": {
+            "all_expected_once": false,
+            "ordered": false,
+            "negative_control": false,
+            "no_unexpected_record": false,
+            "absent_marker_not_hallucinated": true
+          },
+          "observed": [],
+          "pass": false
+        },
+        "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pass": false
+      }
+    }
+  ],
+  "full_qualification": "NO_RESULT until host/freeze/lifecycle checks and review",
+  "raw_scorer_summary": "client/summary.json in the archive; exact original output retained and replayed"
+}

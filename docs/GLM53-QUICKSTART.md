@@ -36,11 +36,13 @@ rejected. To choose an output directory or reuse a client key, invoke
 `python3 scripts/47_run_glm53_dev.py --start --profile <profile-id>` with
 `--output` or `--api-key-file`. The older development commands remain available.
 
-The million-token named profile has been launched through this interface.
-Authentication and a completed reply passed, and stop removed the model and
-recovered memory. Its first stop exposed a guard-handshake error; the reviewed
-orderly-shutdown correction has passed real CPU guard tests, with native
-confirmation next. Full-context retrieval remains unqualified.
+The million-token named profile passed its actual start/status/authentication/
+READY/stop lifecycle, including a clean terminal guard receipt and memory
+recovery. Its latest full-context run processed 1,000,512 input tokens, but three
+replies never reached a final answer before their output limit. Full-context
+retrieval remains unqualified. [Native lifecycle evidence](../results/glm53-flash-gates/profile-launch-002/README.md)
+and [context failure](../results/glm53-flash-gates/context-direct-006/README.md)
+are retained separately.
 
 The last agent preset ran in
 `/home/bmarti44/.cache/glm53-flash/server-20260909-201848`. It received SIGTERM
