@@ -1,0 +1,52 @@
+{
+  "scope": "single chat coding smoke only",
+  "task_id": "HumanEval/0",
+  "verdict": "PASS",
+  "reason": "correct",
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/home/bmarti44/.cache/glm53-flash/agent-code-smoke-001/execution:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "usage": {
+    "prompt_tokens": 150,
+    "total_tokens": 316,
+    "completion_tokens": 166,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  },
+  "full_context_tested": false,
+  "paired_fidelity_tested": false
+}
