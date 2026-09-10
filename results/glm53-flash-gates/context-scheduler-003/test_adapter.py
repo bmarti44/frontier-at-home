@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
@@ -67,6 +68,24 @@ class Reuse(unittest.TestCase):
             check(rows)
             for changed in [rows[1:], rows + [rows[0]], [{**rows[0], 'sha256': '0' * 64}] + rows[1:]]:
                 with self.assertRaises(ValueError):check(changed)
+
+    def test_short_validates_launch_before_request(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory);server = root / 'server';server.mkdir()
+            argv = ['adapter.py', 'short', '--frozen', str(root), '--output', str(root), '--server', str(server)]
+            with patch.object(self.api, 'verify_freeze'), patch.object(self.api.short, 'main', return_value=0) as request, patch.object(self.api.sys, 'argv', argv):
+                with self.assertRaises(FileNotFoundError):self.api.main()
+                request.assert_not_called()
+                arguments = ['--max-model-len', '262144', '--max-num-seqs', '4', '--max-num-batched-tokens', '128',
+                             '--long-prefill-token-threshold', '32', '--no-enable-prefix-caching']
+                (server / 'launch.json').write_text(json.dumps({'arguments': arguments}))
+                with self.assertRaises(ValueError):self.api.main()
+                request.assert_not_called()
+                arguments[arguments.index('--max-num-batched-tokens') + 1] = '512'
+                arguments[arguments.index('--long-prefill-token-threshold') + 1] = '128'
+                (server / 'launch.json').write_text(json.dumps({'arguments': arguments}))
+                self.assertEqual(self.api.main(), 0)
+                request.assert_called_once_with(root / 'short-correctness', server)
 
 if __name__ == '__main__':
     unittest.main()
