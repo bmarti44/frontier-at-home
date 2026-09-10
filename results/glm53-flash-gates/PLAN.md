@@ -1,20 +1,22 @@
 # GLM-5.3-Flash / CUDA qualification campaign
 
-Status: REAL MODEL SERVING — authenticated text, tool calls, and four concurrent
-short requests passed, and image/four-image/16-frame video smokes passed in
-development attempt 012. Full context, paired fidelity and production switching
-remain pending; GLM remains optional and the
-recorded Qwen default is unchanged.
+Status: OPTIONAL PROFILES RUNNABLE — authenticated text, tools, images and
+16-frame video passed basic serving checks. Direct context007 passed all four
+final retrieval answers with 1,000,512 actual input tokens across four slots.
+Native named-profile start/status/stop and host safety passed. Sustained operation,
+paired fidelity, qualified performance and production switching remain pending.
+GLM remains optional and the recorded Qwen default is unchanged.
 
 The model-free build, cache, attention, convolution/indexer, and loader work is
 preserved in the evidence archive. Real weights are downloaded, checked against
 the local inventory at launch, and loaded successfully. See [STATUS.md](STATUS.md)
 for the latest actual serving result; the acceptance formulas below are unchanged.
 
-Next: direct aggregate-context processing on four overlapping full prompts,
-then the remaining qualification gates. The working media startup uses bounded
-native dummy inputs while retaining real media settings. Do not repeat
-already frozen component reviews or add more startup guard infrastructure.
+Next: the [bounded native durability gate](soak-native-001/PROTOCOL.md), using
+four clients and short retrieval requests for 30 minutes. This is sustained
+operation evidence; the passed aggregate-context gate stays closed. Native
+100-case fidelity reference coverage remains missing. Do not repeat already
+frozen component reviews or add more startup guard infrastructure.
 
 Target: one ARM64 DGX Spark, 1,048,576 aggregate context tokens in four
 262,144-token slots; text, reasoning, tools, four images or one video sampled

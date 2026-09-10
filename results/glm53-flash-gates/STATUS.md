@@ -251,21 +251,26 @@ generated state files match their originals. Separate sealed confirmation is
 next; this is not a full-model or context-capability result.
 
 These historical synthetic results do not establish cold checkpoint I/O behavior.
-Current full-model bring-up and failed direct-context attempts are recorded above.
+Current full-model bring-up, context007 PASS and prior failures are recorded above.
 
 ## Remaining gates
 
-The [runtime-compilation audit](jit-audit-001.md) identifies an additional
-large-load admission requirement: prewarm/freeze the actual selected kernels
-and reject cache misses before compilation. Fourteen Triton cache/control-flow
-tests pass, but worker startup wiring, cache immutability, FlashInfer AOT,
-DeepGEMM, CuTe and Inductor closure remain. Two user-systemd read-only namespace
-probes failed and are preserved; requested mount properties are not evidence
-of enforcement on this host.
+The experimental profile's actual prepared kernels remained unchanged through
+context007, including terminal checks. For eventual production service admission,
+the [runtime-compilation audit](jit-audit-001.md) still requires effective
+read-only access and rejection of unprepared compiler paths in the actual
+service identity. The earlier failed user-systemd namespace probes remain
+preserved; requested mount properties alone do not prove enforcement.
 
-Weights are prepared and native serving has run. The remaining work is direct full-context retrieval with complete frozen
-artifacts, the 100-case paired fidelity gate, and production switching/rollback
-and soak qualification. Public native reference coverage is still insufficient
-for the required fidelity gate. Owner adoption of any measured nonzero fidelity
-delta remains separate from passing statistical bounds. Qwen stays the default;
-qualified GLM production performance is not yet measured.
+The next independent gate is [30-minute native durability](soak-native-001/PROTOCOL.md)
+with four clients and short retrieval requests. Its CPU compatibility witness
+shows that the old soak parser misses native GLM reasoning; the new evidence-only
+client reuses the existing GLM stream and retrieval validators. No server change
+or repeated context ladder is planned for this gate.
+
+Direct aggregate context and experimental lifecycle are complete. The 100-case
+paired fidelity gate, sustained operation, qualified performance, and production
+switching/rollback remain pending. Public native reference coverage is still
+insufficient for fidelity qualification. Owner adoption of any measured nonzero
+fidelity delta remains separate from passing statistical bounds. Qwen stays the
+default; qualified GLM production performance is not yet measured.
