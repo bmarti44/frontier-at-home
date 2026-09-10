@@ -1,0 +1,40 @@
+{
+  "reviewer": "glm53_gap_reviewer",
+  "created_unix": 1789071271.4095025,
+  "scope": "Focused M1 HTTP framing closure only; no freezer/controller or closed-component review.",
+  "verdict": "PASS",
+  "closed_findings": [
+    "M1"
+  ],
+  "high_findings": 0,
+  "critical_findings": 0,
+  "findings": [],
+  "checks": {
+    "nine_focused_CPU_tests_pass": true,
+    "actual_HTTPResponse_conflicting_Content_Length_rejected": true,
+    "actual_HTTPResponse_chunked_plus_Content_Length_rejected": true,
+    "run_preserves_header_multiplicity_for_all_four_framing_headers": true,
+    "live_HTTPMessage_and_retained_list_schema_share_validation": true,
+    "duplicate_framing_headers_and_any_Transfer_Encoding_rejected": true
+  },
+  "limits": [
+    "No network downloads, Torch/GPU, model or service actions performed. Only framing correction is attested."
+  ],
+  "files": [
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-transfer-001/probe.py",
+      "size_bytes": 7725,
+      "sha256": "f1f196205399cb34996303ba968060233d25f2f41d909d682e455ab01a48e236"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-transfer-001/test_probe.py",
+      "size_bytes": 3522,
+      "sha256": "3301a4e6cca7df6fae810a1173246bb428a25dc9b7b8dfe61fb4e42dd5531087"
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-transfer-001-source-gap-review.json",
+      "size_bytes": 3072,
+      "sha256": "ea90f16f2e14a006d369fd5c9776c1b4baea30153cbbe646d45475e173b13fa2"
+    }
+  ]
+}

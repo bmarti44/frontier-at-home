@@ -17,9 +17,12 @@ def host():
 
 def check_headers(status,headers,left,right,total):
     require(status==206,'range server must return206')
-    require(headers.get('Content-Range')==f'bytes {left}-{right}/{total}','exact Content-Range required')
-    require(headers.get('Content-Length')==str(right-left+1),'exact range Content-Length required')
-    require(headers.get('Content-Encoding','identity')=='identity','unexpected content encoding')
+    values={key:(headers.get_all(key,[]) if hasattr(headers,'get_all') else headers.get(key,[])) for key in ['Content-Range','Content-Length','Content-Encoding','Transfer-Encoding']}
+    require(all(isinstance(v,list) and len(v)<=1 and all(isinstance(x,str) for x in v) for v in values.values()),'duplicate or malformed framing headers')
+    require(values['Transfer-Encoding']==[],'Transfer-Encoding forbidden for exact-length response')
+    require(values['Content-Range']==[f'bytes {left}-{right}/{total}'],'exact Content-Range required')
+    require(values['Content-Length']==[str(right-left+1)],'exact range Content-Length required')
+    require(values['Content-Encoding'] in ([],['identity']),'unexpected content encoding')
 
 def score(rows):
     require(len(rows)==4,'all four transport arms required')
@@ -60,7 +63,7 @@ def run(root):
                 item={'left':left,'right':right,'received':0}
                 with lock:row['ranges'].append(item)
                 with urllib.request.urlopen(request,timeout=30) as response:
-                    item.update(status=response.status,headers={k:response.headers[k] for k in ['Content-Range','Content-Length','Content-Encoding'] if k in response.headers},host=urllib.parse.urlsplit(response.url).hostname)
+                    item.update(status=response.status,headers={k:response.headers.get_all(k,[]) for k in ['Content-Range','Content-Length','Content-Encoding','Transfer-Encoding']},host=urllib.parse.urlsplit(response.url).hostname)
                     check_headers(response.status,item['headers'],left,right,TOTAL)
                     while item['received']<right-left+1:
                         start=left+item['received'];n=response.readinto(memoryview(buffer)[start:min(start+1024**2,right+1)])
