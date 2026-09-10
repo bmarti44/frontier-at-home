@@ -44,3 +44,12 @@ fail closed; terminal states still check descendants; and nested cleanup retains
 controller ownership and restores handlers even on stop errors. Fifteen focused
 tests pass, including cancellation of a real small CPU preparation process before
 any model launch. The existing seventeen GLM and fifteen resolver tests still pass.
+
+Candidate 2 closed H1 and H3. Both reviewers retained H2: retries could still
+escape on operational/logging errors, and wrapper exit could release ownership
+without successful unit/cgroup observation. Candidate 3 changes only that retry
+loop. It requires controller exit plus verified unit/cgroup cleanup, tolerates
+operational stop errors and best-effort logging, and retains the lock while
+observation is unavailable. Seventeen focused tests pass; raw failed/successful
+results remain alongside both candidate-2 review records. The readiness cleanup
+test now expects the required second check after controller exit.

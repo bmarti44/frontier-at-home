@@ -81,7 +81,7 @@ class LifecycleRegression(unittest.TestCase):
                  self.mock.patch.object(api,'stop_unit') as stop:
                 with self.assertRaisesRegex(ValueError,'wrong model'):
                     api.run_contained(['wrapper','--tag','glm-test'],{},out,snapshot)
-                stop.assert_called_once()
+                self.assertEqual(stop.call_count,2)  # stop, then verify again after controller exit
                 self.assertEqual(stop.call_args.args[0]['invocation_id'],'fresh')
                 child.wait.assert_called_once_with(timeout=60)
                 self.assertFalse(json.loads(state.read_text())['ready'])

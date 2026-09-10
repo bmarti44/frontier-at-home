@@ -267,15 +267,24 @@ def wait_controller(child, record, path):
     # Keep the lifecycle lock and ownership when the service bus temporarily
     # fails. The hardened unit has its own independent wall-clock timeout.
     while True:
+        controller_exited=False
         try:
             child.wait(timeout=60)
-            return
+            controller_exited=True
         except subprocess.TimeoutExpired:
+            pass
+        try:
+            stop_unit(record)
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            record['cleanup_failure']=type(error).__name__+': '+str(error)
             try:
-                stop_unit(record)
-            except (ValueError, subprocess.SubprocessError) as error:
-                record['cleanup_failure']=type(error).__name__+': '+str(error)
                 save_record(path,record)
+            except OSError:
+                # Failed telemetry cannot release ownership of a model.
+                pass
+            if controller_exited: time.sleep(1)
+        else:
+            if controller_exited: return
 
 
 def run_contained(command, control, output, snapshot, session=None):
