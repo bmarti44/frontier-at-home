@@ -1,0 +1,16 @@
+{
+  "scope": "terminal stream diagnosis and prospective output-budget correction; not full host/freeze/lifecycle qualification",
+  "verdict": "FAIL preserved; bounded next attempt justified",
+  "open_high_findings": [],
+  "reviewers": [
+    {
+      "reviewer": "glm53_adversarial_reviewer",
+      "assessment": "Raw-facing FAIL supported: four 250128-input streams, 256 reasoning tokens, length stop and no final answer. 2048 output allowance is bounded and leaves 9968 tokens per-slot margin. Next profile also removes synchronization and changes readiness history; not a one-option replay."
+    },
+    {
+      "reviewer": "glm53_gap_reviewer",
+      "assessment": "Independent raw stream check confirms failed final retrieval and overlapping output. No high issue in diagnosis or proposed 2048 budget. Native-profile configuration and readiness history must be frozen explicitly; old async fault is not resolved."
+    }
+  ],
+  "post_review_observation": "Archive closure check found eight generated tail-seed kernel files and changed usage_stats. Preserved separately; these are added limitations, never a PASS claim."
+}

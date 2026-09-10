@@ -1,0 +1,42 @@
+{
+  "verdict": "FAIL",
+  "scope": "exact-input synchronized failure-localization replay; not fresh-randomness confirmation or performance qualification",
+  "api_verdict": "FAIL",
+  "input_tokens_per_request": 250128,
+  "requests_with_verified_input_and_output_tokens": 4,
+  "actual_input_tokens_in_completed_streams": 1000512,
+  "final_answers_completed": 0,
+  "failure": "all four streams reached max_tokens=256 entirely in reasoning, with finish_reason length and empty final content",
+  "generated_streams_overlap": true,
+  "no_preemption": true,
+  "minimum_available_gib": 18.31505584716797,
+  "cgroup_swap_peak_bytes": 0,
+  "memory_samples": 17476,
+  "maximum_sample_gap_seconds": 0.318342924118042,
+  "cache_after": {
+    "missing": [],
+    "added": [
+      "triton/RRU3QJOCVH7GFWLRL37HCLC6OEQNE3WHXA7ZFDJHVY344KRI7KXQ/__grp___kpool_tail_seed_kernel.json",
+      "triton/RRU3QJOCVH7GFWLRL37HCLC6OEQNE3WHXA7ZFDJHVY344KRI7KXQ/_kpool_tail_seed_kernel.cubin",
+      "triton/RRU3QJOCVH7GFWLRL37HCLC6OEQNE3WHXA7ZFDJHVY344KRI7KXQ/_kpool_tail_seed_kernel.json",
+      "triton/RRU3QJOCVH7GFWLRL37HCLC6OEQNE3WHXA7ZFDJHVY344KRI7KXQ/_kpool_tail_seed_kernel.llir",
+      "triton/RRU3QJOCVH7GFWLRL37HCLC6OEQNE3WHXA7ZFDJHVY344KRI7KXQ/_kpool_tail_seed_kernel.ptx",
+      "triton/RRU3QJOCVH7GFWLRL37HCLC6OEQNE3WHXA7ZFDJHVY344KRI7KXQ/_kpool_tail_seed_kernel.source",
+      "triton/RRU3QJOCVH7GFWLRL37HCLC6OEQNE3WHXA7ZFDJHVY344KRI7KXQ/_kpool_tail_seed_kernel.ttgir",
+      "triton/RRU3QJOCVH7GFWLRL37HCLC6OEQNE3WHXA7ZFDJHVY344KRI7KXQ/_kpool_tail_seed_kernel.ttir"
+    ],
+    "changed": [
+      ".config/vllm/usage_stats.json"
+    ]
+  },
+  "client_exit_code": 0,
+  "launcher_exit_code": 0,
+  "shutdown": "intentional identity-bound systemd stop; no model processes survived; guard BrokenPipe and semaphore warning retained",
+  "limitations": [
+    "different startup request history from failed context-direct-003; no causal attribution to synchronization alone",
+    "original freeze inventories omitted pre-existing bytecode/metadata files; closed coverage now exists in named profiles",
+    "eight kpool-tail seed kernel files were generated after freeze and vLLM usage_stats changed; separate prepared-cache freeze required",
+    "reasoning text does not replace the required final retrieval answer",
+    "qualified production performance not yet measured"
+  ]
+}
