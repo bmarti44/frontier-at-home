@@ -18,3 +18,9 @@ allocates a256MiB buffer, keeps110GiB start admission and adds a64GiB kill floor
 and180-second timeout.34+64GiB must fit measured available memory. This changes
 containment from the proposed512/768MiB envelope; it does not claim equivalence.
 No model/GPU, serving, native reference, or full-file throughput qualification.
+
+Before freezing candidate2, the actual probe's failure path reproduced a shared
+summary filename with the reused controller's exclusive-create writer. The
+committed output-ownership RED test captures that caller mismatch. The probe
+now writes transport-summary.json; summary.json belongs to the controller.
+The caller tests now also use the unchanged real exclusive-create writer.

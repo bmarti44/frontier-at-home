@@ -80,7 +80,7 @@ def run(root):
         if row['status']!='COMPLETE':break
     try:summary=score(rows)
     except Exception as error:summary={'verdict':'FAIL','scope':'HTTP transport diagnostic only; no native/model result','error':repr(error)}
-    (root/'summary.json').write_text(json.dumps(summary,indent=2)+'\n');print(json.dumps(summary),flush=True)
+    (root/'transport-summary.json').write_text(json.dumps(summary,indent=2)+'\n');print(json.dumps(summary),flush=True)
     return summary['verdict']=='PASS'
 
 if __name__=='__main__':
