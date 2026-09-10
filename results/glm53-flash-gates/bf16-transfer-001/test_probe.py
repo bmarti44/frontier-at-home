@@ -48,4 +48,18 @@ class Evidence(unittest.TestCase):
             if name=='nan':rows[1]['elapsed_seconds']=float('nan')
             with self.subTest(name=name),self.assertRaises(ValueError):p.score(rows)
 
+class OutputOwnership(unittest.TestCase):
+    def test_probe_leaves_terminal_summary_to_controller(self):
+        import contextlib,hashlib,io,json,tempfile,types
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            manifest={'probe':{'sha256':hashlib.sha256(Path(p.__file__).read_bytes()).hexdigest()},'frozen_at_unix':1595431051.,'node':'synthetic'}
+            randomness={'round':2,'publication_unix':1595431080,'frozen_at_unix':1595431051.,'seed':0,'randomness':'0'*64,'signature':'fixture','previous_signature':'fixture'}
+            (root/'manifest.json').write_text(json.dumps(manifest));(root/'randomness.json').write_text(json.dumps(randomness))
+            with patch.object(p,'SIZE',16),patch.object(p,'host',return_value={'available_kib':115*1024**2,'pswpin':0,'pswpout':0,'used_swap_kib':0}),patch.object(p.subprocess,'run',return_value=types.SimpleNamespace(returncode=0,stdout='DRAND_BLS_RECEIPT_OK\n')),patch.object(p.urllib.request,'urlopen',side_effect=ValueError('synthetic failed request')),contextlib.redirect_stdout(io.StringIO()):
+                self.assertFalse(p.run(root))
+            self.assertFalse((root/'summary.json').exists(),'terminal summary belongs to controller')
+            self.assertEqual(json.loads((root/'transport-summary.json').read_text())['verdict'],'FAIL')
+
 if __name__=='__main__':unittest.main()
