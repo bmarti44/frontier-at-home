@@ -66,6 +66,20 @@ keeps the native probe and all memory, OOM/Xid and swap checks unchanged under
 a fresh baseline. This removes the pending host prerequisite; it does not revise
 the earlier failed attempts or complete model qualification.
 
+The [unchanged native replay003](bf16-one-layer-003/README.md) then verified two
+complete shards and part of the third within its ten-minute limit. It stopped
+before GPU computation. The wrapper terminated a remaining child and exited15;
+the guard's terminal summary is missing. The attempt remains FAIL despite zero
+swap, ample memory and separately verified eventual process/cgroup cleanup.
+The [reviewed download alternative](bf16-parallel-transfer-001/PROTOCOL.md) uses
+four disjoint ranges into the same shard buffer, retaining complete LFS/header
+verification and all native computation, staging, scoring and safety limits.
+
+The [current-scheduler context adapter](context-scheduler-003/PROTOCOL.md) is also
+ready: it reuses the existing512/128 launch validator and unchanged direct-input,
+retrieval, stream and score code. A reviewed short-launch validation correction
+is included. This preparation is not a fresh million-token result.
+
 A separate [small HTTP transfer diagnostic](bf16-transfer-001/attempt-001/README.md)
 passed byte equality, host safety and cleanup for four transfers of the same
 256 MiB shard prefix. Parallel ranges reduced elapsed download time in this
