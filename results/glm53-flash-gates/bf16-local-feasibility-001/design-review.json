@@ -1,0 +1,151 @@
+{
+  "reviewer": "glm53_gap_reviewer",
+  "verdict": "DESIGN_PLAUSIBLE_NOT_QUALIFIED",
+  "scope": "Bounded source/metadata feasibility design for native HF BF16 reference-only layer streaming. No weight payload, model construction, torch/CUDA execution, service action or equivalence result.",
+  "created_unix": 1789065206.2821116,
+  "checkpoint_revision": "a5b45eb41df6402735dedc900be14a42e8d5e538",
+  "independently_checked_metadata": {
+    "header_count": 120,
+    "total_tensor_bytes": 642646653816,
+    "largest_forward_layer_bytes": 14825277272,
+    "mtp45_bytes": 14865185408,
+    "maximum_shard_bytes_from_header_audit": 5368754192
+  },
+  "conclusion": "No source-proven memory or mathematical impossibility for a fixed short 100-case text corpus. One-layer residency is a defensible scheduling hypothesis, not equivalence or a safe-load measurement. Full checkpoint download volume remains at least hundreds of GB even without a disk cache.",
+  "minimal_cpu_falsifier": {
+    "configuration": {
+      "num_hidden_layers": 5,
+      "layer_types": [
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "deepseek_sparse_attention",
+        "linear_attention"
+      ],
+      "mlp_layer_types": [
+        "dense",
+        "dense",
+        "dense",
+        "sparse",
+        "sparse"
+      ],
+      "indexer_types": [
+        "full",
+        "full",
+        "full",
+        "full",
+        "full"
+      ],
+      "vocab_size": 64,
+      "pad_token_id": 0,
+      "hidden_size": 32,
+      "intermediate_size": 64,
+      "moe_intermediate_size": 16,
+      "n_routed_experts": 4,
+      "num_experts_per_tok": 2,
+      "n_shared_experts": 1,
+      "n_group": 1,
+      "topk_group": 1,
+      "num_attention_heads": 2,
+      "num_key_value_heads": 2,
+      "q_lora_rank": 8,
+      "kv_lora_rank": 8,
+      "qk_nope_head_dim": 8,
+      "qk_rope_head_dim": 0,
+      "v_head_dim": 8,
+      "index_head_dim": 8,
+      "index_n_heads": 2,
+      "index_kpool": 4,
+      "index_topk": 8,
+      "linear_num_heads": 2,
+      "linear_head_dim": 8,
+      "linear_conv_kernel_dim": 4,
+      "hc_mult": 4,
+      "hc_sinkhorn_iters": 20,
+      "use_cache": false
+    },
+    "cases": "Batch size one, distinct cases of lengths 5, 64 and 65 to cover incomplete KPool tail and KDA chunk/padding boundary. Explicit all-valid boolean masks and positions. CPU only, eval/inference mode, native eager implementations, no optional hub kernels.",
+    "comparison": "Stock full text-model forward plus the same stock LM head versus layer-major traversal of separately owned/copied modules over the same cases. Compare parameter/buffer names, shapes, dtypes and bytes first; require finite bit-identical per-layer HC outputs, returned top-k state, final HC-head/norm outputs and complete logits. Use original per-case operation shapes in both arms.",
+    "conversion_check": "The same tiny witness must also pass through the stock glm5_next checkpoint conversion/dtype plan, with deliberately split expert gate/up/down and q/k/v-conv sources. A same-weights loop test alone does not test the real checkpoint loader. The enclosing native glm5_next model mapping is needed; a bare DecoderLayer or standalone glm5_next_text load must not silently omit that mapping.",
+    "status": "Proposed configuration from source; not instantiated or executed by reviewer."
+  },
+  "source_constraints": [
+    {
+      "reference": "modeling_glm5_next.py:1431-1494",
+      "requirement": "Preserve [1,T,4,4096] HC streams, mask creation, positions, NoPE, every layer return, and final unweighted HC mean then RMSNorm. Explicit use_cache=False/past_key_values=None for full-prompt reference evaluation."
+    },
+    {
+      "reference": "conversion_mapping.py:535-581; modeling_glm5_next.py:1358; modeling_utils.py:3829-3834",
+      "requirement": "Retain native checkpoint renaming, expert MergeModulelist/Concatenate ordering, q/k/v convolution concatenation and strict FP32 dtype plan. Do not blanket-cast loaded modules to BF16."
+    },
+    {
+      "reference": "modeling_glm5_next.py:486-582",
+      "requirement": "Account for native PyTorch KDA decay mask [1,64,ceil(T/64),64,64,128] FP32 and equally shaped expression temporaries. Pin implementation choice; fused kernels are a separate matched execution path, not an automatic memory shortcut."
+    },
+    {
+      "reference": "modeling_glm5_next.py:1155-1256",
+      "requirement": "Native MLA expands KV and creates an S-by-S selection mask; eager attention also has heads-by-S-by-S score/probability workspace. Bound final chat-template length before admission."
+    },
+    {
+      "reference": "modeling_glm5_next.py:1359; config num_hidden_layers45",
+      "requirement": "Native text reference executes layers0..44. Layer45/MTP and text-unused vision payload must have explicit stock exclusion semantics, not missing-weight tolerance."
+    }
+  ],
+  "memory_arithmetic": {
+    "hc_bytes_per_token": 32768,
+    "100_raw_prompts_reported_total31637_hc_bytes_before_chat_template": 1036681216,
+    "hc100_cases_at4224_tokens_bytes": 13841203200,
+    "single_KDA_decay_mask_at512_tokens_bytes": 1073741824,
+    "single_KDA_decay_mask_at4224_tokens_bytes": 8858370048,
+    "limitations": "These are individual live tensors, not peak estimates. Stock conversion may simultaneously hold source views, stacked tensors and packed outputs; shard-backed views must not retain all prior shards. Count verified RAM shard, CPU/GPU layer ownership, pinned parameter/activation staging, one in-flight case, output logits and allocator workspaces."
+  },
+  "smallest_real_weight_next_step": "Only after tiny stock-load/loop parity: contained, no competing large model, one actual maximum-size forward layer with one longest final-tokenized corpus case; preserve native math/conversion, measure complete peak ownership/workspace and verify every downloaded whole shard against pinned LFS SHA before exposing its tensors. Do not start a 100-case full teacher pass from the scalar layer+shard estimate.",
+  "reference_evidence_rules": [
+    "Process all cases one at a time for each resident layer. Keep lossless rolling CPU HC activations and any returned state; persistent pinned transfer buffers and completion fences must protect both parameter and activation H2D paths.",
+    "Final LM head must evaluate the full vocabulary for each scored position. It is possible to preserve compact per-token truth log probability and top-1 evidence without retaining every full-vocabulary tensor on disk, but reduction precision and shifted input/target alignment must be fixed and independently verified.",
+    "Use independently hashed official BF16 checkpoint bytes, not reconstructed EXL3 weights. Match token IDs/templates/masks/positions and score windows exactly to the candidate.",
+    "Kimi-generated text can provide cases; its answers/logits are not the GLM teacher. Tiny CPU parity cannot establish full-size GPU or whole-model equivalence."
+  ],
+  "files": [
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-local-feasibility-001/config.json",
+      "sha256": "33e63ec7fe607658be712bd6dd3c16c6549960d8e7f0483d34b939881b55f943",
+      "size_bytes": 5939
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-local-feasibility-001/receipts.json",
+      "sha256": "656becdcf69aa11d6272880310858368fc9891901146b1e04fcffeec864ce8b3",
+      "size_bytes": 1011
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-local-feasibility-001/model.safetensors.index.json",
+      "sha256": "e6007bd58fb7e07f9fe69544257ee2713f252ef5855bbf685b48c991d524ef0f",
+      "size_bytes": 4083163
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-local-feasibility-001/streaming-layout/summary.json",
+      "sha256": "aae003ee9d83c30f332acf56094894fa677eba33094a24ea6970a97d4d02b1f9",
+      "size_bytes": 1973
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/transformers/models/glm5_next/modeling_glm5_next.py",
+      "sha256": "2092bbb4efa2a8087b74f4a4da37635c503fe1df9ae73f1e6e8342af8b4b8e8b",
+      "size_bytes": 102403
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/transformers/models/glm5_next/configuration_glm5_next.py",
+      "sha256": "b62936c9f5d74b09ea511f3211abde65f97a9be1cb3c8f10fdad7c879850fa72",
+      "size_bytes": 14202
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/transformers/conversion_mapping.py",
+      "sha256": "319e24abfac50cd2464dfc25c336c0f71dc08b6273fef65dfdf9feb414608577",
+      "size_bytes": 106614
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/lib/python3.12/site-packages/transformers/modeling_utils.py",
+      "sha256": "f103dc66dd3f08e7842c3624c586b281250349e1c0707f394f98db992ec3cd8f",
+      "size_bytes": 271832
+    }
+  ]
+}

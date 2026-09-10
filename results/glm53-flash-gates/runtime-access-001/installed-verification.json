@@ -1,0 +1,69 @@
+{
+  "scope": "Owner-installed grant; actual noninteractive idempotent stop of already inactive identity-checked containerd under inference lock",
+  "verified": true,
+  "rows": [
+    {
+      "command": [
+        "systemctl",
+        "show",
+        "docker.service",
+        "docker.socket",
+        "containerd.service",
+        "-p",
+        "Id",
+        "-p",
+        "MainPID",
+        "-p",
+        "ActiveState",
+        "-p",
+        "InvocationID"
+      ],
+      "started_unix": 1789064564.0677106,
+      "ended_unix": 1789064564.0750105,
+      "exit_code": 0,
+      "stdout": "MainPID=0\nId=docker.service\nActiveState=inactive\nInvocationID=8ba31452b56841b6b7c46b11fac2470e\n\nId=docker.socket\nActiveState=inactive\nInvocationID=d0dbf82f3a904806bc99ebce2102401f\n\nMainPID=0\nId=containerd.service\nActiveState=inactive\nInvocationID=67c0d0a5eed647148a596752d5d046cb\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "scripts/93_profile_serve.sh",
+        "--profile",
+        "glm-5.3-flash/cuda-spark-128g-1m-experimental",
+        "status"
+      ],
+      "started_unix": 1789064564.0750124,
+      "ended_unix": 1789064564.115824,
+      "exit_code": 0,
+      "stdout": "{\"profile\": \"glm-5.3-flash/cuda-spark-128g-1m-experimental\", \"state\": \"stopped\", \"output\": \"/home/bmarti44/.cache/glm53-flash/server-20260910-075433\", \"port\": 8015, \"qualified\": false}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "sudo",
+        "-n",
+        "-l"
+      ],
+      "started_unix": 1789064564.1158252,
+      "ended_unix": 1789064564.1191618,
+      "exit_code": 0,
+      "stdout": "Matching Defaults entries for bmarti44 on spark-aba1:\n    env_reset, mail_badpass, secure_path=/usr/local/sbin\\:/usr/local/bin\\:/usr/sbin\\:/usr/bin\\:/sbin\\:/bin\\:/snap/bin, use_pty\n\nUser bmarti44 may run the following commands on spark-aba1:\n    (ALL : ALL) ALL\n    (root) NOPASSWD: /home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh *\n    (root) NOPASSWD: /home/bmarti44/spark-deepseek-v4-flash/scripts/42_verify_exposure.sh\n    (root) NOPASSWD: /usr/bin/systemctl start deepseek-v4-flash-llamacpp.service, /usr/bin/systemctl stop deepseek-v4-flash-llamacpp.service, /usr/bin/systemctl status deepseek-v4-flash-llamacpp.service, /usr/bin/systemctl restart deepseek-v4-flash-llamacpp.service\n    (root) NOPASSWD: /usr/bin/systemctl start dsv4-guard.timer, /usr/bin/systemctl stop dsv4-guard.timer, /usr/bin/systemctl status dsv4-guard.timer\n    (root) NOPASSWD: /usr/bin/systemctl start dsv4-authhelper.service, /usr/bin/systemctl stop dsv4-authhelper.service, /usr/bin/systemctl status dsv4-authhelper.service\n    (root) NOPASSWD: /usr/bin/systemctl start dsv4-caddy.service, /usr/bin/systemctl stop dsv4-caddy.service, /usr/bin/systemctl status dsv4-caddy.service\n    (root) NOPASSWD: /usr/bin/systemctl start qwen38-engine.service, /usr/bin/systemctl stop qwen38-engine.service, /usr/bin/systemctl status qwen38-engine.service, /usr/bin/systemctl restart qwen38-engine.service\n    (root) NOPASSWD: /usr/bin/systemctl start laguna-engine.service, /usr/bin/systemctl stop laguna-engine.service, /usr/bin/systemctl status laguna-engine.service, /usr/bin/systemctl restart laguna-engine.service\n    (root) NOPASSWD: /usr/bin/pkill -f 52_engine_switch.sh\n    (dsv4) NOPASSWD: /home/dsv4/*\n    (root) NOPASSWD: /usr/local/sbin/dsv4-context-submit *\n    (root) NOPASSWD: /usr/local/sbin/glm52-w1-submit *\n    (root) NOPASSWD: /usr/bin/systemctl start docker.service\n    (root) NOPASSWD: /usr/bin/systemctl stop docker.service\n    (root) NOPASSWD: /usr/bin/systemctl start docker.socket\n    (root) NOPASSWD: /usr/bin/systemctl stop docker.socket\n    (root) NOPASSWD: /usr/bin/systemctl start containerd.service\n    (root) NOPASSWD: /usr/bin/systemctl stop containerd.service\n    (root) NOPASSWD: /usr/bin/ctr namespaces list -q\n    (root) NOPASSWD: /usr/bin/ctr ^--namespace [A-Za-z0-9_][A-Za-z0-9_.-]* tasks list -q$\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "sudo",
+        "-n",
+        "/usr/bin/systemctl",
+        "stop",
+        "containerd.service"
+      ],
+      "started_unix": 1789064564.1191864,
+      "ended_unix": 1789064564.1285665,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "inference_lock_held": true,
+  "large_model_started": false
+}

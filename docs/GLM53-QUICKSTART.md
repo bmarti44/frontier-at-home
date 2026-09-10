@@ -83,8 +83,10 @@ socket. A fresh replay still recorded one swap-in page before model loading,
 with a matching process-swap decrease and major fault in the separate containerd
 service. This correlation does not prove the cause or waive the failed gate.
 
-GLM and Docker remain stopped; containerd remains active. The next proposed step
-is the reviewed [guarded containerd isolation procedure](GLM53-CONTAINERD-ISOLATION.md),
-which checks every namespace for running tasks before stopping the service. It
-requires the owner's administrator access. The named-profile settings and the
-current default remain unchanged; full qualification is still pending.
+GLM, Docker, its socket and containerd are now stopped. The owner completed the
+guarded containerd procedure and installed the reviewed
+[scoped passwordless runtime controls](GLM53-RUNTIME-ACCESS.md); noninteractive
+operation was verified. The next unchanged-profile replay will test the isolated
+host. The named-profile settings and current default remain unchanged; full
+qualification is still pending. Kimi has supplied 100 synthetic prompt candidates
+for further testing, but native BF16 reference probabilities are still required.

@@ -1,5 +1,11 @@
 # Proposed containerd isolation after the Docker-isolated preflight
 
+Status: the owner completed this stop and installed the separate
+[scoped runtime grant](GLM53-RUNTIME-ACCESS.md). All three runtime services are
+inactive; actual noninteractive operation was verified. The procedure below is
+the historical, identity-bound owner operation and should not be rerun with its
+old PID. Its pre-action bytes and reviews remain in attempt 012's evidence.
+
 Docker and docker.socket are stopped as requested by the owner. GLM was never
 loaded in attempt 012. Its preflight failed on one swap-in page after fixture
 preparation. The process census recorded containerd PID 2120/start ticks 1002

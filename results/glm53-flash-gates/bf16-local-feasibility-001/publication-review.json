@@ -1,0 +1,117 @@
+{
+  "reviewer": "/root/glm53_adversarial_reviewer",
+  "reviewed_at_utc": "2026-09-10T18:39:02.788764+00:00",
+  "scope": "Preparatory Kimi prompt-corpus and official native BF16 metadata publications only; no native reference generation, model execution or closed workload/scorer re-review.",
+  "review_verdict": "PASS",
+  "findings": [],
+  "model_qualification": "NO_RESULT",
+  "corpus_verification": {
+    "archive_members_all_verified": 64,
+    "archive_bytes": 250914,
+    "published_cases_identical_to_archived_final_repair": true,
+    "final_ids_unique_complete": 100,
+    "distinct_prompts": 100,
+    "categories": 10,
+    "every_final_prompt_text_equals_its_hashed_Kimi_response_source": true,
+    "initial_70_accepted_and_3_failed_batches_preserved": true,
+    "extra_case_batch_required_ID040_049_unchanged": true,
+    "extra_top_level_metadata_batch_all_ten_objects_unchanged": true,
+    "unsolicited_case_metadata_preserved_in_original_responses": true,
+    "repair_failure_and_two_short_prompt_expansions_preserved": true,
+    "final_changed_ids": [
+      "kimi-071",
+      "kimi-076"
+    ],
+    "actual_pinned_tokenizer_all_100_token_ID_vectors_reproduced": true,
+    "raw_prompt_tokens": {
+      "total": 31637,
+      "minimum": 176,
+      "maximum": 504,
+      "chat_template_applied": false
+    },
+    "remote_Ollama_route_recorded": "kimi-k3:cloud -> https://ollama.com",
+    "no_GLM_output_or_score_selection_in_recorded_preparation": true
+  },
+  "BF16_verification": {
+    "archive_members_all_verified": 131,
+    "archive_bytes": 644962,
+    "checkpoint_revision": "a5b45eb41df6402735dedc900be14a42e8d5e538",
+    "metadata_HTTP_receipt_hashes_verified": true,
+    "all_shards_headers_unique_index_coverage": 120,
+    "all_shapes_dtype_bytes_and_contiguous_offsets_recomputed": true,
+    "header_plus_payload_size_equals_declared_shard_size": true,
+    "tensor_bytes": 642646653816,
+    "parameter_counts": {
+      "F32": 295518,
+      "BF16": 321322735872
+    },
+    "largest_forward_layer_bytes": 14825277272,
+    "MTP_layer45_bytes": 14865185408,
+    "largest_shard_bytes": 5368754192,
+    "conservative_largest_layer_plus_largest_shard_bytes": 20233939600,
+    "public_layout_summary_equals_archived_original": true,
+    "retained_meminfo_matches_whole_model_budget_comparison": true,
+    "whole_model_memory_and_current_free_disk_fit": false,
+    "design_review_source_bindings_verified": true
+  },
+  "claim_limits": [
+    "Kimi authored synthetic inputs only. Its hosted weights are not independently pinned and it supplies no native GLM BF16 outputs or logits.",
+    "Raw tokenizer counts exclude final chat serialization and are neither actual evaluated model tokens nor a million-token context result.",
+    "Official BF16 headers and expected shard hashes establish geometry/provenance metadata, not downloaded or verified payloads, safe layer loading, streaming equivalence, native logits, fidelity or speed.",
+    "Layer-plus-shard arithmetic excludes activations, pinned staging, duplicate allocations and workspaces; no inference-memory admission is granted.",
+    "Prior closed reference NO_RESULT and model qualification gaps remain unchanged.",
+    "Containerd-isolation protocol explicitly keeps this new corpus out of the closed durability workload. No root/service action, model load, API call, or weight download occurred in this review."
+  ],
+  "bindings": [
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/kimi-corpus-001/README.md",
+      "size_bytes": 2009,
+      "sha256": "01ec5d7e9a0ffa329588c437ef0b340e982ae501c1805e894f48b6d7b224b752"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/kimi-corpus-001/manifest.json",
+      "size_bytes": 10851,
+      "sha256": "8023fc5b050f73a9bc90b608c27b2d67a689c4a16eea922c32e5080350f220ab"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/kimi-corpus-001/summary.json",
+      "size_bytes": 561,
+      "sha256": "4b35cd0f4b7ca08b93d80fb87fa7b12f82e0ed815e5f6a91022a51ac8386dc56"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/kimi-corpus-001/cases.jsonl",
+      "size_bytes": 131469,
+      "sha256": "c9963bbba47061a1fe6d88c5bea581de714dc0cd61883819e6e19e1b03eadccc"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-local-feasibility-001/README.md",
+      "size_bytes": 1851,
+      "sha256": "635e5c0caa6cd7fd292a36553f9eb88e2237cc62c036ecd93852b72154a651f7"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-local-feasibility-001/manifest.json",
+      "size_bytes": 26270,
+      "sha256": "1865389e677816e81962e1210bb12f7fd6e36adc2848f40027e7bf8719621aa2"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-local-feasibility-001/summary.json",
+      "size_bytes": 1070,
+      "sha256": "41fee118698e571ce215a9231a7e5f0c56065acda2cd49e1b3743c3116734005"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-local-feasibility-001/streaming-layout-summary.json",
+      "size_bytes": 1973,
+      "sha256": "aae003ee9d83c30f332acf56094894fa677eba33094a24ea6970a97d4d02b1f9"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-local-feasibility-001/design-review.json",
+      "size_bytes": 8988,
+      "sha256": "30cd9c084c209219dacb1a25e3a57ede743b876005e41941fd40c6288202b66d"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/containerd-isolation-001/PROTOCOL.md",
+      "size_bytes": 2484,
+      "sha256": "627ba366787f483d88c66735d6e5bd73f39bd1d6ade2a3e0141e6a48434e3629"
+    }
+  ]
+}

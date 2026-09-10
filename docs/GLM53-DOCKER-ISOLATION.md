@@ -2,8 +2,8 @@
 
 Status: the owner stopped Docker and its socket. The subsequent
 [unloaded replay 012](../results/glm53-flash-gates/soak-native-012/README.md) still
-failed its host swap gate. Containerd remains active; see the separate
-[guarded containerd proposal](GLM53-CONTAINERD-ISOLATION.md) for the next step.
+failed its host swap gate. The owner later completed the separate
+[guarded containerd stop](GLM53-CONTAINERD-ISOLATION.md).
 The procedure below records the earlier Docker-only intervention. Its original
 pre-action bytes are retained in the attempt-012 freeze.
 

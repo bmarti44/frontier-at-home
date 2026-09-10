@@ -1,0 +1,35 @@
+{
+  "scope": "Native BF16 whole-model memory/storage feasibility; metadata only, no weight payload downloaded",
+  "model": "zai-org/GLM-5.3-Flash-BF16",
+  "revision": "a5b45eb41df6402735dedc900be14a42e8d5e538",
+  "weight_bytes": 642646653816,
+  "shards": 120,
+  "safetensors": {
+    "parameters": {
+      "F32": 295518,
+      "BF16": 321322735872
+    },
+    "total": 321323031390
+  },
+  "disk_available_bytes": 2268811264,
+  "mem_available_bytes": 124192661504,
+  "mem_total_bytes": 128495218688,
+  "whole_model_fits_memory": false,
+  "whole_model_fits_free_disk": false,
+  "native_reference_generated": false,
+  "streaming_feasibility": "NOT_MEASURED; requires a compatible reference execution path and exact weight-binding, not a BF16 cast of EXL3 weights",
+  "config_keys": [
+    "architectures",
+    "text_config",
+    "vision_config",
+    "image_token_id",
+    "video_token_id",
+    "image_start_token_id",
+    "image_end_token_id",
+    "video_start_token_id",
+    "video_end_token_id",
+    "tie_word_embeddings",
+    "model_type",
+    "transformers_version"
+  ]
+}

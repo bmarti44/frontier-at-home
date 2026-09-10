@@ -24,12 +24,20 @@ and gained one major fault in the same interval. This is a correlation, not proo
 of the cause. The complete 900-census observation also retains one later swap-in
 page after the failed preflight. No model workload was admitted.
 
-Docker and its socket remain inactive; containerd remains active. The reviewed
-[guarded containerd isolation procedure](../../docs/GLM53-CONTAINERD-ISOLATION.md)
-checks all namespaces for running tasks before stopping the exact observed
-service. That task query and service operation require the owner's administrator
-access; the installed delegated controls cannot perform them. This is a proposed
-next step, not an executed fix. The broad host gate and model settings are unchanged.
+The owner subsequently stopped containerd and installed the reviewed
+[scoped passwordless runtime grant](runtime-access-001/README.md). All three
+runtime services are now inactive, and an actual noninteractive command verified
+the new delegation. The next [unchanged-profile replay](containerd-isolation-001/PROTOCOL.md)
+will test that environmental change under the original broad host gate. It is
+not yet a successful model result; no model setting or default changed.
+
+The owner has no reference dataset or second machine. Ollama's installed
+`kimi-k3:cloud` route supplied [100 synthetic prompt candidates](kimi-corpus-001/README.md),
+with failed preparation and all raw responses retained. These are inputs, not
+native GLM reference probabilities. A [BF16 metadata audit](bf16-local-feasibility-001/README.md)
+rules out whole-model memory/disk loading on this host and sizes a possible
+layer-streaming reference. Native computation, memory safety and fidelity remain
+unverified for that proposed route.
 
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
 512-token batches with a 128-token prompt-chunk cap per conversation, retaining
