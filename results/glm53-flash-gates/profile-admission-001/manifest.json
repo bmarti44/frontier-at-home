@@ -1,0 +1,32 @@
+{
+  "scope": "real low-memory admission rejection only; no second model or qualification claim",
+  "command": [
+    "/usr/bin/python3",
+    "-B",
+    "/home/bmarti44/spark-deepseek-v4-flash/scripts/47_run_glm53_dev.py",
+    "--start",
+    "--profile",
+    "glm-5.3-flash/cuda-spark-128g-agent-fast",
+    "--output",
+    "/home/bmarti44/.cache/glm53-flash/profile-admission-001/must-not-launch"
+  ],
+  "acceptance_formula": "nonzero exit with explicit 110 GiB rejection, no output/identity/wrapper artifacts created, unchanged existing model process identities and service InvocationID, both guard services active, memory above existing run floor",
+  "sources": [
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/scripts/47_run_glm53_dev.py",
+      "sha256": "621ad704050bcb7444b407214b212a820019e40648ecddbaec64737b0c2005b6"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py",
+      "sha256": "e47066fc98108358f86165cb1a7cd8f422fba76b1d5e072aa7e7dda9f0bb078a"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/profile_resolver.py",
+      "sha256": "bc56c0f82d5ab7c37f4f7a909651568177261b199d169d224a66dc5e20f71c85"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/configs/profiles/glm-5.3-flash/cuda-spark-128g-agent-fast.json",
+      "sha256": "bc189ecd28897cf0eba1605a03af37bbb2d33da5e408bafc928e9c1731bdbb59"
+    }
+  ]
+}

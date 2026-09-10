@@ -1,0 +1,55 @@
+{
+  "time_unix": 1789005598.1274579,
+  "mem_available_kb": 20376544,
+  "unit": {
+    "ControlGroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-context-1770728-1770746.service",
+    "LoadState": "loaded",
+    "ActiveState": "active",
+    "InvocationID": "c5847e1b735740a9a171393ce241b362"
+  },
+  "processes": [
+    {
+      "pid": 1770728,
+      "start_ticks": 35485863,
+      "boot_id": "40d1ea0e-0700-4c35-9315-7009ef501b6a",
+      "command": [
+        "python3",
+        "-B",
+        "/home/bmarti44/.cache/glm53-flash/server-bringup-019-context-sync/launch-frozen.py",
+        "/home/bmarti44/.cache/glm53-flash/server-bringup-019-context-sync"
+      ],
+      "executable": "/usr/bin/python3.12"
+    },
+    {
+      "pid": 1770801,
+      "start_ticks": 35486129,
+      "boot_id": "40d1ea0e-0700-4c35-9315-7009ef501b6a",
+      "command": [
+        "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3",
+        "-I",
+        "-B",
+        "/home/bmarti44/.cache/glm53-flash/server-bringup-019-context-sync/guard.py",
+        "--child",
+        "5",
+        "6",
+        "/home/bmarti44/.cache/glm53-flash/server-bringup-019-context-sync/server.py",
+        "--serve",
+        "/home/bmarti44/.cache/glm53-flash/server-bringup-019-context-sync"
+      ],
+      "executable": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3"
+    },
+    {
+      "pid": 1771589,
+      "start_ticks": 35487467,
+      "boot_id": "40d1ea0e-0700-4c35-9315-7009ef501b6a",
+      "command": [
+        "VLLM::EngineCore"
+      ],
+      "executable": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3"
+    }
+  ],
+  "guard_services": [
+    "active",
+    "active"
+  ]
+}
