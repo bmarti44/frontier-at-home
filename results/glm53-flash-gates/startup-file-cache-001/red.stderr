@@ -1,0 +1,86 @@
+FF.EFFFF
+======================================================================
+ERROR: test_enabled_releases_pages_before_engine_import (__main__.FileCacheAdmissionTests.test_enabled_releases_pages_before_engine_import)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 36, in test_enabled_releases_pages_before_engine_import
+    self.run_serve(engine);self.assertEqual(self.events,['advice','engine'])
+    ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 31, in run_serve
+    api.serve(self.server)
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/47_run_glm53_dev.py", line 65, in serve
+    runpy.run_module('vllm.entrypoints.openai.api_server',run_name='__main__')
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1199, in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 34, in engine
+    if self.events!=['advice']:raise MemoryError('model page cache was not advised before CUDA admission')
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+MemoryError: model page cache was not advised before CUDA admission
+
+======================================================================
+FAIL: test_advice_failure_aborts_and_closes_descriptor (__main__.FileCacheAdmissionTests.test_advice_failure_aborts_and_closes_descriptor)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 59, in test_advice_failure_aborts_and_closes_descriptor
+    with self.assertRaises(OSError):self.run_serve(advice=fail)
+AssertionError: OSError not raised
+
+======================================================================
+FAIL: test_changed_inventory_rejects_before_engine (__main__.FileCacheAdmissionTests.test_changed_inventory_rejects_before_engine)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 44, in test_changed_inventory_rejects_before_engine
+    with self.assertRaises(ValueError):self.run_serve()
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_escaping_symlink_and_wrong_size_reject (__main__.FileCacheAdmissionTests.test_escaping_symlink_and_wrong_size_reject) (mode='escape')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 55, in test_escaping_symlink_and_wrong_size_reject
+    with self.assertRaises((ValueError,OSError)):self.run_serve()
+AssertionError: (<class 'ValueError'>, <class 'OSError'>) not raised
+
+======================================================================
+FAIL: test_escaping_symlink_and_wrong_size_reject (__main__.FileCacheAdmissionTests.test_escaping_symlink_and_wrong_size_reject) (mode='symlink')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 55, in test_escaping_symlink_and_wrong_size_reject
+    with self.assertRaises((ValueError,OSError)):self.run_serve()
+AssertionError: (<class 'ValueError'>, <class 'OSError'>) not raised
+
+======================================================================
+FAIL: test_escaping_symlink_and_wrong_size_reject (__main__.FileCacheAdmissionTests.test_escaping_symlink_and_wrong_size_reject) (mode='size')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 55, in test_escaping_symlink_and_wrong_size_reject
+    with self.assertRaises((ValueError,OSError)):self.run_serve()
+AssertionError: (<class 'ValueError'>, <class 'OSError'>) not raised
+
+======================================================================
+FAIL: test_payload_bytes_unchanged_and_not_rehashed (__main__.FileCacheAdmissionTests.test_payload_bytes_unchanged_and_not_rehashed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-file-cache-001/test_serve.py", line 67, in test_payload_bytes_unchanged_and_not_rehashed
+    self.assertEqual(hashed,[self.model/'inventory.json']);self.assertEqual(self.payload.read_bytes(),original)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [] != [PosixPath('/tmp/tmp3p5rzni2/model/inventory.json')]
+
+Second list contains 1 additional elements.
+First extra element 0:
+PosixPath('/tmp/tmp3p5rzni2/model/inventory.json')
+
+- []
++ [PosixPath('/tmp/tmp3p5rzni2/model/inventory.json')]
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.007s
+
+FAILED (failures=6, errors=1)
