@@ -2,6 +2,7 @@
 
 No production switch/default state is read or written here.
 """
+from contextlib import contextmanager
 import fcntl
 import gzip
 import json
@@ -103,24 +104,45 @@ def open_identity(record):
 
 def unit_properties(unit):
     result = subprocess.run(['systemctl','--user','show',unit,
-        '--property=InvocationID,ActiveState,ControlGroup'],text=True,capture_output=True)
-    if result.returncode: return {}
-    return dict(line.split('=',1) for line in result.stdout.splitlines() if '=' in line)
+        '--property=LoadState,InvocationID,ActiveState,ControlGroup'],
+        text=True,capture_output=True,timeout=10)
+    props = dict(line.split('=',1) for line in result.stdout.splitlines() if '=' in line)
+    if result.returncode or props.get('ActiveState') not in {'active','activating','deactivating','inactive','failed'}:
+        raise ValueError('cannot observe systemd unit state: ' + unit)
+    return props
 
 
-def stop_unit(record):
-    props = unit_properties(record['unit'])
-    if props.get('ActiveState') in (None,'inactive','failed'): return
-    if props.get('InvocationID') != record.get('invocation_id'):
-        raise ValueError('systemd invocation identity mismatch; refusing stop')
-    subprocess.run(['systemctl','--user','stop',record['unit']],check=True,timeout=60)
-    if unit_properties(record['unit']).get('ActiveState') not in (None,'inactive','failed'):
-        raise ValueError('model unit survived stop')
+def check_group_empty(record):
     cgroup = record.get('control_group')
     if cgroup:
         events = Path('/sys/fs/cgroup') / cgroup.lstrip('/') / 'cgroup.events'
         if events.exists() and 'populated 1' in events.read_text():
             raise ValueError('model descendants survived stop')
+
+
+def bind_unit(record, props):
+    if not props.get('InvocationID'): return False
+    if not record.get('invocation_id'):
+        # The unique unit name was derived from this still-verified controller.
+        fd=open_identity(record['controller'])
+        os.close(fd)
+        record['invocation_id']=props['InvocationID']
+    if props['InvocationID'] != record['invocation_id']:
+        raise ValueError('systemd invocation identity mismatch')
+    if props.get('ControlGroup'): record['control_group']=props['ControlGroup']
+    return True
+
+
+def stop_unit(record):
+    props = unit_properties(record['unit'])
+    if props['ActiveState'] not in ('inactive','failed'):
+        if not bind_unit(record,props):
+            raise ValueError('cannot observe systemd invocation identity; refusing stop')
+        subprocess.run(['systemctl','--user','stop',record['unit']],check=True,timeout=60)
+        props=unit_properties(record['unit'])
+        if props['ActiveState'] not in ('inactive','failed'):
+            raise ValueError('model unit survived stop')
+    check_group_empty(record)
 
 
 def save_record(path, record):
@@ -133,20 +155,87 @@ def lifecycle_path(name):
     return Path.home()/'.local/state/glm53-profiles'/ (name.split('/')[-1]+'.json')
 
 
+@contextmanager
+def preparing_session(snapshot, output):
+    path=lifecycle_path(snapshot['profile_id']);path.parent.mkdir(parents=True,exist_ok=True)
+    path.parent.chmod(0o700)
+    with path.with_suffix('.lock').open('a') as lock:
+        try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError: raise ValueError('this profile already has an active launcher')
+        if path.exists():
+            old=strict_json(path)
+            if old.get('unit'):
+                props=unit_properties(old['unit'])
+                if props['ActiveState'] not in ('inactive','failed'):
+                    raise ValueError('existing model unit must be stopped before starting this profile')
+                check_group_empty(old)
+        record={'profile':snapshot['profile_id'],'output':str(output),'unit':None,
+                'launcher':process_identity(os.getpid()),'phase':'preparing','ready':False,
+                'startup_deadline':time.monotonic()+snapshot.get('safety',{}).get('startup_timeout_seconds',1800)}
+        def cancel(signum, frame): raise SystemExit(128+signum)
+        previous={s:signal.signal(s,cancel) for s in (signal.SIGTERM,signal.SIGINT)}
+        try:
+            save_record(path,record)
+            yield record
+        finally:
+            try:
+                record['phase']='exited';save_record(path,record)
+            finally:
+                for signum,handler in previous.items(): signal.signal(signum,handler)
+
+
+def wait_launcher(record, path, timeout=65):
+    deadline=time.monotonic()+timeout
+    while time.monotonic()<deadline:
+        with path.with_suffix('.lock').open('a') as lock:
+            try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            except BlockingIOError: pass
+            else:
+                # Lock release is the end of all launch/cleanup work. Never
+                # confuse a later run's record with the run being stopped.
+                current=strict_json(path)
+                if current['launcher'] != record['launcher']:
+                    raise ValueError('another profile start replaced the stopped run')
+                return
+        time.sleep(.1)
+    raise TimeoutError('profile launcher did not finish cleanup')
+
+
 def lifecycle_action(name, action):
-    if name.removesuffix('.json') not in NAMES: raise ValueError('unknown experimental profile')
-    path = lifecycle_path(name.removesuffix('.json'))
+    name=name.removesuffix('.json')
+    if name not in NAMES: raise ValueError('unknown experimental profile')
+    path=lifecycle_path(name)
     if not path.exists():
+        # A start may hold the lock immediately before atomic registration.
+        if path.with_suffix('.lock').exists():
+            with path.with_suffix('.lock').open('a') as lock:
+                try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                except BlockingIOError: raise ValueError('profile start is registering; retry lifecycle action')
         print(json.dumps({'profile':name,'state':'stopped','registered_run':False}));return
     record = strict_json(path)
-    if record['profile'] != name.removesuffix('.json'): raise ValueError('profile identity mismatch')
-    props = unit_properties(record['unit'])
-    active = props.get('ActiveState') not in (None,'inactive','failed')
-    if active and props.get('InvocationID') != record['invocation_id']:
-        raise ValueError('systemd invocation identity mismatch')
-    if action == 'stop': stop_unit(record);active=False
-    print(json.dumps({'profile':name,'state':('running' if record.get('ready') else 'starting') if active else 'stopped',
-                      'output':record['output'],'port':8015,'qualified':False}))
+    if record['profile'] != name: raise ValueError('profile identity mismatch')
+    active=False
+    if record.get('unit'):
+        props=unit_properties(record['unit'])
+        active=props['ActiveState'] not in ('inactive','failed')
+        if active and record.get('invocation_id'): bind_unit(record,props)
+        if not active: check_group_empty(record)
+    launcher_live=False
+    try: fd=open_identity(record['launcher']);launcher_live=True
+    except (ProcessLookupError,FileNotFoundError): fd=None
+    try:
+        if action=='stop':
+            if active and record.get('invocation_id'): stop_unit(record)
+            if launcher_live: signal.pidfd_send_signal(fd,signal.SIGTERM)
+            wait_launcher(record,path)
+            # A preparing controller may have created its unit before cancelling.
+            final=strict_json(path)
+            if final.get('unit'): stop_unit(final)
+            active=launcher_live=False
+    finally:
+        if fd is not None: os.close(fd)
+    state=('running' if record.get('ready') else 'starting') if active or launcher_live else 'stopped'
+    print(json.dumps({'profile':name,'state':state,'output':record['output'],'port':8015,'qualified':False}))
 
 
 def authenticated_ready(snapshot, output):
@@ -174,47 +263,66 @@ def authenticated_ready(snapshot, output):
     return {'health':True,'auth_rejection':401,'model':'glm-5.3-flash','semantic_completion':True}
 
 
-def run_contained(command, control, output, snapshot):
-    """Foreground launcher with unit-bound shutdown, including Ctrl-C/TERM."""
-    path=lifecycle_path(snapshot['profile_id']);path.parent.mkdir(parents=True,exist_ok=True)
-    path.parent.chmod(0o700)
-    with path.with_suffix('.lock').open('a') as lock:
-        try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        except BlockingIOError: raise ValueError('this profile already has an active launcher')
-        if path.exists():
-            old=strict_json(path)
-            if unit_properties(old['unit']).get('ActiveState') not in (None,'inactive','failed'):
-                raise ValueError('existing model unit must be stopped before starting this profile')
-        cancelled=[]
-        def cancel(signum, frame): cancelled.append(signum)
-        previous={s:signal.signal(s,cancel) for s in (signal.SIGTERM,signal.SIGINT)}
-        record=None
-        with (output/'wrapper.log').open('w') as log:
-            child=subprocess.Popen(command,env=control,stdout=log,stderr=subprocess.STDOUT)
-            unit='glm52-'+command[command.index('--tag')+1]+'-'+str(child.pid)+'.service'
+def wait_controller(child, record, path):
+    # Keep the lifecycle lock and ownership when the service bus temporarily
+    # fails. The hardened unit has its own independent wall-clock timeout.
+    while True:
+        try:
+            child.wait(timeout=60)
+            return
+        except subprocess.TimeoutExpired:
             try:
-                deadline=time.monotonic()+snapshot['safety']['startup_timeout_seconds']
-                while child.poll() is None:
-                    props=unit_properties(unit)
-                    if props.get('InvocationID') and record is None:
-                        record={'profile':snapshot['profile_id'],'output':str(output),'unit':unit,
-                                'invocation_id':props['InvocationID'],'control_group':props.get('ControlGroup'),
-                                'launcher':process_identity(os.getpid()),'ready':False}
-                        save_record(path,record)
-                    if cancelled:
-                        if record: stop_unit(record)
-                        # Unit creation may still be in flight; do not abandon controller.
-                    elif record and not record['ready']:
-                        if time.monotonic()>deadline: raise TimeoutError('profile startup timed out')
-                        try: readiness=authenticated_ready(snapshot,output)
-                        except (ConnectionError,urllib.error.URLError,TimeoutError): pass
-                        else:
-                            record['ready']=True;record['readiness']=readiness;save_record(path,record)
-                            print(json.dumps({'event':'ready','profile':snapshot['profile_id'],'port':snapshot['port'],'output':str(output)}),flush=True)
-                    time.sleep(1)
-                return child.returncode
+                stop_unit(record)
+            except (ValueError, subprocess.SubprocessError) as error:
+                record['cleanup_failure']=type(error).__name__+': '+str(error)
+                save_record(path,record)
+
+
+def run_contained(command, control, output, snapshot, session=None):
+    """Keep controller ownership through readiness, cancellation and cleanup."""
+    if session is None:
+        with preparing_session(snapshot,output) as record:
+            return run_contained(command,control,output,snapshot,record)
+    path=lifecycle_path(snapshot['profile_id']);record=session
+    if time.monotonic()>record['startup_deadline']: raise TimeoutError('profile preparation timed out')
+    cancelled=[]
+    def cancel(signum, frame): cancelled.append(signum)
+    previous={s:signal.signal(s,cancel) for s in (signal.SIGTERM,signal.SIGINT)}
+    child=None
+    try:
+        with (output/'wrapper.log').open('w') as log:
+            if cancelled: raise SystemExit(128+cancelled[0])
+            child=subprocess.Popen(command,env=control,stdout=log,stderr=subprocess.STDOUT)
+            record.update(unit='glm52-'+command[command.index('--tag')+1]+'-'+str(child.pid)+'.service',
+                          controller=process_identity(child.pid),invocation_id=None,phase='starting')
+            save_record(path,record)
+            while child.poll() is None:
+                if time.monotonic()>record['startup_deadline'] and not record['ready']:
+                    raise TimeoutError('profile startup timed out')
+                props=unit_properties(record['unit'])
+                bound=bind_unit(record,props)
+                if bound: save_record(path,record)
+                if cancelled:
+                    if bound: stop_unit(record)
+                elif bound and not record['ready']:
+                    try: readiness=authenticated_ready(snapshot,output)
+                    except (ConnectionError,urllib.error.URLError,TimeoutError): pass
+                    else:
+                        record.update(ready=True,readiness=readiness,phase='running');save_record(path,record)
+                        print(json.dumps({'event':'ready','profile':snapshot['profile_id'],'port':snapshot['port'],'output':str(output)}),flush=True)
+                time.sleep(1)
+            return child.returncode
+    except BaseException as error:
+        record['failure']=type(error).__name__+': '+str(error);save_record(path,record)
+        raise
+    finally:
+        try:
+            try:
+                if record.get('unit'): stop_unit(record)
+            except BaseException as error:
+                record['cleanup_failure']=type(error).__name__+': '+str(error);save_record(path,record)
+                raise
             finally:
-                if record: stop_unit(record)
-                try: child.wait(timeout=60)
-                finally:
-                    for signum,handler in previous.items(): signal.signal(signum,handler)
+                if child is not None: wait_controller(child,record,path)
+        finally:
+            for signum,handler in previous.items(): signal.signal(signum,handler)

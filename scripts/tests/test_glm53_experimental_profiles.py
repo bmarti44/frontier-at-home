@@ -1,6 +1,7 @@
 """Fixed acceptance for optional named GLM profiles; no model is loaded."""
 import importlib
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -70,7 +71,7 @@ class LifecycleRegression(unittest.TestCase):
         api=self.api
         with tempfile.TemporaryDirectory() as tmp:
             out=Path(tmp);state=out/'state.json'
-            child=self.mock.Mock(pid=4321);child.poll.return_value=None
+            child=self.mock.Mock(pid=os.getpid());child.poll.return_value=None
             props={'ActiveState':'active','InvocationID':'fresh','ControlGroup':'/fake'}
             snapshot={'profile_id':'glm-5.3-flash/cuda-spark-128g-agent-fast','safety':{'startup_timeout_seconds':10}}
             with self.mock.patch.object(api,'lifecycle_path',return_value=state), \
@@ -89,7 +90,7 @@ class LifecycleRegression(unittest.TestCase):
         import signal
         api=self.api
         with tempfile.TemporaryDirectory() as tmp:
-            out=Path(tmp);state=out/'state.json';child=self.mock.Mock(pid=4321,returncode=0)
+            out=Path(tmp);state=out/'state.json';child=self.mock.Mock(pid=os.getpid(),returncode=0)
             child.poll.side_effect=[None,None,0]
             snapshot={'profile_id':'glm-5.3-flash/cuda-spark-128g-agent-fast','safety':{'startup_timeout_seconds':10},'port':8015}
             props={'ActiveState':'active','InvocationID':'fresh','ControlGroup':'/fake'}
@@ -186,7 +187,7 @@ class ReviewRegression(unittest.TestCase):
         import signal
         api=self.api;before=signal.getsignal(signal.SIGTERM)
         with tempfile.TemporaryDirectory() as tmp:
-            out=Path(tmp);child=self.mock.Mock(pid=4321);child.poll.return_value=None
+            out=Path(tmp);child=self.mock.Mock(pid=os.getpid());child.poll.return_value=None
             with self.mock.patch.object(api,'lifecycle_path',return_value=out/'state.json'), self.mock.patch.object(api.subprocess,'Popen',return_value=child), self.mock.patch.object(api,'unit_properties',return_value={'ActiveState':'active','InvocationID':'fresh','ControlGroup':'/fake'}), self.mock.patch.object(api,'authenticated_ready',side_effect=ValueError('wrong model')), self.mock.patch.object(api,'stop_unit',side_effect=TimeoutError('stop timeout')):
                 try:
                     with self.assertRaises(TimeoutError):
@@ -207,5 +208,34 @@ class ReviewRegression(unittest.TestCase):
                     import os;os.close(fd)
                     with self.assertRaisesRegex(ValueError,'active launcher'):
                         with api.preparing_session({'profile_id':'test'},out): pass
+
+
+
+    def test_real_preparing_process_is_cancelled_before_model_launch(self):
+        import subprocess,time
+        api=self.api
+        with tempfile.TemporaryDirectory() as tmp:
+            state=Path(tmp)/'state.json'
+            code = """import sys,time
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+import glm53_profile as p
+p.lifecycle_path=lambda name:Path(sys.argv[2])
+with p.preparing_session({'profile_id':'glm-5.3-flash/cuda-spark-128g-agent-fast'},Path(sys.argv[2]).parent):
+ print('preparing',flush=True)
+ time.sleep(30)
+ raise RuntimeError('uncancelled preparation')
+"""
+            child=subprocess.Popen([sys.executable,'-B','-c',code,str(ROOT/'scripts/lib'),str(state)],stdout=subprocess.PIPE,text=True)
+            try:
+                self.assertEqual(child.stdout.readline().strip(),'preparing')
+                with self.mock.patch.object(api,'lifecycle_path',return_value=state):
+                    api.lifecycle_action('glm-5.3-flash/cuda-spark-128g-agent-fast','stop')
+                self.assertEqual(child.wait(timeout=5),143)
+                record=json.loads(state.read_text())
+                self.assertEqual(record['phase'],'exited');self.assertIsNone(record['unit'])
+            finally:
+                if child.poll() is None:child.terminate();child.wait(timeout=5)
+                child.stdout.close()
 
 if __name__ == '__main__': unittest.main()

@@ -97,11 +97,18 @@ def main():
         snapshot=profile_api.resolve_profile(args.profile,args.host,args.output.resolve())
         args.port=snapshot['port']
         args.model=Path(snapshot['argv'][snapshot['argv'].index('--model')+1])
-        profile_api.verify_artifacts(snapshot)
     elif args.host or args.status or args.stop:
         parser.error('--host, --status and --stop require --profile')
-    if not args.start:parser.error('explicit --start is required; this never changes the serving default')
-    if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
+    if snapshot:
+        with profile_api.preparing_session(snapshot,args.output.resolve()) as session:
+            profile_api.verify_artifacts(snapshot)
+            launch(args,snapshot,session,profile_api)
+    else: launch(args,None,None,None)
+
+
+def launch(args,snapshot,session,profile_api):
+    if not args.start:raise ValueError('explicit --start is required; this never changes the serving default')
+    if args.port not in range(1024,65536) or args.port in (8010,8013,8014):raise ValueError('use a separate local development port')
     agent_fast=args.preset=='agent-fast'
     prefill_batch=args.prefill_batch if args.prefill_batch is not None else (512 if agent_fast else 128)
     # Keep margin above a quarter of the original reservation for recurrent
@@ -184,7 +191,7 @@ def main():
         'context_per_slot':int(arguments[arguments.index('--max-model-len')+1]),'slots':4,
         'prefill_batch':prefill_batch,'kv_cache_bytes':kv_cache_bytes}),flush=True)
     if snapshot:
-        returncode=profile_api.run_contained(command,control,output,snapshot)
+        returncode=profile_api.run_contained(command,control,output,snapshot,session)
     else:
         with (output/'wrapper.log').open('w') as log:
             returncode=subprocess.run(command,env=control,stdout=log,stderr=subprocess.STDOUT).returncode

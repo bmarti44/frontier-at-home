@@ -31,3 +31,16 @@ binary was added or changed. The launcher rehashes the entire closed trees befor
 use; inherited hashes are not accepted as evidence of a successful launch. This
 also limits the current replay to failure localization, not closed-inventory
 confirmation. Its original freeze and inputs remain unchanged.
+
+Candidate 1 review failed on three verified lifecycle defects (merged across the
+two persistent reviewers): unknown/terminal systemd state skipped cleanup checks,
+stop errors skipped controller waiting/handler restoration, and preparation
+preceded registration/cancellation. `review-candidate-1.json` and
+`review-red.txt` preserve the assertions and genuine failed regressions.
+
+Candidate 2 targets those findings only. Registration/locking covers preparation;
+identity-bound cancellation waits for the lifecycle lock; unit observation errors
+fail closed; terminal states still check descendants; and nested cleanup retains
+controller ownership and restores handlers even on stop errors. Fifteen focused
+tests pass, including cancellation of a real small CPU preparation process before
+any model launch. The existing seventeen GLM and fifteen resolver tests still pass.
