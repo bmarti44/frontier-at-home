@@ -53,3 +53,9 @@ operational stop errors and best-effort logging, and retains the lock while
 observation is unavailable. Seventeen focused tests pass; raw failed/successful
 results remain alongside both candidate-2 review records. The readiness cleanup
 test now expects the required second check after controller exit.
+
+Both persistent reviewers cleared candidate 3 (`review-candidate-3.json`). The
+code/lifecycle gate passes. Both profile argv/env arrays were independently
+compared with the recorded launches: agent-fast matches its serving snapshot;
+1m-experimental matches server019 with CUDA_LAUNCH_BLOCKING removed. Actual
+profile launch and full-model qualification remain pending.

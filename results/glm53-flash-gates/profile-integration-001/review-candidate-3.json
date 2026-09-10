@@ -1,0 +1,57 @@
+{
+  "candidate": "b7042e9b",
+  "gate_candidate_count": 3,
+  "scope": "named experimental profile code and CPU lifecycle tests only; actual model launch pending",
+  "verdict": "PASS",
+  "open_high_findings": [],
+  "open_critical_findings": [],
+  "closed": [
+    "H1",
+    "H2",
+    "H3"
+  ],
+  "reviewers": [
+    {
+      "reviewer": "glm53_adversarial_reviewer",
+      "assessment": "H2 closed; all 17 focused tests pass; no verified high or critical regression."
+    },
+    {
+      "reviewer": "glm53_gap_reviewer",
+      "assessment": "H2 closed; three focused regressions and independent combined bus/group/log failure witness pass; no remaining high/critical findings."
+    }
+  ],
+  "files": [
+    {
+      "path": "scripts/lib/glm53_profile.py",
+      "sha256": "e47066fc98108358f86165cb1a7cd8f422fba76b1d5e072aa7e7dda9f0bb078a"
+    },
+    {
+      "path": "scripts/47_run_glm53_dev.py",
+      "sha256": "621ad704050bcb7444b407214b212a820019e40648ecddbaec64737b0c2005b6"
+    },
+    {
+      "path": "scripts/93_profile_serve.sh",
+      "sha256": "7a71bc7241869734a2bf49884902cbef27af6eb73cbafee149ac69587bbfb2d1"
+    },
+    {
+      "path": "scripts/lib/profile_resolver.py",
+      "sha256": "bc56c0f82d5ab7c37f4f7a909651568177261b199d169d224a66dc5e20f71c85"
+    },
+    {
+      "path": "scripts/tests/test_glm53_experimental_profiles.py",
+      "sha256": "9bf2744c7b14227154c6fd10edcfa66f42f2389407f0a159bcc34fd8c945d5c8"
+    },
+    {
+      "path": "configs/profiles/glm-5.3-flash/cuda-spark-128g-agent-fast.json",
+      "sha256": "bc189ecd28897cf0eba1605a03af37bbb2d33da5e408bafc928e9c1731bdbb59"
+    },
+    {
+      "path": "configs/profiles/glm-5.3-flash/cuda-spark-128g-1m-experimental.json",
+      "sha256": "75dd052cf289a61bcc13c595eba3023d9eda7f11732814bade35cb575a650c15"
+    },
+    {
+      "path": "configs/profiles/glm-5.3-flash/model.json",
+      "sha256": "420bb88c163257329ea86062329b56474fdbb57929b15d9046b71ba429378fd5"
+    }
+  ]
+}
