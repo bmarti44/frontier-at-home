@@ -1,7 +1,7 @@
 """Freeze a single real-weight feasibility probe; never load native weights here."""
 from pathlib import Path
 import gzip,hashlib,json,shutil,subprocess,sys,time
-R=Path('/home/bmarti44/spark-deepseek-v4-flash');B=Path.home()/'.cache/glm53-flash';O=B/'bf16-one-layer-002';S=Path(__file__).parent
+R=Path('/home/bmarti44/spark-deepseek-v4-flash');B=Path.home()/'.cache/glm53-flash';O=B/'bf16-one-layer-003';S=Path(__file__).parent
 sys.path.insert(0,str(R/'scripts/lib'))
 from glm53_contract import sha256_file,strict_json,verify_inventory
 from glm53_probe_capture import inference_lock
@@ -14,6 +14,7 @@ with inference_lock():
     m=dict(x.split(':',1) for x in Path('/proc/meminfo').read_text().splitlines());v=dict(x.split() for x in Path('/proc/vmstat').read_text().splitlines())
     baseline={'time_unix':time.time(),'pswpin':int(v['pswpin']),'pswpout':int(v['pswpout']),'used_swap_kib':int(m['SwapTotal'].split()[0])-int(m['SwapFree'].split()[0]),'available_kib':int(m['MemAvailable'].split()[0])};save(O/'broad-baseline.json',baseline)
     if baseline['available_kib']<110*1024**2:raise ValueError('start memory below110GiB')
+    if int(m['SwapTotal'].split()[0])!=0 or len(Path('/proc/swaps').read_text().splitlines())!=1:raise ValueError('owner-approved temporary swap pause required')
     facts={}
     for unit in ['docker.service','docker.socket','containerd.service']:
         text=subprocess.check_output(['systemctl','show',unit,'-p','ActiveState','-p','MainPID','-p','InvocationID'],text=True);facts[unit]=dict(x.split('=',1) for x in text.splitlines());assert facts[unit]['ActiveState']=='inactive' and facts[unit].get('MainPID','0')=='0'
@@ -45,5 +46,5 @@ with inference_lock():
     node=Path('/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node');python=runtime/'bin/python3';wrapper=R/'results/glm52-gates/harness/glm_cgroup_run.sh'
     environment={'HOME':str(O/'state'),'PATH':f'{runtime}/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin','LANG':'C.UTF-8','CUDA_HOME':'/usr/local/cuda-13.0','CUDA_VISIBLE_DEVICES':'0','CUDA_CACHE_DISABLE':'1','USE_HUB_KERNELS':'0','HF_HUB_OFFLINE':'1','TRANSFORMERS_OFFLINE':'1','HF_DEACTIVATE_ASYNC_LOAD':'1','TOKENIZERS_PARALLELISM':'false','NVIDIA_TF32_OVERRIDE':'0','TORCH_COMPILE_DISABLE':'1','OMP_NUM_THREADS':'2','MKL_NUM_THREADS':'2','PYTORCH_CUDA_ALLOC_CONF':'expandable_segments:False'}
     paths=[p for root in [O/'code',O/'metadata'] for p in sorted(root.rglob('*')) if p.is_file()]+[O/'fetch-randomness.py',profile_path,build_path,profile_inventory,python,node,wrapper,R/'results/glm52-gates/harness/glm_safe_run.sh',R/'scripts/03_memory_guard.py',Path('/usr/lib/aarch64-linux-gnu/libc.so.6')]
-    manifest={'scope':'One real BF16 KDA layer with synthetic HCactivations; no native full-model reference or serving qualification','source_revision':subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip(),'broad_baseline':baseline,'runtime':{'root':str(runtime),'inventory':str(inventory),'verified_files':len(verified)},'python':str(python),'node':str(node),'wrapper':str(wrapper),'tag':'glm53-bf16-layer-002','model_revision':revision,'shards':shards,'input_tokens':516,'input_spec':{'generator':'shake256-bf16-small-v1','seed_encoding':'unsigned-64-big-endian','tensor_byte_order':'little-endian','shape':[1,516,4,4096],'dtype':'torch.bfloat16'},'environment':environment,'safety':{'minimum_start_gib':110,'kill_floor_gib':40,'timeout_seconds':600,'memory_high_gib':62,'memory_max_gib':64},'files':[{'path':str(p),'size_bytes':p.stat().st_size,'sha256':sha256_file(p)} for p in paths],'frozen_at_unix':time.time()}
+    manifest={'scope':'One real BF16 KDA layer with synthetic HCactivations; no native full-model reference or serving qualification','source_revision':subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip(),'broad_baseline':baseline,'runtime':{'root':str(runtime),'inventory':str(inventory),'verified_files':len(verified)},'python':str(python),'node':str(node),'wrapper':str(wrapper),'tag':'glm53-bf16-layer-003','model_revision':revision,'shards':shards,'input_tokens':516,'input_spec':{'generator':'shake256-bf16-small-v1','seed_encoding':'unsigned-64-big-endian','tensor_byte_order':'little-endian','shape':[1,516,4,4096],'dtype':'torch.bfloat16'},'environment':environment,'safety':{'minimum_start_gib':110,'kill_floor_gib':40,'timeout_seconds':600,'memory_high_gib':62,'memory_max_gib':64},'files':[{'path':str(p),'size_bytes':p.stat().st_size,'sha256':sha256_file(p)} for p in paths],'frozen_at_unix':time.time()}
     save(O/'manifest.json',manifest);print(json.dumps({'frozen':str(O),'runtime_files':len(verified),'frozen_at_unix':manifest['frozen_at_unix']}),flush=True)
