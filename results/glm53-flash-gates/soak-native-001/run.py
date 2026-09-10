@@ -46,13 +46,25 @@ def require(condition, message):
 def finite(value):
     return type(value) in (float, int) and math.isfinite(value)
 
+def decode(value):
+    def number(text):
+        result = float(text)
+        require(math.isfinite(result), 'nonfinite JSON number')
+        return result
+    def constant(text):
+        raise ValueError('nonfinite JSON constant: ' + text)
+    return json.loads(value, parse_float=number, parse_constant=constant)
+
+def read(path):
+    return decode(Path(path).read_text())
+
 def prepare(out, seed):
     from jinja2.sandbox import ImmutableSandboxedEnvironment
     from tokenizers import Tokenizer
     require(re.fullmatch('[0-9a-f]{64}', seed), 'invalid public seed')
     out.mkdir(parents=True, exist_ok=False)
     tokenizer = Tokenizer.from_file(str(probe.MODEL / 'tokenizer.json'))
-    require(probe.sha(probe.MODEL / 'tokenizer.json') == probe.read(probe.BINDING)['tokenizer']['sha256'], 'tokenizer binding')
+    require(probe.sha(probe.MODEL / 'tokenizer.json') == read(probe.BINDING)['tokenizer']['sha256'], 'tokenizer binding')
     template = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True,
         extensions=['jinja2.ext.loopcontrols']).from_string((probe.MODEL / 'chat_template.jinja').read_text())
     for worker in range(WORKERS):
@@ -82,7 +94,7 @@ def prepare(out, seed):
     verify(out)
 
 def verify(out):
-    manifest = probe.read(out / 'manifest.json')
+    manifest = read(out / 'manifest.json')
     require(manifest['configuration'] == CONFIG, 'configuration changed')
     require(set(manifest['files']) == FILES, 'fixture file coverage')
     require(set(manifest['sources']) == {str(p) for p in SOURCES}, 'source coverage')
@@ -92,7 +104,7 @@ def verify(out):
     for name, digest in manifest['sources'].items():
         require(probe.sha(name) == digest, 'source digest: ' + name)
     for worker in range(WORKERS):
-        ids = probe.read(out / f'{worker}-input-token-ids.json')
+        ids = read(out / f'{worker}-input-token-ids.json')
         require(len(ids) == INPUT_TOKENS and all(type(t) is int and t >= 0 for t in ids), 'input geometry')
     return probe.sha(out / 'manifest.json')
 
@@ -117,14 +129,14 @@ def stream(path, body, key, deadline_ns=None):
                     if data == b'[DONE]':
                         event(kind='done')
                         break
-                    event(kind='chunk', chunk=probe.decode(data))
+                    event(kind='chunk', chunk=decode(data))
         except Exception as error:
             event(kind='error', error=repr(error), body=error.read().decode(errors='replace') if hasattr(error, 'read') else None)
         event(kind='end')
     return True
 
 def score_request(path, ids, fixture):
-    rows = [probe.decode(line) for line in path.read_text().splitlines()]
+    rows = [decode(line) for line in path.read_text().splitlines()]
     content, reasoning, usage, finish, first, terminal, response_id, outputs = probe.parse_stream(rows, ids)
     require(all(row['chunk'].get('model') == 'glm-5.3-flash' for row in rows if row['kind'] == 'chunk'), 'wrong response model')
     result = probe.retrieval.validate_completion(content=content, reasoning_content=reasoning,
@@ -135,10 +147,25 @@ def score_request(path, ids, fixture):
             'start_ns': rows[0]['monotonic_ns'], 'end_ns': rows[-1]['monotonic_ns'],
             'input_tokens': len(ids), 'output_tokens': len(outputs), 'final_answer': content}
 
+class JournalSamples(list):
+    """Retain each observation before exposing it to the terminal aggregate."""
+    def __init__(self, path):
+        super().__init__()
+        self.path = path
+        self.path.touch(exist_ok=False)
+        self.lock = threading.Lock()
+    def append(self, sample):
+        with self.lock:
+            row = {'observed_ns': time.monotonic_ns(), 'sample': sample}
+            with self.path.open('a') as output:
+                output.write(json.dumps(row, allow_nan=False) + '\n')
+                output.flush()
+            super().append(sample)
+
 class HealthClient(soak.Client):
-    def __init__(self, key):
+    def __init__(self, key, path):
         super().__init__('http://127.0.0.1:8015', key, 30)
-        self.records = []
+        self.records = JournalSamples(path)
     def health(self):
         row = {'start_ns': time.monotonic_ns(), 'time_unix': time.time()}
         request = urllib.request.Request(self.base_url + '/v1/models', headers=self._headers())
@@ -156,9 +183,9 @@ def smoke(out, server):
     probe.launch_check(server)
     path = out / 'smoke'
     path.mkdir(exist_ok=False)
-    stream(path / 'raw.jsonl', probe.read(out / '0-request.json'), (server / 'api-key').read_text().strip())
+    stream(path / 'raw.jsonl', read(out / '0-request.json'), (server / 'api-key').read_text().strip())
     try:
-        result = score_request(path / 'raw.jsonl', probe.read(out / '0-input-token-ids.json'), probe.read(out / '0-fixture.json'))
+        result = score_request(path / 'raw.jsonl', read(out / '0-input-token-ids.json'), read(out / '0-fixture.json'))
         require(verify(out) == binding, 'smoke binding changed')
         result.update(verdict='PASS', scope='startup correctness only', manifest_sha256=binding)
     except Exception as error:
@@ -167,15 +194,23 @@ def smoke(out, server):
     print(json.dumps({'smoke_verdict': result['verdict']}), flush=True)
     return result['verdict'] == 'PASS'
 
+def validate_smoke(out, binding, before_ns):
+    path = out / 'smoke'
+    result = score_request(path / 'raw.jsonl', read(out / '0-input-token-ids.json'), read(out / '0-fixture.json'))
+    require(result['end_ns'] < before_ns, 'startup smoke did not complete before admission')
+    result.update(verdict='PASS', scope='startup correctness only', manifest_sha256=binding)
+    require(read(path / 'summary.json') == result, 'startup smoke summary differs from raw result')
+    return {name: probe.sha(path / name) for name in ['raw.jsonl', 'summary.json']}
+
 def run(out, server):
     binding = verify(out)
     launch = probe.launch_check(server)
-    require(probe.read(out / 'smoke/summary.json')['verdict'] == 'PASS', 'startup correctness failed')
-    require(probe.read(out / 'smoke/summary.json')['manifest_sha256'] == binding, 'smoke input binding')
+    startup = validate_smoke(out, binding, time.monotonic_ns())
     probe.write(out / 'server-launch.json', launch)
     key = (server / 'api-key').read_text().strip()
     monitor = soak.MemorySampler(interval=1.0)
-    health = HealthClient(key)
+    monitor.samples = JournalSamples(out / 'memory.jsonl')
+    health = HealthClient(key, out / 'health.jsonl')
     start = time.monotonic_ns()
     deadline = start + DURATION * 10**9
     health_thread = soak.HealthProber(health, start / 1e9)
@@ -187,13 +222,13 @@ def run(out, server):
             with journal_lock:
                 journal.write(json.dumps({'observed_ns': time.monotonic_ns(), **data}, allow_nan=False) + '\n')
                 journal.flush()
-        event(kind='start', start_ns=start, deadline_ns=deadline, manifest_sha256=binding, launch_sha256=probe.sha(out / 'server-launch.json'))
+        event(kind='start', start_ns=start, deadline_ns=deadline, manifest_sha256=binding, smoke=startup, launch_sha256=probe.sha(out / 'server-launch.json'))
         monitor.start()
         health_thread.start()
         def worker(worker_id):
-            body = probe.read(out / f'{worker_id}-request.json')
-            ids = probe.read(out / f'{worker_id}-input-token-ids.json')
-            fixture = probe.read(out / f'{worker_id}-fixture.json')
+            body = read(out / f'{worker_id}-request.json')
+            ids = read(out / f'{worker_id}-input-token-ids.json')
+            fixture = read(out / f'{worker_id}-fixture.json')
             barrier.wait(timeout=60)
             count = 0
             while not stop.is_set() and time.monotonic_ns() < deadline:
@@ -235,14 +270,15 @@ def run(out, server):
 def score(out):
     try:
         binding = verify(out)
-        journal = [probe.decode(line) for line in (out / 'raw.jsonl').read_text().splitlines()]
+        journal = [decode(line) for line in (out / 'raw.jsonl').read_text().splitlines()]
         require(journal[0]['kind'] == 'start' and journal[-1]['kind'] == 'end', 'journal endpoints')
         initial, final = journal[0], journal[-1]
         require(initial['manifest_sha256'] == binding, 'run input binding')
         require(initial['launch_sha256'] == probe.sha(out / 'server-launch.json'), 'launch binding')
-        probe.check_launch(probe.read(out / 'server-launch.json'))
+        probe.check_launch(read(out / 'server-launch.json'))
         start, deadline = initial['start_ns'], initial['deadline_ns']
         require(type(start) is int and type(deadline) is int and deadline == start + DURATION * 10**9, 'admission interval')
+        require(initial['smoke'] == validate_smoke(out, binding, start), 'startup bytes changed after admission')
         require(type(final['drained_ns']) is int and type(final['ended_ns']) is int and deadline <= final['drained_ns'] <= start + DRAIN_LIMIT * 10**9, 'duration or drain bound')
         require(final['ended_ns'] >= final['drained_ns'] and not final['stopped_on_failure'], 'failed or invalid stop')
         observed = [row['observed_ns'] for row in journal]
@@ -256,7 +292,7 @@ def score(out):
             worker, index = row['worker'], row['index']
             require(type(worker) is int and worker in range(WORKERS) and type(index) is int and index >= 0, 'worker identity')
             require(row['raw_path'] == f'w{worker}-{index:05d}-raw.jsonl', 'request path identity')
-            result = score_request(out / row['raw_path'], probe.read(out / f'{worker}-input-token-ids.json'), probe.read(out / f'{worker}-fixture.json'))
+            result = score_request(out / row['raw_path'], read(out / f'{worker}-input-token-ids.json'), read(out / f'{worker}-fixture.json'))
             require(all(row[k] == v for k, v in result.items()), 'stored request reduction differs')
             require(start <= result['start_ns'] < deadline and result['end_ns'] <= final['drained_ns'], 'request outside interval')
             require(result['end_ns'] - result['start_ns'] <= 600 * 10**9, 'request timeout')
@@ -285,9 +321,19 @@ def score(out):
                 active.discard(worker)
             overlap |= len(active) == WORKERS
         require(overlap, 'four generated streams never overlap')
-        monitor = probe.read(out / 'monitor.json')
+        monitor = read(out / 'monitor.json')
         elapsed = (final['ended_ns'] - start) / 1e9
         memory = monitor['memory']
+        memory_raw = [decode(line) for line in (out / 'memory.jsonl').read_text().splitlines()]
+        health_raw = [decode(line) for line in (out / 'health.jsonl').read_text().splitlines()]
+        require([r['sample'] for r in memory_raw] == memory, 'memory aggregate differs from incremental observations')
+        require(sorted((r['sample'] for r in health_raw), key=lambda r: r['start_ns']) == monitor['health'], 'health aggregate differs from incremental observations')
+        for raw in [memory_raw, health_raw]:
+            times = [r['observed_ns'] for r in raw]
+            require(times and all(type(t) is int and start <= t <= final['ended_ns'] for t in times)
+                and all(a < b for a, b in zip(times, times[1:])), 'incremental observation time coverage')
+        require(memory_raw[0]['observed_ns'] <= start + 2 * 10**9
+            and memory_raw[-1]['observed_ns'] >= final['ended_ns'] - 2 * 10**9, 'absolute memory endpoint coverage')
         require(monitor['memory_error'] is None and monitor['sampler_alive_at_stop'] is True and monitor['sampler_stopped'] is True and monitor['health_thread_stopped'] is True, 'monitor failure')
         require(len(memory) >= 0.8 * elapsed and all(finite(r['t']) and finite(r['gib']) and r['gib'] >= 18 for r in memory), 'memory floor or density')
         require(0 <= memory[0]['t'] <= 2 and abs(memory[-1]['t'] - elapsed) <= 2, 'memory endpoint coverage')
@@ -297,7 +343,7 @@ def score(out):
         require(health[0]['start_ns'] <= start + 5 * 10**9 and final['drained_ns'] - health[-1]['start_ns'] <= 60 * 10**9, 'health endpoint coverage')
         require(all(0 < b['start_ns'] - a['start_ns'] <= 60 * 10**9 for a, b in zip(health, health[1:])), 'health gap')
         for row in health:
-            require(any(m['id'] == 'glm-5.3-flash' and m['max_model_len'] == 262144 for m in probe.decode(row['body'])['data']), 'wrong health model')
+            require(any(m['id'] == 'glm-5.3-flash' and m['max_model_len'] == 262144 for m in decode(row['body'])['data']), 'wrong health model')
         result = {'scope': 'short-prompt sustained operation client checks; separate host/freeze/lifecycle checks required', 'verdict': 'PASS',
             'admission_seconds': DURATION, 'elapsed_seconds': elapsed, 'requests': len(requests),
             'requests_per_worker': [sum(r['worker'] == w for r in requests) for w in range(WORKERS)],

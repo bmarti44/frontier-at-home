@@ -115,6 +115,21 @@ class DurabilityEvidenceTests(unittest.TestCase):
         (self.out / 'smoke/raw.jsonl').write_text('{}\n')
         self.assertFalse(self.verdict())
 
+    def test_bad_startup_stops_before_model_requests(self):
+        (self.out / 'smoke/raw.jsonl').write_text('{}\n')
+        with mock.patch.object(api.probe, 'launch_check', return_value={}), mock.patch.object(api, 'stream') as transport:
+            with self.assertRaises((ValueError, AssertionError, KeyError)):
+                api.run(self.out, self.out)
+        transport.assert_not_called()
+
+    def test_changed_valid_startup_after_admission_is_rejected(self):
+        path = self.out / 'smoke'
+        self.write_rows(path / 'raw.jsonl', self.native_rows(START - 100 * NANO, 'different-startup'))
+        summary = api.score_request(path / 'raw.jsonl', self.ids, self.fixture)
+        summary.update(verdict='PASS', scope='startup correctness only', manifest_sha256=api.verify(self.out))
+        api.probe.write(path / 'summary.json', summary)
+        self.assertFalse(self.verdict())
+
     def test_unused_overflow_number_is_rejected(self):
         path = self.out / 'raw.jsonl'
         path.write_text(path.read_text().replace('"kind": "start"', '"unused_nonfinite": 1e999, "kind": "start"', 1))
@@ -127,6 +142,15 @@ class DurabilityEvidenceTests(unittest.TestCase):
     def test_incremental_health_observations_are_required(self):
         (self.out / 'health.jsonl').unlink()
         self.assertFalse(self.verdict())
+
+    def test_sample_is_on_disk_before_terminal_aggregation(self):
+        path = self.out / 'partial-samples.jsonl'
+        samples = api.JournalSamples(path)
+        samples.append({'t': 0, 'gib': 20})
+        row = json.loads(path.read_text())
+        self.assertEqual(row['sample'], {'t': 0, 'gib': 20})
+        self.assertGreater(row['observed_ns'], 0)
+        self.assertEqual(samples, [row['sample']])
 
     def test_truncation_is_rejected(self):
         self.mutate_stream(lambda rows: rows[5]['chunk']['choices'][0].update(finish_reason='length'))
@@ -175,16 +199,19 @@ class DurabilityEvidenceTests(unittest.TestCase):
         for value in [17.99, float('nan'), float('inf')]:
             self.monitor['memory'][50]['gib'] = value
             (self.out / 'monitor.json').write_text(json.dumps(self.monitor))
+            self.write_rows(self.out / 'memory.jsonl', [{'observed_ns': START + row['t'] * NANO + 100, 'sample': row} for row in self.monitor['memory']])
             self.assertFalse(self.verdict())
 
     def test_health_gap_or_wrong_model_rejected(self):
         baseline = list(self.monitor['health'])
         self.monitor['health'] = baseline[:10] + baseline[15:]
         api.probe.write(self.out / 'monitor.json', self.monitor)
+        self.write_rows(self.out / 'health.jsonl', [{'observed_ns': row['end_ns'] + 100, 'sample': row} for row in self.monitor['health']])
         self.assertFalse(self.verdict())
         self.monitor['health'] = baseline
         self.monitor['health'][0]['body'] = '{"data":[{"id":"wrong","max_model_len":262144}]}'
         api.probe.write(self.out / 'monitor.json', self.monitor)
+        self.write_rows(self.out / 'health.jsonl', [{'observed_ns': row['end_ns'] + 100, 'sample': row} for row in self.monitor['health']])
         self.assertFalse(self.verdict())
 
     def test_missing_fixture_binding_rejected(self):
