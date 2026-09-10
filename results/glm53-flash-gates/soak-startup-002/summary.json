@@ -1,0 +1,52 @@
+{
+  "scope": "Native named-profile startup admission for30-minute durability; no timed soak or startup fixture admitted",
+  "verdict": "FAIL",
+  "formula": "Required conjunction of existing native lifecycle/host checks and soak-native-001/PROTOCOL.md startup admission; any kernel OOM rejects admission",
+  "failure": "CUDA graphics-context allocation failed in init_device/get_memory_info before model loading and before the proposed pre-profile cleanup. Host wrapper returned16; pre-profile cleanup efficacy NO_RESULT.",
+  "checks": {
+    "named_profile_ready": false,
+    "authentication_health_and_completed_ready": false,
+    "native_argv_environment_and_containment": "not independently collected before early startup death",
+    "kernel_clear": false,
+    "wrapper_exit_zero": false,
+    "timed_soak_admitted": false,
+    "guard_completion": false,
+    "observed_descendants_gone": true,
+    "default_proxy_guards_unchanged": true,
+    "post_artifact_verification": true,
+    "compiled_inputs_unchanged": true
+  },
+  "qualification_input_tokens": 0,
+  "timed_requests": 0,
+  "durability_verdict": "NO_RESULT",
+  "memory": {
+    "samples": 91,
+    "minimum_available_gib": 112.29317855834961,
+    "maximum_cgroup_swap_bytes": 0
+  },
+  "guard": {
+    "verdict": "FAIL",
+    "qualification": "Python_probe_identity_only",
+    "identity_samples": 101,
+    "probe_exit_code": 1,
+    "live_process_group_after": [],
+    "raw_sha256": "2703c52d3a0e3ac3c447537fd2572e6a9ec6023d2ac9b456361ee5a055a82410",
+    "failure": "ValueError('missing verified completion handshake')"
+  },
+  "kernel": {
+    "command": [
+      "journalctl",
+      "-k",
+      "--since",
+      "@1789025848",
+      "--no-pager",
+      "-o",
+      "short-iso-precise"
+    ],
+    "exit_code": 0,
+    "stdout": "2026-09-10T03:41:00.302487-04:00 spark-aba1 kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from _memdescAllocInternal(pMemDesc) @ mem_desc.c:1359\n2026-09-10T03:41:00.302649-04:00 spark-aba1 kernel: NVRM: nvAssertOkFailedNoLog: Assertion failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from status @ kernel_graphics_context.c:1178\n2026-09-10T03:41:00.302678-04:00 spark-aba1 kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from kgrctxAllocMainCtxBuffer(pGpu, pKernelGraphicsContext, pKernelGraphics, pKernelChannel) @ kernel_graphics_context.c:1387\n2026-09-10T03:41:00.302700-04:00 spark-aba1 kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from kgrctxAllocCtxBuffers(pGpu, pKernelGraphicsObject->pKernelGraphicsContext, pKernelGraphics, pKernelGraphicsObject) @ kernel_graphics_object.c:215\n",
+    "stderr": ""
+  },
+  "source_revision": "6a46330286446789622456c03242ebe123a869c9",
+  "qualified_production_performance": null
+}
