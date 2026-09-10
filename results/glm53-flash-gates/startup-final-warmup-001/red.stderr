@@ -1,0 +1,21 @@
+.FF.
+======================================================================
+FAIL: test_enabled_releases_unused_warmup_allocation_before_return (__main__.FinalWarmupTests.test_enabled_releases_unused_warmup_allocation_before_return)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-final-warmup-001/test_worker.py", line 29, in test_enabled_releases_unused_warmup_allocation_before_return
+    self.assertEqual(state['reserved'],0,'unused warmup allocation still retained after warmup')
+AssertionError: 1342177280 != 0 : unused warmup allocation still retained after warmup
+
+======================================================================
+FAIL: test_initialization_choice_does_not_reread_environment (__main__.FinalWarmupTests.test_initialization_choice_does_not_reread_environment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-final-warmup-001/test_worker.py", line 44, in test_initialization_choice_does_not_reread_environment
+    self.assertEqual(state['reserved'],want)
+AssertionError: 1342177280 != 0
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+
+FAILED (failures=2)
