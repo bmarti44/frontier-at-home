@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/tmp/glm53-soak-preparation-trace.py", line 10, in <module>
+    with tempfile.TemporaryDirectory(prefix='glm53-soak-trace-') as root:api.prepare(Path(root)/'inputs','0'*64)
+                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-native-001/run.py", line 85, in prepare
+    require(len(ids) == INPUT_TOKENS, 'exact prompt length did not converge')
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-native-001/run.py", line 44, in require
+    raise ValueError(message)
+ValueError: exact prompt length did not converge
