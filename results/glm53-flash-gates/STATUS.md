@@ -96,6 +96,16 @@ existing durability padding only for that short check; exact tokens, fixture has
 instruction, markers and negative control passed independent verification. The
 long-context branch and scorer are unchanged. Fresh freeze and confirmation follow.
 
+The subsequent [direct009 startup](context-direct-009/startup-summary.json) hit
+the unchanged 18 GiB host reserve before READY or any request. The watchdog killed
+the model, verified descendant cleanup, and memory recovered above 110 GiB. All
+2,486 prepared files and post-run model/runtime/source bindings stayed unchanged;
+no swap or kernel fault was recorded. Its identity terminal summary is missing,
+and the overall result remains FAIL. A small evidence publisher overlapped final
+startup, but its recorded memory peak does not establish causation. The
+[unchanged serialized replay](startup-serialized-replay-001/PROTOCOL.md) completes
+auxiliary work before model launch and retains all existing limits and settings.
+
 The [current-scheduler context adapter](context-scheduler-003/PROTOCOL.md) is also
 ready: it reuses the existing512/128 launch validator and unchanged direct-input,
 retrieval, stream and score code. A reviewed short-launch validation correction
