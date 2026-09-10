@@ -76,9 +76,15 @@ was admitted. GLM stopped cleanly and memory recovered. Both startup reclamation
 alternatives are now recorded as an unsuccessful branch; full qualification
 remains pending, including investigation of host activity during measurement.
 
-Two later qualification preflights failed before GLM was loaded. The latest
-one-page swap-in event was accounted to Docker's cgroup while the model was off.
-Both environmental warmup alternatives are closed as unsuccessful. The next
-targeted step is the reviewed [temporary Docker isolation procedure](GLM53-DOCKER-ISOLATION.md);
-it requires the owner's existing administrator access. No service or swap-policy
-change has been made, and the named-profile settings remain unchanged.
+Two later qualification preflights failed before GLM was loaded; the second
+accounted one swap-in page to Docker's cgroup. Both environmental warmup
+alternatives are closed as unsuccessful. The owner then stopped Docker and its
+socket. A fresh replay still recorded one swap-in page before model loading,
+with a matching process-swap decrease and major fault in the separate containerd
+service. This correlation does not prove the cause or waive the failed gate.
+
+GLM and Docker remain stopped; containerd remains active. The next proposed step
+is the reviewed [guarded containerd isolation procedure](GLM53-CONTAINERD-ISOLATION.md),
+which checks every namespace for running tasks before stopping the service. It
+requires the owner's administrator access. The named-profile settings and the
+current default remain unchanged; full qualification is still pending.

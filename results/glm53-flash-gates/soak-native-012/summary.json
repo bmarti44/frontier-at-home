@@ -1,0 +1,118 @@
+{
+  "scope": "Owner-stopped Docker/socket; unchanged profile frozen and inputs prepared; model never loaded",
+  "verdict": "FAIL",
+  "model_qualification": "NO_RESULT",
+  "source_revision": "b8f44e695c1196036b85dae432d8de8e93582b39",
+  "formula": "The unchanged broad pre-freeze baseline requires unchanged observed global swap-in/out and used-swap counters. Any observed change fails admission; process correlation does not waive it.",
+  "preflight": {
+    "swap_delta": {
+      "pswpin": 1,
+      "pswpout": 0
+    },
+    "used_swap_kib": [
+      152400,
+      152400
+    ],
+    "first_event": {
+      "left_index": 134,
+      "right_index": 135,
+      "start_unix": 1789060384.6638474,
+      "end_unix": 1789060385.6860619,
+      "global_delta": {
+        "pswpin": 1,
+        "pswpout": 0
+      },
+      "process_changes_not_causal": [
+        {
+          "pid": 2120,
+          "name": "containerd",
+          "start_ticks": 1002,
+          "cgroup": [
+            "0::/system.slice/containerd.service"
+          ],
+          "vm_swap_kib": [
+            3564,
+            3560
+          ],
+          "major_faults": [
+            75350,
+            75351
+          ]
+        }
+      ]
+    }
+  },
+  "runtime_model_inventory_verification": "PASS",
+  "frozen_file_bindings_verified": true,
+  "prepared_cache_files": 2486,
+  "public_randomness": {
+    "round": 6454310,
+    "verification": "DRAND_BLS_RECEIPT_OK",
+    "publication_unix": 1789060320,
+    "frozen_at_unix": 1789060306.9045327
+  },
+  "fixtures_prepared_and_verified": true,
+  "model_started": false,
+  "smoke": "NOT_RUN",
+  "necessary_window": "NOT_RUN",
+  "full_durability": "NOT_RUN",
+  "qualified_production_performance": null,
+  "default_proxy_guard_state_unchanged": true,
+  "observer": {
+    "observation_integrity": "PASS",
+    "censuses": 900,
+    "raw_rows": 902,
+    "duration_seconds": 900.0008506774902,
+    "global_delta": {
+      "pswpin": 2,
+      "pswpout": 0
+    },
+    "used_swap_kib": [
+      152400,
+      152396
+    ],
+    "minimum_available_gib": 115.41990661621094,
+    "process_read_errors": 0,
+    "exit_code": 0,
+    "identity_no_longer_live": true,
+    "subsequent_events": [
+      {
+        "left_index": 545,
+        "right_index": 546,
+        "start_unix": 1789060795.6636755,
+        "end_unix": 1789060796.6870089,
+        "global_delta": {
+          "pswpin": 1,
+          "pswpout": 0
+        },
+        "process_changes_not_causal": [
+          {
+            "pid": 2115,
+            "name": "tailscaled",
+            "start_ticks": 1002,
+            "cgroup": [
+              "0::/system.slice/tailscaled.service"
+            ],
+            "vm_swap_kib": [
+              2728,
+              2724
+            ],
+            "major_faults": [
+              8701,
+              8702
+            ]
+          }
+        ]
+      }
+    ],
+    "coverage_limit": "Process/global census starts after the broad baseline, before freeze completion. Phase markers retain earlier counters. Later events are after the failed preflight, during an interval also containing read-only diagnostics; no causal attribution or continuous per-cgroup accounting is claimed."
+  },
+  "malformed_controls_rejected": 6,
+  "service_isolation": {
+    "docker_service": "inactive",
+    "docker_socket": "inactive",
+    "containerd_service": "active",
+    "next_action": "Containerd isolation is proposed separately and has not occurred"
+  },
+  "prior_attempts": "All previous FAIL and NO_RESULT evidence remains unchanged"
+}

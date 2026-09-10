@@ -1,6 +1,11 @@
 # Proposed Docker isolation for GLM qualification
 
-Status: prepared for owner action; no Docker service change has been made.
+Status: the owner stopped Docker and its socket. The subsequent
+[unloaded replay 012](../results/glm53-flash-gates/soak-native-012/README.md) still
+failed its host swap gate. Containerd remains active; see the separate
+[guarded containerd proposal](GLM53-CONTAINERD-ISOLATION.md) for the next step.
+The procedure below records the earlier Docker-only intervention. Its original
+pre-action bytes are retained in the attempt-012 freeze.
 
 The second unloaded preflight recorded one global swap-in page between
 1789044832.2367342 and 1789044833.2368898. The same sample interval recorded one

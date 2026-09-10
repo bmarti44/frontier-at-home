@@ -16,11 +16,20 @@ ownership, not the trigger for the read. Neither replay admitted a model workloa
 The two environmental alternatives are **NO_RESULT**; no further automatic warmup
 variant is planned.
 
-Docker had no running containers when inspected. A reviewed
-[temporary Docker isolation procedure](../../docs/GLM53-DOCKER-ISOLATION.md) is
-prepared, but no service setting has been changed. The existing passwordless
-controls do not cover Docker service control, and a noninteractive privilege probe
-requires an administrator password. The broad host gate remains unchanged.
+The owner stopped Docker and its socket. The subsequent
+[Docker-isolated replay](soak-native-012/README.md) verified artifacts and prepared
+fresh inputs, then failed on one host swap-in page before GLM loaded. Containerd,
+a separate service left running after Docker stopped, lost 4 KiB of process swap
+and gained one major fault in the same interval. This is a correlation, not proof
+of the cause. The complete 900-census observation also retains one later swap-in
+page after the failed preflight. No model workload was admitted.
+
+Docker and its socket remain inactive; containerd remains active. The reviewed
+[guarded containerd isolation procedure](../../docs/GLM53-CONTAINERD-ISOLATION.md)
+checks all namespaces for running tasks before stopping the exact observed
+service. That task query and service operation require the owner's administrator
+access; the installed delegated controls cannot perform them. This is a proposed
+next step, not an executed fix. The broad host gate and model settings are unchanged.
 
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
 512-token batches with a 128-token prompt-chunk cap per conversation, retaining
@@ -73,7 +82,8 @@ queries; this diagnostic interval is separate from the loaded failure. The next
 independent investigation concerns host activity and a quiet qualification window.
 Default/proxy/guard state remained unchanged. The legacy engine guard's existing
 open circuit breaker prevented restarts; these checks do not claim a running
-production model. No service or swap-policy settings were changed.
+production model. That attempt changed no service or swap-policy settings; the
+later owner-requested Docker stop is recorded above.
 
 Current-configuration direct context, sustained-load confirmation, the fixed
 100-case native BF16 fidelity reference, maximum media and production switching
