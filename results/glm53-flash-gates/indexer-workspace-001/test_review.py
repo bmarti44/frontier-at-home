@@ -30,17 +30,20 @@ def frozen_fixture(root):
     (root/'metadata/config.json').write_text('{}');(root/'cache-template-inventory.json').write_text('{}')
     runtime=root/'external/runtime';(runtime/'bin').mkdir(parents=True)
     python=runtime/'bin/python3';python.write_text('synthetic interpreter bytes; never executed')
-    paths={}
-    for role in ('node','wrapper','safe_wrapper','memory_guard','libc','nvcc','cxx'):
-        p=root/'external'/role;p.write_text(role);paths[role]=str(p)
+    # Read actual small execution dependencies only; these are never executed.
+    node=Path('/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node')
+    paths={'node':str(node),'wrapper':str(probe.REPO/'results/glm52-gates/harness/glm_cgroup_run.sh'),
+        'safe_wrapper':str(probe.REPO/'results/glm52-gates/harness/glm_safe_run.sh'),
+        'memory_guard':str(probe.REPO/'scripts/03_memory_guard.py'),
+        'libc':'/usr/lib/aarch64-linux-gnu/libc.so.6','nvcc':'/usr/local/cuda-13.0/bin/nvcc','cxx':'/usr/bin/c++'}
     inventory=root/'metadata/runtime-inventory.json'
     probe.write(inventory,{'schema_version':1,'files':[{**binding(python),'path':'bin/python3'}]})
-    return {'files':[binding(p) for p in root.rglob('*') if p.is_file()],
+    return {'files':[binding(p) for p in root.rglob('*') if p.is_file()]+[binding(Path(v)) for k,v in paths.items()],
         'safety':copy.deepcopy(probe.SAFETY),'cases':copy.deepcopy(probe.CASES),'budgets_mib':[512,64],
         'python':str(python),'node':paths['node'],'wrapper':paths['wrapper'],
         'runtime':{'root':str(runtime),'inventory':str(inventory),'verified_files':1},
         'external_dependencies':{k:paths[k] for k in ('safe_wrapper','memory_guard','libc','nvcc','cxx')},
-        'environment':{'DG_JIT_NVCC_COMPILER':paths['nvcc'],'CUDA_HOME':str(root/'external')}}
+        'environment':{'DG_JIT_NVCC_COMPILER':paths['nvcc'],'CUDA_HOME':'/usr/local/cuda-13.0','PATH':f'{runtime}/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin'}}
 
 
 class ExternalBindings(unittest.TestCase):

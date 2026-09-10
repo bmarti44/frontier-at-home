@@ -40,7 +40,7 @@ def read_json(path):
 
 def write(path,data):Path(path).write_text(json.dumps(data,indent=2,allow_nan=False)+'\n')
 
-REQUIRED_CODE={'probe.py','native.py','run.py','freeze.py','test_probe.py','PROTOCOL.md','prior_fixture.py','prior_probe45.py',
+REQUIRED_CODE={'probe.py','native.py','run.py','freeze.py','test_probe.py','test_review.py','test_roles.py','CORRECTION.md','PROTOCOL.md','prior_fixture.py','prior_probe45.py',
     'scripts/38_guard_glm53_probe.py','scripts/103_verify_drand_receipt_bundle.mjs',
     'scripts/lib/glm53_contract.py','scripts/lib/glm53_probe_capture.py','scripts/lib/glm53_host_evidence.py'}
 
@@ -48,6 +48,24 @@ def verify_frozen(root,manifest):
     require(manifest['safety']==SAFETY and manifest['cases']==CASES and manifest['budgets_mib']==[512,64],'frozen scope')
     rows=manifest['files'];require(isinstance(rows,list),'frozen file list')
     paths=[x['path'] for x in rows];require(len(set(paths))==len(paths),'duplicate frozen binding')
+    dependencies=manifest.get('external_dependencies')
+    expected_dependencies={'safe_wrapper':str(REPO/'results/glm52-gates/harness/glm_safe_run.sh'),
+        'memory_guard':str(REPO/'scripts/03_memory_guard.py'),'libc':'/usr/lib/aarch64-linux-gnu/libc.so.6',
+        'nvcc':'/usr/local/cuda-13.0/bin/nvcc','cxx':'/usr/bin/c++'}
+    require(dependencies==expected_dependencies,'external roles differ from actual execution paths')
+    require(manifest.get('wrapper')==str(REPO/'results/glm52-gates/harness/glm_cgroup_run.sh'),'wrapper differs from fixed current-user containment path')
+    require(manifest.get('node')=='/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node','Node differs from fixed beacon fetcher executable')
+    runtime=manifest.get('runtime');require(isinstance(runtime,dict),'runtime selection missing')
+    selected=[manifest.get(k) for k in ('python','node','wrapper')]+[runtime.get('inventory'),runtime.get('root')]+list(dependencies.values())
+    require(all(isinstance(x,str) and Path(x).is_absolute() and str(Path(x))==x for x in selected),'noncanonical external selection')
+    required_external=set(selected)-{runtime['root']}
+    require(required_external<=set(paths),'selected external dependency omitted')
+    runtime_root=Path(runtime['root']);python=Path(manifest['python']);inventory=Path(runtime['inventory'])
+    require(python==runtime_root/'bin/python3' and inventory==root/'metadata/runtime-inventory.json','interpreter/runtime inventory selection mismatch')
+    environment=manifest.get('environment')
+    require(isinstance(environment,dict) and environment.get('DG_JIT_NVCC_COMPILER')==dependencies['nvcc'],'compiler selection differs from frozen dependency')
+    require(environment.get('PATH')==f'{runtime_root}/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin' and environment.get('CUDA_HOME')=='/usr/local/cuda-13.0','compiler search path changed')
+    require(not any(k.startswith('LD_') or k in {'CC','CXX','NVCC_CCBIN','FLASHINFER_CXX_LAUNCHER'} for k in environment),'external compiler or loader override')
     require({str(root/'code'/name) for name in REQUIRED_CODE}|{str(root/'metadata/config.json'),str(root/'metadata/runtime-inventory.json'),str(root/'cache-template-inventory.json')}<=set(paths),'required frozen source omitted')
     for folder in ('code','metadata','cache-template'):
         directory=root/folder;require(directory.is_dir() and not directory.is_symlink(),'frozen directory missing')
@@ -59,6 +77,44 @@ def verify_frozen(root,manifest):
     for row in rows:
         require(set(row)=={'path','size_bytes','sha256'},'frozen binding schema')
         p=Path(row['path']);require(p.is_file() and p.stat().st_size==row['size_bytes'] and sha(p)==row['sha256'],'frozen file changed: '+str(p))
+    # The selected interpreter must be the same object bytes covered by the
+    # normalized inventory that the controller passes to the closed verifier.
+    normalized=read_json(inventory)
+    require(normalized.get('schema_version')==1 and isinstance(normalized.get('files'),list),'runtime inventory schema')
+    interpreter_rows=[x for x in normalized['files'] if x.get('path')=='bin/python3']
+    require(len(interpreter_rows)==1,'selected interpreter inventory coverage')
+    interpreter_binding=next(x for x in rows if x['path']==str(python))
+    require(all(interpreter_rows[0].get(k)==interpreter_binding[k] for k in ('sha256','size_bytes')),'interpreter differs from runtime inventory')
+
+def bind_host_identity(root,host_scorer,expected):
+    """Bind the exact identity files consumed by the unchanged host scorer."""
+    paths={'raw':root/'identity/raw.jsonl','summary':root/'identity/summary.json'}
+    before={key:{'sha256':sha(path)} for key,path in paths.items()}
+    result=host_scorer(root,expected)
+    require(before=={key:{'sha256':sha(path)} for key,path in paths.items()},'identity files changed during host scoring')
+    require(result.get('verdict')=='PASS','host identity not verified')
+    return {**result,'identity_binding':before}
+
+
+def join_identity(checks,armroot,host_result,inner):
+    """Join already validated inner rows to the exact verified guard interval."""
+    bindings=host_result['identity_binding'];raw_path=armroot/'identity/raw.jsonl';summary_path=armroot/'identity/summary.json'
+    raw=raw_path.read_bytes();summary=read_json(summary_path)
+    require(hashlib.sha256(raw).hexdigest()==bindings['raw']['sha256']==summary.get('raw_sha256') and sha(summary_path)==bindings['summary']['sha256'],'identity proof binding changed')
+    records=[read_json_line(line) for line in raw.splitlines()]
+    require(len(records)>=3 and records[-1].get('event')=='cleanup' and all(x.get('event')=='identity' for x in records[:-1]),'identity record coverage')
+    identities=records[:-1]
+    require(summary.get('verdict')=='PASS' and summary.get('identity_samples')==host_result['identity_samples']==len(identities),'verified identity count')
+    require(all(x.get('pid')==host_result['identity_pid'] and x.get('start_ticks')==host_result['identity_start_ticks'] for x in identities),'verified identity process mismatch')
+    terminal=identities[-1];first=identities[0]['time_unix'];last=terminal['time_unix']
+    require(terminal.get('completion_verified') is True and terminal.get('terminal_exec_filter_verified') is True,'verified completion identity missing')
+    require(all(type(t) in (int,float) and math.isfinite(t) for t in (first,last)) and first<last,'identity interval')
+    inner_raw=(checks/'raw.jsonl').read_bytes();require(inner.get('verdict')=='PASS' and hashlib.sha256(inner_raw).hexdigest()==inner['raw_sha256'],'inner rows changed after scoring')
+    times=[read_json_line(line).get('time_unix') for line in inner_raw.splitlines()]
+    require(len(times)==4 and all(type(t) in (int,float) and math.isfinite(t) and first<=t<=last for t in times),'inner evidence outside verified identity interval')
+    require(all(b>a for a,b in zip(times,times[1:])),'inner chronology changed')
+    return {'initial_identity_unix':first,'completion_identity_unix':last,'inner_first_unix':times[0],'inner_last_unix':times[-1]}
+
 
 def fixture_api():
     # A private module namespace, never the serving module or the closed source.

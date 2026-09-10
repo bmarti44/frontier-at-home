@@ -141,14 +141,8 @@ class BindingControls(unittest.TestCase):
     def test_frozen_binding_missing_duplicate_mutation(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
-            for name in probe.REQUIRED_CODE:
-                p=root/'code'/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(name)
-            (root/'metadata').mkdir();(root/'cache-template').mkdir()
-            for p in [root/'metadata/config.json',root/'metadata/runtime-inventory.json',root/'cache-template/kernel.bin',root/'cache-template-inventory.json']:
-                p.write_text('{}')
-            paths=[p for p in root.rglob('*') if p.is_file()]
-            rows=[{'path':str(p),'size_bytes':p.stat().st_size,'sha256':probe.sha(p)} for p in paths]
-            manifest={'files':rows,'safety':probe.SAFETY,'cases':probe.CASES,'budgets_mib':[512,64]}
+            helper=probe.load_module('workspace_review_fixture_for_original_test',HERE/'test_review.py')
+            manifest=helper.frozen_fixture(root)
             probe.verify_frozen(root,manifest)
             for change in [lambda m:m['files'].pop(0),lambda m:m['files'].append(m['files'][0]),
                            lambda m:m.update(budgets_mib=[512,128]),lambda m:m['safety'].update(kill_floor_gib=18)]:

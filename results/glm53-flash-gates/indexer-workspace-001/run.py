@@ -60,9 +60,11 @@ def main():
                 capture_wrapper(armroot,Path(m['wrapper']),tag,command,control,600)
                 after=host();write(armroot/'after-host.json',after);same_host(after);verify()
                 expected={'binary_sha256':sha256_file(python),'executable':str(python.resolve()),'guard':str(guard),'guard_sha256':sha256_file(guard),'probe':str(source),'probe_sha256':sha256_file(source),'probe_arguments':pargs,'environment_sha256':hashlib.sha256(b'\0'.join(sorted(os.fsencode(k+'='+v) for k,v in env.items()))).hexdigest(),'unit_prefix':'glm52-'+tag+'-','maximum_sample_gap_seconds':2.0,'minimum_start_gib':110,'kill_floor_gib':40,'timeout_seconds':600}
-                write(armroot/'host-score-arguments.json',expected);host_result=score_host_observations(armroot,expected)
+                write(armroot/'host-score-arguments.json',expected);host_result=probe.bind_host_identity(armroot,score_host_observations,expected)
                 checks=armroot/'checks';inner_manifest=strict_json(checks/'manifest.json');require(inner_manifest=={'seed':seed,**arm,'source_sha256':sha256_file(source),'frozen_manifest_sha256':bindings['manifest.json'],'randomness_sha256':bindings['randomness.json']},'inner manifest binding')
                 inner=probe.score_arm(checks,seed,arm['case'],arm['budget_mib']);require(strict_json(checks/'summary.json')==inner,'independent inner reduction mismatch')
+                interval=probe.join_identity(checks,armroot,host_result,inner)
+                write(armroot/'inner-identity-interval.json',interval)
                 cache=[]
                 for p in sorted(state.rglob('*')):
                     require(not p.is_symlink(),'new state symlink')
