@@ -67,7 +67,8 @@ scheduler configuration.
 The agent profile's earlier basic chat, tool, four-image and 16-frame video checks
 used 224x224 fixtures; they do not establish maximum media or context capability.
 
-The latest cache replay kept all prepared kernels unchanged, but startup wrote
-three host pages to swap, so no workload test was admitted. A bounded final-warmup
-cleanup candidate is now selected only in the experimental full-context profile;
-its host and model qualification are pending.
+The latest final-warmup cleanup attempt passed startup, correctness, the 20-request
+necessary window and host swap checks, then stopped cleanly. Two new DeepGEMM files
+require a separate cache replay before full-duration admission. The current launcher
+reuses those files; model settings and profile flags remain unchanged. Full
+qualification is still pending.

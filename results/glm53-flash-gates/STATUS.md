@@ -23,12 +23,18 @@ artifact verification after GLM stopped. The complete 900-second census preserve
 both events, partial snapd correlations and read errors; attribution remains
 unknown. Both reviewers verified the full archive and negative result.
 
-The next [bounded startup candidate](startup-final-warmup-001/PROTOCOL.md) releases
-unused CUDA allocations after final engine warmup, before API processor warmup.
-Its exact flag defaults off and is enabled only in the experimental full-context
-profile. Scheduler, context, weights, precision and all closed scorers stay fixed.
-CPU tests pass; measured savings and host/window/durability confirmation are pending.
-Fresh direct-context qualification on the current configuration also remains pending.
+The [final-warmup cleanup attempt](soak-native-007/README.md) passed startup,
+correctness, the 20-request necessary window and host checks through clean shutdown.
+It reported 40 MiB of unused CUDA allocator reservations released; this single
+attempt does not establish causal host or performance improvement. Two new
+DeepGEMM files keep the overall attempt **FAIL** and kernel confirmation **NO_RESULT**;
+no full-duration client was admitted. Both reviewers verified the complete archive.
+
+The next [two-file cache replay](soak-cache-replay-002/PROTOCOL.md) keeps all profiles,
+startup flags, model settings and scorers unchanged. Its real-launcher reuse test
+and all 2,486 copied cache-file checks pass. It still needs a fresh freeze, seed,
+necessary window and full-duration confirmation. Current-configuration direct
+context, native paired fidelity and production switching remain pending.
 
 The [preceding 256/64 test](soak-native-004/README.md) returned 17 correct replies,
 but admissions were `[5,4,4,4]` against the required five per worker. The bounded
