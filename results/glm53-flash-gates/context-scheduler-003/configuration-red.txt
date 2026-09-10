@@ -1,0 +1,17 @@
+F
+======================================================================
+FAIL: test_current_profile_and_rejections (test_adapter.Configuration.test_current_profile_and_rejections)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/context-scheduler-003/test_adapter.py", line 22, in test_current_profile_and_rejections
+    self.assertEqual(api.check_launch(launch), launch)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/48_probe_glm53_context.py", line 53, in check_launch
+    assert flag in argv and argv[argv.index(flag)+1]==value,(flag,value)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('--max-num-batched-tokens', '128')
+
+----------------------------------------------------------------------
+Ran 1 test in 0.024s
+
+FAILED (failures=1)
