@@ -54,5 +54,21 @@ class AccountingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'cgroup counter reset'):
             api.score(rows, 1)
 
+    def test_invalid_but_equal_observer_identities_rejected(self):
+        for field, bad in [('boot_id', ''), ('pid', False), ('start_ticks', None)]:
+            rows = self.rows()
+            for row in rows[:-1]:
+                if field == 'boot_id': row[field] = bad
+                else: row['observer'][field] = bad
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                api.score(rows, 1)
+
+    def test_noninteger_sample_indices_rejected(self):
+        for bad in [False, 0.0]:
+            rows = self.rows()
+            rows[0]['index'] = bad
+            with self.subTest(index=bad), self.assertRaises(ValueError):
+                api.score(rows, 1)
+
 
 if __name__ == '__main__': unittest.main()
