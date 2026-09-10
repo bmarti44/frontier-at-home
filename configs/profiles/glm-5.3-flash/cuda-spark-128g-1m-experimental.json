@@ -8,7 +8,7 @@
   "purpose": "Explicit experimental GLM serving; leaves production and reboot default unchanged",
   "status": {
     "state": "estimated",
-    "basis": "Unqualified second scheduler candidate: batch512/threshold128, four262144-token slots and unchanged safeguards. Prior256/64 window failed17/20 admissions; host swap-in+1page and generated cache inputs remain preserved. Fresh window/durability/direct-context qualification pending. Fidelity/switching pending; qualified performance not yet measured."
+    "basis": "Unqualified startup-reclamation candidate on unchanged 512/128 scheduling and four 262,144-token slots. Prior 20-request window passed, but frozen replay failed host swap at startup. A new default-off final-warmup cleanup flag is enabled only here for bounded measurement. Fresh host/window/durability/direct-context confirmation, fidelity and switching remain pending; qualified performance is not yet measured."
   },
   "engine": "vllm-exl3-glm53-local",
   "artifact_roles": {
@@ -53,7 +53,8 @@
       "INSTANTTENSOR_IO_DEPTH": "3",
       "INSTANTTENSOR_BACKEND": "AIO",
       "GLM53_RELEASE_LOAD_CACHE": "1",
-      "GLM53_RELEASE_MODEL_FILE_CACHE": "1"
+      "GLM53_RELEASE_MODEL_FILE_CACHE": "1",
+      "GLM53_RELEASE_WARMUP_CACHE": "1"
     },
     "diagnostics_unset": [
       "GLM_KPOOL_TAIL_BOUNDS",

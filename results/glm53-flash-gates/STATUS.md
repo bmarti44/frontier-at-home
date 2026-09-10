@@ -2,7 +2,7 @@
 
 **GLM is runnable through named experimental profiles, and the direct aggregate
 million-token context check passed.** Qwen remains the recorded/reboot default.
-GLM is currently stopped after the completed short scheduler test. Full model
+GLM is currently stopped after a failed startup host check. Full model
 qualification remains incomplete.
 
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
@@ -15,11 +15,20 @@ window and seven generated kernel files changed the frozen inputs. No full-durat
 run was admitted. Shutdown, recovery, identity, default/proxy/guard and post-run
 artifact checks passed; both persistent reviewers verified the complete archive.
 
-The next [prepared-kernel replay](soak-cache-replay-001/PROTOCOL.md) keeps the same
-scheduler and reuses those seven verified files. An external phase observer will
-narrow any swap activity without changing the acceptance rule. An unloaded
-120-second control observed no swap I/O; it does not establish attribution.
-Fresh durability and direct-context confirmation remain pending.
+The [prepared-kernel replay](soak-native-006/README.md) reached authenticated READY
+and kept all 2,484 prepared files unchanged. It failed the host startup gate:
+three pages were written to swap, so no test workload was admitted. GLM cgroup
+swap and limit events stayed zero. A separate six-page swap-out occurred during
+artifact verification after GLM stopped. The complete 900-second census preserves
+both events, partial snapd correlations and read errors; attribution remains
+unknown. Both reviewers verified the full archive and negative result.
+
+The next [bounded startup candidate](startup-final-warmup-001/PROTOCOL.md) releases
+unused CUDA allocations after final engine warmup, before API processor warmup.
+Its exact flag defaults off and is enabled only in the experimental full-context
+profile. Scheduler, context, weights, precision and all closed scorers stay fixed.
+CPU tests pass; measured savings and host/window/durability confirmation are pending.
+Fresh direct-context qualification on the current configuration also remains pending.
 
 The [preceding 256/64 test](soak-native-004/README.md) returned 17 correct replies,
 but admissions were `[5,4,4,4]` against the required five per worker. The bounded
