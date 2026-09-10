@@ -1,0 +1,32 @@
+E.E
+======================================================================
+ERROR: test_choice_is_fixed_at_initialization (__main__.StartupCleanupTests.test_choice_is_fixed_at_initialization)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-cache-release-001/test_worker.py", line 57, in test_choice_is_fixed_at_initialization
+    api.WarmupCleanupWorker().determine_available_memory()
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_worker.py", line 10, in determine_available_memory
+    budget = super().determine_available_memory()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-cache-release-001/test_worker.py", line 26, in determine_available_memory
+    raise MemoryError('unused load allocation still retained before profile')
+MemoryError: unused load allocation still retained before profile
+
+======================================================================
+ERROR: test_enabled_closes_retained_load_allocation_failure (__main__.StartupCleanupTests.test_enabled_closes_retained_load_allocation_failure)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-cache-release-001/test_worker.py", line 43, in test_enabled_closes_retained_load_allocation_failure
+    self.assertIs(api.WarmupCleanupWorker().determine_available_memory(), budget)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_worker.py", line 10, in determine_available_memory
+    budget = super().determine_available_memory()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-cache-release-001/test_worker.py", line 26, in determine_available_memory
+    raise MemoryError('unused load allocation still retained before profile')
+MemoryError: unused load allocation still retained before profile
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.002s
+
+FAILED (errors=2)
