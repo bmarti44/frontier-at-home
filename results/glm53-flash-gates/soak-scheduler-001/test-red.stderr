@@ -1,0 +1,17 @@
+F..
+======================================================================
+FAIL: test_declared_configuration_is_accepted_without_rewriting (__main__.Configuration.test_declared_configuration_is_accepted_without_rewriting)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/test_candidate.py", line 29, in test_declared_configuration_is_accepted_without_rewriting
+    self.assertEqual(self.module.check_launch(self.launch), self.launch)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/48_probe_glm53_context.py", line 53, in check_launch
+    assert flag in argv and argv[argv.index(flag)+1]==value,(flag,value)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('--max-num-batched-tokens', '128')
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.006s
+
+FAILED (failures=1)
