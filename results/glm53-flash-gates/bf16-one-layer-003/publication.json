@@ -1,0 +1,29 @@
+{
+  "scope": "One real native BF16 KDA layer with synthetic activations only; no full-model native reference, fidelity, context or serving-speed qualification",
+  "verdict": "FAIL",
+  "archive_member_bytes_verified": 64,
+  "raw_lines": 4399,
+  "frozen_bindings_verified": 35,
+  "wrapper_exit_code": 15,
+  "identity_verdict": "NO_RESULT: terminal guard summary missing",
+  "identity_samples": 2264,
+  "separate_postterminal_process_group_rows": [],
+  "cgroup_gone": true,
+  "unit_inactive": true,
+  "external_memory_samples": 2081,
+  "minimum_available_kib": 103247560,
+  "maximum_cgroup_swap_bytes": 0,
+  "broad_swap_deltas": {
+    "pswpin": 0,
+    "pswpout": 0,
+    "used_swap_kib": 0
+  },
+  "completed_shard_receipts": 2,
+  "GPU_weights_receipt": false,
+  "forward_completion_receipt": false,
+  "formulas": {
+    "minimum_available_kib": "min mem_avail_kb over all external samples",
+    "maximum_cgroup_swap_bytes": "max cgroup_swap_current_bytes over all external samples",
+    "broad_swap_deltas": "post-verification minus frozen broad baseline"
+  }
+}
