@@ -1,0 +1,21 @@
+FF
+======================================================================
+FAIL: test_missing_prerequisite_cannot_pass_packaged_cli (__main__.Terminal.test_missing_prerequisite_cannot_pass_packaged_cli)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/test_terminal.py", line 84, in test_missing_prerequisite_cannot_pass_packaged_cli
+    self.assertNotEqual(code, 0, summary)
+AssertionError: 0 == 0 : {'scope': 'short-prompt sustained operation client checks; separate host/freeze/lifecycle checks required', 'verdict': 'PASS', 'admission_seconds': 1800, 'elapsed_seconds': 1801.2, 'requests': 144, 'requests_per_worker': [36, 36, 36, 36], 'minimum_available_gib': 20.0, 'memory_samples': 1802, 'health_probes': 61, 'four_generated_streams_overlap': True, 'qualified_production_performance': None}
+
+======================================================================
+FAIL: test_later_worker_transport_exception_stops_peers (__main__.Transport.test_later_worker_transport_exception_stops_peers)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/test_terminal.py", line 184, in test_later_worker_transport_exception_stops_peers
+    self.assertEqual(len(calls), 4, calls)
+AssertionError: 16 != 4 : ['w3-00000-raw.jsonl', 'w0-00000-raw.jsonl', 'w1-00000-raw.jsonl', 'w2-00000-raw.jsonl', 'w2-00001-raw.jsonl', 'w1-00001-raw.jsonl', 'w0-00001-raw.jsonl', 'w2-00002-raw.jsonl', 'w1-00002-raw.jsonl', 'w0-00002-raw.jsonl', 'w2-00003-raw.jsonl', 'w1-00003-raw.jsonl', 'w0-00003-raw.jsonl', 'w2-00004-raw.jsonl', 'w1-00004-raw.jsonl', 'w0-00004-raw.jsonl']
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.537s
+
+FAILED (failures=2)

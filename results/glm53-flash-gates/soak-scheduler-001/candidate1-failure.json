@@ -1,0 +1,48 @@
+{
+  "scope": "Candidate 1 review and locally reproduced synthetic CPU failures, not model evidence",
+  "candidate_revision": "af22b404aa33a5ee9f82ad463d56ed7c0aa35dbb",
+  "gate_candidate": 1,
+  "verdict": "FAIL",
+  "open_high": 1,
+  "open_critical": 0,
+  "open_medium": 1,
+  "observed_unix": 1789031459.2385232,
+  "acceptance": {
+    "H1": "Public final score and run completion must reject absent, corrupt, unbound, stale or temporally invalid prerequisite evidence; exact source/input/launch and file coverage binding; read-only prerequisite rescore before acceptance; unchanged inherited scorer",
+    "M1": "Later worker transport error immediately sets shared stop and retains failure row; only four already-entered calls may complete in deterministic CPU control"
+  },
+  "local_red": {
+    "exit_code": 1,
+    "tests": 2,
+    "genuine_assertion_failures": 2,
+    "H1": "Packaged CLI returned exit0/PASS on full144-request synthetic native trace with no first-window or binding",
+    "M1": "Transport error on worker3 allowed16 calls rather than the4 already entered"
+  },
+  "files": [
+    {
+      "path": "candidate.py",
+      "sha256": "2341543aead30848b47c5f8b439e55f31fd6414cc4796fbbad5f99e83fc41d70"
+    },
+    {
+      "path": "test_terminal.py",
+      "sha256": "f79ff141665c969c9dc0da84c714e1917a146000dfbce8ac0e22c39e0e75a036"
+    },
+    {
+      "path": "candidate1-red.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "candidate1-red.stderr",
+      "sha256": "c6dd4ac5651c0043ab4e0c49070ced4ea51fa37ad6c00a0e62a55478e0f75702"
+    },
+    {
+      "path": "candidate1-gap-review.json",
+      "sha256": "f15c6beaeae71276e092202a6e3c9777cad28226c5fd3e21e596447cb785e111"
+    },
+    {
+      "path": "candidate1-adversarial-review.json",
+      "sha256": "302261b9255bbacbb6c70e730635318b5aa03748c396b7a49b4bd844c972b851"
+    }
+  ],
+  "metadata_schema_correction": "First commit rejected plain path-to-digest mapping by secret lint; original bytes retained in adjacent gzip. Only digest representation changed to path/sha256 records."
+}

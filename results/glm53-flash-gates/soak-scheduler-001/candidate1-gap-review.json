@@ -1,0 +1,92 @@
+{
+  "candidate": "af22b404",
+  "implementation": "35593501",
+  "scope": "new256/64 scheduler evidence adapter/window/freezer/profile only; inherited components not reopened",
+  "reviewed_at_unix": 1789031048.0253475,
+  "verdict": "CHANGES_REQUIRED",
+  "verified_high_count": 1,
+  "verified_critical_count": 0,
+  "findings": [
+    {
+      "id": "H1",
+      "severity": "high",
+      "location": "candidate.py:135-146,162",
+      "finding": "Required preliminary-window evidence is not checked by public final score or after full run. run_full writes first-window-admission-binding.json but no path verifies that receipt or bound bytes on final acceptance. score invokes inherited runner.score directly and accepts a full duration trace without any preliminary window.",
+      "reproduction": {
+        "scope": "synthetic CPU witness only; no native measurements",
+        "fixture": "existing soak-native-001/test_run.py DurabilityEvidenceTests.setUp with launch geometry updated to256/64 and launch hash updated; same inherited score invoked by candidate score action, selected candidate check_launch",
+        "first_window_directory_exists": false,
+        "first_window_admission_binding_exists": false,
+        "returned_verdict": "PASS",
+        "synthetic_full_requests": 144,
+        "synthetic_requests_per_worker": [
+          36,
+          36,
+          36,
+          36
+        ]
+      },
+      "minimal_fix": "New adapter final-score wrapper independently rescores preliminary window, requires exact admission receipt source/input/launch/time binding and frozen bytes, and runs on both post-run and public score. Keep inherited durability scorer unchanged."
+    }
+  ],
+  "checks": {
+    "five_adapter_window_tests": "PASS",
+    "audit_hashes": "PASS",
+    "profile_delta": "Only128/32\u2192256/64 plus estimated status basis; other fields identical",
+    "original_context_and_durability_source_bytes": "unchanged versus48107090",
+    "new_adapter_input_manifest_sources": "candidate.py and PROTOCOL added to inherited closed source list",
+    "freeze": "New adapter/tests/protocol/audit, inherited sources, selected profile and closed inventories included; prospective freeze/public seed still pending",
+    "scope_claims": "Preliminary window is necessary-condition only; host and full durability required; changed scheduler does not inherit direct-context or production/performance qualification"
+  },
+  "bound_files": [
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/candidate.py",
+      "sha256": "2341543aead30848b47c5f8b439e55f31fd6414cc4796fbbad5f99e83fc41d70"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/test_candidate.py",
+      "sha256": "1c00ac59fafd1993ca30e0e50379558036e797a5af99faf2c428226bed15d9f0"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/PROTOCOL.md",
+      "sha256": "1d03260734c58de00e775c4fae9df93ff25e521e8cecac03c8a9c3868751cc52"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/freeze.py",
+      "sha256": "da394fceda65cf07f38b405922e151e36e076539c5b66b17b691f26f380ac925"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/configs/profiles/glm-5.3-flash/cuda-spark-128g-1m-experimental.json",
+      "sha256": "cf47aabb8dadbe022333f0f51951f1c9e31f7a40784af9bf63c4cbd0592495c0"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py",
+      "sha256": "789526e2f3d52089c7f5b9bdd140ceb4534d2a4d91d57b8f6d0bbb646b1fddb1"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/candidate-tests.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/candidate-tests.stderr",
+      "sha256": "23b14261e5ff35adf9fd4beb9f156efde5d411e7e43263b4b807ed13bf395890"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/scorer-tests.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/scorer-tests.stderr",
+      "sha256": "afa155ebff2863cc51a165a6c98102ad21b294f99a1bc7246a93ff0c64b3782f"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/profile-tests.stdout",
+      "sha256": "f91d6e3f61d66545c58d1048ed672497d642879c0385359f4cb7764e03f0ed77"
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-scheduler-001/profile-tests.stderr",
+      "sha256": "707d2e80e09ed8b638a17fd52ce1497f54b011e17cb1dc259b0e89286820efe1"
+    }
+  ],
+  "actions": "Read-only source/metadata and small synthetic CPU tests; no model/GPU/service or repository source changes."
+}

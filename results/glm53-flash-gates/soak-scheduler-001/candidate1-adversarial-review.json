@@ -1,0 +1,73 @@
+{
+  "bindings": {
+    "configs/profiles/glm-5.3-flash/cuda-spark-128g-1m-experimental.json": {
+      "sha256": "cf47aabb8dadbe022333f0f51951f1c9e31f7a40784af9bf63c4cbd0592495c0",
+      "size_bytes": 5497
+    },
+    "results/glm53-flash-gates/soak-scheduler-001/PROTOCOL.md": {
+      "sha256": "1d03260734c58de00e775c4fae9df93ff25e521e8cecac03c8a9c3868751cc52",
+      "size_bytes": 4688
+    },
+    "results/glm53-flash-gates/soak-scheduler-001/candidate.py": {
+      "sha256": "2341543aead30848b47c5f8b439e55f31fd6414cc4796fbbad5f99e83fc41d70",
+      "size_bytes": 10068
+    },
+    "results/glm53-flash-gates/soak-scheduler-001/cpu-audit.json": {
+      "sha256": "53652406b70b0c426d8064f8020a7c63091e112de781bdb902c3c3287b53ce07",
+      "size_bytes": 2423
+    },
+    "results/glm53-flash-gates/soak-scheduler-001/freeze.py": {
+      "sha256": "da394fceda65cf07f38b405922e151e36e076539c5b66b17b691f26f380ac925",
+      "size_bytes": 6067
+    },
+    "results/glm53-flash-gates/soak-scheduler-001/test_candidate.py": {
+      "sha256": "1c00ac59fafd1993ca30e0e50379558036e797a5af99faf2c428226bed15d9f0",
+      "size_bytes": 7057
+    }
+  },
+  "candidate_commit": "af22b404aa33a5ee9f82ad463d56ed7c0aa35dbb",
+  "checks": [
+    "Independent submitted candidate test suite:5tests PASS.",
+    "Exact256/64 validator retains four262144-token slots and rejects tested duplicate/prefix variants.",
+    "Window scorer checks20 unique native response IDs/streams, per-worker indices0..4, all admissions before300s, drain<=900s,<=600s per request, startup raw rescore and four-way generated overlap.",
+    "Freeze protocol keeps fresh source/cache bindings and later public randomness, treats new JIT inputs as preparation, retains18GiB floor and no-new-host-swap requirement; no numerical or speed result claimed."
+  ],
+  "findings": [
+    {
+      "evidence": "Actual packaged Python -I -B candidate.py score --output TEMP exited0 and printed PASS for the existing complete144-request synthetic native-SSE fixture adjusted to exact256/64 with real full candidate source hashes, while neither first-window/ nor first-window-admission-binding.json existed. No stream parser/scorer functions were stubbed in that CLI.",
+      "fix": "Add one adapter final scorer used by CLI score and run completion. It must independently validate the window and its exact closed admission hashes, bind the actual full launch/input manifest, enforce window completion before the binding and full admission, reject missing or mutated prerequisites, then conjoin with unchanged base scoring. Do not overwrite prior window artifacts before checking their admission-bound bytes.",
+      "id": "H1",
+      "impact": "The new prerequisite can be absent, replaced or corrupted after admission without affecting published full-client PASS. The admission-binding file is currently write-only evidence, never checked.",
+      "locations": [
+        "candidate.py:135-146",
+        "candidate.py:162"
+      ],
+      "regressions": [
+        "Missing window/binding",
+        "Altered window stream or launch after binding",
+        "Changed/recomputed valid window with stale admission hashes",
+        "Window/falsifier completion after full admission",
+        "Run completion and public score both fail closed"
+      ],
+      "severity": "HIGH",
+      "title": "Final adapter scoring omits mandatory first-window evidence and its admission binding"
+    },
+    {
+      "evidence": "Deterministic four-thread CPU control raised OSError from worker3 transport. Workers0\u20132 then each submitted indices1\u20134 (12 additional requests) before ordered pool.map observed worker3 exception. Their already-entered first calls were separately allowed to finish.",
+      "fix": "Catch stream/transport failure inside each worker, set shared stop immediately and retain a failure row; let already admitted work drain under existing timeout. Add a later-index-worker failure regression.",
+      "id": "M1",
+      "impact": "Contradicts the new protocol error-stop rule; final FAIL is retained and admission remains bounded, so this is not another false-PASS defect.",
+      "locations": [
+        "candidate.py:118-124",
+        "candidate.py:125-130"
+      ],
+      "severity": "MEDIUM",
+      "title": "Later-worker transport error does not promptly stop new peer submissions"
+    }
+  ],
+  "reproduction_limits": "Synthetic inputs are CPU acceptance controls, not measured model evidence. No production code or retained evidence was changed; temporary fixtures were removed. No GPU imports, model loads, HTTP requests or service actions.",
+  "reviewed_at_utc": "2026-09-10T09:04:55.159379+00:00",
+  "reviewer": "/root/glm53_adversarial_reviewer",
+  "scope": "New256/64 adapter/window gate and freeze protocol only. No hardware execution or frozen component re-review.",
+  "verdict": "CHANGES_REQUESTED"
+}
