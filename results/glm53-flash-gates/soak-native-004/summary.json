@@ -1,0 +1,167 @@
+{
+  "scope": "Bounded first-window preparation/falsifier on optional aggregate-1M profile; not full durability, context, fidelity or production performance",
+  "verdict": "FAIL",
+  "formula": "soak-scheduler-001/PROTOCOL.md and candidate.py first-window checks, conjoined with host, identity, lifecycle and frozen-input conditions; all required conditions must pass. The full1800-second gate was not admitted.",
+  "client_summary": {
+    "scope": "First-window necessary-condition falsifier only",
+    "verdict": "FAIL",
+    "error": "ValueError('window request coverage')"
+  },
+  "checks": {
+    "fixed_first_window_gate": false,
+    "all_completed_requests_independently_rescored_correct": true,
+    "bounded_admission_and_drain": true,
+    "full_durability_not_admitted": true,
+    "whole_host_no_new_swap": true,
+    "whole_host_no_swap_io": false,
+    "watchdog_floor_at_least_18_gib": true,
+    "all_watchdog_cgroup_swap_samples_zero": true,
+    "cgroup_swap_peak_zero_before_stop": true,
+    "cgroup_no_limit_events": true,
+    "identity_guard_and_clean_descendants": true,
+    "operator_stop_and_wrapper_exit_zero": true,
+    "processes_gone": true,
+    "profile_stopped": true,
+    "memory_recovery_above_110_gib": true,
+    "default_proxy_and_guards_unchanged": true,
+    "kernel_journal_clear": true,
+    "post_runtime_model_verification": true,
+    "frozen_source_bindings_unchanged": true,
+    "frozen_compiled_inputs_unchanged": false
+  },
+  "source_revision": "71dab9855682aa9684e4858a1051a056144cddf9",
+  "request_observations": {
+    "completed": 17,
+    "input_tokens_per_request": 4224,
+    "admissions_per_worker": [
+      5,
+      4,
+      4,
+      4
+    ],
+    "admission_limit_seconds": 300,
+    "drain_completed_after_seconds": 324.009181744,
+    "all_final_answers_and_negative_controls_correct": true
+  },
+  "host": {
+    "watchdog_samples": 2009,
+    "minimum_available_gib": 18.20391845703125,
+    "maximum_cgroup_swap_bytes": 0,
+    "host_used_swap_kib_before_smoke_prestop_after": [
+      168560,
+      168560,
+      168560,
+      168560
+    ],
+    "swap_io_counters": [
+      {
+        "pswpin": 6315009,
+        "pswpout": 57487414
+      },
+      {
+        "pswpin": 6315009,
+        "pswpout": 57487414
+      },
+      {
+        "pswpin": 6315010,
+        "pswpout": 57487414
+      },
+      {
+        "pswpin": 6315010,
+        "pswpout": 57487414
+      }
+    ],
+    "identity_samples": 2197
+  },
+  "compiled_inputs": {
+    "verdict": "NO_RESULT",
+    "changed": [],
+    "missing": [],
+    "added": [
+      {
+        "path": ".config/vllm/usage_stats.json",
+        "size_bytes": 1498,
+        "sha256": "63903ee06f8320659a225c975b5af793f5ef52a60815b2e0d5b10156b5ab1d59"
+      },
+      {
+        "path": ".humming/tmp/lock/launcher.lock",
+        "size_bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/cuda-binaries/0d7340c0a71ad9b0b90deeb6f67fdb95579526a7f888f62362fce66d39a9e29a.cubin",
+        "size_bytes": 157768,
+        "sha256": "468317043140d304d36307a47f5a0725cba07459823d6b77e884a268646ad786"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/cuda-binaries/53c7024b24d98454b086c89fdf538948e8f3c24617b925cfd43e24b8e3ab3f46.cubin",
+        "size_bytes": 160064,
+        "sha256": "39734db43802b9a8911560391e5dbb9b045e1b24600b92c6c1a2676eb5cc3a6c"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/14c41234b071ced11776f71ca7257d5a9b798c25466f977a46e7952e69a15c52/device_kernel.cu",
+        "size_bytes": 23168,
+        "sha256": "d87648ba2d0c5676565ca2bc2f5b848a65d4af5e592907b0349a225375cef248"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/14c41234b071ced11776f71ca7257d5a9b798c25466f977a46e7952e69a15c52/executable.so",
+        "size_bytes": 201376,
+        "sha256": "15b371ce5fe5fe57df5292b8e9f4df5118b36d62315d6353113dd8e5ce36d2ec"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/14c41234b071ced11776f71ca7257d5a9b798c25466f977a46e7952e69a15c52/host_kernel.cu",
+        "size_bytes": 59117,
+        "sha256": "ba165c727d68aff4f9540c75b416330dcceb8ccaa852fd8a251c665780093b78"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/14c41234b071ced11776f71ca7257d5a9b798c25466f977a46e7952e69a15c52/params.pkl",
+        "size_bytes": 2207,
+        "sha256": "71bedc639a2d1a856d14a69be47565927f4563e1b8ab2915c5df1abe810ee560"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/c2823e7c312e9c8bfa03c1dc8c636bab95944f2214858940a8ed0b0095c55b8f/device_kernel.cu",
+        "size_bytes": 23168,
+        "sha256": "107d4c9125dbb6d1f70e056a8d49f73e672b4bcd0a304c0dced2c5ca008761b6"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/c2823e7c312e9c8bfa03c1dc8c636bab95944f2214858940a8ed0b0095c55b8f/executable.so",
+        "size_bytes": 201376,
+        "sha256": "ccf318f864160f7c08ea0958753688cd48ecc1c28243597170d42820c9d8f023"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/c2823e7c312e9c8bfa03c1dc8c636bab95944f2214858940a8ed0b0095c55b8f/host_kernel.cu",
+        "size_bytes": 59117,
+        "sha256": "9e0466b878e19156a9f37a1b6c35f312fe090af7929e58bde167ad8846b37352"
+      },
+      {
+        "path": ".tilelang/cache/0.1.12/linux-aarch64/kernels/c2823e7c312e9c8bfa03c1dc8c636bab95944f2214858940a8ed0b0095c55b8f/params.pkl",
+        "size_bytes": 2207,
+        "sha256": "098e137cb4880fb63445f253e176c546519755d2821d4939dc11b030a100b70a"
+      },
+      {
+        "path": "deep-gemm/cache/kernel.sm120_tf32_hc_prenorm_gemm.5010f16a00be6cec8e28e4e5852c3e35/kernel.cu",
+        "size_bytes": 347,
+        "sha256": "3f762f7545e0803c12ffa8037f49899acb7b30705f8b14a55b40853e51ebca9f"
+      },
+      {
+        "path": "deep-gemm/cache/kernel.sm120_tf32_hc_prenorm_gemm.5010f16a00be6cec8e28e4e5852c3e35/kernel.cubin",
+        "size_bytes": 59552,
+        "sha256": "0030189d79cf818b13b05b29df222262337c9b0b6b26e808c7657f35f969b155"
+      },
+      {
+        "path": "deep-gemm/cache/kernel.sm120_tf32_hc_prenorm_gemm.c9279686dd2ae3303b2ec030edddb360/kernel.cu",
+        "size_bytes": 347,
+        "sha256": "d05ecf93cd7a9ce69444fc901fa08541e52ee5c760b52b1aabdd52965b8109cf"
+      },
+      {
+        "path": "deep-gemm/cache/kernel.sm120_tf32_hc_prenorm_gemm.c9279686dd2ae3303b2ec030edddb360/kernel.cubin",
+        "size_bytes": 48200,
+        "sha256": "24bda3ec79010c8c2e393830010a75453181f45063ecefb721ab7bc08dacedc8"
+      }
+    ],
+    "interpretation": "New compiled inputs make this a preparation attempt; freeze/replay required for confirmation."
+  },
+  "full_durability": "NO_RESULT: first-window prerequisite failed; no admission",
+  "full_model_qualification": "NO_RESULT: native100-case fidelity, direct context on changed scheduler and production switching remain pending",
+  "qualified_production_performance": null
+}
