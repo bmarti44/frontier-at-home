@@ -1,0 +1,89 @@
+{
+  "verdict": "PASS",
+  "scope": "Pre-submission source and CPU evidence validation only; no weight payload/GPU run",
+  "gate_candidate": 2,
+  "prior_high_findings": [
+    "H1",
+    "H2",
+    "H3"
+  ],
+  "time_unix": 1789068923.6208544,
+  "checks": {
+    "CPU_regressions": 40,
+    "syntax": true,
+    "native_meta_tensors": 28,
+    "native_meta_bytes": 14825473772,
+    "stock_functions_bound": 4,
+    "closed_sources_byte_identical": true,
+    "diff_scope_only_named_findings": true,
+    "manual_diff_scan": "No prompt/hash detection, canned native results, disabled assertions, benchmark serving branches or timing manipulation; synthetic validator fixtures remain labelled"
+  },
+  "sources": [
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/freeze.py",
+      "size_bytes": 6556,
+      "sha256": "3c9a6f185bd7ee0b84ae60034a96c314e8c98d7d9cd7b587da8ca8ecb2846b15"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/probe.py",
+      "size_bytes": 21302,
+      "sha256": "27373478acff87e2aa1e753978bdf8a2b3aaa87a68806d03087557c4e10ebdb6"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/run.py",
+      "size_bytes": 6843,
+      "sha256": "ee09cc1bf0c0f81b17c6475b23049444a540e34fd8d566f72208183c1968806a"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/test_probe.py",
+      "size_bytes": 6328,
+      "sha256": "5097e4baa9ccc727751faf5774b07c2cd3ab16b86c3e2c586e9604d0a679241d"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/test_review.py",
+      "size_bytes": 7395,
+      "sha256": "e53a98d17ec48405da71041d646a1c2da1486134b2a4ad2c407619678efd0bfb"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/PROTOCOL.md",
+      "sha256": "fd66903d84d9199ef439f7777a72a3a3c365b45ed0b875fcd717f0d173e8835c"
+    }
+  ],
+  "closed_sources": [
+    {
+      "path": "scripts/38_guard_glm53_probe.py",
+      "sha256": "8c0170e56402c6a008049e299c26e466a3a7fe4465c2eec68663cd595f5aa5e3"
+    },
+    {
+      "path": "scripts/103_verify_drand_receipt_bundle.mjs",
+      "sha256": "b3729f3b9d213a9c040ea77324ee96d419c3bf4b8a80e2be9f54e6d8ebcff2bc"
+    },
+    {
+      "path": "scripts/lib/glm53_contract.py",
+      "sha256": "26f0673769eae0d4bf86971fb0364262cbd760069f3afeef177067b74d264be8"
+    },
+    {
+      "path": "scripts/lib/glm53_host_evidence.py",
+      "sha256": "2246bd06770c07730c01384fb41a04efc326fa39947468f0593a2cbda549d99c"
+    },
+    {
+      "path": "scripts/lib/glm53_probe_capture.py",
+      "sha256": "1a16f739be521ac285722bc3fb52257752dcf1ca446955adea597e753b99b6fe"
+    },
+    {
+      "path": "results/glm52-gates/harness/glm_cgroup_run.sh",
+      "sha256": "08054584eb6422743901b4fbd90fc1e3ba1223f48d43ef6e46f46cb3ef23c3c1"
+    },
+    {
+      "path": "results/glm52-gates/harness/glm_safe_run.sh",
+      "sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6"
+    },
+    {
+      "path": "scripts/03_memory_guard.py",
+      "sha256": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58"
+    }
+  ],
+  "diff": {
+    "sha256": "85c3187277d25b82dda04adb3a9ca16051ce92a3f6fc607c3d1968845fd2a505"
+  }
+}

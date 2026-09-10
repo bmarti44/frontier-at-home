@@ -35,27 +35,31 @@ class Evidence(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.out=self.root/'checks';self.out.mkdir();(self.root/'metadata').mkdir()
         self.digest=hashlib.sha256(b'synthetic-validator-fixture').hexdigest()
         self.shards=[{'rfilename':str(i),'size':1,'lfs':{'sha256':self.digest}} for i in range(3)]
-        self.dump('manifest.json',{'shards':self.shards});self.dump('randomness.json',{'seed':0,'randomness':'0'*64})
-        spec={'shape':[1],'dtype':'torch.bfloat16','bytes':2};self.dump('metadata/layer-plan.json',{'tensors':{'test':spec},'converted_layer_bytes':2})
+        self.dump('manifest.json',{'shards':self.shards,'broad_baseline':{'pswpin':0,'pswpout':0,'used_swap_kib':0},'input_spec':p.INPUT_SPEC});self.dump('randomness.json',{'seed':0,'randomness':'0'*64})
+        self.selector={'module':{'path':'synthetic-native-module','sha256':self.digest},'functions':[{'name':'synthetic-native-function','source':{'sha256':self.digest}}]};self.dump('checks/stock-torch-selector.json',self.selector)
+        spec={'shape':[1],'dtype':'torch.bfloat16','bytes':2};self.dump('metadata/layer-plan.json',{'tensors':{'test':spec},'converted_layer_bytes':2,'stock_torch_selector':self.selector})
         self.verified=[{'path':x['rfilename'],'size_bytes':1,'sha256':self.digest} for x in self.shards]
         self.dump('checks/staging.json',{'weights':[{'name':'test',**spec,'pinned':True,'sha256':self.digest}],'persistent_until_forward_completion':True,'converted_layer_bytes':2,'native_source_tensors':892,'downloaded_shards':self.verified})
         self.rows=[]
-        for shard in self.verified:self.rows.extend([{'kind':'download_start','shard':shard['path']},{'kind':'verified_shard','shard':shard}])
-        self.rows.extend([{'kind':'verified_gpu_tensor','name':'test','sha256':self.digest},{'kind':'weights_on_gpu'},{'kind':'forward_complete'}])
+        for i,shard in enumerate(self.verified):self.rows.extend([{'kind':'download_start','shard':shard['path'],'bytes':1},{'kind':'verified_shard','shard':shard,'seconds':0.5,'selected_tensors':[300,600,892][i]}])
+        self.rows.extend([{'kind':'verified_gpu_tensor','name':'test','sha256':self.digest},{'kind':'weights_on_gpu','cuda_allocated':2,'cuda_reserved':512,'cuda_peak_allocated':2,'cuda_peak_reserved':512},{'kind':'forward_complete','elapsed_seconds':0.5,'cuda_allocated':2+516*4*4096*4+516*9,'cuda_reserved':40*1024**2,'cuda_peak_allocated':40*1024**2,'cuda_peak_reserved':40*1024**2}])
         self.raw();self.payload=bytes(516*4*4096*2);self.output(self.payload)
     def tearDown(self):self.tmp.cleanup()
     def dump(self,name,value):(self.root/name).write_text(json.dumps(value))
     def raw(self):
-        for i,row in enumerate(self.rows):row['time_unix']=float(i+1)
+        for i,row in enumerate(self.rows):
+            row['time_unix']=float(i+1)
+            row.setdefault('host',{'pswpin':0,'pswpout':0,'used_swap_kib':0,'available_kib':115*1024**2})
+            row['host']['time_unix']=row['time_unix']-0.01
         (self.out/'raw.jsonl').write_text(''.join(json.dumps(x)+'\n' for x in self.rows))
     def output(self,b):
-        (self.out/'output.bf16.gz').write_bytes(gzip.compress(b,mtime=0));self.dump('checks/output.json',{'shape':[1,516,4,4096],'dtype':'torch.bfloat16','bytes':len(b),'sha256':hashlib.sha256(b).hexdigest(),'seed':0,'input':{'shape':[1,516,4,4096],'dtype':'torch.bfloat16','sha256':self.digest}})
+        (self.out/'output.bf16.gz').write_bytes(gzip.compress(b,mtime=0));self.dump('checks/output.json',{'shape':[1,516,4,4096],'dtype':'torch.bfloat16','bytes':len(b),'sha256':hashlib.sha256(b).hexdigest(),'seed':0,'input':{'shape':[1,516,4,4096],'dtype':'torch.bfloat16','sha256':p.sha(p.canonical_input(0)),'bytes':516*4*4096*2,'pinned':True}})
     def test_valid_shape_only_control(self):self.assertEqual(p.score(self.root)['verdict'],'PASS')
     def test_missing_gpu_tensor(self):
         self.rows=[x for x in self.rows if x['kind']!='verified_gpu_tensor'];self.raw()
         with self.assertRaisesRegex(ValueError,'GPU parameter coverage'):p.score(self.root)
     def test_duplicate_shard(self):
-        self.rows.insert(1,self.rows[1].copy());self.raw()
+        self.rows.insert(1,copy.deepcopy(self.rows[1]));self.raw()
         with self.assertRaisesRegex(ValueError,'shard coverage'):p.score(self.root)
     def test_changed_gpu_digest(self):
         next(x for x in self.rows if x['kind']=='verified_gpu_tensor')['sha256']='bad';self.raw()

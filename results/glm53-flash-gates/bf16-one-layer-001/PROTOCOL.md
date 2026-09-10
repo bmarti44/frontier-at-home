@@ -18,7 +18,19 @@ Select the stock Torch fallback, eager attention/experts, eval and inference_mod
 as in the independently reproduced tiny test. Use synthetic BF16 HC activations
 of shape [1,516,4,4096], chosen from the maximum serialized Kimi prompt length.
 This does not reconstruct the actual layer-8 activations of those prompts.
-Bind the synthetic generator and later verified public seed. Persist pinned
+Bind the synthetic generator and later verified public seed. The canonical input
+uses SHAKE256 with domain `glm53-bf16-layer-input-v1\0` followed by the unsigned
+64-bit seed in big-endian order, expanded to 16,908,288 bytes. For each little-endian
+BF16 pair, mask the low byte with 127 and map the high byte to `0x3c | (byte & 128)`.
+This yields random sign/mantissa with exponent 120. Both pinned source and scorer
+use these exact bytes. The frozen native meta plan binds all four stock function
+source digests and module identity. Every raw phase has an exact schema, unchanged
+host counters and floor, sequential lifecycle, and consistent positive CUDA
+allocations/peaks bounded by the 64 GiB cap. Forward duration must be finite,
+positive and inside the recorded lifecycle. Launch derives the exact beacon round
+and publication from frozen time (genesis 1595431050, period 30, next round).
+Stable-read manifest/randomness bytes and file identities must remain unchanged
+before launch and through capture, scoring and final runtime revalidation. Persist pinned
 weight and activation staging through H2D completion; do not use pageable H2D.
 Require finite, complete output with the expected shape/dtype and retained bytes.
 

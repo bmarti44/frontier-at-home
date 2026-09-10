@@ -16,6 +16,25 @@ def strict(data):
 
 def sha(data):return hashlib.sha256(data).hexdigest()
 
+INPUT_SPEC={'generator':'shake256-bf16-small-v1','seed_encoding':'unsigned-64-big-endian','tensor_byte_order':'little-endian','shape':[1,516,4,4096],'dtype':'torch.bfloat16'}
+
+def canonical_input(seed):
+    require(type(seed) is int and 0<=seed<2**64,'canonical input seed')
+    # BF16 sign is random, exponent is 120, mantissa is random: small finite HC.
+    data=bytearray(hashlib.shake_256(b'glm53-bf16-layer-input-v1\0'+seed.to_bytes(8,'big')).digest(516*4*4096*2))
+    data[::2]=data[::2].translate(bytes(i & 127 for i in range(256)))
+    data[1::2]=data[1::2].translate(bytes(0x3c | (i & 128) for i in range(256)))
+    return data
+
+def stock_selector(native):
+    rows=[]
+    for name in ['causal_conv1d_fn','causal_conv1d_update','chunk_kimi_delta_attention','recurrent_kimi_delta_attention']:
+        fn=inspect.unwrap(getattr(native,name))
+        require(fn.__module__==native.__name__ and fn.__globals__ is native.__dict__,'native fallback identity')
+        require(Path(fn.__code__.co_filename).resolve()==Path(native.__file__).resolve(),'native fallback file')
+        rows.append({'name':name,'source':{'sha256':sha(inspect.getsource(fn).encode())}})
+    return {'module':{'path':native.__file__,'sha256':sha(Path(native.__file__).read_bytes())},'functions':rows}
+
 def validate_shard(buffer,record,expected_header):
     require(len(buffer)==record['size'],'shard byte count')
     require(sha(buffer)==record['lfs']['sha256'],'whole shard digest')
@@ -44,6 +63,7 @@ def run(root):
     out=root/'checks';out.mkdir(exist_ok=False)
     def save(name,value):(out/name).write_text(json.dumps(value,indent=2,allow_nan=False)+'\n')
     def event(**row):
+        row.setdefault('host',host())
         with (out/'raw.jsonl').open('a') as f:f.write(json.dumps({'time_unix':time.time(),**row},allow_nan=False)+'\n')
     def host():
         m=dict(x.split(':',1) for x in Path('/proc/meminfo').read_text().splitlines());v=dict(x.split() for x in Path('/proc/vmstat').read_text().splitlines())
@@ -54,12 +74,10 @@ def run(root):
         torch.set_num_threads(2);torch.set_num_interop_threads(1)
         torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
         torch.set_float32_matmul_precision('highest');check_host()
-        selectors=[]
-        for name in ['causal_conv1d_fn','causal_conv1d_update','chunk_kimi_delta_attention','recurrent_kimi_delta_attention']:
-            fn=inspect.unwrap(getattr(native,name));require(fn.__module__==native.__name__ and fn.__globals__ is native.__dict__,'native fallback identity')
-            require(Path(fn.__code__.co_filename).resolve()==Path(native.__file__).resolve(),'native fallback file');setattr(native,name,fn)
-            selectors.append({'name':name,'source':{'sha256':sha(inspect.getsource(fn).encode())}})
-        save('stock-torch-selector.json',{'module':{'path':native.__file__,'sha256':sha(Path(native.__file__).read_bytes())},'functions':selectors})
+        selectors=stock_selector(native)
+        require(selectors==strict((root/'metadata/layer-plan.json').read_bytes())['stock_torch_selector'],'frozen fallback selector differs')
+        for row in selectors['functions']:setattr(native,row['name'],inspect.unwrap(getattr(native,row['name'])))
+        save('stock-torch-selector.json',selectors)
         config=Glm5NextConfig.from_dict(strict((root/'metadata/config.json').read_bytes()))
         with torch.device('meta'):
             model=native.Glm5NextForConditionalGeneration._from_config(config,dtype=torch.bfloat16,attn_implementation='eager',experts_implementation='eager').eval()
@@ -114,53 +132,80 @@ def run(root):
             observed=sha(param.detach().cpu().contiguous().view(torch.uint8).numpy())
             require(observed==expected,'H2D weight bytes differ: '+name)
             event(kind='verified_gpu_tensor',name=name,sha256=observed)
-        event(kind='weights_on_gpu',host=check_host(),cuda_allocated=torch.cuda.memory_allocated(),cuda_reserved=torch.cuda.memory_reserved())
+        event(kind='weights_on_gpu',host=check_host(),cuda_allocated=torch.cuda.memory_allocated(),cuda_reserved=torch.cuda.memory_reserved(),cuda_peak_allocated=torch.cuda.max_memory_allocated(),cuda_peak_reserved=torch.cuda.max_memory_reserved())
         n=manifest['input_tokens'];require(n==516,'fixed input shape changed')
-        generator=torch.Generator(device='cpu').manual_seed(seed);source_input=(torch.randn((1,n,4,4096),generator=generator,dtype=torch.float32)*0.02).to(torch.bfloat16).pin_memory()
+        require(manifest['input_spec']==INPUT_SPEC,'frozen input specification')
+        input_bytes=canonical_input(seed);source_input=torch.frombuffer(input_bytes,dtype=torch.bfloat16).reshape(INPUT_SPEC['shape']).pin_memory();del input_bytes
         require(source_input.is_pinned(),'pageable activation staging');x=source_input.to('cuda',non_blocking=True);torch.cuda.synchronize()
         mask=torch.ones((1,n),dtype=torch.bool,device='cuda');positions=torch.arange(n,device='cuda').unsqueeze(0)
         torch.cuda.reset_peak_memory_stats();began=time.time()
         with torch.inference_mode():y,topk=layer(x,attention_mask=mask,position_ids=positions,position_embeddings=None,input_ids=None,past_key_values=None,prev_topk_indices=None)
         torch.cuda.synchronize();require(y.shape==x.shape and y.dtype==torch.bfloat16 and bool(torch.isfinite(y).all()),'invalid complete layer output');require(topk is None,'unexpected KDA topk')
-        event(kind='forward_complete',elapsed_seconds=time.time()-began,host=check_host(),cuda_allocated=torch.cuda.memory_allocated(),cuda_peak_allocated=torch.cuda.max_memory_allocated())
+        event(kind='forward_complete',elapsed_seconds=time.time()-began,host=check_host(),cuda_allocated=torch.cuda.memory_allocated(),cuda_peak_allocated=torch.cuda.max_memory_allocated(),cuda_reserved=torch.cuda.memory_reserved(),cuda_peak_reserved=torch.cuda.max_memory_reserved())
         output=y.cpu().contiguous().view(torch.uint8).numpy().tobytes();(out/'output.bf16.gz').write_bytes(gzip.compress(output,mtime=0))
-        save('output.json',{'shape':list(y.shape),'dtype':str(y.dtype),'bytes':len(output),'sha256':sha(output),'seed':seed,'input':{'shape':list(x.shape),'dtype':str(x.dtype),'sha256':sha(source_input.view(torch.uint8).numpy().tobytes())}})
+        save('output.json',{'shape':list(y.shape),'dtype':str(y.dtype),'bytes':len(output),'sha256':sha(output),'seed':seed,'input':{'shape':list(x.shape),'dtype':str(x.dtype),'sha256':sha(source_input.view(torch.uint8).numpy().tobytes()),'bytes':source_input.numel()*source_input.element_size(),'pinned':source_input.is_pinned()}})
         save('summary.json',{'verdict':'PASS','scope':'One native BF16 KDA layer with synthetic activations; host verdict required separately','native_model_reference':False,'full_model_loaded':False,'layer':8,'input_tokens_shape':n,'converted_layer_bytes':sum(x['bytes'] for x in records),'finite_output':True,'pinned_weight_and_activation_staging':True,'unrelated_model_weights_remained_meta':True})
     except BaseException as error:
         event(kind='failure',error=repr(error));save('summary.json',{'verdict':'FAIL','scope':'One-layer feasibility only','error':repr(error),'native_model_reference':False});raise
 
 def score(root):
-    import array,sys
+    import array,sys,re
     m=strict((root/'manifest.json').read_bytes());out=root/'checks';seed=strict((root/'randomness.json').read_bytes())
-    require(seed['seed']==int(seed['randomness'][:16],16),'seed conversion mismatch')
+    require(type(seed['seed']) is int and seed['seed']==int(seed['randomness'][:16],16),'seed conversion mismatch')
     rows=[strict(x) for x in (out/'raw.jsonl').read_bytes().splitlines()]
     require(rows and not any(x['kind']=='failure' for x in rows),'missing raw or inner failure')
-    times=[x['time_unix'] for x in rows];require(all(type(t) in (int,float) and math.isfinite(t) for t in times) and all(b>a for a,b in zip(times,times[1:])),'raw timestamps')
-    require(all(x['kind'] in ['download_start','download_progress','verified_shard','verified_gpu_tensor','weights_on_gpu','forward_complete'] for x in rows),'unknown raw event')
+    def finite(x):return type(x) in (int,float) and math.isfinite(x)
+    def uint(x):return type(x) is int and x>=0
+    def digest(x):return type(x) is str and re.fullmatch('[0-9a-f]{64}',x) is not None
+    times=[x['time_unix'] for x in rows];require(all(finite(t) and t>0 for t in times) and all(b>a for a,b in zip(times,times[1:])),'raw timestamps')
+    fields={'download_start':{'shard','bytes'},'download_progress':{'shard','bytes'},'verified_shard':{'shard','seconds','selected_tensors'},'verified_gpu_tensor':{'name','sha256'},'weights_on_gpu':{'cuda_allocated','cuda_reserved','cuda_peak_allocated','cuda_peak_reserved'},'forward_complete':{'elapsed_seconds','cuda_allocated','cuda_reserved','cuda_peak_allocated','cuda_peak_reserved'}}
+    for row in rows:
+        require(row['kind'] in fields,'unknown raw event')
+        require(set(row)==fields[row['kind']]|{'kind','time_unix','host'},'missing or unexpected phase fields')
+        h=row['host'];require(set(h)=={'time_unix','pswpin','pswpout','used_swap_kib','available_kib'},'phase host fields')
+        require(finite(h['time_unix']) and 0<=row['time_unix']-h['time_unix']<=2,'phase host timestamp')
+        require(all(uint(h[k]) and h[k]==m['broad_baseline'][k] for k in ('pswpin','pswpout','used_swap_kib')),'phase host swap counters')
+        require(uint(h['available_kib']) and h['available_kib']>=40*1024**2,'phase host memory floor')
     stage=strict((out/'staging.json').read_bytes());plan=strict((root/'metadata/layer-plan.json').read_bytes())
+    require(strict((out/'stock-torch-selector.json').read_bytes())==plan['stock_torch_selector'],'frozen stock selector binding')
     observed={x['name']:x for x in stage['weights']};require(len(observed)==len(stage['weights'])==len(plan['tensors']),'staging duplicates or coverage')
     require(set(observed)==set(plan['tensors']),'staging parameter names')
     for name,spec in plan['tensors'].items():
-        row=observed[name];require(all(row[k]==v for k,v in spec.items()) and row['pinned'] is True,'staging shape/dtype/pinning')
-    require(stage['persistent_until_forward_completion'] is True and stage['converted_layer_bytes']==plan['converted_layer_bytes'] and stage['native_source_tensors']==892,'native staging totals')
+        row=observed[name];require(set(row)=={'name','shape','dtype','bytes','pinned','sha256'} and all(row[k]==v for k,v in spec.items()) and row['pinned'] is True and digest(row['sha256']),'staging shape/dtype/pinning/digest')
+    require(stage['persistent_until_forward_completion'] is True and stage['converted_layer_bytes']==plan['converted_layer_bytes']==sum(x['bytes'] for x in plan['tensors'].values()) and stage['native_source_tensors']==892,'native staging totals')
     expected_shards=[{'path':x['rfilename'],'size_bytes':x['size'],'sha256':x['lfs']['sha256']} for x in m['shards']]
     require(stage['downloaded_shards']==expected_shards and [x['shard'] for x in rows if x['kind']=='verified_shard']==expected_shards,'verified shard coverage')
     require([x['shard'] for x in rows if x['kind']=='download_start']==[x['path'] for x in expected_shards],'download admission coverage')
     gpu=[x for x in rows if x['kind']=='verified_gpu_tensor'];require(len(gpu)==len(observed) and {x['name'] for x in gpu}==set(observed),'GPU parameter coverage')
     for row in gpu:require(row['sha256']==observed[row['name']]['sha256'],'GPU weight digest mismatch')
-    for kind in ['weights_on_gpu','forward_complete']:require(sum(x['kind']==kind for x in rows)==1,'missing or duplicate phase')
+    # Exact sequential download/verification lifecycle, followed by GPU validation.
+    cursor=0;selected=0
+    for shard in expected_shards:
+        row=rows[cursor];require(row['kind']=='download_start' and row['shard']==shard['path'] and row['bytes']==shard['size_bytes'],'download phase order/size');cursor+=1;last=0
+        while cursor<len(rows) and rows[cursor]['kind']=='download_progress':
+            row=rows[cursor];require(row['shard']==shard['path'] and uint(row['bytes']) and last<row['bytes']<=shard['size_bytes'],'download progress');last=row['bytes'];cursor+=1
+        row=rows[cursor];require(row['kind']=='verified_shard' and row['shard']==shard and finite(row['seconds']) and row['seconds']>0 and uint(row['selected_tensors']) and selected<row['selected_tensors']<=892,'verified shard phase');selected=row['selected_tensors'];cursor+=1
+    require(selected==892,'selected native tensor coverage')
+    require([x['kind'] for x in rows[cursor:]]==['verified_gpu_tensor']*len(gpu)+['weights_on_gpu','forward_complete'],'GPU/forward phase order')
+    weights,forward=rows[-2:];nbytes=516*4*4096*2
+    for row,lower in [(weights,plan['converted_layer_bytes']),(forward,plan['converted_layer_bytes']+2*nbytes+516*9)]:
+        require(all(uint(row[k]) for k in ('cuda_allocated','cuda_reserved','cuda_peak_allocated','cuda_peak_reserved')),'CUDA measurement types')
+        a,r,pa,pr=(row[k] for k in ('cuda_allocated','cuda_reserved','cuda_peak_allocated','cuda_peak_reserved'))
+        require(lower<=a<=r<=pr<=64*1024**3 and a<=pa<=pr,'CUDA allocation counters/limits')
+    require(finite(forward['elapsed_seconds']) and 0<forward['elapsed_seconds']<=forward['time_unix']-weights['time_unix']<=600,'forward elapsed time')
     desc=strict((out/'output.json').read_bytes());payload=gzip.decompress((out/'output.bf16.gz').read_bytes())
-    require(desc['shape']==[1,516,4,4096] and desc['dtype']=='torch.bfloat16' and len(payload)==desc['bytes']==516*4*4096*2 and sha(payload)==desc['sha256'],'output geometry or digest')
-    require(desc['seed']==seed['seed'] and desc['input']['shape']==desc['shape'] and desc['input']['dtype']==desc['dtype'],'input binding')
+    require(desc['shape']==[1,516,4,4096] and desc['dtype']=='torch.bfloat16' and len(payload)==desc['bytes']==nbytes and sha(payload)==desc['sha256'],'output geometry or digest')
+    require(m['input_spec']==INPUT_SPEC and desc['seed']==seed['seed'] and desc['input']=={'shape':desc['shape'],'dtype':desc['dtype'],'bytes':nbytes,'pinned':True,'sha256':sha(canonical_input(seed['seed']))},'canonical input binding')
     bits=array.array('H');bits.frombytes(payload)
     if sys.byteorder!='little':bits.byteswap()
     require(all((x & 0x7f80)!=0x7f80 for x in bits),'nonfinite output bytes')
-    return {'verdict':'PASS','scope':'One-layer real weights and synthetic activation checks only','verified_shards':len(expected_shards),'verified_gpu_tensors':len(gpu),'converted_layer_bytes':plan['converted_layer_bytes'],'finite_output_elements':len(bits)}
+    return {'verdict':'PASS','scope':'One-layer real weights and synthetic activation checks only','verified_shards':len(expected_shards),'verified_gpu_tensors':len(gpu),'converted_layer_bytes':plan['converted_layer_bytes'],'finite_output_elements':len(bits),'cuda_peak_allocated':forward['cuda_peak_allocated'],'forward_elapsed_seconds':forward['elapsed_seconds']}
 
 def plan(config_path):
     import torch
     from transformers import Glm5NextConfig
-    from transformers.models.glm5_next.modeling_glm5_next import Glm5NextForConditionalGeneration
+    import transformers.models.glm5_next.modeling_glm5_next as native
+    Glm5NextForConditionalGeneration=native.Glm5NextForConditionalGeneration
     config=Glm5NextConfig.from_dict(strict(config_path.read_bytes()))
     with torch.device('meta'):
         model=Glm5NextForConditionalGeneration._from_config(config,dtype=torch.bfloat16,attn_implementation='eager',experts_implementation='eager')
@@ -169,7 +214,7 @@ def plan(config_path):
     for name,p in model.model.language_model.layers[8].state_dict().items():
         dtype='torch.float32' if any(x in name.split('.') for x in model._keep_in_fp32_modules_strict) else 'torch.bfloat16'
         expected[name]={'shape':list(p.shape),'dtype':dtype,'bytes':p.numel()*(4 if dtype=='torch.float32' else 2)}
-    print(json.dumps({'scope':'Native meta layout only; no weights loaded','tensors':expected,'converted_layer_bytes':sum(x['bytes'] for x in expected.values())}),flush=True)
+    print(json.dumps({'scope':'Native meta layout only; no weights loaded','stock_torch_selector':stock_selector(native),'tensors':expected,'converted_layer_bytes':sum(x['bytes'] for x in expected.values())}),flush=True)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);group=parser.add_mutually_exclusive_group(required=True);group.add_argument('--frozen',type=Path);group.add_argument('--plan',type=Path);args=parser.parse_args()
