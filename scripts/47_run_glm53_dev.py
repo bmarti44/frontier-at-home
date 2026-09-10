@@ -68,6 +68,10 @@ def serve(directory):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--start',action='store_true')
+    parser.add_argument('--profile',help='Explicit experimental profile under configs/profiles')
+    parser.add_argument('--host',help='Host configuration for the named profile')
+    parser.add_argument('--status',action='store_true')
+    parser.add_argument('--stop',action='store_true')
     parser.add_argument('--model',type=Path,default=BASE/'model-weights-001')
     parser.add_argument('--output',type=Path,default=BASE/('server-'+time.strftime('%Y%m%d-%H%M%S')))
     parser.add_argument('--port',type=int,default=8015)
@@ -82,6 +86,20 @@ def main():
     parser.add_argument('--skip-autotune',action=argparse.BooleanOptionalAction,default=True,help='Use native default FlashInfer tactics without optional startup tuning')
     parser.add_argument('--api-key-file',type=Path,help='Reuse an existing owner-only API key when replacing the local server')
     args=parser.parse_args()
+    snapshot=None
+    if args.profile:
+        sys.path.insert(0,str(ROOT/'scripts/lib'))
+        import glm53_profile as profile_api
+        profile_api.reject_overrides(sys.argv[1:])
+        if sum((args.start,args.status,args.stop)) != 1:parser.error('choose exactly one lifecycle action')
+        if args.status or args.stop:
+            profile_api.lifecycle_action(args.profile,'stop' if args.stop else 'status');return
+        snapshot=profile_api.resolve_profile(args.profile,args.host,args.output.resolve())
+        args.port=snapshot['port']
+        args.model=Path(snapshot['argv'][snapshot['argv'].index('--model')+1])
+        profile_api.verify_artifacts(snapshot)
+    elif args.host or args.status or args.stop:
+        parser.error('--host, --status and --stop require --profile')
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
     agent_fast=args.preset=='agent-fast'
@@ -93,7 +111,7 @@ def main():
     model=args.model.resolve(); output=args.output.resolve()
     api_key=launch_key(args.api_key_file)
     inventory=json.loads((model/'inventory.json').read_text())
-    for row in inventory['files']:
+    for row in ([] if snapshot else inventory['files']):
         path=model/row['path']
         if path.parent!=model or path.is_symlink() or path.stat().st_size!=row['size_bytes'] or sha(path)!=row['sha256']:
             raise ValueError('model inventory mismatch')
@@ -136,6 +154,14 @@ def main():
         'INSTANTTENSOR_BUFFER_SIZE':'1342177280','INSTANTTENSOR_CHUNK_SIZE':'8388608',
         'INSTANTTENSOR_CONCURRENCY':'1','INSTANTTENSOR_IO_DEPTH':'3','INSTANTTENSOR_BACKEND':'AIO'}
     if args.standard_cuda_allocator:environment['PYTORCH_CUDA_ALLOC_CONF']='expandable_segments:False'
+    if snapshot:
+        arguments=snapshot['argv'][4:]
+        environment=snapshot['env']
+        profile={'profile_id':snapshot['profile_id']}
+        args.preset=snapshot['profile_id'].split('/')[-1]
+        prefill_batch=int(arguments[arguments.index('--max-num-batched-tokens')+1])
+        kv_cache_bytes=int(arguments[arguments.index('--kv-cache-memory-bytes')+1])
+        (output/'profile-snapshot.json').write_text(json.dumps(snapshot,indent=2)+'\n')
     launch={'scope':'development bring-up; no model qualification or performance claim',
         'preset':args.preset,
         'start_unix':time.time(),'arguments':arguments,'environment':environment,
@@ -157,10 +183,13 @@ def main():
     print(json.dumps({'event':'launch','port':args.port,'output':str(output),'preset':args.preset,
         'context_per_slot':int(arguments[arguments.index('--max-model-len')+1]),'slots':4,
         'prefill_batch':prefill_batch,'kv_cache_bytes':kv_cache_bytes}),flush=True)
-    with (output/'wrapper.log').open('w') as log:
-        result=subprocess.run(command,env=control,stdout=log,stderr=subprocess.STDOUT)
-    (output/'exit.json').write_text(json.dumps({'exit_code':result.returncode,'time_unix':time.time()})+'\n')
-    raise SystemExit(result.returncode)
+    if snapshot:
+        returncode=profile_api.run_contained(command,control,output,snapshot)
+    else:
+        with (output/'wrapper.log').open('w') as log:
+            returncode=subprocess.run(command,env=control,stdout=log,stderr=subprocess.STDOUT).returncode
+    (output/'exit.json').write_text(json.dumps({'exit_code':returncode,'time_unix':time.time()})+'\n')
+    raise SystemExit(returncode)
 
 
 if __name__=='__main__':

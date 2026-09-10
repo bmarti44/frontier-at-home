@@ -1,23 +1,50 @@
 {
- "schema_version": 1,
- "model": "glm-5.3-flash",
- "identity_manifest": "weights/glm-5.3-flash/manifest.json",
- "artifacts": {
-  "exl3-k2-densek4": {
-   "kind": "safetensors",
-   "path": "{model_root}/glm-5.3-flash/exl3-k2-densek4",
-   "weights_gib": 80.0,
-   "note": "Estimate only. Full inventory and measured resident bytes required before launch."
+  "schema_version": 1,
+  "model": "glm-5.3-flash",
+  "identity_manifest": "weights/glm-5.3-flash/manifest.json",
+  "artifacts": {
+    "exl3-k2-densek4": {
+      "kind": "safetensors",
+      "path": "{model_root}/glm-5.3-flash/exl3-k2-densek4",
+      "weights_gib": 80.0,
+      "note": "Estimate only. Full inventory and measured resident bytes required before launch."
+    },
+    "local-exl3-k2-densek4": {
+      "kind": "safetensors",
+      "path": "{cache_root}/glm53-flash/model-weights-001",
+      "weights_gib": 80
+    },
+    "model-freeze-004": {
+      "kind": "inventory",
+      "path": "{repo}/results/glm53-flash-gates/profile-integration-001/inventories/model-inventory.json.gz",
+      "sha256": "c0d9388d768356fc9aa0b5e50ff8eaa3daebc7e9d58d176377377f0d7069f764"
+    },
+    "runtime-freeze-004": {
+      "kind": "inventory",
+      "path": "{repo}/results/glm53-flash-gates/profile-integration-001/inventories/runtime-inventory.json.gz",
+      "sha256": "b31467c7ce44cce83bc3107098eff52c16a43f13624ac02240d443053f2ec2e8"
+    }
+  },
+  "engines": {
+    "vllm-exl3-glm53": {
+      "build_manifest": "configs/build-manifests/glm53-flash-vllm-exl3.json",
+      "binary_path": "{cache_root}/glm53-flash/runtime/bin/python3",
+      "note": "Unbuilt; interpreter alone is not runtime identity. Closed package/extension inventory required."
+    },
+    "vllm-exl3-glm53-local": {
+      "binary_path": "{cache_root}/glm53-flash/native-runtime-002/runtime/bin/python3",
+      "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+      "build_manifest": "configs/build-manifests/glm53-flash-local.json",
+      "note": "Whole runtime inventory verified by experimental lifecycle before every start."
+    }
+  },
+  "backend_support": {
+    "cuda": {
+      "supported": true,
+      "hardware_class": [
+        "spark"
+      ],
+      "note": "Candidate only; no qualification result."
+    }
   }
- },
- "engines": {
-  "vllm-exl3-glm53": {
-   "build_manifest": "configs/build-manifests/glm53-flash-vllm-exl3.json",
-   "binary_path": "{cache_root}/glm53-flash/runtime/bin/python3",
-   "note": "Unbuilt; interpreter alone is not runtime identity. Closed package/extension inventory required."
-  }
- },
- "backend_support": {
-  "cuda": {"supported": true, "hardware_class": ["spark"], "note": "Candidate only; no qualification result."}
- }
 }

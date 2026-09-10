@@ -44,6 +44,14 @@ while (( $# > 0 )); do
     esac
 done
 [[ -n $PROFILE_ARG ]] || { usage >&2; exit 2; }
+case ${PROFILE_ARG%.json} in
+    glm-5.3-flash/cuda-spark-128g-agent-fast|glm-5.3-flash/cuda-spark-128g-1m-experimental)
+        [[ -z $PORT_OVERRIDE ]] || die 'named GLM profiles do not allow port overrides'
+        glm_args=(--profile "$PROFILE_ARG" "--$ACTION")
+        [[ -z $HOST_ARG ]] || glm_args+=(--host "$HOST_ARG")
+        exec python3 -B "$REPO_ROOT/scripts/47_run_glm53_dev.py" "${glm_args[@]}"
+        ;;
+esac
 if [[ $PROFILE_ARG == glm-5.3-flash/* ]]; then
     die 'use the hardened GLM-5.3 lifecycle; generic profile launch is disabled for this model'
 fi

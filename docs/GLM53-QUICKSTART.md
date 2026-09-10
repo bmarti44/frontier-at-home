@@ -3,6 +3,42 @@
 GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`, with
 model name `glm-5.3-flash`. Qwen remains the recorded default.
 
+GLM is available through two explicitly selected experimental profiles:
+
+```bash
+scripts/92_resolve_profile.py list --model glm-5.3-flash
+scripts/93_profile_serve.sh --profile glm-5.3-flash/cuda-spark-128g-agent-fast start
+```
+
+The agent profile uses four 65,536-token slots, a 4 GiB KV reservation and
+512-token prefill batches. The launch command stays in the foreground. Wait
+for its `ready` event before connecting; startup verifies the complete pinned
+runtime and model inventories, then checks authentication and a completed reply.
+The printed output directory contains the owner-only `api-key` file.
+
+From another terminal:
+
+```bash
+scripts/93_profile_serve.sh --profile glm-5.3-flash/cuda-spark-128g-agent-fast status
+scripts/93_profile_serve.sh --profile glm-5.3-flash/cuda-spark-128g-agent-fast stop
+```
+
+For the full-context experimental configuration, replace `agent-fast` with
+`1m-experimental`. It configures four 262,144-token slots: 1,048,576 tokens in
+aggregate, not a million tokens in one request. Its prior direct context run
+failed; this profile remains unqualified. Only one model can run at a time.
+Start requires at least 110 GiB available; stop an existing model through its
+own lifecycle first. These commands preserve Qwen's recorded/reboot default
+and do not promote GLM into the production switch.
+
+Named profiles supply exact settings; command-line parameter overrides are
+rejected. To choose an output directory or reuse a client key, invoke
+`python3 scripts/47_run_glm53_dev.py --start --profile <profile-id>` with
+`--output` or `--api-key-file`. The older development commands remain available.
+
+The new named lifecycle has passed synthetic regression tests; its first actual
+model launch is pending while the million-token campaign uses port 8015.
+
 The last agent preset ran in
 `/home/bmarti44/.cache/glm53-flash/server-20260909-201848`. It received SIGTERM
 and stopped at 20:55 EDT on September 9; the sender was not established.

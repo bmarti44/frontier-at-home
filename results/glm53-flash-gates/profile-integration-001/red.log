@@ -1,0 +1,72 @@
+EEEE
+======================================================================
+ERROR: test_frozen_inventory_rejects_changed_or_unlisted_files (test_glm53_experimental_profiles.ExperimentalProfiles.test_frozen_inventory_rejects_changed_or_unlisted_files)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 43, in test_frozen_inventory_rejects_changed_or_unlisted_files
+    api = importlib.import_module('glm53_profile')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'glm53_profile'
+
+======================================================================
+ERROR: test_profile_entry_rejects_production_and_cli_overrides (test_glm53_experimental_profiles.ExperimentalProfiles.test_profile_entry_rejects_production_and_cli_overrides)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 36, in test_profile_entry_rejects_production_and_cli_overrides
+    api = importlib.import_module('glm53_profile')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'glm53_profile'
+
+======================================================================
+ERROR: test_profiles_render_exact_geometry_and_containment (test_glm53_experimental_profiles.ExperimentalProfiles.test_profiles_render_exact_geometry_and_containment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/profile_resolver.py", line 92, in _load_json
+    with open(path, encoding="utf-8") as stream:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/bmarti44/spark-deepseek-v4-flash/configs/profiles/glm-5.3-flash/cuda-spark-128g-agent-fast.json'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 17, in test_profiles_render_exact_geometry_and_containment
+    p = resolver.load_profile('glm-5.3-flash', 'cuda-spark-128g-' + name + '.json')
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/profile_resolver.py", line 188, in load_profile
+    leaf = _load_json(directory / profile_file)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/profile_resolver.py", line 95, in _load_json
+    raise ProfileError(f"cannot read {path}: {error}") from error
+profile_resolver.ProfileError: cannot read /home/bmarti44/spark-deepseek-v4-flash/configs/profiles/glm-5.3-flash/cuda-spark-128g-agent-fast.json: [Errno 2] No such file or directory: '/home/bmarti44/spark-deepseek-v4-flash/configs/profiles/glm-5.3-flash/cuda-spark-128g-agent-fast.json'
+
+======================================================================
+ERROR: test_stale_process_record_cannot_stop_a_process (test_glm53_experimental_profiles.ExperimentalProfiles.test_stale_process_record_cannot_stop_a_process)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 57, in test_stale_process_record_cannot_stop_a_process
+    api = importlib.import_module('glm53_profile')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'glm53_profile'
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+
+FAILED (errors=4)

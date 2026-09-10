@@ -1,5 +1,10 @@
 # GLM-5.3-Flash CUDA status
 
+Named experimental profiles now have executable start/status/stop wiring through
+`93_profile_serve.sh`; synthetic lifecycle checks pass, and a real profile launch
+is pending while the direct context campaign runs. See the
+[profile integration record](profile-integration-001/README.md).
+
 **The optional agent preset passed basic serving checks and is now stopped.**
 It received SIGTERM at 20:55 EDT on September 9; sender attribution is unknown.
 The interrupted wrapper/guard shutdown is retained as terminal FAIL in
@@ -24,7 +29,7 @@ production performance remains **not yet measured**.
 The original optional configuration remains available. Its separate four-slot
 context run **failed**: all four 250,128-token requests returned server errors
 after a CUDA illegal memory access and Xid31. No request completed. Raw evidence
-is preserved in [context-direct-003](context-direct-003/README.md). The exact-input synchronized replay is now being prepared to localize the failure.
+is preserved in [context-direct-003](context-direct-003/README.md). The exact-input synchronized replay is running in server019/context-direct-004 to localize the failure; no result is claimed yet.
 Session 016's earlier memory-floor failure during repository publication also
 remains preserved alongside its successful functional snapshot.
 

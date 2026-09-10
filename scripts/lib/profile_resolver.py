@@ -41,6 +41,7 @@ PLACEHOLDERS = (
     "model_root",
     "cache_root",
     "state_root",
+    "run_root",
 )
 PLACEHOLDER_RE = re.compile(r"\{(" + "|".join(PLACEHOLDERS) + r")\}")
 UNKNOWN_PLACEHOLDER_RE = re.compile(r"^\{[a-z_]+\}$")
@@ -255,7 +256,7 @@ def _substitute(value: str, mapping: dict, label: str) -> str:
     return rendered
 
 
-def resolve(profile: dict, model: dict, host: dict, verb: str = "start") -> dict:
+def resolve(profile: dict, model: dict, host: dict, verb: str = "start", *, run_root: str | None = None) -> dict:
     if "serving" in profile:
         from glm53_contract import validate_serving
         try:
@@ -281,6 +282,7 @@ def resolve(profile: dict, model: dict, host: dict, verb: str = "start") -> dict
         "cache_root": paths["cache_root"],
         "state_root": paths["state_root"],
         "verb": verb,
+        "run_root": run_root or f"{paths['cache_root']}/profile-runs/{profile['profile_id']}",
     }
     port_role = profile["port_role"]
     port = host["ports"].get(port_role)

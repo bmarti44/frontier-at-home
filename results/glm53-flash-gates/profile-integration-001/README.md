@@ -10,3 +10,24 @@ not model qualification or performance evidence.
 and module) at 721041dd. Existing production admission/default tests must also
 continue to pass. Start stays explicit, uses the existing hardened wrapper,
 and never writes the production switch's active/default state.
+
+Candidate 1 adds `cuda-spark-128g-agent-fast` and
+`cuda-spark-128g-1m-experimental`, with start/status/stop through script93 and the
+existing hardened wrapper. It does not change production admission or default
+state. Profile arguments/environment are rendered once; containment must equal
+the measured wrapper envelope. Startup verifies compressed, digest-bound closed
+inventories, checks authentication/model/semantics, and emits `ready` only then.
+Shutdown checks the exact systemd InvocationID and waits for unit/cgroup exit.
+
+`green.txt` records ten passing configuration/lifecycle tests. The seventeen
+existing GLM contract tests and fifteen resolver tests also pass. The actual
+profile model launch is pending because server019 is running the direct context
+replay. This is not production qualification or a model performance result.
+
+The profile inventories extend freeze004 coverage to 48 existing runtime bytecode
+files and 130 model metadata/receipt files that its original list omitted. See
+`configs/build-manifests/glm53-local/coverage.json`. No executable source or native
+binary was added or changed. The launcher rehashes the entire closed trees before
+use; inherited hashes are not accepted as evidence of a successful launch. This
+also limits the current replay to failure localization, not closed-inventory
+confirmation. Its original freeze and inputs remain unchanged.

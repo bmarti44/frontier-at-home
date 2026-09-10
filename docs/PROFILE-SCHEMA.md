@@ -51,7 +51,7 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
     the platform watchdog (macOS: `scripts/06_memwatch_macos.sh`).
 - `launch.args` / `launch.env` accept placeholders
   `{model} {mmproj} {draft_model} {binary} {port} {verb} {repo}
-  {model_root} {cache_root} {state_root}`. Unknown or unresolved
+  {model_root} {cache_root} {state_root} {run_root}`. Unknown or unresolved
   placeholders are hard errors; arrays replace whole under `extends`.
 - `memory_model` maps 1:1 onto `scripts/02_membudget.py`
   (`kv_bytes_per_token`, `overhead_gib`, `extra_gib`, `floor_gib`).
@@ -110,3 +110,7 @@ soak with the platform watchdog armed) → evidence bundle under
 flips `status` with the evidence pointer. Community-qualified rows carry the
 "Qualified (community)" attestation; numbers are never merged across
 backends. See docs/QUALIFY-OFFHOST.md.
+
+The experimental GLM launcher supplies `{run_root}` as its unique attempt
+directory before rendering. Read-only rendering uses
+`{cache_root}/profile-runs/<profile_id>` as the illustrative run directory.
