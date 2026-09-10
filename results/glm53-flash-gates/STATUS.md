@@ -1,29 +1,28 @@
 # GLM-5.3-Flash CUDA status
 
-**GLM is now serving text, tools, images and video locally.** The
-[restored serving checks passed](server-bringup-017-restore/README.md): authenticated chat,
-unauthenticated rejection, correct tool arguments, four overlapping text requests,
-one image, four images in order, and a 16-frame video. Media fixtures were 224x224;
-larger inputs remain unqualified. The externally sampled memory low point through
-this live snapshot was 18.79424285888672 GiB, with cgroup swap 0.
+**The optional agent preset is serving chat, tools, images and video.**
+[Agent preset checks passed](agent-fast-001/README.md): authenticated chat,
+rejection without authentication, correct tool arguments, a tool-result round
+trip, four overlapping requests, four images and a 16-frame video using 224x224
+fixtures. The observed memory low point was 24.18417739868164 GiB with no cgroup
+swap. This is a live snapshot; terminal lifecycle remains unobserved.
 
-Use `python3 scripts/47_run_glm53_dev.py --start` for the verified optional
-settings; [the launch guide](../../docs/GLM53-QUICKSTART.md) explains access and
-the 2.5-hour development timeout. Development endpoint: localhost:8015, model
-`glm-5.3-flash`; run directory:
-`/home/bmarti44/.cache/glm53-flash/server-bringup-018-restore`.
-Session 016 restores the working settings and passed chat, tools, four
-overlapping requests, one image, four images and a 16-frame video. Session 016 later crossed the watchdog floor during repository publication and
-was stopped; its terminal FAIL is preserved alongside the functional snapshot.
-Session 017 passed the same functional checks and later stopped cleanly for
-a bounded operator diagnostic. Session 018 restores the same serving settings.
-The separate four-slot context run **failed**:
-all four 250,128-token requests returned server errors after a CUDA illegal
-memory access and Xid31. No request completed. Raw evidence is preserved in
-[context-direct-003](context-direct-003/README.md). The engine exited and host
-memory recovered without a reboot. Restoring basic serving does not resolve
-this long-context defect. Further stress testing is deferred to keep the usable
-server available.
+The owner has prioritized speed for agent work. `--preset agent-fast` configures
+65,536 tokens per request, four slots, a 4 GiB KV reservation and 512-token prompt
+batches, using the same weights. Maximum context and fidelity remain unqualified.
+Host access is restored; the active run directory is
+`/home/bmarti44/.cache/glm53-flash/server-20260909-201848`.
+[Launch and connection instructions](../../../docs/GLM53-QUICKSTART.md).
+Short development timing evidence is archived with its limitations; qualified
+production performance remains **not yet measured**.
+
+The original optional configuration remains available. Its separate four-slot
+context run **failed**: all four 250,128-token requests returned server errors
+after a CUDA illegal memory access and Xid31. No request completed. Raw evidence
+is preserved in [context-direct-003](context-direct-003/README.md). Further
+million-token investigation is deferred in favor of practical agent serving.
+Session 016's earlier memory-floor failure during repository publication also
+remains preserved alongside its successful functional snapshot.
 
 The [native top-k diagnostic](context-topk-probe-001/README.md) completed both
 finite and all-NaN inputs at the failed batch's geometry without invalid or
@@ -36,7 +35,7 @@ The earlier client memory-scaling correction remains valid: all 17 scorer tests
 and both focused reviews pass. Its interrupted attempt remains preserved in
 [context-direct-002](context-direct-002/README.md).
 
-Qwen remains the recorded default. The launch configures 1,048,576 aggregate
+Qwen remains the recorded default. The original launch configures 1,048,576 aggregate
 tokens across four 262,144-token slots. Full-context processing has failed; paired fidelity, production switching and
 lifecycle qualification remain pending. Production
 admission is closed. Performance is **not yet measured**.

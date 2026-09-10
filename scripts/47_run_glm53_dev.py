@@ -71,9 +71,10 @@ def main():
     parser.add_argument('--model',type=Path,default=BASE/'model-weights-001')
     parser.add_argument('--output',type=Path,default=BASE/('server-'+time.strftime('%Y%m%d-%H%M%S')))
     parser.add_argument('--port',type=int,default=8015)
+    parser.add_argument('--preset',choices=('original','agent-fast'),default='original',help='agent-fast: unmeasured 64K-per-request, four-slot candidate with a smaller KV cache and larger prompt batches')
     parser.add_argument('--text-only',action=argparse.BooleanOptionalAction,default=False,help='Disable vision while retaining the same four-slot text geometry')
     parser.add_argument('--skip-mm-profiling',action=argparse.BooleanOptionalAction,default=True,help='Skip automatic media warm-up while retaining media support')
-    parser.add_argument('--prefill-batch',type=int,choices=(128,256,512,1024,2048),default=128,help='Prompt chunk size; does not change context or slot count')
+    parser.add_argument('--prefill-batch',type=int,choices=(128,256,512,1024,2048),help='Override prompt chunk size (original: 128; agent-fast: 512)')
     parser.add_argument('--long-prefill-token-threshold',type=int,choices=(0,32),default=0,help='Native per-request chunk cap for the four-slot context probe')
     parser.add_argument('--standard-cuda-allocator',action=argparse.BooleanOptionalAction,default=True,help='Avoid expandable virtual reservations under the existing address-space limit')
     parser.add_argument('--release-warmup-cache',action=argparse.BooleanOptionalAction,default=True,help='Release unused startup allocations before reserving the full KV cache')
@@ -83,6 +84,12 @@ def main():
     args=parser.parse_args()
     if not args.start:parser.error('explicit --start is required; this never changes the serving default')
     if args.port not in range(1024,65536) or args.port in (8010,8013,8014):parser.error('use a separate local development port')
+    agent_fast=args.preset=='agent-fast'
+    prefill_batch=args.prefill_batch if args.prefill_batch is not None else (512 if agent_fast else 128)
+    # Keep margin above a quarter of the original reservation for recurrent
+    # states and cache-page rounding. Native startup must validate capacity;
+    # this candidate's four-slot fit and speed have not been measured.
+    kv_cache_bytes=4294967296 if agent_fast else 9565304320
     model=args.model.resolve(); output=args.output.resolve()
     api_key=launch_key(args.api_key_file)
     inventory=json.loads((model/'inventory.json').read_text())
@@ -103,13 +110,14 @@ def main():
     with os.fdopen(descriptor,'w') as key:key.write(api_key+'\n')
     profile=json.loads((ROOT/'configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json').read_text())
     arguments=[value.replace('{model}',str(model)).replace('{port}',str(args.port)) for value in profile['launch']['args'][4:]]
-    arguments[arguments.index('--max-num-batched-tokens')+1]=str(args.prefill_batch)
+    arguments[arguments.index('--max-num-batched-tokens')+1]=str(prefill_batch)
+    if agent_fast:arguments[arguments.index('--max-model-len')+1]='65536'
     if args.long_prefill_token_threshold:
         arguments+=['--long-prefill-token-threshold',str(args.long_prefill_token_threshold)]
     if not args.text_only:
         arguments[arguments.index('--limit-mm-per-prompt')+1]='{"image":{"count":4,"width":512,"height":512},"video":{"count":1,"num_frames":16,"width":512,"height":512}}'
     arguments+=['--load-format','instanttensor','--dtype','bfloat16','--enforce-eager',
-                '--enable-chunked-prefill','--kv-cache-memory-bytes','9565304320',
+                '--enable-chunked-prefill','--kv-cache-memory-bytes',str(kv_cache_bytes),
                 '--mm-processor-cache-gb','0']
     if args.skip_autotune:arguments+=['--kernel-config','{"enable_flashinfer_autotune":false}']
     if args.release_warmup_cache:arguments+=['--worker-cls','glm53_worker.WarmupCleanupWorker']
@@ -129,6 +137,7 @@ def main():
         'INSTANTTENSOR_CONCURRENCY':'1','INSTANTTENSOR_IO_DEPTH':'3','INSTANTTENSOR_BACKEND':'AIO'}
     if args.standard_cuda_allocator:environment['PYTORCH_CUDA_ALLOC_CONF']='expandable_segments:False'
     launch={'scope':'development bring-up; no model qualification or performance claim',
+        'preset':args.preset,
         'start_unix':time.time(),'arguments':arguments,'environment':environment,
         'library_sources':[{'path':p.name,'sha256':sha(p)} for p in sorted((output/'lib').glob('*.py'))],
         'worker_source':{'sha256':sha(output/'lib/glm53_worker.py')} if args.release_warmup_cache else None,
@@ -145,7 +154,9 @@ def main():
         '--tag','glm53-dev-'+str(os.getpid()),'--','/usr/bin/env','-i',
         *(k+'='+v for k,v in sorted(environment.items())),str(RUNTIME/'bin/python3'),'-I','-B',
         str(output/'guard.py'),'--output',str(output/'identity'),'--',str(output/'server.py'),'--serve',str(output)]
-    print(json.dumps({'event':'launch','port':args.port,'output':str(output),'context_per_slot':262144,'slots':4}),flush=True)
+    print(json.dumps({'event':'launch','port':args.port,'output':str(output),'preset':args.preset,
+        'context_per_slot':int(arguments[arguments.index('--max-model-len')+1]),'slots':4,
+        'prefill_batch':prefill_batch,'kv_cache_bytes':kv_cache_bytes}),flush=True)
     with (output/'wrapper.log').open('w') as log:
         result=subprocess.run(command,env=control,stdout=log,stderr=subprocess.STDOUT)
     (output/'exit.json').write_text(json.dumps({'exit_code':result.returncode,'time_unix':time.time()})+'\n')

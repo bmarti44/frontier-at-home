@@ -1,35 +1,50 @@
 # GLM-5.3-Flash local bring-up
 
-GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`.
-The model name is `glm-5.3-flash`. Qwen remains the recorded default.
-The replacement launch directory is
-`/home/bmarti44/.cache/glm53-flash/server-bringup-018-restore`; its private key is
-in `api-key` within that directory. The preceding session 017 passed authenticated
-chat, tool-call, four concurrent-request, single-image, four-image and 16-frame
-video checks with 224x224 media inputs. [Raw serving evidence](../results/glm53-flash-gates/server-bringup-017-restore/README.md)
-is preserved. Session 017 then stopped cleanly for a small native operator test.
-Session 018 uses the same serving settings. Finish memory-heavy background work
-before starting GLM.
+GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`, with
+model name `glm-5.3-flash`. Qwen remains the recorded default.
 
-The requested capacity is **four slots of 262,144 tokens each**, totaling
-1,048,576 tokens. The separate full-context test **failed with a CUDA memory
-access error**. The restored server supports basic use; this restart does not
-resolve that long-context failure.
+The agent preset is running in
+`/home/bmarti44/.cache/glm53-flash/server-20260909-201848`.
+Its private API key is in `api-key` in that directory. Chat, correct tool calls,
+a tool-result round trip, four overlapping requests, four images and a 16-frame
+video passed. [Raw serving evidence](../results/glm53-flash-gates/agent-fast-001/README.md)
+is preserved. Media checks used 224x224 fixtures.
 
-Start the optional local server from the repository (the launcher now defaults
-to the settings that passed the text/tool/media checks):
+This preset uses the existing compressed weights, 65,536 tokens per request,
+four slots, a 4 GiB KV reservation and 512-token prompt batches. Its observed
+memory low point during the short serving checks was 24.18 GiB with zero cgroup
+swap. Maximum context and fidelity remain unqualified; no extra quantization was
+introduced. Start it with the following command when it is not already running:
+
+```bash
+python3 scripts/47_run_glm53_dev.py --start --preset agent-fast
+```
+
+The original experimental configuration remains available:
 
 ```bash
 python3 scripts/47_run_glm53_dev.py --start
 ```
 
-The launcher verifies the pinned weights, uses the prepared runtime, and writes
-its random API key to `api-key` inside the printed output directory with owner-only permissions. Use that
-key in the `Authorization: Bearer ...` header. Use `--output /path/to/a/new/run` to choose that directory. It also holds
-the exact launch settings and logs. The launcher uses the shared inference lock
-and requires the other large model to be stopped and memory to recover first.
+That configuration requests four slots of 262,144 tokens each, totaling
+1,048,576 tokens. Its direct full-context run failed with a CUDA memory access
+error. The smaller candidate does not establish a fix for that failure.
 
-This is a manual development server with a 2.5-hour safety timeout. It does not
-change reboot defaults or authorize the production switch. The existing memory
-watchdog and containment remain active. This recipe enables text, tools, images and video. Use `--text-only` for the working text fallback. Larger media and full context remain unqualified. Current results are in
-[GLM status](../results/glm53-flash-gates/STATUS.md).
+The launcher verifies the pinned weights and uses the prepared runtime. It writes
+an owner-only `api-key` file inside the printed output directory. Use that key in
+the `Authorization: Bearer ...` header. Set `--output /path/to/a/new/run` to choose
+the directory, or `--api-key-file /path/to/existing/api-key` to retain a client key.
+Exact settings and logs are saved with each launch. `--prefill-batch` overrides
+the preset's prompt batch size; `--text-only` disables media.
+
+Host-control access has been restored. Finish memory-heavy background work
+before starting GLM; the launcher requires the other large model to be stopped
+and memory to recover first. The launch command stays running while the server
+serves requests; startup includes verification of the model files.
+
+This manual development server has a 2.5-hour safety timeout and retains the
+shared inference lock, memory watchdog and containment. It does not change
+reboot defaults or enable the production switch. Larger media, full context and
+paired fidelity remain unqualified. Qualified production performance is **not yet measured**. Short development
+timings are retained in the serving evidence, with their limitations.
+See [GLM status](../results/glm53-flash-gates/STATUS.md).

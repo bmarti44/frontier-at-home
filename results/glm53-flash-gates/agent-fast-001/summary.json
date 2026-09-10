@@ -1,0 +1,38 @@
+{
+  "scope": "development serving snapshot only; not production, capacity or fidelity qualification",
+  "verdict": "PASS",
+  "snapshot_unix": 1788999930.21448,
+  "checks": {
+    "authenticated_chat": true,
+    "unauthenticated_rejection": true,
+    "tool_arguments": true,
+    "four_completed_requests": true,
+    "four_client_requests_overlap": true,
+    "memory_floor": true,
+    "no_cgroup_swap": true,
+    "default_unchanged": true,
+    "unit_active": true,
+    "preset": true,
+    "images4-smoke": true,
+    "video-smoke": true,
+    "tool-roundtrip": true
+  },
+  "capacity": {
+    "configured_tokens_per_request": 65536,
+    "configured_slots": 4,
+    "full_context_tested": false
+  },
+  "memory_low_gib": 24.18417739868164,
+  "memory_formula": "minimum externally sampled MemAvailable_kB / 1048576",
+  "cgroup_swap_peak_bytes": 0,
+  "server_lifecycle": "live snapshot; terminal outcome not observed; 9000-second watchdog timeout",
+  "run_directory": "/home/bmarti44/.cache/glm53-flash/server-20260909-201848",
+  "unit": "glm52-glm53-dev-1655918-1657188.service",
+  "recorded_default": {
+    "active_profile": "qwen38-1m",
+    "schema_version": 1,
+    "state": "recorded"
+  },
+  "production_performance": "not yet measured",
+  "timing_evidence": "agent-timing in archive; case 0 isolated, case 1 excluded from isolated speed comparison due to overlapping media request; both ended at requested output limit"
+}
