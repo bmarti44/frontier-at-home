@@ -4,7 +4,8 @@
 passed the direct aggregate million-token context check; the latest current-settings
 run failed its memory reserve. Qwen remains the recorded/reboot default.
 The latest model-free workspace test failed its repeated-baseline byte comparison;
-runtime bytecode restoration is pending before another launch. The corrected native reference probe passed one real
+the original runtime inventory passes again after exact bytecode restoration.
+The corrected native reference probe passed one real
 layer, including host monitoring and cleanup. Full model qualification remains incomplete.
 
 The [passive unloaded control](host-swap-accounting-001/unloaded-control-001/README.md)
@@ -136,8 +137,11 @@ before either64MiB candidate arm. The attempt is **FAIL** and smaller-workspace
 qualification is **NO_RESULT**. No buffer saving, speed or context claim follows.
 The original terminal host record is missing. Separate checks verified98 frozen
 bindings but found149 changed inventoried Python bytecode files and830 extras.
-All changed/extra bytes and exact original backup locations are preserved for
-restoration against the unchanged61,401-file inventory. All four processes and
+All changed/extra bytes and exact original backup locations were preserved before
+[restoration](indexer-workspace-preparation-001/runtime-restoration/README.md).
+The149 originals were restored from hash-identical existing backups and830 extras
+quarantined; the unchanged61,401-file inventory then passed. This separate recovery
+does not revise the original attempt. All four processes and
 cgroups were gone and memory recovered. No profile/default changed. The next
 practical configuration under consideration restores the earlier128/32 scheduler
 while retaining the full million-token/four-slot target; it is not a new result.
