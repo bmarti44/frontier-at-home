@@ -1,9 +1,10 @@
 # External swap observation controls
 
-Attempts004/005 retain a failed no-swap-I/O check: one host swap-in page arrived
-between the broad prelaunch baseline and before-window observation. There was
-no used-swap growth, no swap-out and no GLM cgroup swap. Attribution is unknown.
-Those attempts and their formulas remain unchanged.
+Attempts 004 and 005 retain a failed no-swap-I/O check. In attempt 004, one host
+swap-in page arrived between the before-window and pre-stop observations. In
+attempt 005, one page arrived between the broad prelaunch baseline and the
+before-window observation. Neither attempt grew used swap or recorded swap-out
+or GLM cgroup swap. Attribution is unknown. The attempts and formulas remain unchanged.
 
 Run this explicit external diagnostic in a fresh small zero-swap cgroup. It is
 not imported by a server, is absent from production profiles, and adds no disabled
