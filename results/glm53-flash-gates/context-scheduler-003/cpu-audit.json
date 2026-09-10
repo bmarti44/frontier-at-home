@@ -1,0 +1,41 @@
+{
+  "scope": "Evidence-only direct-context invocation adaptation; no model/serving or qualification result",
+  "verdict": "PASS",
+  "time_unix": 1789074463.5308712,
+  "configuration": "4x262144; batch512/long-prefill128; prefix cache disabled",
+  "checks": [
+    "Current configuration accepted; old/wrong/duplicate/cache-enabled/malformed configuration rejected",
+    "Prepared, short, stream, retrieval, run and score functions reused unchanged",
+    "Binding statement AST identical to closed binder",
+    "Missing, duplicate and wrong source bindings rejected",
+    "17 existing direct-context scorer tests pass; four adapter tests pass"
+  ],
+  "files": [
+    {
+      "path": "results/glm53-flash-gates/context-scheduler-003/adapter.py",
+      "sha256": "9a63c6f73e92ecb67800cf203031a3f13c6a43f764d5b7530cf983e656af1325",
+      "size_bytes": 4833
+    },
+    {
+      "path": "results/glm53-flash-gates/context-scheduler-003/test_adapter.py",
+      "sha256": "e39c216b37b06688a6eff6a7e0a901b289bc9f911148380f9ed21613947aa4b7",
+      "size_bytes": 3875
+    },
+    {
+      "path": "results/glm53-flash-gates/context-scheduler-003/PROTOCOL.md",
+      "sha256": "c2a66ab734ab6cd03790afdd82610928992261626ac0f1dd7e287c1a7dd7ad0c",
+      "size_bytes": 1409
+    },
+    {
+      "path": "scripts/48_probe_glm53_context.py",
+      "sha256": "a0ad6be0bf807d693894454e72710ac4c0b54ba205a954c66cf4f7427b2d634d",
+      "size_bytes": 12224
+    },
+    {
+      "path": "scripts/57_dsv4_context_probe.py",
+      "sha256": "9d87dda019181d44f1ca0fea80412eb147d8927aa984aa4c32c64f97e6ac7eec",
+      "size_bytes": 17885
+    }
+  ],
+  "manual_diff_scan": "No serving changes, benchmark-specific production branches, canned outputs or timing/scoring changes."
+}
