@@ -3,8 +3,8 @@
 **GLM is runnable through named experimental profiles.** An earlier configuration
 passed the direct aggregate million-token context check; current settings still
 need confirmation. Qwen remains the recorded/reboot default.
-GLM is currently stopped; the latest replays failed before model loading. Full model
-qualification remains incomplete.
+GLM is currently stopped. The latest reference probe completed one native layer,
+but its host-monitoring aggregation failed. Full model qualification remains incomplete.
 
 The [passive unloaded control](host-swap-accounting-001/unloaded-control-001/README.md)
 completed all 121 samples with no swap activity. The subsequent
@@ -74,6 +74,13 @@ swap, ample memory and separately verified eventual process/cgroup cleanup.
 The [reviewed download alternative](bf16-parallel-transfer-001/PROTOCOL.md) uses
 four disjoint ranges into the same shard buffer, retaining complete LFS/header
 verification and all native computation, staging, scoring and safety limits.
+
+The [parallel native replay004](bf16-one-layer-004/README.md) completed all three
+whole-shard checks and a real native layer forward with finite output. Its
+identity guard and cleanup passed, but the outer host scorer rejected sampling
+coverage, leaving the overall verdict FAIL. Native full-model reference and
+paired fidelity remain unverified. The original failure and all raw output are
+preserved; a scoped review is checking the teardown timing boundary.
 
 The [current-scheduler context adapter](context-scheduler-003/PROTOCOL.md) is also
 ready: it reuses the existing512/128 launch validator and unchanged direct-input,
