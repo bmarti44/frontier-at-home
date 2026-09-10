@@ -1,89 +1,68 @@
 # GLM-5.3-Flash CUDA status
 
-Named experimental profiles are executable through `93_profile_serve.sh`.
-The [second actual lifecycle](profile-launch-002/README.md) passed native start,
-status, authentication, completed READY, orderly stop, terminal guard, process
-cleanup and memory recovery. Qwen/default/proxy state stayed unchanged. The
-[first lifecycle FAIL](profile-launch-001/README.md) remains preserved.
+**GLM is runnable through named experimental profiles, and the direct aggregate
+million-token context check passed.** Qwen remains the recorded/reboot default.
+GLM is currently stopped after the completed qualification run.
 
-The [latest direct context attempt](context-direct-006/README.md) processed
-1,000,512 actual input tokens across four slots without a CUDA crash, but its
-fixed verdict is **FAIL**: three requests exhausted 2,048 output tokens in
-reasoning with no final answer; one passed retrieval and negative controls.
-All 2,463 prepared cache files remained unchanged; the host minimum was
-18.293609619140625 GiB, with zero cgroup swap and clean shutdown. This does not
-establish complete context capability or qualified performance. The next bounded
-candidate clarifies only the fixture output instruction under a fresh freeze
-and public seed, keeping model settings and retrieval checks unchanged.
+The [latest completed context attempt](context-direct-007/README.md) passed all
+four final-answer retrieval checks and their negative controls. It processed
+1,000,512 actual input tokens across four simultaneous requests. The configured
+capacity is 1,048,576 tokens in total: four slots of 262,144 tokens each. This
+establishes the declared aggregate capacity; a single request is capped at
+262,144 tokens.
 
-**The optional agent preset passed basic serving checks and is now stopped.**
-It received SIGTERM at 20:55 EDT on September 9; sender attribution is unknown.
-The interrupted wrapper/guard shutdown is retained as terminal FAIL in
-[agent-fast-001/terminal](agent-fast-001/terminal/summary.json). No model process
-remained and memory recovered. The owner explicitly resumed the full million-token
-campaign and requested an executable profile integration.
-[Agent preset checks passed](agent-fast-001/README.md): authenticated chat,
-rejection without authentication, correct tool arguments, a tool-result round
-trip, four overlapping requests, four images and a 16-frame video using 224x224
-fixtures. The observed memory low point was 24.18417739868164 GiB with no cgroup
-swap. These figures describe the earlier live snapshot; the terminal update is linked above.
+The native profile's start, status, authentication, READY reply and orderly stop
+also passed. The guard confirmed cleanup, and available memory recovered above
+110 GiB. The measured low point was 18.44664764404297 GiB, with zero cgroup swap
+and no recorded Xid/OOM. All 2,463 prepared cache files stayed unchanged. Comparing
+launch and post-run bytes found growth only in unfrozen usage metadata. Default,
+proxy and guard state stayed unchanged. Both persistent reviewers independently
+reproduced the fixed context scorer's PASS and found no high/critical issue in
+this result.
 
-The owner has prioritized speed for agent work. `--preset agent-fast` configures
-65,536 tokens per request, four slots, a 4 GiB KV reservation and 512-token prompt
-batches, using the same weights. Maximum context and fidelity remain unqualified.
-Host access is restored; the preceding agent run directory was
-`/home/bmarti44/.cache/glm53-flash/server-20260909-201848`.
-[Launch and connection instructions](../../../docs/GLM53-QUICKSTART.md).
-Short development timing evidence is archived with its limitations; qualified
-production performance remains **not yet measured**.
+Use [the quickstart](../../docs/GLM53-QUICKSTART.md) for the repo's
+`93_profile_serve.sh` start/status/stop commands. The two profiles are:
 
-The original optional configuration remains available. Its separate four-slot
-context run **failed**: all four 250,128-token requests returned server errors
-after a CUDA illegal memory access and Xid31. No request completed. Raw evidence
-is preserved in [context-direct-003](context-direct-003/README.md). The synchronized replay processed 1,000,512 actual input tokens and generated
-four overlapping output streams, but [context-direct-004](context-direct-004/README.md)
-also failed: all four requests spent their 256-token allowance on reasoning and
-produced no final answer. No retrieval success or async-crash fix is claimed.
-The native follow-up006 and its failed final-answer result are recorded above.
-Session 016's earlier memory-floor failure during repository publication also
-remains preserved alongside its successful functional snapshot.
+- `glm-5.3-flash/cuda-spark-128g-agent-fast`: four 65,536-token slots for agent work.
+- `glm-5.3-flash/cuda-spark-128g-1m-experimental`: four 262,144-token slots for large contexts.
 
-The [native top-k diagnostic](context-topk-probe-001/README.md) completed both
-finite and all-NaN inputs at the failed batch's geometry without invalid or
-duplicate selections. The finite control matched its independent expected set.
-Both fresh processes exited cleanly with no cgroup swap. This is a null crash
-reproduction, not evidence that full context works; no serving patch follows
-from it.
+Both profiles remain experimental. Paired fidelity and production switching are
+pending. Qualified production performance is **not yet measured**. The context
+run's short outputs do not support a decode-speed claim.
 
-The earlier client memory-scaling correction remains valid: all 17 scorer tests
-and both focused reviews pass. Its interrupted attempt remains preserved in
-[context-direct-002](context-direct-002/README.md).
+The successful candidate clarified only the test's answer-format instruction,
+with a fresh freeze, public seed and a 4,224-token startup correctness check.
+Weights, runtime, model settings and retrieval scorer were unchanged. This does
+not establish a causal fix for the earlier asynchronous CUDA failure.
 
-Qwen remains the recorded default. The original launch configures 1,048,576 aggregate
-tokens across four 262,144-token slots. Full-context final-answer qualification, paired fidelity and production switching
-remain pending. Experimental named-profile lifecycle has passed. Production
-admission is closed. Performance is **not yet measured**.
+Earlier results remain preserved:
+
+- [context-direct-006](context-direct-006/README.md): FAIL; all input tokens processed, but three requests exhausted their output allowance in reasoning without a final answer.
+- [context-direct-004](context-direct-004/README.md): FAIL; synchronized diagnostic completed input processing but all four final answers were empty.
+- [context-direct-003](context-direct-003/README.md): FAIL; CUDA illegal memory access and Xid31, no completed request.
+- [profile-launch-002](profile-launch-002/README.md): PASS for actual native profile lifecycle after the preserved [first stop failure](profile-launch-001/README.md).
+- [agent-fast-001](agent-fast-001/README.md): basic authenticated chat, tool arguments and round trip, four overlapping requests, four images and a 16-frame video passed using 224x224 media fixtures. Its later unexplained SIGTERM and interrupted shutdown remain a separate [terminal FAIL](agent-fast-001/terminal/summary.json).
 
 The [native probability diagnostic](native-logprobs-001/README.md) passed exact
 input/position alignment on one non-final window. It measured delta-NLL
 0.043934924660812516 and top-1 accuracy loss 1.5144113336590133 percentage points
 against the native BF16 teacher. These point values exceed the eventual limits,
 but one non-final case is not the required 100-case gate. No performance benefit
-or adoption approval is claimed for that loss. Public native reference coverage
-for 100 qualifying cases remains unavailable; broader published captures are
-[retained privately](reference-followup-001/README.md).
+or adoption approval is claimed for that loss. The bounded
+[reference refresh](reference-availability-002/README.md) still found insufficient
+public native reference coverage for 100 qualifying cases. Broader published
+captures remain [retained privately](reference-followup-001/README.md).
 
-The media startup fix uses native dummy options: at most 16 video frames and
-512×512 throwaway warm-up images. Real media resolution and request limits are
-unchanged. Earlier failed attempts and genuine regressions remain preserved;
-focused source review found no verified high/critical issue. No new token-path
-diagnostic or runtime patch was needed for this fix.
+The [native top-k diagnostic](context-topk-probe-001/README.md) was a null crash
+reproduction: finite and all-NaN inputs at the failed batch geometry completed
+without invalid or duplicate selections. No serving patch followed from it.
+Earlier interrupted attempts, client corrections and failures remain in their
+original evidence directories. The unchanged context scorer reproduced the new
+result exactly; its 17 existing tests passed.
 
 [Weight preparation completed](model-weights-001/README.md): 84,696,019,172 tensor
-bytes with no new local quantization. Main source shards passed whole-source
-hash checks; selected dense ranges were read twice and compared, with complete
-dense-source hashes remaining metadata only. Every launch verifies the final
-local model/tokenizer inventory. The [reference binding check](reference-binding-001/README.md)
+bytes with no new local quantization. Every launch verifies the final local
+model/tokenizer inventory. The [reference binding check](reference-binding-001/README.md)
 verified exact public tokenizer, BF16 output-head and final-normalization bytes;
 this does not establish native reference equivalence or paired model fidelity.
 
