@@ -46,6 +46,20 @@ def prepare(out, seed, server):
             rendered = template.render(messages=body['messages'], tools=[], add_generation_prompt=True,
                                        reasoning_effort='low', clear_thinking=True)
             ids = tokenizer.encode(rendered, add_special_tokens=False).ids
+            # Reuse the durability builder's measured boundary filler for the
+            # short startup check; the direct-context branch stays unchanged.
+            missing = total - len(ids)
+            if total == 4224 and 0 < missing <= 2:
+                padded = fixture['text'] + ' .' * missing
+                body['messages'][0]['content'] = padded + INSTRUCTION
+                rendered = template.render(messages=body['messages'], tools=[], add_generation_prompt=True,
+                                           reasoning_effort='low', clear_thinking=True)
+                padded_ids = tokenizer.encode(rendered, add_special_tokens=False).ids
+                if len(padded_ids) == total:
+                    fixture.update(text=padded, fixture_sha256=hashlib.sha256(padded.encode()).hexdigest())
+                    ids = padded_ids
+                else:
+                    body['messages'][0]['content'] = fixture['text'] + INSTRUCTION
             if len(ids) == total:
                 break
             target += total - len(ids)
