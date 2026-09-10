@@ -1,6 +1,6 @@
 """Explicit real-weight/synthetic-activation feasibility probe; no serving imports."""
 from pathlib import Path
-import argparse,gc,gzip,hashlib,inspect,json,math,struct,time,urllib.request
+import argparse,gc,gzip,hashlib,importlib.util,inspect,json,math,struct,time,urllib.request
 
 def require(ok,message):
     if not ok: raise ValueError(message)
@@ -52,6 +52,11 @@ def validate_shard(buffer,record,expected_header):
     require(8+length+end==len(buffer),'unclaimed shard bytes')
     return 8+length,header
 
+def download_shard(buffer,url,progress):
+    spec=importlib.util.spec_from_file_location('native_range_transport',Path(__file__).with_name('range_download.py'))
+    transport=importlib.util.module_from_spec(spec);spec.loader.exec_module(transport)
+    return transport.download(buffer,url,progress)
+
 def run(root):
     import torch
     from transformers import Glm5NextConfig
@@ -84,17 +89,13 @@ def run(root):
         require(all(p.device.type=='meta' for p in model.parameters()),'meta initialization allocated weights')
         prefix='model.language_model.layers.8.';all_names=set(model.state_dict());want={k for k in all_names if k.startswith(prefix)}
         expected_native={k for k in strict((root/'metadata/model.safetensors.index.json').read_bytes())['weight_map'] if k.startswith(prefix)}
+        require(manifest['transport']=={'connections':4,'whole_shard_verification_before_use':True},'frozen transport selection')
         loaded={};downloaded=[]
         for record in manifest['shards']:
             check_host();name=record['rfilename'];buffer=bytearray(record['size']);position=0;began=time.time();event(kind='download_start',shard=name,bytes=record['size'])
             url='https://huggingface.co/zai-org/GLM-5.3-Flash-BF16/resolve/'+manifest['model_revision']+'/'+name+'?download=true'
-            request=urllib.request.Request(url,headers={'Accept-Encoding':'identity','User-Agent':'glm53-bounded-reference-feasibility'})
-            with urllib.request.urlopen(request,timeout=30) as response:
-                require(response.status==200 and int(response.headers.get('Content-Length','-1'))==len(buffer),'full shard HTTP framing')
-                while position<len(buffer):
-                    count=response.readinto(memoryview(buffer)[position:min(position+8*1024**2,len(buffer))]);require(count is not None and count>0,'short shard read');position+=count
-                    if position%(256*1024**2)<8*1024**2:event(kind='download_progress',shard=name,bytes=position,host=check_host())
-                require(response.read(1)==b'','oversized shard response')
+            receipt=download_shard(buffer,url,lambda count:event(kind='download_progress',shard=name,bytes=count,host=check_host()))
+            save(name+'.transport.json',receipt)
             offset,header=validate_shard(buffer,record,strict((root/'metadata'/ (name+'.header.json')).read_bytes()))
             for key,value in header.items():
                 if not key.startswith(prefix):continue

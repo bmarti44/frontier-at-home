@@ -1,0 +1,76 @@
+{
+  "scope": "Bounded evidence downloader correction after native003 cutoff; no new model or GPU result",
+  "verdict": "PASS",
+  "time_unix": 1789075062.7245965,
+  "test_executions_passed": 44,
+  "runtime_inventory_verified_after_uv_cache_prune": true,
+  "unchanged_probe_functions": [
+    "require",
+    "strict",
+    "sha",
+    "canonical_input",
+    "stock_selector",
+    "validate_shard",
+    "score",
+    "plan"
+  ],
+  "post_download_native_path_byte_identical": true,
+  "reviewed_HTTP_checker_byte_identical": true,
+  "controller_and_closed_tests_byte_identical": true,
+  "range_memory": "One existing full-shard bytearray; four disjoint views; 1MiB reads; all workers joined before whole hash/header and tensor use",
+  "unchanged_safety": {
+    "minimum_start_gib": 110,
+    "kill_floor_gib": 40,
+    "timeout_seconds": 600,
+    "memory_high_gib": 62,
+    "memory_max_gib": 64
+  },
+  "files": [
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/probe.py",
+      "size_bytes": 21146,
+      "sha256": "38a33cfe80a9f08c4b669fdcb842b542a819c683eede05c751b41ed9724cb7e7"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/freeze.py",
+      "size_bytes": 7629,
+      "sha256": "829d9486c1b275bfe2811a309ec3ed44b9c4b0a0b7940b4c1f21771dd5333f0c"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/run.py",
+      "size_bytes": 6843,
+      "sha256": "ee09cc1bf0c0f81b17c6475b23049444a540e34fd8d566f72208183c1968806a"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/range_download.py",
+      "size_bytes": 2790,
+      "sha256": "73b3a50bfcd42ef4a122fdf1033b54964adc3cee7ab110efe91f51bc5e2641ad"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/test_parallel.py",
+      "size_bytes": 4291,
+      "sha256": "3ed5c2c0b50f4eaa425c42a8593bdcc789c98030398df5ed1cbbcdd37ab9dc4a"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/test_probe.py",
+      "size_bytes": 6328,
+      "sha256": "5097e4baa9ccc727751faf5774b07c2cd3ab16b86c3e2c586e9604d0a679241d"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/test_review.py",
+      "size_bytes": 7395,
+      "sha256": "e53a98d17ec48405da71041d646a1c2da1486134b2a4ad2c407619678efd0bfb"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-one-layer-001/test_runtime_inventory.py",
+      "size_bytes": 2045,
+      "sha256": "711d939cb7feb134e05b2f929411da20b569a3786e421757a9b5fc02dbf2e1b6"
+    },
+    {
+      "path": "results/glm53-flash-gates/bf16-parallel-transfer-001/PROTOCOL.md",
+      "size_bytes": 1881,
+      "sha256": "bf7ea1a19a915bdd79295a66fafdee8173605213bc1fb63cb165b384e6177450"
+    }
+  ],
+  "manual_diff_scan": "Only evidence download method, explicit frozen selection, helper/test/protocol inclusion and fresh output/tag changed. No serving decision paths, canned output, disabled assertions, numerical or scorer changes."
+}
