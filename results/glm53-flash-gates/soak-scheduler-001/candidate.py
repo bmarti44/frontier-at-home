@@ -33,7 +33,7 @@ def check_launch(launch):
 runner.probe.check_launch = check_launch
 runner.SOURCES = runner.SOURCES + [Path(__file__).resolve(), HERE / 'PROTOCOL.md']
 
-def score_first_window(out):
+def score_first_window(out, *, write_summary=True):
     window = out / 'first-window'
     try:
         binding = runner.verify(out)
@@ -86,7 +86,8 @@ def score_first_window(out):
                   'qualified_production_performance': None}
     except Exception as error:
         result = {'scope': 'First-window necessary-condition falsifier only', 'verdict': 'FAIL', 'error': repr(error)}
-    runner.probe.write(window / 'summary.json', result)
+    if write_summary:
+        runner.probe.write(window / 'summary.json', result)
     return result
 
 def first_window(out, server):
@@ -115,13 +116,13 @@ def first_window(out, server):
             for index in range(5):
                 if stop.is_set(): break
                 name = f'w{worker_id}-{index:05d}-raw.jsonl'
-                if not runner.stream(window / name, body, key, deadline): break
                 try:
+                    if not runner.stream(window / name, body, key, deadline): break
                     result = runner.score_request(window / name, ids, fixture)
                     event(kind='request', worker=worker_id, index=index, raw_path=name, verdict='PASS', **result)
                 except Exception as error:
-                    event(kind='request', worker=worker_id, index=index, raw_path=name, verdict='FAIL', error=repr(error))
                     stop.set()
+                    event(kind='request', worker=worker_id, index=index, raw_path=name, verdict='FAIL', error=repr(error))
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
                 list(pool.map(worker, range(4)))
@@ -133,9 +134,11 @@ def first_window(out, server):
     return score_first_window(out)
 
 def run_full(out, server):
-    result = score_first_window(out)
+    result = score_first_window(out, write_summary=False)
     require(result['verdict'] == 'PASS', 'first-window falsifier must pass before durability admission')
     window = out / 'first-window'
+    require(runner.read(window / 'summary.json') == result, 'window summary changed before admission')
+    require(runner.probe.launch_check(server) == runner.read(window / 'launch.json'), 'window server changed before admission')
     binding = {'scope': 'Completed necessary-condition falsifier before unchanged durability admission',
                'observed_ns': time.monotonic_ns(), 'manifest_sha256': runner.verify(out),
                'files': {str(path.relative_to(out)): runner.probe.sha(path)
@@ -144,6 +147,57 @@ def run_full(out, server):
         json.dump(binding, stream, indent=2, allow_nan=False)
         stream.write('\n')
     return runner.run(out, server)
+
+def validate_admission(out):
+    window = out / 'first-window'
+    binding = runner.read(out / 'first-window-admission-binding.json')
+    expected = {'first-window/' + name for name in ['launch.json', 'raw.jsonl', 'summary.json']}
+    expected |= {f'first-window/w{worker}-{index:05d}-raw.jsonl' for worker in range(4) for index in range(5)}
+    require(set(binding['files']) == expected, 'window admission file coverage')
+    require(not window.is_symlink() and {str(p.relative_to(out)) for p in window.iterdir()} == expected,
+            'window actual file coverage')
+    for name in sorted(expected):
+        path = out / name
+        require(path.is_file() and not path.is_symlink() and runner.probe.sha(path) == binding['files'][name],
+                'window admission bytes changed: ' + name)
+    manifest = runner.verify(out)
+    require(binding['manifest_sha256'] == manifest, 'window admission input binding')
+    rows = [runner.decode(line) for line in (window / 'raw.jsonl').read_text().splitlines()]
+    with (out / 'raw.jsonl').open() as stream:
+        initial = runner.decode(stream.readline())
+    observed, start = binding['observed_ns'], initial['start_ns']
+    require(type(observed) is int and type(start) is int and 0 < observed < start,
+            'window binding must precede full admission')
+    require(rows[-1]['ended_ns'] <= rows[-1]['observed_ns'] <= observed,
+            'window must complete before admission binding')
+    require(initial['kind'] == 'start' and initial['manifest_sha256'] == manifest
+            and initial['smoke'] == rows[0]['smoke'], 'window/full input and startup linkage')
+    require(initial['launch_sha256'] == rows[0]['launch_sha256'] == runner.probe.sha(out / 'server-launch.json')
+            == runner.probe.sha(window / 'launch.json'), 'window/full launch linkage')
+    result = score_first_window(out, write_summary=False)
+    require(result['verdict'] == 'PASS' and result == runner.read(window / 'summary.json'),
+            'bound window does not independently rescore to stored PASS')
+    return result
+
+# The inherited run resolves its final score through this adapter. Its original
+# implementation remains unchanged and is called only after prerequisite checks.
+inherited_score = runner.score
+
+def score(out):
+    try:
+        window = validate_admission(out)
+        inherited_score(out)
+        component = runner.read(out / 'summary.json')
+        runner.probe.write(out / 'durability-component-summary.json', component)
+        result = {**component, 'scope': 'Scheduler candidate client checks; separate host/freeze/lifecycle checks required',
+                  'first_window': window, 'first_window_admission_sha256': runner.probe.sha(out / 'first-window-admission-binding.json')}
+    except Exception as error:
+        result = {'scope': 'Scheduler candidate client checks', 'verdict': 'FAIL', 'error': repr(error)}
+    runner.probe.write(out / 'summary.json', result)
+    print(json.dumps(result), flush=True)
+    return result['verdict'] == 'PASS'
+
+runner.score = score
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -159,6 +213,6 @@ if __name__ == '__main__':
         sys.exit(0 if result['verdict'] == 'PASS' else 1)
     else:
         if args.action == 'run': result = run_full(args.output, args.server)
-        elif args.action == 'score': result = runner.score(args.output)
+        elif args.action == 'score': result = score(args.output)
         else: result = runner.smoke(args.output, args.server)
         sys.exit(0 if result else 1)

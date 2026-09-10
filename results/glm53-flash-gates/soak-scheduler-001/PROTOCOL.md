@@ -52,6 +52,16 @@ the new launch validator. Its request-count, timing, overlap, native output,
 memory/health and failure rules remain byte-for-byte unchanged. Additional startup
 requests are declared here and prefix caching remains off.
 
+Review candidate 2 closes the retained H1/M1 failures without changing scheduler
+configuration or acceptance limits. Both public scoring and completed-run scoring
+must check all 23 preliminary-window files against the admission receipt before
+any read-only rescore. The exact input manifest, startup evidence and server launch
+must match the full run, with window completion before receipt observation before
+full admission. Missing or changed prerequisite bytes fail; scoring must not repair
+the retained window summary. Preserve the unchanged durability component's result
+alongside the combined client result. Catch transport exceptions inside each worker,
+set the shared stop immediately, retain its failure row and drain admitted work.
+
 Record whole-host swap totals and cumulative pswpin/pswpout counters before
 startup, before timed admission and after shutdown; record cgroup current/peak/
 events while it exists. Any increase in host used swap fails the no-new-swap
