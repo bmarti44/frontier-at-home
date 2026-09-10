@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import uuid
 
 HERE = Path(__file__).resolve().parent
 PARENT = HERE.parent / 'swap-observation-001/observe.py'
@@ -51,7 +52,8 @@ def score(rows, seconds):
     if len(rows) != seconds + 2 or rows[-1].get('kind') != 'end':
         raise ValueError('missing samples or terminal record')
     samples = rows[:-1]
-    if [row.get('index') for row in samples] != list(range(seconds + 1)):
+    if any(type(row.get('index')) is not int for row in samples) or [
+            row['index'] for row in samples] != list(range(seconds + 1)):
         raise ValueError('missing or duplicate sample index')
     first = samples[0]
     globals_ = []
@@ -59,6 +61,13 @@ def score(rows, seconds):
     for row in samples:
         if row.get('kind') != 'sample' or set(row['groups']) != set(GROUPS):
             raise ValueError('malformed sample coverage')
+        if type(row['boot_id']) is not str:
+            raise ValueError('invalid boot identity')
+        boot = uuid.UUID(row['boot_id'])
+        if not boot.int or str(boot) != row['boot_id'] or any(
+                type(row['observer'][k]) is not int or row['observer'][k] <= 0
+                for k in ['pid', 'start_ticks']):
+            raise ValueError('invalid observer identity')
         if row['boot_id'] != first['boot_id'] or any(
                 row['observer'][k] != first['observer'][k] for k in ['pid', 'start_ticks']):
             raise ValueError('observer or boot identity changed')
