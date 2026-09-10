@@ -17,8 +17,12 @@ This equality does not verify the complete shard's LFS digest and no bytes from
 this test may be used for inference. Discard payload buffers after their digest.
 
 Run alone under the shared inference lock, with GLM stopped and at least110GiB
-available. Use fresh user containment: MemoryHigh512MiB, MemoryMax768MiB,
-MemorySwapMax0, OOMPolicykill, KillModecontrol-group, RuntimeMaxSec180s. Retain
+available. Reuse the unchanged guarded GLM capture/identity/host scorer with fresh user
+containment: MemoryHigh32GiB, MemoryMax34GiB (the hardened wrapper minimum),
+MemorySwapMax0, OOMPolicykill, KillModecontrol-group, and180-second timeout.
+This ceiling is not a reservation. Keep a64GiB whole-host kill floor and require
+34+64GiB to fit measured start memory. The earlier512/768MiB proposal is replaced
+by this explicit envelope; no equivalence is claimed. Retain
 actual invocation, cgroup observations, interpreter/process identity, host
 observations, errors and terminal cleanup. No GPU libraries are imported. A
 failed prerequisite or transfer remains FAIL/NO_RESULT; do not silently retry.

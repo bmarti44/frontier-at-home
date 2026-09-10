@@ -1,58 +1,66 @@
-"""Capture limited HTTP diagnostics under existing lock and fresh user cgroup."""
+"""Reuse closed capture/scoring for a partial-file HTTP transport diagnostic."""
 from pathlib import Path
-import hashlib,importlib.util,json,os,subprocess,sys,time
+import gzip,hashlib,importlib.util,json,math,os,subprocess,sys,time
 O=Path(sys.argv[1]).resolve();assert Path(__file__).resolve()==O/'code/run.py'
 sys.path.insert(0,str(O/'code/scripts/lib'))
-from glm53_probe_capture import inference_lock
-m=json.loads((O/'manifest.json').read_text())
-spec=importlib.util.spec_from_file_location('transport',O/'code/probe.py');p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
-def save(path,value):path.write_text(json.dumps(value,indent=2,allow_nan=False)+'\n')
-def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
-def bindings():
-    for row in m['files']:
-        path=Path(row['path']);p.require(path.stat().st_size==row['size_bytes'] and digest(path)==row['sha256'],'frozen file changed')
-def observe(unit):
-    args=['systemctl','--user','show',unit,'-p','LoadState','-p','ActiveState','-p','MainPID','-p','ControlGroup','-p','MemoryHigh','-p','MemoryMax','-p','MemorySwapMax','-p','OOMPolicy','-p','KillMode','-p','RuntimeMaxUSec'];v=subprocess.run(args,capture_output=True,text=True,timeout=5);fields=dict(x.split('=',1) for x in v.stdout.splitlines() if '=' in x)
-    row={'time_unix':time.time(),'host':p.host(),'unit':{'returncode':v.returncode,'stdout':v.stdout,'stderr':v.stderr},'fields':fields};pid=int(fields.get('MainPID','0'))
-    if pid:
-        try:row['process']={'pid':pid,'stat':Path(f'/proc/{pid}/stat').read_text(),'cmdline':Path(f'/proc/{pid}/cmdline').read_bytes().decode().split('\0'),'executable':os.readlink(f'/proc/{pid}/exe')}
-        except OSError as error:row['process_error']=repr(error)
-    if fields.get('ControlGroup'):
-        cg=Path('/sys/fs/cgroup')/fields['ControlGroup'].lstrip('/')
-        try:row['cgroup']={name:(cg/name).read_text() for name in ['memory.current','memory.peak','memory.swap.current','memory.events','cgroup.procs']}
-        except OSError as error:row['cgroup_error']=repr(error)
-    return row
-with inference_lock():
-    failure=None;samples=[];process=None;before=p.host();unit=m['unit']+'.service';document_digests={name:digest(O/name) for name in ['manifest.json','randomness.json']}
+from glm53_contract import sha256_file,strict_json,verify_inventory
+from glm53_probe_capture import capture_wrapper,inference_lock,write
+from glm53_host_evidence import score_host_observations,require
+CONTROL={'HOME':'/home/bmarti44','USER':'bmarti44','LOGNAME':'bmarti44','LANG':'C.UTF-8','PATH':'/usr/bin:/bin','XDG_RUNTIME_DIR':'/run/user/1000','DBUS_SESSION_BUS_ADDRESS':'unix:path=/run/user/1000/bus'}
+def host():
+    m=dict(x.split(':',1) for x in Path('/proc/meminfo').read_text().splitlines());v=dict(x.split() for x in Path('/proc/vmstat').read_text().splitlines());return {'time_unix':time.time(),'pswpin':int(v['pswpin']),'pswpout':int(v['pswpout']),'used_swap_kib':int(m['SwapTotal'].split()[0])-int(m['SwapFree'].split()[0]),'available_kib':int(m['MemAvailable'].split()[0])}
+def bound_read(path):
+    identity=lambda st:(st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns)
+    with path.open('rb') as stream:
+        before=identity(os.fstat(stream.fileno()));data=stream.read();after=identity(os.fstat(stream.fileno()))
+    require(before==after==identity(path.stat()),'launch document changed while reading: '+path.name)
+    class Snapshot:
+        def read_bytes(self):return data
+    return strict_json(Snapshot()),{'sha256':hashlib.sha256(data).hexdigest(),'identity':before}
+
+def check_bindings():
+    for name,binding in bindings.items():
+        _,current=bound_read(O/name)
+        require(current==binding,'launch document changed: '+name)
+
+m=None;failure=None;host_result=None;inner=None;started=False;bindings={}
+with inference_lock() as lock:
     try:
-        bindings();p.require(before['available_kib']>=110*1024**2,'unloaded start memory');p.require(':8015' not in subprocess.check_output(['ss','-ltn'],text=True),'GLM listener active')
-        command=['systemd-run','--user','--wait','--pipe','--collect','--quiet','--unit='+m['unit'],'-p','MemoryHigh=512M','-p','MemoryMax=768M','-p','MemorySwapMax=0','-p','OOMPolicy=kill','-p','KillMode=control-group','-p','RuntimeMaxSec=180s','-p','CPUQuota=200%','/usr/bin/env','-i','HOME='+str(O/'state'),'LANG=C.UTF-8','PATH=/usr/bin:/bin',m['python'],'-I','-B',str(O/'code/probe.py'),'--frozen',str(O)]
-        save(O/'invocation.json',{'command':command,'time_unix':time.time(),'host_before':before,'documents':{k:{'sha256':v} for k,v in document_digests.items()}})
-        with (O/'stdout').open('w') as out,(O/'stderr').open('w') as err:
-            process=subprocess.Popen(command,stdout=out,stderr=err)
-            while process.poll() is None:
-                row=observe(unit);samples.append(row)
-                with (O/'host.jsonl').open('a') as f:f.write(json.dumps(row)+'\n')
-                time.sleep(.5)
-            p.require(process.wait()==0,'transport process failed')
-        rows=[json.loads(x) for x in (O/'raw.jsonl').read_text().splitlines()];scored=p.score(rows);r=json.loads((O/'randomness.json').read_text());p.require(''.join(x['arm'] for x in rows)==('ABBA' if r['seed']%2==0 else 'BAAB'),'seeded transport order')
-        live=[s for s in samples if s['fields'].get('ActiveState')=='active'];p.require(live,'no live containment observation')
-        for s in live:
-            p.require(s['fields']['MemoryMax']==str(768*1024**2) and s['fields']['MemoryHigh']==str(512*1024**2) and s['fields']['MemorySwapMax']=='0' and s['fields']['OOMPolicy']=='kill' and s['fields']['KillMode']=='control-group','containment differs')
-            p.require(s.get('process',{}).get('executable')==m['python'] and s['process']['cmdline']==[m['python'],'-I','-B',str(O/'code/probe.py'),'--frozen',str(O),''],'process identity missing or changed')
-            cg=s.get('cgroup',{});p.require(cg and int(cg['memory.swap.current'])==0 and all(int(line.split()[1])==0 for line in cg['memory.events'].splitlines()),'cgroup swap/limit event or missing sample')
-        for s in samples:
-            h=s['host'];p.require(h['available_kib']>=110*1024**2 and all(h[k]==before[k] for k in ['pswpin','pswpout','used_swap_kib']),'observed host memory/swap failure')
-        save(O/'transport-score.json',scored)
+        m,bindings['manifest.json']=bound_read(O/'manifest.json')
+        r,bindings['randomness.json']=bound_read(O/'randomness.json')
+        for row in m['files']:
+            p=Path(row['path']);require(p.stat().st_size==row['size_bytes'] and sha256_file(p)==row['sha256'],'frozen input changed: '+str(p))
+        require(m['safety']=={'minimum_start_gib':110,'kill_floor_gib':64,'timeout_seconds':180,'memory_high_gib':32,'memory_max_gib':34},'frozen safety mismatch')
+        before=host();write(O/'preload-host.json',before);require(all(before[k]==m['broad_baseline'][k] for k in ['pswpin','pswpout','used_swap_kib']),'broad preflight host swap changed');require(before['available_kib']>=110*1024**2,'start memory')
+        frozen=m['frozen_at_unix'];require(type(frozen) in (int,float) and math.isfinite(frozen) and frozen>=1595431050,'frozen timestamp')
+        expected_round=int((frozen-1595431050)//30)+2;expected_publication=1595431050+(expected_round-1)*30
+        require(type(r['round']) is int and r['round']==expected_round and r['publication_unix']==expected_publication and r['frozen_at_unix']==frozen and r['verification']=='DRAND_BLS_RECEIPT_OK','public beacon exact round/publication')
+        cmd=[m['node'],str(O/'code/scripts/103_verify_drand_receipt_bundle.mjs'),str(r['round']),r['randomness'],r['signature'],r['previous_signature']];v=subprocess.run(cmd,env={'PATH':'/usr/bin:/bin','HOME':'/nonexistent'},capture_output=True,text=True,timeout=30);require(v.returncode==0 and v.stdout=='DRAND_BLS_RECEIPT_OK\n','public beacon verification')
+        require(r['seed']==int(r['randomness'][:16],16),'public seed conversion')
+        write(O/'launch-beacon-verification.json',{'exit_code':v.returncode,'stdout':v.stdout,'stderr':v.stderr,'time_unix':time.time()})
+        python=Path(m['python']);guard=O/'code/scripts/38_guard_glm53_probe.py';probe=O/'code/probe.py';args=['--frozen',str(O)];environment=m['environment'];command=['/usr/bin/env','-i',*(k+'='+v for k,v in sorted(environment.items())),str(python),'-I','-B',str(guard),'--output',str(O/'identity'),'--',str(probe),*args]
+        control={**CONTROL,**lock,'GLM_SAFE_RUN_AS_CURRENT_USER':'1','GLM_SAFE_MIN_START_GIB':'110','GLM_SAFE_KILL_FLOOR_GIB':'64','GLM_SAFE_TIMEOUT_S':'180','GLM_SAFE_MEMORY_HIGH_GIB':'32','GLM_SAFE_DONE_DIGESTS':'1'}
+        write(O/'invocation.json',{'command':['/usr/bin/bash',m['wrapper'],'--tag',m['tag'],'--',*command],'environment':{k:v for k,v in control.items() if not k.startswith('GLM_SAFE_PARENT_LOCK_')},'time_unix':time.time(),'manifest':{'sha256':bindings['manifest.json']['sha256']},'randomness':{'sha256':bindings['randomness.json']['sha256']}})
+        check_bindings()
+        started=True;capture_wrapper(O,Path(m['wrapper']),m['tag'],command,control,180)
+        check_bindings()
+        expected={'binary_sha256':sha256_file(python),'executable':str(python.resolve()),'guard':str(guard),'guard_sha256':sha256_file(guard),'probe':str(probe),'probe_sha256':sha256_file(probe),'probe_arguments':args,'environment_sha256':hashlib.sha256(b'\0'.join(sorted(os.fsencode(k+'='+v) for k,v in environment.items()))).hexdigest(),'unit_prefix':'glm52-'+m['tag']+'-','maximum_sample_gap_seconds':2.0,'minimum_start_gib':110,'kill_floor_gib':64,'timeout_seconds':180}
+        host_result=score_host_observations(O,expected)
+        spec=importlib.util.spec_from_file_location('frozen_layer_probe',probe);scorer=importlib.util.module_from_spec(spec);spec.loader.exec_module(scorer)
+        inner=scorer.score(O)
+        check_bindings()
+        write(O/'host-score-arguments.json',expected)
     except BaseException as error:failure=repr(error)
     finally:
-        if process is not None and process.poll() is None:
-            subprocess.run(['systemctl','--user','stop',unit],timeout=30,capture_output=True);process.wait(timeout=10)
-        terminal=observe(unit);save(O/'terminal.json',terminal)
+        after=host();write(O/'terminal-host.json',after)
+        if m is not None and any(after[k]!=m['broad_baseline'][k] for k in ['pswpin','pswpout','used_swap_kib']):failure=failure or 'broad terminal host swap changed'
         try:
-            bindings();p.require(all(digest(O/name)==sha for name,sha in document_digests.items()),'launch document changed')
-            p.require(terminal['fields'].get('MainPID')=='0' and terminal['fields'].get('ActiveState') in ['inactive','failed'] and not terminal['fields'].get('ControlGroup'),'surviving transport cgroup')
-            last=p.host();p.require(all(last[k]==before[k] for k in ['pswpin','pswpout','used_swap_kib']),'terminal host swap changed')
-        except BaseException as error:failure=failure or repr(error)
-        save(O/'controller-summary.json',{'verdict':'FAIL' if failure else 'PASS','scope':'Partial-file transport diagnostic only; never model qualification','failure':failure,'observed_samples':len(samples),'exit_code':None if process is None else process.returncode,'time_unix':time.time()})
-print(json.dumps(json.loads((O/'controller-summary.json').read_text())),flush=True)
+            check_bindings()
+            for row in m['files']:
+                p=Path(row['path']);require(p.stat().st_size==row['size_bytes'] and sha256_file(p)==row['sha256'],'post-run frozen input changed')
+            check_bindings()
+        except Exception as error:failure=failure or repr(error)
+        last=host();write(O/'post-verification-host.json',last)
+        if m is not None and any(last[k]!=m['broad_baseline'][k] for k in ['pswpin','pswpout','used_swap_kib']):failure=failure or 'post-verification broad host swap changed'
+        write(O/'summary.json',{'verdict':'FAIL' if failure else 'PASS','scope':'Partial-file HTTP byte equivalence/transport diagnostic only; no model, GPU, full-shard or serving qualification','failure':failure,'wrapper_started':started,'host':host_result,'inner':inner,'end_unix':time.time()})
+print(json.dumps(strict_json(O/'summary.json')),flush=True);raise SystemExit(1 if failure else 0)

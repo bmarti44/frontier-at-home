@@ -25,6 +25,8 @@ def check_headers(status,headers,left,right,total):
     require(values['Content-Encoding'] in ([],['identity']),'unexpected content encoding')
 
 def score(rows):
+    if isinstance(rows,Path):
+        root=rows;rows=[json.loads(x) for x in (root/'raw.jsonl').read_text().splitlines()];r=json.loads((root/'randomness.json').read_text());require(''.join(x['arm'] for x in rows)==('ABBA' if r['seed']%2==0 else 'BAAB'),'seeded transport order')
     require(len(rows)==4,'all four transport arms required')
     require([x['arm'] for x in rows] in (list('ABBA'),list('BAAB')),'matched transport order')
     digests=[]
