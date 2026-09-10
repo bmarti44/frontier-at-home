@@ -13,6 +13,11 @@ def save(p,d):p.write_text(json.dumps(d,indent=2,allow_nan=False)+'\n')
 snapshot=api.resolve_profile('glm-5.3-flash/cuda-spark-128g-1m-experimental',None,out/'run-root-placeholder')
 print('verifying closed runtime and model inventories',flush=True);api.verify_artifacts(snapshot)
 print('closed runtime and model inventories verified',flush=True)
+binder=repo/'results/glm53-flash-gates/startup-heap-trim-001/bind_libc.py'
+libc=json.loads(subprocess.check_output([snapshot['argv'][0],'-I','-B',str(binder)],text=True))
+provider=Path(libc['provider']['path'])
+assert provider.stat().st_size==libc['provider']['size_bytes'] and sha(provider)==libc['provider']['sha256']
+save(out/'libc-provider.json',libc)
 state=out/'prepared-state';launcher.reuse_prepared_kernels(state)
 cache=[]
 for p in sorted(state.rglob('*')):
@@ -53,6 +58,7 @@ paths += [repo/'results/glm53-flash-gates/soak-native-007'/name for name in ['su
 paths += [repo/'results/glm53-flash-gates/startup-heap-trim-001'/name for name in ['PROTOCOL.md','test_worker.py','cpu-audit.json']]
 paths += [repo/'results/glm53-flash-gates/soak-native-008'/name for name in ['summary.json','manifest.json']]
 paths += [Path(r['path']) for r in snapshot['digest_checks']]
+paths += [binder,provider,out/'libc-provider.json']
 paths += [repo/'results/glm53-flash-gates/context-native-profile-002/bind_launch.py',out/'fixture-profile/launch.json',out/'freeze.py',out/'fetch-randomness.py',out/'prepared-cache-inventory.json',out/'profile-snapshot-template.json',code/'103_verify_drand_receipt_bundle.mjs',Path('/home/bmarti44/.nvm/versions/node/v22.22.2/bin/node')]
 manifest={'scope':'Second bounded process-local heap trim with final-warmup CUDA cleanup off; unchanged batch 512/threshold 128, exact full-context profile, external host observations and closed necessary/full-duration gates; direct context/fidelity/performance/switching separate','source_revision':subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),'profile':snapshot['profile_id'],'request_configuration':{'max_tokens':2048,'input_tokens_per_request':4224,'workers':4,'admission_seconds':1800,'drain_limit_seconds':2400,'first_window_admission_seconds':300,'first_window_requests_per_worker':5,'first_window_drain_limit_seconds':900},'ephemeral_path':'run-root-placeholder is replaced by the actual unique operator launch directory; exact argv/env and relocated cache bindings must be retained before requests','closed_runtime_model_verification':True,'prepared_cache_files':len(cache),'files':[{'path':str(p),'size_bytes':p.stat().st_size,'sha256':sha(p)} for p in dict.fromkeys(paths)],'frozen_at_unix':time.time()}
 save(out/'manifest.json',manifest)

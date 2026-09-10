@@ -1,5 +1,5 @@
 {
-  "scope": "Second bounded startup heap-trim CPU audit only; no model measurement or qualification",
+  "scope": "Startup heap-trim CPU audit plus focused native-provider provenance correction; no loaded qualification",
   "verdict": "PASS",
   "candidate": 1,
   "tests": {
@@ -7,7 +7,8 @@
     "prior_load_cleanup": 3,
     "prior_final_warmup": 4,
     "profiles": 17,
-    "total": 30
+    "total": 32,
+    "libc_binding": 2
   },
   "changes": "Exact startup-only flag; default-off original memory method AST unchanged; experimental final-warmup cleanup flag removed; CPU heap trim selected instead. No model math, host-to-device path, scheduler, KV/media, containment or closed scorer change. Pure Python startup change requires no CUDA build.",
   "baseline_revision": "c86677889657f000e5e1288c8ae6e61128b8ce73",
@@ -48,15 +49,27 @@
     },
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/PROTOCOL.md",
-      "sha256": "5b5c1131ae9693d069c0ec8c95b74379c8ab5e23d5374e2e9d7363c81b8a28c0"
+      "sha256": "55864eb9913dd24671130b88b297bb60eab22f9ca0aaef0b9779ab2b8b96d70f"
     },
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/acceptance-red.json",
       "sha256": "7b6b705184822c8b246053c54ef7ada37752df1c4db66f74889d242338c034f7"
     },
     {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/bind_libc.py",
+      "sha256": "118b466d80f1c3bca7c590d303317ab5ce49d4a969407ca9399adfe6298b703b"
+    },
+    {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/freeze.py",
-      "sha256": "72b59835da46bf5f2cb1bf421332119b717ec0fc1677b7df8f78b83a1386544a"
+      "sha256": "a06d5e670f6aea46339a56e72b031e4a2b944b4f0f9ef558de74c6899feab159"
+    },
+    {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-binding-tests.stderr",
+      "sha256": "b70aaee4b98aed3c929b11d2edf077f243b297ed21e6fabbffb70bd38d82b0f9"
+    },
+    {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-binding-tests.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/prior-final-warmup-tests.stderr",
@@ -91,6 +104,10 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/test_libc_binding.py",
+      "sha256": "9d63797c4fb38822cc2ee74016ff30481b279d46f248a52888484fd14560269a"
+    },
+    {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/test_worker.py",
       "sha256": "d2b90fd25652034b46a174efad7b595f589b3cfe23319fdec4d3e48c672e9636"
     },
@@ -106,5 +123,6 @@
       "path": "results/glm53-flash-gates/startup-heap-trim-001/worker-tests.stdout",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
-  ]
+  ],
+  "focused_followup": "Review M1: freeze resolved malloc_trim provider path/hash from pinned runtime Python; actual EngineCore mapped device/inode/path checked before workload. Prior worker/profile unchanged."
 }

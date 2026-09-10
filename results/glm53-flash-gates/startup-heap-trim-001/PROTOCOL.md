@@ -33,6 +33,10 @@ closed scorers and previously reviewed components remain byte-identical.
 
 After clean source and scoped review, freeze source/runtime/model/cache/scorer/
 fixtures/configuration, then obtain a later verified public seed. Admission
+also binds the actual `malloc_trim` provider resolved with `dladdr` under the
+pinned runtime Python, without invoking the trim. Freeze that library's path and
+hash; verify its mapped device/inode/path in the identity-verified workers after
+launch and retain those observations. This is startup evidence only. Admission
 requires the unchanged host checks, authenticated short correctness, unchanged
 prepared kernels and fixed necessary window before the full-duration client.
 Any host swap I/O, used-swap growth, memory-floor violation, cgroup failure,
