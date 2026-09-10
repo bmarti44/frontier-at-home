@@ -1,0 +1,51 @@
+{
+  "scope": "Native named-profile startup admission for30-minute durability; no timed soak or startup fixture admitted",
+  "verdict": "FAIL",
+  "formula": "Required conjunction of existing native lifecycle/host checks and soak-native-001/PROTOCOL.md startup admission; any kernel OOM rejects admission",
+  "failure": "Kernel reported NVRM NV_ERR_NO_MEMORY from _memdescAllocInternal during native dummy profiling. Host wrapper returned16 despite successful API readiness.",
+  "checks": {
+    "named_profile_ready": true,
+    "authentication_health_and_completed_ready": true,
+    "native_argv_environment_and_containment": true,
+    "kernel_clear": false,
+    "wrapper_exit_zero": false,
+    "timed_soak_admitted": false,
+    "guard_cleanup": true,
+    "default_proxy_guards_unchanged": true,
+    "post_artifact_verification": true,
+    "compiled_inputs_unchanged": true
+  },
+  "qualification_input_tokens": 0,
+  "timed_requests": 0,
+  "durability_verdict": "NO_RESULT",
+  "memory": {
+    "samples": 430,
+    "minimum_available_gib": 18.672855377197266,
+    "maximum_cgroup_swap_bytes": 0
+  },
+  "guard": {
+    "verdict": "PASS",
+    "qualification": "Python_probe_identity_only",
+    "identity_samples": 467,
+    "probe_exit_code": 0,
+    "live_process_group_after": [],
+    "raw_sha256": "9157b1551cc8dd7faf369dcd9c57f8c0488606246b6825a8857507f3e9cd07dd",
+    "failure": null
+  },
+  "kernel": {
+    "command": [
+      "journalctl",
+      "-k",
+      "--since",
+      "@1789024609",
+      "--no-pager",
+      "-o",
+      "short-iso-precise"
+    ],
+    "exit_code": 0,
+    "stdout": "2026-09-10T03:26:40.340623-04:00 spark-aba1 kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from _memdescAllocInternal(pMemDesc) @ mem_desc.c:1359\n",
+    "stderr": ""
+  },
+  "source_revision": "8e5864323c887ce38c8f5d0641e133d935deca1b",
+  "qualified_production_performance": null
+}
