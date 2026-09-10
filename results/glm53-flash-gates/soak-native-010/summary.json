@@ -1,0 +1,72 @@
+{
+  "scope": "Unloaded preflight only; model was never launched and no randomized fixtures were prepared",
+  "verdict": "FAIL",
+  "model_qualification": "NO_RESULT",
+  "source_revision": "8d6002a3052d640619c44981b383949064f76dee",
+  "formula": "The preregistered broad pre-freeze host baseline requires unchanged observed global swap-in/out and used-swap counters; any observed change fails admission. This recorded endpoint failure is conclusive without claiming continuous coverage.",
+  "preflight": {
+    "verdict": "FAIL",
+    "swap_delta": {
+      "pswpin": 1,
+      "pswpout": 0
+    },
+    "used_swap_kib": [
+      168536,
+      168536
+    ]
+  },
+  "start_unix": 1789044090.3476083,
+  "failure_observed_unix": 1789044193.0255692,
+  "freeze_completed_unix": 1789044162.8827384,
+  "runtime_model_inventory_verification": "PASS",
+  "prepared_cache_files": 2486,
+  "prepared_cache_inventory": {
+    "sha256": "bf763797e9235e2c9102ac5a7041d9dc95804f727468096ee43831756bd9294f"
+  },
+  "model_started": false,
+  "smoke": "NOT_RUN",
+  "necessary_window": "NOT_RUN",
+  "full_durability": "NOT_RUN",
+  "public_randomness": "NOT_REQUESTED: preflight failed first",
+  "qualified_production_performance": null,
+  "default_proxy_guard_state_unchanged": true,
+  "host_accounting": {
+    "scope": "Cumulative accounting since end of unloaded control, includes publication/push/preparation; cannot attribute the narrower preflight event",
+    "time_unix": 1789044239.193795,
+    "interval_start_unix": 1789043663.5849996,
+    "interval_end_unix": 1789044239.190848,
+    "global_delta": {
+      "pswpin": 2,
+      "pswpout": 0
+    },
+    "cgroup_deltas_not_additive": {
+      ".": {
+        "pswpin": 2,
+        "pswpout": 0
+      },
+      "init.scope": {
+        "pswpin": 0,
+        "pswpout": 0
+      },
+      "system.slice": {
+        "pswpin": 2,
+        "pswpout": 0
+      },
+      "user.slice": {
+        "pswpin": 0,
+        "pswpout": 0
+      },
+      "system.slice/docker.service": {
+        "pswpin": 0,
+        "pswpout": 0
+      },
+      "system.slice/snapd.service": {
+        "pswpin": 0,
+        "pswpout": 0
+      }
+    }
+  },
+  "coverage_limit": "Phase endpoints only during freeze; the longer unloaded-control-to-terminal accounting interval includes publication, push and preparation, so it cannot attribute the single preflight page",
+  "malformed_controls_rejected": 5,
+  "prior_attempts": "Earlier FAIL results and startup reclamation branch NO_RESULT remain unchanged"
+}
