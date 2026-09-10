@@ -1,7 +1,7 @@
 """Freeze this named-profile candidate before fetching its confirmation seed."""
 import hashlib,importlib.util,json,shutil,subprocess,sys,time
 from pathlib import Path
-repo=Path('/home/bmarti44/spark-deepseek-v4-flash');base=Path('/home/bmarti44/.cache/glm53-flash');out=base/'qualification-freeze-002'
+repo=Path('/home/bmarti44/spark-deepseek-v4-flash');base=Path('/home/bmarti44/.cache/glm53-flash');out=base/'qualification-freeze-003'
 if subprocess.check_output(['git','status','--porcelain'],cwd=repo,text=True):raise ValueError('freeze requires clean source')
 if shutil.disk_usage(base).free < 2 * 1024**3:raise ValueError('freeze requires at least 2 GiB disk headroom')
 mem=dict(x.split(':',1) for x in Path('/proc/meminfo').read_text().splitlines())
@@ -70,6 +70,7 @@ paths += [repo/'results/glm53-flash-gates/containerd-isolation-001/PROTOCOL.md',
 paths += [repo/'results/glm53-flash-gates/context-scheduler-003'/name for name in ['adapter.py','test_adapter.py','PROTOCOL.md','cpu-audit.json']]
 paths += [repo/'results/glm53-flash-gates/context-clear-instruction-001/run_short.py',repo/'results/glm53-flash-gates/swap-paused-qualification-001/PROTOCOL.md',repo/'results/glm53-flash-gates/host-swap-pause-001/owner-execution-observed.json']
 paths += [repo/'results/glm53-flash-gates/context-short-padding-001'/name for name in ['test_prepare.py','failed-beacon.json.gz','PROTOCOL.md']]
+paths += [repo/'results/glm53-flash-gates/startup-serialized-replay-001/PROTOCOL.md']
 manifest={'scope':'Owner-paused swap and stopped container runtimes; current full-context profile with unchanged numerical code and closed direct/durability scorers. Direct invocation uses the reviewed512/128 validator adapter. Separate fresh server attempts for direct context and durability; no default or production promotion.','source_revision':subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip(),'profile':snapshot['profile_id'],'request_configuration':{'max_tokens':2048,'input_tokens_per_request':4224,'workers':4,'admission_seconds':1800,'drain_limit_seconds':2400,'first_window_admission_seconds':300,'first_window_requests_per_worker':5,'first_window_drain_limit_seconds':900},'ephemeral_path':'run-root-placeholder is replaced by the actual unique operator launch directory; exact argv/env and relocated cache bindings must be retained before requests','closed_runtime_model_verification':True,'prepared_cache_files':len(cache),'files':[{'path':str(p),'size_bytes':p.stat().st_size,'sha256':sha(p)} for p in dict.fromkeys(paths)],'frozen_at_unix':time.time()}
 manifest['direct_context_configuration']={'slots':4,'context_per_slot':262144,'aggregate_cap':1048576,'input_tokens_per_request':250128,'aggregate_input_tokens':1000512,'max_output_tokens':2048,'adapter':str(repo/'results/glm53-flash-gates/context-scheduler-003/adapter.py')}
 save(out/'manifest.json',manifest)
