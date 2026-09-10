@@ -42,7 +42,10 @@ Client acceptance is the conjunction of these fixed conditions:
 - Four workers start in the first 60 seconds. Each completes at least five
   requests admitted in the first 300 seconds and at least five admitted in the
   final 300 seconds. At least 30 requests complete overall. At least one common
-  interval of generated tokens proves all four clients actually overlap.
+  interval of generated tokens proves all four clients actually overlap. Between
+  successive requests, each worker may spend at most five seconds outside HTTP
+  processing; its final request must finish within five seconds of the admission
+  deadline or later. This bounds client-side idle gaps in the back-to-back load.
 - Every request has its own raw native stream, unique request identifier,
   exact prompt-token IDs, complete and equal output-token/usage counts, normal
   `stop` completion and a correct final answer including negative controls.
