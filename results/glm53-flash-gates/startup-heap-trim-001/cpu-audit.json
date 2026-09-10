@@ -7,8 +7,8 @@
     "prior_load_cleanup": 3,
     "prior_final_warmup": 4,
     "profiles": 17,
-    "total": 32,
-    "libc_binding": 2
+    "total": 33,
+    "libc_binding": 3
   },
   "changes": "Exact startup-only flag; default-off original memory method AST unchanged; experimental final-warmup cleanup flag removed; CPU heap trim selected instead. No model math, host-to-device path, scheduler, KV/media, containment or closed scorer change. Pure Python startup change requires no CUDA build.",
   "baseline_revision": "c86677889657f000e5e1288c8ae6e61128b8ce73",
@@ -61,7 +61,7 @@
     },
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/freeze.py",
-      "sha256": "a06d5e670f6aea46339a56e72b031e4a2b944b4f0f9ef558de74c6899feab159"
+      "sha256": "40dd779d0591d428bd6bd719423595a2e71f81f395ddaaf23a459bda7d555b29"
     },
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-binding-tests.stderr",
@@ -70,6 +70,30 @@
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-binding-tests.stdout",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-freeze-fixed-tests.stderr",
+      "sha256": "d3e71e6369c2ee2914dd522d60ac70a106429d6e8d9ec0089d14a1c1f065633f"
+    },
+    {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-freeze-fixed-tests.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-freeze-red.json",
+      "sha256": "a842fbe0a9b29eb06757b13f9219481a732e3bf294e08e5e9c82fa7c401c3bc8"
+    },
+    {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-freeze-red.stderr",
+      "sha256": "8d80e58f81db5098b733e7283617297995c84f3e2f17f22ccd7b0461279faf67"
+    },
+    {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-freeze-red.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/glm53-flash-gates/startup-heap-trim-001/libc-freeze-reviewer-red.json.gz",
+      "sha256": "55ec92f221be8983ef00ed4af8dbf13852b0d5d5831e29f3bcf450fefbdcae13"
     },
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/prior-final-warmup-tests.stderr",
@@ -105,7 +129,7 @@
     },
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/test_libc_binding.py",
-      "sha256": "9d63797c4fb38822cc2ee74016ff30481b279d46f248a52888484fd14560269a"
+      "sha256": "9d9464039b747f9c80c01f92af3a574d09b1d0e7b7d198aa54f94b5fac3e3564"
     },
     {
       "path": "results/glm53-flash-gates/startup-heap-trim-001/test_worker.py",
@@ -124,5 +148,5 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   ],
-  "focused_followup": "Review M1: freeze resolved malloc_trim provider path/hash from pinned runtime Python; actual EngineCore mapped device/inode/path checked before workload. Prior worker/profile unchanged."
+  "focused_followup": "Review M1: freeze resolved malloc_trim provider path/hash from pinned runtime Python; actual EngineCore mapped device/inode/path checked before workload. Prior worker/profile unchanged. Actual resolved freezer command regression passes after correcting argv[0] to binary; genuine failure committed first."
 }
