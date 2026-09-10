@@ -1,0 +1,154 @@
+{
+  "scope": "Final-warmup reclamation: necessary window and host checks pass, but two new compiled inputs prevent full-duration admission; no context, fidelity or production performance result",
+  "verdict": "FAIL",
+  "formula": "soak-scheduler-002/PROTOCOL.md and candidate.py first-window checks, conjoined with host, identity, lifecycle and frozen-input conditions; all required conditions must pass. The full1800-second gate was not admitted.",
+  "client_summary": {
+    "scope": "First-window necessary-condition falsifier only; host checks required separately; not durability/context/fidelity/performance qualification",
+    "verdict": "PASS",
+    "requests": 20,
+    "admissions_per_worker": [
+      5,
+      5,
+      5,
+      5
+    ],
+    "drain_seconds": 314.931620364,
+    "four_generated_streams_overlap": true,
+    "qualified_production_performance": null
+  },
+  "checks": {
+    "fixed_first_window_gate": true,
+    "all_completed_requests_independently_rescored_correct": true,
+    "bounded_admission_and_drain": true,
+    "full_durability_not_admitted": true,
+    "whole_host_no_new_swap": true,
+    "whole_host_no_swap_io": true,
+    "watchdog_floor_at_least_18_gib": true,
+    "all_watchdog_cgroup_swap_samples_zero": true,
+    "cgroup_swap_peak_zero_before_stop": true,
+    "cgroup_no_limit_events": true,
+    "identity_guard_and_clean_descendants": true,
+    "operator_stop_and_wrapper_exit_zero": true,
+    "processes_gone": true,
+    "profile_stopped": true,
+    "memory_recovery_above_110_gib": true,
+    "default_proxy_and_guards_unchanged": true,
+    "kernel_journal_clear": true,
+    "post_runtime_model_verification": true,
+    "frozen_source_bindings_unchanged": true,
+    "frozen_compiled_inputs_unchanged": false,
+    "external_census_complete_and_swap_counters_unchanged": true,
+    "external_census_covers_preparation_startup_window_and_actual_stop": true
+  },
+  "source_revision": "7c21dbf6ca8c3f4e4fba112fd86fa917d28d223b",
+  "request_observations": {
+    "completed": 20,
+    "input_tokens_per_request": 4224,
+    "admissions_per_worker": [
+      5,
+      5,
+      5,
+      5
+    ],
+    "admission_limit_seconds": 300,
+    "drain_completed_after_seconds": 314.931620364,
+    "all_final_answers_and_negative_controls_correct": true
+  },
+  "host": {
+    "watchdog_samples": 2205,
+    "minimum_available_gib": 18.393482208251953,
+    "maximum_cgroup_swap_bytes": 0,
+    "host_used_swap_kib_before_smoke_prestop_after": [
+      168592,
+      168592,
+      168592,
+      168592
+    ],
+    "swap_io_counters": [
+      {
+        "pswpin": 6315011,
+        "pswpout": 57487423
+      },
+      {
+        "pswpin": 6315011,
+        "pswpout": 57487423
+      },
+      {
+        "pswpin": 6315011,
+        "pswpout": 57487423
+      },
+      {
+        "pswpin": 6315011,
+        "pswpout": 57487423
+      }
+    ],
+    "identity_samples": 2409
+  },
+  "compiled_inputs": {
+    "verdict": "NO_RESULT",
+    "changed": [],
+    "missing": [],
+    "added": [
+      {
+        "path": ".config/vllm/usage_stats.json",
+        "size_bytes": 1580,
+        "sha256": "da8a3d5df374c0ce72aafb1f9cc3e51401b3a96ca8538017a3699383416b0691"
+      },
+      {
+        "path": ".humming/tmp/lock/launcher.lock",
+        "size_bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "deep-gemm/cache/kernel.sm120_tf32_hc_prenorm_gemm.f7e4df8b26fdf06517e02e7bf07bd818/kernel.cu",
+        "size_bytes": 346,
+        "sha256": "d25259651ced8603991df5643962e70d6adb603a4ce6e587ae004e503ca866c0"
+      },
+      {
+        "path": "deep-gemm/cache/kernel.sm120_tf32_hc_prenorm_gemm.f7e4df8b26fdf06517e02e7bf07bd818/kernel.cubin",
+        "size_bytes": 63912,
+        "sha256": "87b421b3c43239a90c56d8e40beafeb231a77cb350629559d9bccb05ccac210c"
+      }
+    ],
+    "interpretation": "New compiled inputs make this a preparation attempt; freeze/replay required for confirmation."
+  },
+  "full_durability": "NO_RESULT: frozen-input prerequisite not passed; no admission",
+  "full_model_qualification": "NO_RESULT: native100-case fidelity, direct context on changed scheduler and production switching remain pending",
+  "qualified_production_performance": null,
+  "startup_reclamation": {
+    "time_unix": 1789037653.7171926,
+    "scope": "Startup allocator diagnostic only; not proof of causal host improvement or production performance",
+    "log_path": "/home/bmarti44/.local/state/glm52-crashlog/20260910-065205-glm53-dev-2768891/cmd.log",
+    "original_line": "(EngineCore pid=2769841) {\"event\": \"glm53_release_warmup_cache\", \"reserved_before_bytes\": 97312047104, \"reserved_after_bytes\": 97270104064}",
+    "event": {
+      "event": "glm53_release_warmup_cache",
+      "reserved_before_bytes": 97312047104,
+      "reserved_after_bytes": 97270104064
+    },
+    "reported_released_bytes": 41943040,
+    "actual_deployed_worker": {
+      "path": "/home/bmarti44/.cache/glm53-flash/server-20260910-065113/lib/glm53_worker.py",
+      "sha256": "833bab8baee76f158528cba2dfeb671b476013ee7a39b8933a31176b3ef32ab0"
+    },
+    "host_swap_counters_unchanged_before_smoke": true
+  },
+  "external_observer": {
+    "censuses": 900,
+    "start_unix": 1789037276.4320369,
+    "end_unix": 1789038176.432726,
+    "phase_coverage": {
+      "after-fixture-preparation": true,
+      "after-freeze": true,
+      "after-randomness": true,
+      "after_ready": true,
+      "after_stop": false,
+      "after_window": true,
+      "before_freeze": true,
+      "before_profile_start": true,
+      "before_window": true
+    },
+    "actual_stop_command_covered": true,
+    "per_process_read_errors": 289,
+    "post_stop_snapshot_and_artifact_verification_scope": "Outside the bounded census; retained terminal snapshots, recovery samples and artifact verification are separate evidence. No continuous post-census process coverage is claimed."
+  }
+}
