@@ -1,0 +1,28 @@
+{
+  "scope": "actual named-profile lifecycle against prior fixed acceptance; no long-context requests sent",
+  "verdict": "FAIL",
+  "checks": {
+    "operator_ready": true,
+    "health": true,
+    "unauthenticated_rejected": true,
+    "model_listing": true,
+    "reply": true,
+    "stop_reported_stopped": true,
+    "no_surviving_model_pids": true,
+    "unit_inactive": true,
+    "memory_floor": true,
+    "no_cgroup_swap": true,
+    "default_unchanged": true,
+    "proxy_unchanged": true,
+    "guards_unchanged": true,
+    "clean_guard_shutdown": false
+  },
+  "minimum_available_gib": 18.511810302734375,
+  "cgroup_swap_peak_bytes": 0,
+  "launcher_exit_code": 0,
+  "stop_command_exit_code": 0,
+  "finding": "Intentional whole-group stop kills guard parent before child completion handshake, causing guard BrokenPipe despite model cleanup. Do not suppress guard failure. Orderly API-only termination while guard remains alive is the next bounded correction.",
+  "context_preparation": "separate 512 MiB CPU fixture-preparation attempt timed out; no long-context requests were sent",
+  "prepared_cache_finding": "startup recreated cooperative autotune cache because its subtree was absent from existing reuse list; full confirmation remains NO_RESULT",
+  "qualified_production_performance": "not yet measured"
+}
