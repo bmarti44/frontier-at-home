@@ -1,6 +1,6 @@
 # Preserve native cooperative autotuning
 
-Profile-launch-001 recreated a272-byte EXL3 cooperative autotune table because
+Profile-launch-001 recreated a592-byte EXL3 cooperative autotune table because
 its existing cache subtree was not copied at startup. The native table differs
 from the earlier synchronized table; both are preserved. This fixed regression
 requires the exact native table from the committed launch evidence, avoiding a
