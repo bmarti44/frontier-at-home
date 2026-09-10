@@ -1,0 +1,212 @@
+{
+  "scope": "Unchanged 512/128 two-file prepared-kernel replay; short correctness only, host gate failed before necessary window",
+  "source_revision": "1218b3ec77d4179ae0aeece456dd94e2758c6087",
+  "verdict": "FAIL",
+  "formula": "Conjunction of frozen soak-cache-replay-002/PROTOCOL.md host, startup, cache and lifecycle checks; any new unattributed host swap I/O or used-swap growth rejects workload admission. Existing window/full-duration scorers are unchanged and were not run.",
+  "checks": {
+    "short_correctness_rescored_from_raw": true,
+    "actual_native_configuration_authentication_ready": true,
+    "whole_host_no_new_swap": false,
+    "whole_host_no_swap_io": false,
+    "watchdog_floor_at_least_18_gib": true,
+    "cgroup_swap_samples_and_peak_zero": true,
+    "cgroup_no_limit_events": true,
+    "guard_identity_and_clean_descendants": true,
+    "operator_stop_and_wrapper_exit_zero": true,
+    "processes_gone": true,
+    "profile_stopped": true,
+    "memory_recovery_above_110_gib": true,
+    "default_proxy_guards_unchanged": true,
+    "kernel_journal_clear": true,
+    "post_runtime_model_verification": true,
+    "frozen_compiled_inputs_unchanged": true,
+    "observer_complete_and_covers_preparation_startup_stop_verification": true,
+    "frozen_source_bindings_unchanged": true
+  },
+  "qualification_input_tokens": 0,
+  "short_correctness_input_tokens": 4224,
+  "short_correctness": "PASS",
+  "timed_requests": 0,
+  "necessary_window": "NO_RESULT: host prerequisites failed before window admission",
+  "full_durability": "NO_RESULT: not admitted",
+  "qualified_production_performance": null,
+  "host_swap": {
+    "observation_order": [
+      "before",
+      "pre-stop",
+      "after"
+    ],
+    "used_swap_kib": [
+      168592,
+      168596,
+      168596
+    ],
+    "pswpin": [
+      6315012,
+      6315012,
+      6315012
+    ],
+    "pswpout": [
+      57487423,
+      57487424,
+      57487424
+    ]
+  },
+  "memory": {
+    "watchdog_samples": 756,
+    "minimum_available_gib": 18.385921478271484,
+    "identity_samples": 820
+  },
+  "compiled_inputs": {
+    "verdict": "PASS",
+    "baseline_files": 2486,
+    "changed": [],
+    "missing": [],
+    "added": [
+      {
+        "path": ".config/vllm/usage_stats.json",
+        "size_bytes": 1498,
+        "sha256": "dea2f712edb9c9bf6eebd23bb93ab2ae5faaf44a7437494c1f505ab2487f56f7"
+      },
+      {
+        "path": ".humming/tmp/lock/launcher.lock",
+        "size_bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "external_observer": {
+    "censuses": 900,
+    "counter_changes": [
+      {
+        "interval_start_unix": 1789039387.6669688,
+        "interval_end_unix": 1789039388.6684227,
+        "deltas": {
+          "pswpin": 0,
+          "pswpout": 1
+        },
+        "process_correlations_not_causal_attribution": [
+          {
+            "pid": 206652,
+            "name": "snapd",
+            "start_ticks": 24271771,
+            "cgroup": [
+              "0::/system.slice/snapd.service"
+            ],
+            "deltas": {
+              "vm_swap_kib": 4
+            }
+          }
+        ]
+      }
+    ],
+    "attribution": "NO_RESULT: process VmSwap correlation is retained but does not establish causation or authorize a host-gate exemption",
+    "phase_observations": [
+      {
+        "phase": "after-fixture-preparation",
+        "counters": {
+          "observed_ns": 392006461299078,
+          "time_unix": 1789039205.4597638,
+          "pswpin": 6315012,
+          "pswpout": 57487423,
+          "MemAvailable_kib": 120235076,
+          "SwapTotal_kib": 16777212,
+          "SwapFree_kib": 16608620,
+          "SwapCached_kib": 16772
+        }
+      },
+      {
+        "phase": "after-freeze",
+        "counters": {
+          "observed_ns": 391996215210263,
+          "time_unix": 1789039195.213675,
+          "pswpin": 6315012,
+          "pswpout": 57487423,
+          "MemAvailable_kib": 120403692,
+          "SwapTotal_kib": 16777212,
+          "SwapFree_kib": 16608620,
+          "SwapCached_kib": 16772
+        }
+      },
+      {
+        "phase": "after-randomness",
+        "counters": {
+          "observed_ns": 392003728466898,
+          "time_unix": 1789039202.7269316,
+          "pswpin": 6315012,
+          "pswpout": 57487423,
+          "MemAvailable_kib": 120409716,
+          "SwapTotal_kib": 16777212,
+          "SwapFree_kib": 16608620,
+          "SwapCached_kib": 16772
+        }
+      },
+      {
+        "phase": "after_ready",
+        "counters": {
+          "observed_ns": 392188601375273,
+          "time_unix": 1789039387.5998397,
+          "pswpin": 6315012,
+          "pswpout": 57487423,
+          "MemAvailable_kib": 19334568,
+          "SwapTotal_kib": 16777212,
+          "SwapFree_kib": 16608620,
+          "SwapCached_kib": 16772
+        }
+      },
+      {
+        "phase": "after_smoke",
+        "counters": {
+          "observed_ns": 392292624048952,
+          "time_unix": 1789039491.6225133,
+          "pswpin": 6315012,
+          "pswpout": 57487424,
+          "MemAvailable_kib": 19835320,
+          "SwapTotal_kib": 16777212,
+          "SwapFree_kib": 16608616,
+          "SwapCached_kib": 16776
+        }
+      },
+      {
+        "phase": "after_stop",
+        "counters": {
+          "observed_ns": 392375199911602,
+          "time_unix": 1789039574.1983762,
+          "pswpin": 6315012,
+          "pswpout": 57487424,
+          "MemAvailable_kib": 121296632,
+          "SwapTotal_kib": 16777212,
+          "SwapFree_kib": 16608616,
+          "SwapCached_kib": 16776
+        }
+      },
+      {
+        "phase": "before_freeze",
+        "counters": {
+          "observed_ns": 391921872240572,
+          "time_unix": 1789039120.8707051,
+          "pswpin": 6315012,
+          "pswpout": 57487423,
+          "MemAvailable_kib": 120403944,
+          "SwapTotal_kib": 16777212,
+          "SwapFree_kib": 16608620,
+          "SwapCached_kib": 16772
+        }
+      },
+      {
+        "phase": "before_profile_start",
+        "counters": {
+          "observed_ns": 392025880209713,
+          "time_unix": 1789039224.8786743,
+          "pswpin": 6315012,
+          "pswpout": 57487423,
+          "MemAvailable_kib": 120388292,
+          "SwapTotal_kib": 16777212,
+          "SwapFree_kib": 16608620,
+          "SwapCached_kib": 16772
+        }
+      }
+    ],
+    "additional_unloaded_event_scope": "Events after after.json are retained diagnostic observations, separate from the startup-through-stop failure interval"
+  }
+}

@@ -30,11 +30,21 @@ attempt does not establish causal host or performance improvement. Two new
 DeepGEMM files keep the overall attempt **FAIL** and kernel confirmation **NO_RESULT**;
 no full-duration client was admitted. Both reviewers verified the complete archive.
 
-The next [two-file cache replay](soak-cache-replay-002/PROTOCOL.md) keeps all profiles,
-startup flags, model settings and scorers unchanged. Its real-launcher reuse test
-and all 2,486 copied cache-file checks pass. It still needs a fresh freeze, seed,
-necessary window and full-duration confirmation. Current-configuration direct
-context, native paired fidelity and production switching remain pending.
+The latest [two-file cache replay](soak-native-008/README.md) kept all profiles,
+startup flags, model settings and scorers unchanged. All 2,486 prepared files
+stayed unchanged and the 4,224-input-token correctness smoke passed. The host
+wrote one page to swap, increasing used swap by 4 KiB; the overall verdict is
+**FAIL**, and neither the necessary window nor the full-duration test was admitted.
+The complete external census retains a simultaneous snapd VmSwap increase;
+this correlation does not establish causation or exempt the attempt from its gate.
+GLM cgroup swap and limit events remained zero. Shutdown, recovery, identity,
+default/proxy/guard and post-run artifact checks passed. GLM is stopped.
+
+The next bounded experiment already specified in the startup cleanup protocol is
+process-local CPU heap trimming after startup garbage collection. It has not been
+implemented or measured, and there is no demonstrated saving yet. Current-configuration
+direct context, sustained-load confirmation, native paired fidelity and production
+switching remain pending. Qualified production performance is not yet measured.
 
 The [preceding 256/64 test](soak-native-004/README.md) returned 17 correct replies,
 but admissions were `[5,4,4,4]` against the required five per worker. The bounded

@@ -67,8 +67,9 @@ scheduler configuration.
 The agent profile's earlier basic chat, tool, four-image and 16-frame video checks
 used 224x224 fixtures; they do not establish maximum media or context capability.
 
-The latest final-warmup cleanup attempt passed startup, correctness, the 20-request
-necessary window and host swap checks, then stopped cleanly. Two new DeepGEMM files
-require a separate cache replay before full-duration admission. The current launcher
-reuses those files; model settings and profile flags remain unchanged. Full
-qualification is still pending.
+The preceding final-warmup cleanup attempt passed correctness, the 20-request
+necessary window and host swap checks, but generated two additional kernel files.
+The latest replay reused all 2,486 prepared files and passed short correctness.
+It failed the host gate because one page was written to swap (4 KiB), so the
+necessary window and full-duration test were not admitted. GLM stopped cleanly
+and memory recovered; full qualification is still pending.
