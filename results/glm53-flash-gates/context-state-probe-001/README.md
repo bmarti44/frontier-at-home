@@ -19,3 +19,12 @@ Run only after the serving model is safely stopped and110GiB available; use the
 existing lock/wrapper,40GiB floor,32/34GiB cgroup and bounded wall timeout.
 Prepared Triton caches are copied without changing their source artifacts.
 Any new JIT compilation makes this preparation, not frozen confirmation.
+
+## Result
+
+Both transitions passed all listed checks. The convolution maximum absolute
+error was0.0002434849739074707, within the preregistered analytic tolerance.
+Gather/scatter and cross-region preservation were exact, and recurrence outputs
+were finite. The wrapper and identity monitor exited cleanly with zero swap.
+This second bounded alternative did not reproduce the CUDA fault. Preserve the
+branch as NO_RESULT; do not infer model fidelity or full-context capability.
