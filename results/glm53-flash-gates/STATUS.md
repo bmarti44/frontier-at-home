@@ -58,18 +58,21 @@ is FAIL and native GPU feasibility is NO_RESULT, not a memory-capacity rejection
 A separate retrospective comparison accounts the five writes to the persistent
 `system.slice` cgroup over a wider interval; `user.slice` gained none. This does
 not identify a particular service or the trigger. Further automatic warmup or
-daemon-stop variations are not proposed. A temporary pause of the exact
-`/swap.img` swap unit is an owner-controlled next prerequisite; it has not been
-performed and is outside the installed Docker/containerd grant. Existing memory,
-OOM/Xid and swap checks would remain in force under a fresh baseline.
+daemon-stop variations are not proposed. The owner has now performed the
+temporary pause of the exact `/swap.img` unit. Read-only observations confirm
+the unit inactive, no active swap entries and zero SwapTotal with GLM stopped
+and over 110 GiB available. The [next replay preparation](bf16-one-layer-003-preparation/README.md)
+keeps the native probe and all memory, OOM/Xid and swap checks unchanged under
+a fresh baseline. This removes the pending host prerequisite; it does not revise
+the earlier failed attempts or complete model qualification.
 
 A separate [small HTTP transfer diagnostic](bf16-transfer-001/attempt-001/README.md)
 passed byte equality, host safety and cleanup for four transfers of the same
 256 MiB shard prefix. Parallel ranges reduced elapsed download time in this
 sample, making them a justified option for a future native-reference probe.
 This does not verify a full shard or qualify model speed, native reference,
-fidelity or context. No model, service or swap setting changed. The temporary
-swap pause remains a separate prerequisite for the native campaign.
+fidelity or context. That diagnostic changed no model, service or swap setting.
+The later owner swap pause is recorded above.
 
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
 512-token batches with a 128-token prompt-chunk cap per conversation, retaining

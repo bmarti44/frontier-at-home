@@ -97,3 +97,7 @@ computation: 20 KiB of host swap writes failed its unchanged gate despite over
 100 GiB available memory. It exited cleanly and left no model process. The
 working GLM profiles are unchanged; this failure concerns the remaining strict
 qualification campaign. See the linked status for the retained evidence.
+
+The owner subsequently paused the existing swap unit. Its inactive state and
+zero active swap were verified with GLM stopped and sufficient free memory.
+Qualification has resumed from a fresh baseline; prior failures remain recorded.
