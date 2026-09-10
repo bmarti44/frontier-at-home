@@ -1,7 +1,8 @@
 # GLM-5.3-Flash CUDA status
 
-**GLM is runnable through named experimental profiles, and the direct aggregate
-million-token context check passed.** Qwen remains the recorded/reboot default.
+**GLM is runnable through named experimental profiles.** An earlier configuration
+passed the direct aggregate million-token context check; current settings still
+need confirmation. Qwen remains the recorded/reboot default.
 GLM is currently stopped; the latest replays failed before model loading. Full model
 qualification remains incomplete.
 
@@ -25,19 +26,23 @@ of the cause. The complete 900-census observation also retains one later swap-in
 page after the failed preflight. No model workload was admitted.
 
 The owner subsequently stopped containerd and installed the reviewed
-[scoped passwordless runtime grant](runtime-access-001/README.md). All three
-runtime services are now inactive, and an actual noninteractive command verified
-the new delegation. The next [unchanged-profile replay](containerd-isolation-001/PROTOCOL.md)
-will test that environmental change under the original broad host gate. It is
-not yet a successful model result; no model setting or default changed.
+[scoped passwordless runtime grant](runtime-access-001/README.md). Noninteractive
+operation was verified. The [replay with all three services stopped](soak-native-013/README.md)
+still failed on one swap-in page before model loading. The event falls before the
+first process census, so attribution is unavailable. The read-only freeze completed;
+no new public seed, client fixtures or model workload followed. Later quiet samples
+do not revise the failure. GLM and the three container runtime units remain stopped.
 
-The owner has no reference dataset or second machine. Ollama's installed
-`kimi-k3:cloud` route supplied [100 synthetic prompt candidates](kimi-corpus-001/README.md),
-with failed preparation and all raw responses retained. These are inputs, not
-native GLM reference probabilities. A [BF16 metadata audit](bf16-local-feasibility-001/README.md)
-rules out whole-model memory/disk loading on this host and sizes a possible
-layer-streaming reference. Native computation, memory safety and fidelity remain
-unverified for that proposed route.
+Ollama's installed `kimi-k3:cloud` supplied [100 synthetic prompts](kimi-corpus-001/README.md).
+Their [pinned chat serialization](kimi-serialization-001/README.md) totals 32,837
+input tokens, with a 516-token maximum. These are inputs, not native reference
+probabilities. A [BF16 metadata audit](bf16-local-feasibility-001/README.md) ruled
+out whole-model loading on this host. A [tiny CPU test](bf16-tiny-parity-004/README.md)
+then verified stock checkpoint conversion and byte-identical full-load versus
+partial-module outputs, independently reproduced with seven rejection controls.
+It used synthetic weights kept in memory and stock Torch fallbacks. Real-weight
+streaming, GPU memory feasibility and the native 100-case fidelity result remain
+unverified. Earlier preparation failures are preserved.
 
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
 512-token batches with a 128-token prompt-chunk cap per conversation, retaining

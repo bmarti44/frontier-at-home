@@ -1,0 +1,95 @@
+{
+  "reviewer": "glm53_gap_reviewer",
+  "verdict": "PASS",
+  "critical_findings": 0,
+  "high_findings": 0,
+  "findings": [],
+  "scope": "New negative unloaded preflight013 publication only; no frozen component review or runtime actions.",
+  "created_unix": 1789066985.0035834,
+  "checks": {
+    "archive_members_verified": 2616,
+    "archive_member_bytes": 294667912,
+    "compressed_bytes": 39455529,
+    "raw_rows_exactly_bound": 908,
+    "closed_validator_reproduces_complete900_census_acceptance": true,
+    "all_observer_summary_fields_reduced_from_original": true,
+    "actual_raw_mutations_independently_rejected": 6,
+    "failure_precedes_freeze_completion": true,
+    "no_archived_seed_client_or_workload": true,
+    "frozen_repository_source_bindings": 90,
+    "observer_containment_exit_and_current_pid_absence": true,
+    "default_proxy_guard_state_preserved": true,
+    "all_three_container_units_inactive_at_terminal": true,
+    "archived_publisher_matches_submitted_source": true
+  },
+  "chronology": {
+    "baseline_unix": 1789065901.3816893,
+    "census_start_unix": 1789065924.9558785,
+    "failure_unix": 1789065970.6871836,
+    "freeze_completed_unix": 1789065978.2430441,
+    "independent_CPU_work_phase": {
+      "phase": "before-independent-cpu-work",
+      "counters": {
+        "observed_ns": 418932098222783,
+        "time_unix": 1789066131.0966873,
+        "pswpin": 6315646,
+        "pswpout": 57487424,
+        "MemAvailable_kib": 121296972,
+        "SwapTotal_kib": 16777212,
+        "SwapFree_kib": 16630468,
+        "SwapCached_kib": 11796
+      }
+    },
+    "census_end_unix": 1789066824.957088
+  },
+  "observer": {
+    "observation_integrity": "PASS",
+    "censuses": 900,
+    "raw_rows": 902,
+    "duration_seconds": 900.0012094974518,
+    "global_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "used_swap_kib": [
+      146744,
+      146744
+    ],
+    "minimum_available_gib": 115.17324829101562,
+    "process_read_errors": 14
+  },
+  "limits": [
+    "The one swap-in page falls inside the 23.57418918609619-second gap before process census; no process or causal attribution is supported.",
+    "All subsequent census swap counters remain unchanged; that later quiet interval does not revise the failed broad admission.",
+    "Later observation includes independently marked synthetic CPU/source work after failure. Fourteen process-read errors remain in raw evidence and limit process-level coverage; integrity PASS does not claim complete process attribution.",
+    "No seed, new workload fixtures, model load, smoke, window, durability, fidelity or performance qualification occurred.",
+    "Large runtime/model verification is supported by retained freeze command and bindings; this reviewer did not repeat large model/runtime hashing."
+  ],
+  "files": [
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-native-013/manifest.json",
+      "sha256": "e80f2f2f3b4b4b476110049a906fe57c145cfe7e4197427ef9e821d62d7ffe73",
+      "size_bytes": 671522
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-native-013/summary.json",
+      "sha256": "8cfab02904b7aadfff1def09d46ca29cccb1e90ef4fd389776fd810707b8b30a",
+      "size_bytes": 2064
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-native-013/README.md",
+      "sha256": "967c496badc353866829b93167a710ad3e99c0217d7650b5b55f2aeeacb37f4a",
+      "size_bytes": 1387
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-native-013/attempt.tar.gz",
+      "sha256": "5d12b1e7328cc8196c1f573c5f18d40fbc300d5807b5751b26e9fadbec07380d",
+      "size_bytes": 39455529
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/soak-native-013/raw.jsonl.gz",
+      "sha256": "4452963c034f8d63619cb9f0e9cf3c5fa38a88bd9ccfbbbcb6c3c6e2f92a0c5c",
+      "size_bytes": 5670103
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "scope": "Docker/socket/containerd stopped; unchanged profile failed unloaded host admission before freeze completion",
+  "verdict": "FAIL",
+  "model_qualification": "NO_RESULT",
+  "source_revision": "411258bfd65d38fde522b177ea51b35cf86ae79c",
+  "formula": "Unchanged observed broad pre-freeze global swap-in/out and used-swap counters are required. Any observed change fails admission; no process attribution waives it.",
+  "preflight": {
+    "swap_delta": {
+      "pswpin": 1,
+      "pswpout": 0
+    },
+    "used_swap_kib": [
+      146744,
+      146744
+    ],
+    "event_before_census_start": true,
+    "unobserved_process_interval_seconds": 23.57418918609619,
+    "process_attribution": null
+  },
+  "runtime_model_inventory_verification": "PASS",
+  "frozen_file_bindings_verified": true,
+  "prepared_cache_files": 2486,
+  "public_randomness": "NOT_OBTAINED: admission failed before freeze completed",
+  "fixtures_prepared": false,
+  "model_started": false,
+  "smoke": "NOT_RUN",
+  "necessary_window": "NOT_RUN",
+  "full_durability": "NOT_RUN",
+  "qualified_production_performance": null,
+  "default_proxy_guard_state_unchanged": true,
+  "observer": {
+    "observation_integrity": "PASS",
+    "censuses": 900,
+    "raw_rows": 902,
+    "duration_seconds": 900.0012094974518,
+    "global_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "used_swap_kib": [
+      146744,
+      146744
+    ],
+    "minimum_available_gib": 115.17324829101562,
+    "process_read_errors": 14,
+    "exit_code": 0,
+    "identity_no_longer_live": true,
+    "coverage_limit": "Census starts after the failing swap-in. Broad baseline and census-start counters bracket the event; no process attribution is available. Later coverage includes explicitly marked independent synthetic CPU preparation and source work after failed admission."
+  },
+  "malformed_controls_rejected": 6,
+  "service_isolation": {
+    "docker_service": "inactive",
+    "docker_socket": "inactive",
+    "containerd_service": "inactive"
+  },
+  "prior_attempts": "All FAIL and NO_RESULT evidence unchanged"
+}

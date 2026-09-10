@@ -86,7 +86,8 @@ service. This correlation does not prove the cause or waive the failed gate.
 GLM, Docker, its socket and containerd are now stopped. The owner completed the
 guarded containerd procedure and installed the reviewed
 [scoped passwordless runtime controls](GLM53-RUNTIME-ACCESS.md); noninteractive
-operation was verified. The next unchanged-profile replay will test the isolated
-host. The named-profile settings and current default remain unchanged; full
-qualification is still pending. Kimi has supplied 100 synthetic prompt candidates
-for further testing, but native BF16 reference probabilities are still required.
+operation was verified. The replay still failed on one background host swap-in
+page before GLM loaded. No process attribution is available for that event. The
+named-profile settings and current default remain unchanged. Kimi supplied 100
+synthetic prompts, and a tiny CPU reference-loader test passed; real native BF16
+reference probabilities and full model qualification are still required.

@@ -1,0 +1,141 @@
+{
+  "reviewer": "/root/glm53_adversarial_reviewer",
+  "time_unix": 1789067016.3344932,
+  "verdict": "PASS",
+  "assessment": "The retained synthetic CPU conversion and layer-major parity result independently reproduces; no blocking finding in this bounded scope.",
+  "findings": [],
+  "scope": "Tiny synthetic CPU stock Torch fallback checkpoint conversion, partial-module meta residency, per-layer outputs and final logits only.",
+  "source": {
+    "path": "/tmp/glm53-bf16-tiny-parity004.py",
+    "size_bytes": 9308,
+    "sha256": "4dca74db9ade5ba729dc70b2ad64884402d9f6f89ca736b40dc577fa3ffe8f72"
+  },
+  "evidence": {
+    "summary.json": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004/summary.json",
+      "size_bytes": 460,
+      "sha256": "e9da462ba81e11bce7f5b7c05ccb99de8805a560ccaa5ccda8241d13e32b662d"
+    },
+    "raw.jsonl": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004/raw.jsonl",
+      "size_bytes": 133143,
+      "sha256": "829d29a754786268ed9a7f2e19c370bb3f55c637c5db6d78490541fce06992b4"
+    },
+    "source.json": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004/source.json",
+      "size_bytes": 245,
+      "sha256": "870d98e4e909b8a08f0f455d11a45445dbbcae08c6d3b88f1f41976508285a67"
+    },
+    "configuration.json": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004/configuration.json",
+      "size_bytes": 3613,
+      "sha256": "35d7838cc87fd2d98b665ad08ecffb15e6afc935067e4a604b920ee61927d37d"
+    },
+    "stock-torch-selector.json": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004/stock-torch-selector.json",
+      "size_bytes": 2102,
+      "sha256": "ea35493471691fb6feee5b05e005fc83dcf67fec47307481e764af85b5d5ef1f"
+    },
+    "checkpoint-binding.json": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004/checkpoint-binding.json",
+      "size_bytes": 625,
+      "sha256": "34ea8fa3302fdb9abdf0679db810723f8a1c20e594e4d5b8b009c35970f16a98"
+    },
+    "loading-info.json": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004/loading-info.json",
+      "size_bytes": 95,
+      "sha256": "ea8462ce1fb5161e28a2547070c1a7915315f32097d1aec2ca40a21e18831d85"
+    }
+  },
+  "reproduction": {
+    "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004-adversarial-native-001",
+    "verdict": "PASS",
+    "exit_code": 0,
+    "interpreter": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3",
+    "python_flags": [
+      "-I",
+      "-B"
+    ],
+    "cuda_visible_devices": "",
+    "containment": {
+      "unit": "glm53-tiny004-adversarial-001",
+      "MemoryHigh": "2G",
+      "MemoryMax": "3G",
+      "MemorySwapMax": 0,
+      "OOMPolicy": "kill",
+      "KillMode": "control-group",
+      "RuntimeMaxSec": 180
+    },
+    "summary": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004-adversarial-native-001/summary.json",
+      "size_bytes": 460,
+      "sha256": "e9da462ba81e11bce7f5b7c05ccb99de8805a560ccaa5ccda8241d13e32b662d"
+    },
+    "raw": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004-adversarial-native-001/raw.jsonl",
+      "size_bytes": 133155,
+      "sha256": "8cd58c37a4b8a7f2c38d2fd63d3b978a64244422156e6fdef63e6d85485052f9"
+    },
+    "original_summary_equal": true,
+    "matching_tensor_hashes": 310
+  },
+  "coverage": {
+    "layers": 5,
+    "experts": 12,
+    "checkpoint_shards": 3,
+    "sequence_lengths": [
+      5,
+      64,
+      65
+    ],
+    "full_parameter_and_buffer_comparisons": 157,
+    "partial_parameter_and_buffer_comparisons": 132,
+    "partial_stages": 7,
+    "partial_stage_live_counts": [
+      1,
+      24,
+      24,
+      24,
+      29,
+      28,
+      2
+    ],
+    "hidden_stream_comparisons": 15,
+    "returned_nonnull_topk_comparisons": 3,
+    "full_logit_comparisons": 3
+  },
+  "mutations": {
+    "scope": "Exact original same() function extracted by AST plus fresh full-script execution with an empty layer-2 checkpoint selection; candidate source unchanged.",
+    "results": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004-adversarial-controls/results.json",
+      "size_bytes": 2018,
+      "sha256": "b26c0405783de718116c150a19164dcc925117e78607fc6ba81c8e61b2871b73"
+    },
+    "harness": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004-adversarial-controls/check.py",
+      "size_bytes": 2121,
+      "sha256": "522687d64c1203da9c635ecea6e2a59b4ad2850de22459c5df47bfacd900b9d4"
+    },
+    "missing_stage_source": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004-adversarial-controls/missing-stage.py",
+      "size_bytes": 9368,
+      "sha256": "8c7f0d52bce6f7b075e20dd8b9fc37c3bde05c11513b2f069adc4d4d372738f7"
+    },
+    "missing_stage_summary": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-tiny-parity-004-adversarial-controls/missing-stage-result/summary.json",
+      "size_bytes": 1485,
+      "sha256": "ffba8422d0f986f3721967250d7882614e29214fc6ee0b34484cd8308f79c329"
+    },
+    "controls_passed": 7,
+    "containment_unit": "glm53-tiny004-adversarial-controls-001",
+    "containment_limits": "Same 2G high / 3G max / zero swap / 180 s limits; controls run sequentially."
+  },
+  "limits": [
+    "The partial arm loads cloned selections from the in-memory native tensor dictionary; this does not test a streamed disk/shard loader.",
+    "Full baseline, expected tensors and native source tensors stay resident globally. Only the partial module is checked for one-stage live parameter residency; no whole-process one-layer memory envelope is measured.",
+    "All 157 parameters/buffers are checked, including vision weights, but no vision forward is executed.",
+    "The tiny configuration has zero rotary head dimension and different geometry from the native checkpoint. No real-weight, production-dtype-layout or full-model equivalence follows.",
+    "inspect.unwrap explicitly selects pinned stock Torch fallbacks in both arms. No FLA/Triton equivalence or recurrent/update execution is claimed.",
+    "This is a synthetic CPU falsifier, not native BF16 reference data, a 100-case fidelity result, context capability, performance or production qualification."
+  ]
+}
