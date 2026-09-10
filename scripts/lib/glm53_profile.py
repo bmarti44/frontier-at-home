@@ -190,14 +190,15 @@ def orderly_api_stop(record, timeout=30):
 
 def stop_unit(record):
     props = unit_properties(record['unit'])
-    shutdown_failure=None
+    prior=record.get('shutdown',{})
+    shutdown_failure=(prior.get('failure') or 'previous orderly shutdown failed') if prior.get('clean') is False else None
     if props['ActiveState'] not in ('inactive','failed'):
         if not bind_unit(record,props):
             raise ValueError('cannot observe systemd invocation identity; refusing stop')
         if record.get('ready'):
             try: orderly_api_stop(record)
             except (OSError,ValueError,KeyError,subprocess.SubprocessError) as error:
-                shutdown_failure=type(error).__name__+': '+str(error)
+                shutdown_failure=shutdown_failure or type(error).__name__+': '+str(error)
         props=unit_properties(record['unit'])
         if props['ActiveState'] not in ('inactive','failed'):
             if not bind_unit(record,props): raise ValueError('missing shutdown invocation')
