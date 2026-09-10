@@ -57,8 +57,37 @@ def launch_key(path):
         return value
 
 
+def release_model_file_cache(launch):
+    """Advise verified model files without rereading payloads before CUDA init."""
+    model=Path(launch['arguments'][launch['arguments'].index('--model')+1])
+    inventory_path=model/'inventory.json'
+    if sha(inventory_path)!=launch['model_inventory']['sha256']:
+        raise ValueError('model inventory changed before file-cache advice')
+    inventory=json.loads(inventory_path.read_text())
+    before=Path('/proc/meminfo').read_text()
+    advised_bytes=0
+    for row in inventory['files']:
+        path=model/row['path']
+        if path.parent!=model:
+            raise ValueError('file-cache advice requires direct model children')
+        descriptor=os.open(path,os.O_RDONLY|os.O_CLOEXEC|os.O_NOFOLLOW)
+        try:
+            info=os.fstat(descriptor)
+            if not stat.S_ISREG(info.st_mode) or info.st_size!=row['size_bytes']:
+                raise ValueError('model file changed before file-cache advice')
+            os.posix_fadvise(descriptor,0,0,os.POSIX_FADV_DONTNEED)
+            advised_bytes+=info.st_size
+        finally:
+            os.close(descriptor)
+    print(json.dumps({'event':'verified_model_file_cache_release',
+        'files':len(inventory['files']),'advised_bytes':advised_bytes,
+        'meminfo_before':before,'meminfo_after':Path('/proc/meminfo').read_text()}),flush=True)
+
+
 def serve(directory):
     launch=json.loads((directory/'launch.json').read_text())
+    if launch['environment'].get('GLM53_RELEASE_MODEL_FILE_CACHE')=='1':
+        release_model_file_cache(launch)
     os.environ['VLLM_API_KEY']=(directory/'api-key').read_text().strip()
     sys.path.insert(0,str(directory/'lib'))
     sys.argv=['vllm',*launch['arguments']]

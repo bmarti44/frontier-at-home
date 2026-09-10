@@ -8,7 +8,7 @@
   "purpose": "Explicit experimental GLM serving; leaves production and reboot default unchanged",
   "status": {
     "state": "estimated",
-    "basis": "Startup cache-release candidate: pre-profile cleanup enabled after soak-startup-001 driver allocation failure; confirmation pending. Prior context-direct-007 passed 1,000,512 aggregate input tokens on the preceding startup configuration. Paired fidelity and production switching pending; qualified performance not yet measured."
+    "basis": "Startup file-cache candidate: verified model-file page advice before CUDA init, plus pre-profile allocator cleanup. Confirmation pending after startup001/002 allocation failures. Prior context-direct-007 passed 1,000,512 aggregate tokens on the preceding startup configuration. Paired fidelity/switching pending; qualified performance not yet measured."
   },
   "engine": "vllm-exl3-glm53-local",
   "artifact_roles": {
@@ -52,7 +52,8 @@
       "INSTANTTENSOR_CONCURRENCY": "1",
       "INSTANTTENSOR_IO_DEPTH": "3",
       "INSTANTTENSOR_BACKEND": "AIO",
-      "GLM53_RELEASE_LOAD_CACHE": "1"
+      "GLM53_RELEASE_LOAD_CACHE": "1",
+      "GLM53_RELEASE_MODEL_FILE_CACHE": "1"
     },
     "diagnostics_unset": [
       "GLM_KPOOL_TAIL_BOUNDS",
