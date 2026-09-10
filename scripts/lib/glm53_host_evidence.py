@@ -226,9 +226,15 @@ def score_host_observations(directory, expected):
     rows = [object_text(line) for line in raw.splitlines()]
     require(len(rows) >= 3 and rows[-1].get("event") == "cleanup" and rows[-1].get("live_process_group_after") == [] and
             all(row.get("event") == "identity" for row in rows[:-1]), "incomplete identity or cleanup event coverage")
-    times = ordered_times(rows, "time_unix", gap)
+    # The guard stops identity sampling at its verified completion handshake,
+    # then permits up to five seconds for normal interpreter exit. Memory
+    # sampling continues through this separately bounded teardown interval.
+    times = ordered_times(rows[:-1], "time_unix", gap)
+    times.append(number(rows[-1]["time_unix"]))
+    require(0 < times[-1] - times[-2] <= 5, "terminal teardown outside five-second bound")
     monotonic = [integer(row["monotonic_ns"], 1) for row in rows]
-    require(all(0 < b - a <= gap * 1e9 for a, b in zip(monotonic, monotonic[1:])), "identity monotonic coverage mismatch")
+    require(all(0 < b - a <= gap * 1e9 for a, b in zip(monotonic[:-1], monotonic[1:-1])), "identity monotonic coverage mismatch")
+    require(0 < monotonic[-1] - monotonic[-2] <= 5e9, "terminal monotonic teardown outside five-second bound")
     require(all(abs((b - a) - (mb - ma) / 1e9) <= 0.05 for a, b, ma, mb in zip(times, times[1:], monotonic, monotonic[1:])), "identity clocks disagree")
     identities = rows[:-1]
     first_ticks = integer(identities[0]["start_ticks"], 1)
@@ -242,7 +248,7 @@ def score_host_observations(directory, expected):
         integer(row["seccomp_filters"])
     require(identities[-1]["seccomp_filters"] > identities[0]["seccomp_filters"], "terminal exec filter count did not increase")
     require(times[0] >= number(identity["start_unix"]) and times[-1] - number(identity["start_unix"]) <= timeout and
-            abs(host_times[0] - times[0]) <= gap and abs(host_times[-1] - times[-2]) <= gap, "host/identity sampling windows lack coverage")
+            abs(host_times[0] - times[0]) <= gap and abs(host_times[-1] - times[-1]) <= gap, "host/identity sampling windows lack coverage")
     require(launch_time <= control_time <= number(identity["start_unix"]) <= times[0] and
             control_time <= process_time <= host_times[0] and abs(process_time - times[0]) <= gap and
             max(host_times[-1], times[-1]) <= final_time <= end_time and final_time - times[-1] <= gap,
@@ -285,6 +291,7 @@ def score_host_observations(directory, expected):
             "minimum_mem_available_kib": minimum, "maximum_cgroup_peak_bytes": peak, "memory_samples": len(samples),
             "identity_samples": len(identities), "identity_pid": engine_pid, "identity_start_ticks": first_ticks,
             "maximum_memory_sample_gap_seconds": max(b - a for a, b in zip(host_times, host_times[1:])),
-            "maximum_identity_sample_gap_seconds": max(b - a for a, b in zip(times, times[1:])),
+            "maximum_identity_sample_gap_seconds": max(b - a for a, b in zip(times[:-1], times[1:-1])),
+            "terminal_cleanup_seconds": times[-1] - times[-2],
             "whole_system_swap_delta": {"pswpin": 0, "pswpout": 0},
             "required_separate_checks": ["frozen runtime and metadata inventories", "post-freeze verified public seed", "inner probe correctness", "model qualification"]}
