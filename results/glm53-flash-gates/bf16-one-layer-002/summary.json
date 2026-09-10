@@ -1,0 +1,40 @@
+{
+  "verdict": "FAIL",
+  "scope": "One-layer native BF16 feasibility attempt; no GPU computation, native reference, fidelity, context or serving-performance result",
+  "failure": "Broad host swap-out changed before first verified-shard receipt could be recorded",
+  "native_feasibility": "NO_RESULT",
+  "measurements": {
+    "global_swap_in_pages_delta": 0,
+    "global_swap_out_pages_delta": 5,
+    "used_swap_kib_delta": 20,
+    "external_memory_samples": 777,
+    "minimum_mem_available_kib": 110110368,
+    "minimum_mem_available_gib": 105.00942993164062,
+    "maximum_observed_cgroup_swap_bytes": 0,
+    "maximum_observed_cgroup_peak_bytes": 11554385920,
+    "identity_samples": 855
+  },
+  "formulas": {
+    "swap_deltas": "post-verification host counter minus broad pre-freeze baseline",
+    "memory_floor": "minimum mem_avail_kb over retained external samples",
+    "cgroup_swap": "maximum cgroup_swap_current_bytes over retained external samples"
+  },
+  "checks": {
+    "frozen_file_bindings": 35,
+    "frozen_files_unchanged": true,
+    "archive_member_bytes_verified": 62,
+    "wrapper_exit_code": 1,
+    "capture_failure": null,
+    "identity_verdict": "FAIL: missing success handshake after probe exception",
+    "live_process_group_after": [],
+    "cgroup_gone": true,
+    "unit_inactive": true,
+    "no_verified_shard_receipt": true,
+    "no_GPU_forward_or_output": true
+  },
+  "limits": [
+    "Transfer reached first-shard verification/copy source line, but no completed verified-shard receipt was retained. Do not claim a completed real-layer check.",
+    "Global swap owner and causal trigger are unknown. Zero sampled probe cgroup swap does not attribute the global writes.",
+    "Native GPU memory feasibility and the full 100-case native reference remain unmeasured."
+  ]
+}

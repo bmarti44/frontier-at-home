@@ -44,6 +44,25 @@ It used synthetic weights kept in memory and stock Torch fallbacks. Real-weight
 streaming, GPU memory feasibility and the native 100-case fidelity result remain
 unverified. Earlier preparation failures are preserved.
 
+The first real-layer preparation selected an obsolete packaging inventory and
+failed before freeze. The [correction](bf16-one-layer-preflight-001/README.md)
+reused the existing serving-profile inventory and verified all 61,401 runtime
+files; the temporary bytecode quarantine was restored byte-for-byte. The
+[real-weight attempt](bf16-one-layer-002/README.md) then passed freeze and public
+seed checks but stopped at the first shard's verification/copy stage after five
+host pages (20 KiB) were written to swap. Available memory stayed above 100 GiB,
+and sampled probe cgroup swap stayed zero. No completed shard receipt, GPU
+forward or native reference output was recorded. Cleanup succeeded; the attempt
+is FAIL and native GPU feasibility is NO_RESULT, not a memory-capacity rejection.
+
+A separate retrospective comparison accounts the five writes to the persistent
+`system.slice` cgroup over a wider interval; `user.slice` gained none. This does
+not identify a particular service or the trigger. Further automatic warmup or
+daemon-stop variations are not proposed. A temporary pause of the exact
+`/swap.img` swap unit is an owner-controlled next prerequisite; it has not been
+performed and is outside the installed Docker/containerd grant. Existing memory,
+OOM/Xid and swap checks would remain in force under a fresh baseline.
+
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
 512-token batches with a 128-token prompt-chunk cap per conversation, retaining
 all four 262,144-token slots and existing memory safeguards. The

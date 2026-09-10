@@ -91,3 +91,9 @@ page before GLM loaded. No process attribution is available for that event. The
 named-profile settings and current default remain unchanged. Kimi supplied 100
 synthetic prompts, and a tiny CPU reference-loader test passed; real native BF16
 reference probabilities and full model qualification are still required.
+
+The subsequent native BF16 layer feasibility attempt also stopped before GPU
+computation: 20 KiB of host swap writes failed its unchanged gate despite over
+100 GiB available memory. It exited cleanly and left no model process. The
+working GLM profiles are unchanged; this failure concerns the remaining strict
+qualification campaign. See the linked status for the retained evidence.
