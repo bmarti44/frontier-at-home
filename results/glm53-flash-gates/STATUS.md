@@ -106,6 +106,19 @@ startup, but its recorded memory peak does not establish causation. The
 [unchanged serialized replay](startup-serialized-replay-001/PROTOCOL.md) completes
 auxiliary work before model launch and retains all existing limits and settings.
 
+The [serialized direct010 run](context-direct-010/README.md) started successfully
+and passed authenticated readiness and the short correctness check. Four direct
+250,128-token requests then ended without output when available host memory fell
+to 18,600,216 KiB, below the unchanged 18 GiB reserve. The watchdog stopped the
+model. The stream scorer rejected the incomplete output; identity completion and
+launcher exit records are missing. Separate later observations verify cleanup,
+recovered memory, unchanged defaults and all 111 source/runtime/model bindings
+plus 2,486 prepared cache files. The attempt remains **FAIL**. Removing the known
+startup overlap did not close the memory gate; the serialized replay branch is
+**NO_RESULT**, with no further unchanged replay. A bounded model-free comparison
+of the existing indexer workspace limit is being prepared; its effect on output
+bytes and actual memory remains unverified.
+
 The [current-scheduler context adapter](context-scheduler-003/PROTOCOL.md) is also
 ready: it reuses the existing512/128 launch validator and unchanged direct-input,
 retrieval, stream and score code. A reviewed short-launch validation correction

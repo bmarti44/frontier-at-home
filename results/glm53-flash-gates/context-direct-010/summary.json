@@ -1,0 +1,130 @@
+{
+  "scope": "Current named experimental profile direct aggregate-1M attempt; preserved original failure, separate eventual cleanup and artifact observations",
+  "verdict": "FAIL",
+  "formula": "Existing context-clear-instruction-001/PROTOCOL.md, profile-launch-001/ACCEPTANCE.md and unchanged scripts/48_probe_glm53_context.py. All four direct requests must complete with correct retrieval and host/lifecycle/artifact checks. Any floor kill, incomplete stream, missing terminal identity or scorer error fails. Post-failure recovery cannot revise this result.",
+  "failures": [
+    "18 GiB whole-host reserve breached during direct requests",
+    "All four streams ended without output tokens or completed generation",
+    "Unchanged stream scorer raised AssertionError; original client summary absent",
+    "Launcher raised ValueError at populated-group stop check; original exit.json absent",
+    "Identity terminal summary absent"
+  ],
+  "configuration": {
+    "slots": 4,
+    "context_per_slot": 262144,
+    "aggregate_cap": 1048576,
+    "input_tokens_per_request": 250128,
+    "aggregate_input_tokens": 1000512,
+    "max_output_tokens": 2048,
+    "adapter": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/context-scheduler-003/adapter.py"
+  },
+  "requests": [
+    {
+      "slot": 0,
+      "prepared_input_tokens": 250128,
+      "start_unix": 1789078321.8428605,
+      "end_unix": 1789078942.360544,
+      "request_seconds": 620.517683528,
+      "http_status": 200,
+      "output_chunks": 0,
+      "completed": false,
+      "actual_evaluated_input_tokens": null
+    },
+    {
+      "slot": 1,
+      "prepared_input_tokens": 250128,
+      "start_unix": 1789078321.8506176,
+      "end_unix": 1789078942.360571,
+      "request_seconds": 620.509953357,
+      "http_status": 200,
+      "output_chunks": 0,
+      "completed": false,
+      "actual_evaluated_input_tokens": null
+    },
+    {
+      "slot": 2,
+      "prepared_input_tokens": 250128,
+      "start_unix": 1789078321.8452363,
+      "end_unix": 1789078942.3592029,
+      "request_seconds": 620.513964284,
+      "http_status": 200,
+      "output_chunks": 0,
+      "completed": false,
+      "actual_evaluated_input_tokens": null
+    },
+    {
+      "slot": 3,
+      "prepared_input_tokens": 250128,
+      "start_unix": 1789078321.842817,
+      "end_unix": 1789078942.3606284,
+      "request_seconds": 620.517811096,
+      "http_status": 200,
+      "output_chunks": 0,
+      "completed": false,
+      "actual_evaluated_input_tokens": null
+    }
+  ],
+  "actual_evaluated_input_tokens": null,
+  "short_correctness": {
+    "scope": "Startup correctness only, not context capability",
+    "verdict": "PASS",
+    "input_tokens": 4224
+  },
+  "host": {
+    "watchdog_samples": 3181,
+    "minimum_available_kib": 18600216,
+    "minimum_available_gib": 17.738548278808594,
+    "maximum_sample_gap_seconds": 0.316464900970459,
+    "maximum_cgroup_swap_bytes": 0,
+    "kernel_oom_xid_observed": false,
+    "wrapper_exit_code": 15,
+    "wrapper_reason": "floor",
+    "eventual_cleanup_checks": {
+      "cgroup_absent": true,
+      "model_identities_absent": true,
+      "known_pids_absent": true,
+      "production_state_unchanged": true,
+      "profile_stopped": true,
+      "switch_status_unchanged": true,
+      "proxy_unchanged": true,
+      "listeners_unchanged": true,
+      "guards_unchanged": true,
+      "kernel_no_xid_oom": true,
+      "stable_110_gib_recovery": true
+    },
+    "minimum_recovered_available_kib": 120687044
+  },
+  "metrics": {
+    "rows": 2430,
+    "error_rows": 1,
+    "last_error": {
+      "start_ns": 431743364181842,
+      "end_ns": 431743364405475,
+      "error": "<urlopen error [Errno 111] Connection refused>"
+    },
+    "scope": "Original engine reports and connection error retained; no evaluated-token or capability claim derived from them"
+  },
+  "observer": {
+    "observation_integrity": "PASS",
+    "raw_rows": 902,
+    "censuses": 900,
+    "start_unix": 1789077550.9516659,
+    "end_unix": 1789078450.9520946,
+    "minimum_available_kib": 19043552,
+    "process_read_errors": 232,
+    "malformed_controls_rejected": 6,
+    "swap_deltas": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "coverage_limit": "The fixed census ended before the direct-request memory-floor event and postchecks. Preserve process read errors; it cannot attribute that later event. The separate watchdog sampled through termination."
+  },
+  "artifacts": {
+    "frozen_bindings_verified": 111,
+    "prepared_cache_files_unchanged": 2486,
+    "post_runtime_model_verified": true
+  },
+  "serialized_replay_branch": "NO_RESULT: removing the known auxiliary startup overlap did not produce a passing direct run. Original009 and010 remain FAIL; no further unchanged scheduling replay.",
+  "qualified_production_performance": null,
+  "full_model_qualification": "INCOMPLETE"
+}
