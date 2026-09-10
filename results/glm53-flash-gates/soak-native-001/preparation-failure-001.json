@@ -1,0 +1,19 @@
+{
+  "scope": "CPU-only preparation failure; no model was loaded",
+  "source_revision": "db6f9e41",
+  "seed": "64 ASCII zero characters (CPU regression only)",
+  "observation": "prepare CLI terminated exit 1 with ValueError: exact prompt length did not converge; only worker 0 files exist",
+  "evidence_origin": "observed exec session 61004; initial stdout/stderr was tool output, not separately redirected",
+  "partial_files": {
+    "0-request.json": {
+      "sha256": "9938e1e98a37cee4a4684f045f9da213aa65d39bc2003207bc774eaac4a61cd8"
+    },
+    "0-input-token-ids.json": {
+      "sha256": "8a2b67b375049058048c5b6547debb63b9909c42744ae8e76ab3cdd0005ef05e"
+    },
+    "0-fixture.json": {
+      "sha256": "ee9972b2d087a56d8009b3fb408e44845fc1764b475840a399e4af337d1dd325"
+    }
+  },
+  "acceptance": "The unchanged zero seed must produce four requests, each exactly 4224 rendered tokens, with unchanged settings, instruction, markers and negative control; any preparation error remains a failed attempt. Reproduce before changing preparation."
+}
