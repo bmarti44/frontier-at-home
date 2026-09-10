@@ -2,8 +2,25 @@
 
 **GLM is runnable through named experimental profiles, and the direct aggregate
 million-token context check passed.** Qwen remains the recorded/reboot default.
-GLM is currently stopped after a failed host swap check. Full model
+GLM is currently stopped; the latest replays failed before model loading. Full model
 qualification remains incomplete.
+
+The [passive unloaded control](host-swap-accounting-001/unloaded-control-001/README.md)
+completed all 121 samples with no swap activity. The subsequent
+[unchanged-profile preflight](soak-native-010/README.md) nevertheless recorded one
+host swap-in page during the unloaded freeze/check interval. A second bounded
+[control-warmup replay](soak-native-011/README.md) passed artifact and fresh-input
+preparation, then recorded another swap-in page before GLM started. Direct cgroup
+counters account for the latter page in Docker's cgroup; this identifies accounting
+ownership, not the trigger for the read. Neither replay admitted a model workload.
+The two environmental alternatives are **NO_RESULT**; no further automatic warmup
+variant is planned.
+
+Docker had no running containers when inspected. A reviewed
+[temporary Docker isolation procedure](../../docs/GLM53-DOCKER-ISOLATION.md) is
+prepared, but no service setting has been changed. The existing passwordless
+controls do not cover Docker service control, and a noninteractive privilege probe
+requires an administrator password. The broad host gate remains unchanged.
 
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
 512-token batches with a 128-token prompt-chunk cap per conversation, retaining

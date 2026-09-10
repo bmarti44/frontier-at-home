@@ -75,3 +75,10 @@ but one host swap-in page kept its verdict FAIL. No window or full-duration test
 was admitted. GLM stopped cleanly and memory recovered. Both startup reclamation
 alternatives are now recorded as an unsuccessful branch; full qualification
 remains pending, including investigation of host activity during measurement.
+
+Two later qualification preflights failed before GLM was loaded. The latest
+one-page swap-in event was accounted to Docker's cgroup while the model was off.
+Both environmental warmup alternatives are closed as unsuccessful. The next
+targeted step is the reviewed [temporary Docker isolation procedure](GLM53-DOCKER-ISOLATION.md);
+it requires the owner's existing administrator access. No service or swap-policy
+change has been made, and the named-profile settings remain unchanged.

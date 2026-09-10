@@ -1,0 +1,369 @@
+{
+  "scope": "Second bounded environmental replay; unloaded control warmup and preparation only",
+  "verdict": "FAIL",
+  "environmental_branch": "NO_RESULT: both bounded options failed; no further automatic warmup variant",
+  "model_qualification": "NO_RESULT",
+  "source_revision": "d29376b7b0c23d14015df64dc40df597845bd2aa",
+  "formula": "The unchanged broad pre-freeze baseline requires unchanged observed global swap-in/out and used-swap counters. One observed change fails admission; cgroup accounting is not an exemption.",
+  "preflight": {
+    "swap_delta": {
+      "pswpin": 1,
+      "pswpout": 0
+    },
+    "used_swap_kib": [
+      168536,
+      168536
+    ],
+    "first_event": {
+      "left_index": 112,
+      "right_index": 113,
+      "start_unix": 1789044832.2367342,
+      "end_unix": 1789044833.2368898,
+      "global_delta": {
+        "pswpin": 1,
+        "pswpout": 0
+      },
+      "cgroup_deltas_not_additive": {
+        ".": {
+          "pswpin": 1,
+          "pswpout": 0
+        },
+        "init.scope": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "system.slice": {
+          "pswpin": 1,
+          "pswpout": 0
+        },
+        "user.slice": {
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "system.slice/docker.service": {
+          "pswpin": 1,
+          "pswpout": 0
+        },
+        "system.slice/snapd.service": {
+          "pswpin": 0,
+          "pswpout": 0
+        }
+      }
+    }
+  },
+  "runtime_model_inventory_verification": "PASS",
+  "prepared_cache_files": 2486,
+  "public_randomness": {
+    "round": 6453793,
+    "verification": "DRAND_BLS_RECEIPT_OK",
+    "publication_unix": 1789044810,
+    "frozen_at_unix": 1789044798.2608016
+  },
+  "fixtures_prepared": true,
+  "model_started": false,
+  "smoke": "NOT_RUN",
+  "necessary_window": "NOT_RUN",
+  "full_durability": "NOT_RUN",
+  "qualified_production_performance": null,
+  "default_proxy_guard_state_unchanged": true,
+  "observer": {
+    "verdict": "NO_RESULT",
+    "observation_integrity": "PASS",
+    "scope": "Passive host accounting only; no causal or model qualification",
+    "formula": "All ordered raw samples and identities valid; quiet requires every global swap counter and used-swap value equal to initial observation",
+    "samples": 901,
+    "elapsed_seconds": 900.00064792,
+    "quiet_interval": false,
+    "global_delta": {
+      "pswpin": 126,
+      "pswpout": 0
+    },
+    "cgroup_deltas_not_additive": {
+      ".": {
+        "pswpin": 126,
+        "pswpout": 0
+      },
+      "init.scope": {
+        "pswpin": 0,
+        "pswpout": 0
+      },
+      "system.slice": {
+        "pswpin": 125,
+        "pswpout": 0
+      },
+      "user.slice": {
+        "pswpin": 1,
+        "pswpout": 0
+      },
+      "system.slice/docker.service": {
+        "pswpin": 4,
+        "pswpout": 0
+      },
+      "system.slice/snapd.service": {
+        "pswpin": 18,
+        "pswpout": 0
+      }
+    },
+    "minimum_available_gib": 115.40308380126953,
+    "exit_code": 0,
+    "identity_no_longer_live": true,
+    "subsequent_events": [
+      {
+        "left_index": 338,
+        "right_index": 339,
+        "start_unix": 1789045058.23679,
+        "end_unix": 1789045059.2367163,
+        "global_delta": {
+          "pswpin": 3,
+          "pswpout": 0
+        },
+        "cgroup_deltas_not_additive": {
+          ".": {
+            "pswpin": 3,
+            "pswpout": 0
+          },
+          "init.scope": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice": {
+            "pswpin": 3,
+            "pswpout": 0
+          },
+          "user.slice": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/docker.service": {
+            "pswpin": 3,
+            "pswpout": 0
+          },
+          "system.slice/snapd.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          }
+        }
+      },
+      {
+        "left_index": 378,
+        "right_index": 379,
+        "start_unix": 1789045098.2363677,
+        "end_unix": 1789045099.23716,
+        "global_delta": {
+          "pswpin": 94,
+          "pswpout": 0
+        },
+        "cgroup_deltas_not_additive": {
+          ".": {
+            "pswpin": 94,
+            "pswpout": 0
+          },
+          "init.scope": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice": {
+            "pswpin": 94,
+            "pswpout": 0
+          },
+          "user.slice": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/docker.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/snapd.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          }
+        }
+      },
+      {
+        "left_index": 389,
+        "right_index": 390,
+        "start_unix": 1789045109.2364585,
+        "end_unix": 1789045110.237259,
+        "global_delta": {
+          "pswpin": 4,
+          "pswpout": 0
+        },
+        "cgroup_deltas_not_additive": {
+          ".": {
+            "pswpin": 4,
+            "pswpout": 0
+          },
+          "init.scope": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice": {
+            "pswpin": 4,
+            "pswpout": 0
+          },
+          "user.slice": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/docker.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/snapd.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          }
+        }
+      },
+      {
+        "left_index": 409,
+        "right_index": 410,
+        "start_unix": 1789045129.2367551,
+        "end_unix": 1789045130.2371352,
+        "global_delta": {
+          "pswpin": 3,
+          "pswpout": 0
+        },
+        "cgroup_deltas_not_additive": {
+          ".": {
+            "pswpin": 3,
+            "pswpout": 0
+          },
+          "init.scope": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice": {
+            "pswpin": 2,
+            "pswpout": 0
+          },
+          "user.slice": {
+            "pswpin": 1,
+            "pswpout": 0
+          },
+          "system.slice/docker.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/snapd.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          }
+        }
+      },
+      {
+        "left_index": 447,
+        "right_index": 448,
+        "start_unix": 1789045167.2364924,
+        "end_unix": 1789045168.2366405,
+        "global_delta": {
+          "pswpin": 2,
+          "pswpout": 0
+        },
+        "cgroup_deltas_not_additive": {
+          ".": {
+            "pswpin": 2,
+            "pswpout": 0
+          },
+          "init.scope": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice": {
+            "pswpin": 2,
+            "pswpout": 0
+          },
+          "user.slice": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/docker.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/snapd.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          }
+        }
+      },
+      {
+        "left_index": 453,
+        "right_index": 454,
+        "start_unix": 1789045173.236765,
+        "end_unix": 1789045174.2368402,
+        "global_delta": {
+          "pswpin": 1,
+          "pswpout": 0
+        },
+        "cgroup_deltas_not_additive": {
+          ".": {
+            "pswpin": 1,
+            "pswpout": 0
+          },
+          "init.scope": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice": {
+            "pswpin": 1,
+            "pswpout": 0
+          },
+          "user.slice": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/docker.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/snapd.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          }
+        }
+      },
+      {
+        "left_index": 489,
+        "right_index": 490,
+        "start_unix": 1789045209.2363656,
+        "end_unix": 1789045210.2372146,
+        "global_delta": {
+          "pswpin": 18,
+          "pswpout": 0
+        },
+        "cgroup_deltas_not_additive": {
+          ".": {
+            "pswpin": 18,
+            "pswpout": 0
+          },
+          "init.scope": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice": {
+            "pswpin": 18,
+            "pswpout": 0
+          },
+          "user.slice": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/docker.service": {
+            "pswpin": 0,
+            "pswpout": 0
+          },
+          "system.slice/snapd.service": {
+            "pswpin": 18,
+            "pswpout": 0
+          }
+        }
+      }
+    ],
+    "coverage_limit": "The first event preceded inspection. Later events are outside that failed preflight and include intervals with read-only service/privilege probes; no causal attribution is made."
+  },
+  "malformed_controls_rejected": 6,
+  "service_isolation": "Proposed only; Docker was not stopped; installed passwordless controls require administrator access for this operation",
+  "prior_attempts": "All previous FAIL and NO_RESULT evidence remains unchanged"
+}
