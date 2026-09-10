@@ -82,6 +82,20 @@ coverage, leaving the overall verdict FAIL. Native full-model reference and
 paired fidelity remain unverified. The original failure and all raw output are
 preserved; a scoped review is checking the teardown timing boundary.
 
+The [terminal coverage correction](bf16-terminal-coverage-001/PROTOCOL.md) now
+keeps active identity and memory cadence separate from the guard's existing
+five-second verified teardown. All 29 regression/mutation tests and the focused
+adversarial review passed. Original native004 remains FAIL; corrected native
+confirmation is pending.
+
+The [current-profile preparation008](context-direct-008/preparation-summary.json)
+prepared four exact 250,128-token inputs but failed the separate 4,224-token startup
+fixture before model loading. Its tokenizer boundary oscillated between 4,223 and
+4,225 tokens. The [focused correction](context-short-padding-001/PROTOCOL.md) reuses
+existing durability padding only for that short check; exact tokens, fixture hash,
+instruction, markers and negative control passed independent verification. The
+long-context branch and scorer are unchanged. Fresh freeze and confirmation follow.
+
 The [current-scheduler context adapter](context-scheduler-003/PROTOCOL.md) is also
 ready: it reuses the existing512/128 launch validator and unchanged direct-input,
 retrieval, stream and score code. A reviewed short-launch validation correction
