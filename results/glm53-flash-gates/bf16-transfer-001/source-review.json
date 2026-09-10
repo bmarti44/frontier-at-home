@@ -1,0 +1,65 @@
+{
+  "reviewer": "glm53_gap_reviewer",
+  "created_unix": 1789071100.144338,
+  "scope": "New HTTP framing, byte partitioning and claim scope only. No network download, Torch, GPU, model, service or closed-component review.",
+  "verdict": "PASS_WITH_MEDIUM_FOLLOWUP",
+  "critical_findings": 0,
+  "high_findings": 0,
+  "medium_findings": 1,
+  "findings": [
+    {
+      "id": "M1",
+      "severity": "MEDIUM",
+      "title": "Flattening response headers loses contradictory framing",
+      "location": "probe.py:check_headers and run.part response.headers capture",
+      "verified_reproduction": "Using actual stdlib http.client.HTTPResponse on an in-memory fake socket (no network), both Content-Length:10 plus Content-Length:999, and Transfer-Encoding:chunked plus Content-Length:10, pass the current header capture/check_headers,10-byte readinto and finalEOF checks. Both test bodies decode to exactly0123456789.",
+      "impact": "Decoded payload remains bounded and fully compared. However, the claimed exact HTTP framing validation accepts contradictory raw headers and omits that contradiction from the evidence.",
+      "focused_fix": "Capture raw header multiplicity before flattening. Reject duplicate Content-Range/Content-Length/Content-Encoding and any Transfer-Encoding in this deliberately exact Content-Length contract; add the two no-network HTTPResponse controls. No full gate cycle needed."
+    }
+  ],
+  "checks": {
+    "submitted_header_tests_passed": 4,
+    "range_count_A": 1,
+    "range_count_B": 4,
+    "bytes_each_arm": 268435456,
+    "B_ranges": [
+      [
+        0,
+        67108863
+      ],
+      [
+        67108864,
+        134217727
+      ],
+      [
+        134217728,
+        201326591
+      ],
+      [
+        201326592,
+        268435455
+      ]
+    ],
+    "disjoint_complete_prefix_coverage": true,
+    "body_readinto_limited_to_slice_and_final_EOF_check": true,
+    "four_arm_full_prefix_digest_equality_required": true,
+    "claims_explicitly_exclude_whole_shard_or_native_model_qualification": true
+  },
+  "limits": [
+    "Byte equality across four responses does not authenticate an entire5.36GB shard; whole_shard_verified remainsfalse.",
+    "Two observations perarm support only the reported diagnostic ratio, not a confidence interval, connection-count causal claim, full-shard throughput guarantee or serving/model performance.",
+    "Timed arm includes buffer allocation/thread-pool/HTTP work, and excludes the subsequent SHA calculation. Freeze/containment orchestration is still being prepared and was not submitted in this bounded scope."
+  ],
+  "files": [
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-transfer-001/probe.py",
+      "sha256": "58ebc4799287f6dfe4eac558ab9db7423e7ef7b5c7bb8c51c48fd963184b363f",
+      "size_bytes": 7293
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-transfer-001/test_probe.py",
+      "sha256": "885057fe4376c381e2252686ed0c1ea629a304fabca6551f2d2c874f9a5aace4",
+      "size_bytes": 1181
+    }
+  ]
+}

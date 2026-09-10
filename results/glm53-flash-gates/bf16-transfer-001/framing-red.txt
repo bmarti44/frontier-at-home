@@ -1,0 +1,21 @@
+....FF
+======================================================================
+FAIL: test_chunked_and_length_rejected (test_probe.RawHeaders.test_chunked_and_length_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-transfer-001/test_probe.py", line 26, in test_chunked_and_length_rejected
+    with self.assertRaises(ValueError):p.check_headers(r.status,r.headers,0,9,100)
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_conflicting_lengths_rejected (test_probe.RawHeaders.test_conflicting_lengths_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-transfer-001/test_probe.py", line 23, in test_conflicting_lengths_rejected
+    with self.assertRaises(ValueError):p.check_headers(r.status,r.headers,0,9,100)
+AssertionError: ValueError not raised
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+FAILED (failures=2)
