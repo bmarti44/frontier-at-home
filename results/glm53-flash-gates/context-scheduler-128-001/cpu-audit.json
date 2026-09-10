@@ -1,0 +1,60 @@
+{
+  "scope": "Two-value declarative profile fallback CPU audit only; hardware confirmation pending",
+  "time_unix": 1789084128.1279366,
+  "base_revision": "b4b8f466",
+  "tests": {
+    "command": "/usr/bin/python3 -I -B scripts/tests/test_glm53_experimental_profiles.py",
+    "exit_code": 0,
+    "passed": 18
+  },
+  "only_profile_changes": [
+    "launch.args --max-num-batched-tokens512 to128",
+    "launch.args --long-prefill-token-threshold128 to32",
+    "status.basis factual text"
+  ],
+  "all_other_parsed_profile_fields_unchanged": true,
+  "existing_128_32_context_validator": "PASS",
+  "agent_fast_production_profile_launcher_resolver_lifecycle_sources_unchanged": true,
+  "secret_lint_selftest": "PASS",
+  "gpu_or_model_executed": false,
+  "current_direct_context": "NOT_YET_MEASURED",
+  "qualified_performance": "NOT_YET_MEASURED",
+  "audit_assembly_first_error": "An initial audit read the lint output before unified session60319 completed and raised AssertionError; the same completed lint session then exited0. No code/test/acceptance change.",
+  "bindings": [
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/configs/profiles/glm-5.3-flash/cuda-spark-128g-1m-experimental.json",
+      "sha256": "b584b9f90658908e556642b989303bfe51463e68ea4b8e195741ce407434a833",
+      "size_bytes": 5536
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py",
+      "sha256": "510b9a9acb333b6d88b767fd297918a8c016ecab610488b9433e71b91ab1ba6e",
+      "size_bytes": 15772
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/context-scheduler-128-001/PROTOCOL.md",
+      "sha256": "29903b53313d399fa17240cd2fca1404b6aaa07ba356f3c72c9d7ad19dd33a85",
+      "size_bytes": 4843
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/context-scheduler-128-001/green.stdout",
+      "sha256": "b246c78151bc0e72dfa46965b340fc8460fcf7376b35131e6aee81dd7d57e399",
+      "size_bytes": 258
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/context-scheduler-128-001/green.stderr",
+      "sha256": "e9ee604783c04f16e0726b642324a2e612a44063e1ecc04cce083c510a22d68e",
+      "size_bytes": 117
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/context-scheduler-128-001/secret-lint.stdout",
+      "sha256": "d557c5b8a87676e45bca4cbaecde8ab1c77d74f125850c78d9f1a25ceb5dfcc4",
+      "size_bytes": 17
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/context-scheduler-128-001/secret-lint.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  ]
+}

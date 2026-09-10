@@ -8,7 +8,7 @@
   "purpose": "Explicit experimental GLM serving; leaves production and reboot default unchanged",
   "status": {
     "state": "estimated",
-    "basis": "Unqualified second bounded startup-reclamation candidate: process-local CPU heap trimming, with final-warmup CUDA cleanup disabled. The preceding replay passed short correctness and cache reuse but failed host swap. Scheduling remains 512/128 with four 262,144-token slots. Fresh host/window/durability/direct-context confirmation, fidelity and switching remain pending; qualified performance is not yet measured."
+    "basis": "Unqualified conservative scheduling candidate: 128-token batches and a 32-token long-prefill threshold, matching the earlier direct007 scheduler. Retains current startup reclamation settings and four 262,144-token slots. Fresh direct-context and sustained-load confirmation, paired fidelity, maximum media and switching remain pending; qualified production performance is not yet measured."
   },
   "engine": "vllm-exl3-glm53-local",
   "artifact_roles": {
@@ -81,7 +81,7 @@
       "--max-num-seqs",
       "4",
       "--max-num-batched-tokens",
-      "512",
+      "128",
       "--compilation-config",
       "{\"mode\":0}",
       "--logprobs-mode",
@@ -105,7 +105,7 @@
       "--default-chat-template-kwargs",
       "{\"reasoning_effort\":\"low\",\"clear_thinking\":true}",
       "--long-prefill-token-threshold",
-      "128",
+      "32",
       "--load-format",
       "instanttensor",
       "--dtype",
