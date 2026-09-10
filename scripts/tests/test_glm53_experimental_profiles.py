@@ -188,7 +188,7 @@ class ReviewRegression(unittest.TestCase):
         api=self.api;before=signal.getsignal(signal.SIGTERM)
         with tempfile.TemporaryDirectory() as tmp:
             out=Path(tmp);child=self.mock.Mock(pid=os.getpid());child.poll.return_value=None
-            with self.mock.patch.object(api,'lifecycle_path',return_value=out/'state.json'), self.mock.patch.object(api.subprocess,'Popen',return_value=child), self.mock.patch.object(api,'unit_properties',return_value={'ActiveState':'active','InvocationID':'fresh','ControlGroup':'/fake'}), self.mock.patch.object(api,'authenticated_ready',side_effect=ValueError('wrong model')), self.mock.patch.object(api,'stop_unit',side_effect=TimeoutError('stop timeout')):
+            with self.mock.patch.object(api,'lifecycle_path',return_value=out/'state.json'), self.mock.patch.object(api.subprocess,'Popen',return_value=child), self.mock.patch.object(api,'unit_properties',return_value={'ActiveState':'active','InvocationID':'fresh','ControlGroup':'/fake'}), self.mock.patch.object(api,'authenticated_ready',side_effect=ValueError('wrong model')), self.mock.patch.object(api,'stop_unit',side_effect=[TimeoutError('stop timeout'),None]):
                 try:
                     with self.assertRaises(TimeoutError):
                         api.run_contained(['wrapper','--tag','test'],{},out,{'profile_id':'test','safety':{'startup_timeout_seconds':10}})
@@ -245,8 +245,16 @@ with p.preparing_session({'profile_id':'glm-5.3-flash/cuda-spark-128g-agent-fast
         api=self.api
         for stop_error,log_error in [(PermissionError('control denied'),None),(ValueError('unobserved'),PermissionError('log denied'))]:
             child=self.mock.Mock();child.wait.side_effect=[subprocess.TimeoutExpired('controller',60),0]
-            with self.subTest(stop_error=type(stop_error).__name__),self.mock.patch.object(api,'stop_unit',side_effect=stop_error),self.mock.patch.object(api,'save_record',side_effect=log_error):
+            with self.subTest(stop_error=type(stop_error).__name__),self.mock.patch.object(api,'stop_unit',side_effect=[stop_error,None]),self.mock.patch.object(api,'save_record',side_effect=log_error):
                 api.wait_controller(child,{},Path('/unused'))
                 self.assertEqual(child.wait.call_count,2)
+
+
+
+    def test_controller_exit_is_not_proof_of_unit_cleanup(self):
+        api=self.api;child=self.mock.Mock();child.wait.return_value=1
+        with self.mock.patch.object(api,'stop_unit',side_effect=[ValueError('unobserved'),None]) as stop,self.mock.patch.object(api,'save_record'),self.mock.patch.object(api.time,'sleep'):
+            api.wait_controller(child,{},Path('/unused'))
+            self.assertEqual(stop.call_count,2)
 
 if __name__ == '__main__': unittest.main()
