@@ -14,7 +14,7 @@ import profile_resolver as resolver
 class ExperimentalProfiles(unittest.TestCase):
     def test_profiles_render_exact_geometry_and_containment(self):
         for name, cap, batch, kv in [('agent-fast', 65536, 512, 4294967296),
-                                     ('1m-experimental', 262144, 512, 9565304320)]:
+                                     ('1m-experimental', 262144, 128, 9565304320)]:
             p = resolver.load_profile('glm-5.3-flash', 'cuda-spark-128g-' + name + '.json')
             host = resolver.load_host(ROOT / 'configs/hosts/spark-aba1.json')
             d = resolver.resolve(p, resolver.load_model('glm-5.3-flash'), host, run_root='/tmp/glm-test')
@@ -32,6 +32,13 @@ class ExperimentalProfiles(unittest.TestCase):
             self.assertEqual(d['safety']['minimum_start_gib'], 110)
             self.assertEqual(d['safety']['kill_floor_gib'], 18)
             self.assertGreaterEqual(len(d['digest_checks']), 3)
+
+    def test_1m_profile_renders_exact_long_prefill_threshold(self):
+        p = resolver.load_profile('glm-5.3-flash', 'cuda-spark-128g-1m-experimental.json')
+        host = resolver.load_host(ROOT / 'configs/hosts/spark-aba1.json')
+        d = resolver.resolve(p, resolver.load_model('glm-5.3-flash'), host, run_root='/tmp/glm-test')
+        self.assertEqual(d['argv'].count('--long-prefill-token-threshold'), 1)
+        self.assertEqual(d['argv'][d['argv'].index('--long-prefill-token-threshold') + 1], '32')
 
     def test_profile_entry_rejects_production_and_cli_overrides(self):
         api = importlib.import_module('glm53_profile')

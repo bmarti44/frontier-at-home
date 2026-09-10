@@ -1,0 +1,107 @@
+F..FE..E.E...EE...
+======================================================================
+ERROR: test_stale_process_record_cannot_stop_a_process (__main__.ExperimentalProfiles.test_stale_process_record_cannot_stop_a_process)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 68, in test_stale_process_record_cannot_stop_a_process
+    api.open_identity({'pid':os.getpid(),'start_ticks':-1,'command':['not this process']})
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 96, in open_identity
+    fd = os.pidfd_open(record['pid'])
+         ^^^^^^^^^^^^^
+AttributeError: module 'os' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_failed_readiness_stops_unit_and_waits_for_controller (__main__.LifecycleRegression.test_failed_readiness_stops_unit_and_waits_for_controller)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 90, in test_failed_readiness_stops_unit_and_waits_for_controller
+    api.run_contained(['wrapper','--tag','glm-test'],{},out,snapshot)
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 366, in run_contained
+    return run_contained(command,control,output,snapshot,record)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 384, in run_contained
+    bound=bind_unit(record,props)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 127, in bind_unit
+    fd=open_identity(record['controller'])
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 96, in open_identity
+    fd = os.pidfd_open(record['pid'])
+         ^^^^^^^^^^^^^
+AttributeError: module 'os' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_term_reaches_unit_and_waits_for_descendants (__main__.LifecycleRegression.test_term_reaches_unit_and_waits_for_descendants)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 110, in test_term_reaches_unit_and_waits_for_descendants
+    self.assertEqual(api.run_contained(['wrapper','--tag','glm-test'],{},out,snapshot),0)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 366, in run_contained
+    return run_contained(command,control,output,snapshot,record)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 384, in run_contained
+    bound=bind_unit(record,props)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 127, in bind_unit
+    fd=open_identity(record['controller'])
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 96, in open_identity
+    fd = os.pidfd_open(record['pid'])
+         ^^^^^^^^^^^^^
+AttributeError: module 'os' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_preparation_registers_and_serializes_before_hashing (__main__.ReviewRegression.test_preparation_registers_and_serializes_before_hashing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 214, in test_preparation_registers_and_serializes_before_hashing
+    fd=api.open_identity(record['launcher'])
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 96, in open_identity
+    fd = os.pidfd_open(record['pid'])
+         ^^^^^^^^^^^^^
+AttributeError: module 'os' has no attribute 'pidfd_open'
+
+======================================================================
+ERROR: test_real_preparing_process_is_cancelled_before_model_launch (__main__.ReviewRegression.test_real_preparing_process_is_cancelled_before_model_launch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 240, in test_real_preparing_process_is_cancelled_before_model_launch
+    api.lifecycle_action('glm-5.3-flash/cuda-spark-128g-agent-fast','stop')
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 293, in lifecycle_action
+    try: fd=open_identity(record['launcher']);launcher_live=True
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 96, in open_identity
+    fd = os.pidfd_open(record['pid'])
+         ^^^^^^^^^^^^^
+AttributeError: module 'os' has no attribute 'pidfd_open'
+
+======================================================================
+FAIL: test_1m_profile_renders_exact_long_prefill_threshold (__main__.ExperimentalProfiles.test_1m_profile_renders_exact_long_prefill_threshold)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 41, in test_1m_profile_renders_exact_long_prefill_threshold
+    self.assertEqual(d['argv'][d['argv'].index('--long-prefill-token-threshold') + 1], '32')
+AssertionError: '128' != '32'
+- 128
++ 32
+
+
+======================================================================
+FAIL: test_profiles_render_exact_geometry_and_containment (__main__.ExperimentalProfiles.test_profiles_render_exact_geometry_and_containment)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 26, in test_profiles_render_exact_geometry_and_containment
+    self.assertEqual(d['argv'][d['argv'].index(flag)+1], str(value))
+AssertionError: '512' != '128'
+- 512
+? -
++ 128
+?   +
+
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.591s
+
+FAILED (failures=2, errors=5)
