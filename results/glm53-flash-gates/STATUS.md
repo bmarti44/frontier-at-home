@@ -1,16 +1,21 @@
 # GLM-5.3-Flash CUDA status
 
-**The optional agent preset is serving chat, tools, images and video.**
+**The optional agent preset passed basic serving checks and is now stopped.**
+It received SIGTERM at 20:55 EDT on September 9; sender attribution is unknown.
+The interrupted wrapper/guard shutdown is retained as terminal FAIL in
+[agent-fast-001/terminal](agent-fast-001/terminal/summary.json). No model process
+remained and memory recovered. The owner explicitly resumed the full million-token
+campaign and requested an executable profile integration.
 [Agent preset checks passed](agent-fast-001/README.md): authenticated chat,
 rejection without authentication, correct tool arguments, a tool-result round
 trip, four overlapping requests, four images and a 16-frame video using 224x224
 fixtures. The observed memory low point was 24.18417739868164 GiB with no cgroup
-swap. This is a live snapshot; terminal lifecycle remains unobserved.
+swap. These figures describe the earlier live snapshot; the terminal update is linked above.
 
 The owner has prioritized speed for agent work. `--preset agent-fast` configures
 65,536 tokens per request, four slots, a 4 GiB KV reservation and 512-token prompt
 batches, using the same weights. Maximum context and fidelity remain unqualified.
-Host access is restored; the active run directory is
+Host access is restored; the preceding agent run directory was
 `/home/bmarti44/.cache/glm53-flash/server-20260909-201848`.
 [Launch and connection instructions](../../../docs/GLM53-QUICKSTART.md).
 Short development timing evidence is archived with its limitations; qualified
@@ -19,8 +24,7 @@ production performance remains **not yet measured**.
 The original optional configuration remains available. Its separate four-slot
 context run **failed**: all four 250,128-token requests returned server errors
 after a CUDA illegal memory access and Xid31. No request completed. Raw evidence
-is preserved in [context-direct-003](context-direct-003/README.md). Further
-million-token investigation is deferred in favor of practical agent serving.
+is preserved in [context-direct-003](context-direct-003/README.md). The exact-input synchronized replay is now being prepared to localize the failure.
 Session 016's earlier memory-floor failure during repository publication also
 remains preserved alongside its successful functional snapshot.
 

@@ -3,8 +3,11 @@
 GLM uses a separate authenticated endpoint at `http://127.0.0.1:8015/v1`, with
 model name `glm-5.3-flash`. Qwen remains the recorded default.
 
-The agent preset is running in
-`/home/bmarti44/.cache/glm53-flash/server-20260909-201848`.
+The last agent preset ran in
+`/home/bmarti44/.cache/glm53-flash/server-20260909-201848`. It received SIGTERM
+and stopped at 20:55 EDT on September 9; the sender was not established.
+The owner has resumed full million-token qualification. The development port
+is reserved for that campaign until its next serving handoff.
 Its private API key is in `api-key` in that directory. Chat, correct tool calls,
 a tool-result round trip, four overlapping requests, four images and a 16-frame
 video passed. [Raw serving evidence](../results/glm53-flash-gates/agent-fast-001/README.md)

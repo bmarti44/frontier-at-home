@@ -17,3 +17,10 @@ key and warm caches. Short development timing measurements are preserved inside
 isolated speed comparisons. Both coding responses reached their requested token
 limit, so they do not establish completed coding-task quality. Qualified
 production performance remains not yet measured.
+
+## Terminal update
+
+The session received SIGTERM at 20:55 EDT on September 9. The wrapper reported
+interruption and the guard reported BrokenPipeError during shutdown. The sender
+is unknown. Terminal FAIL is preserved in `terminal/`; all model processes were
+absent afterward and memory recovered. The earlier functional snapshot is intact.
