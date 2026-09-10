@@ -1,0 +1,54 @@
+.EFFFF
+======================================================================
+ERROR: test_enabled_releases_unused_heap_before_and_after_parent (__main__.HeapTrimTests.test_enabled_releases_unused_heap_before_and_after_parent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-heap-trim-001/test_worker.py", line 78, in test_enabled_releases_unused_heap_before_and_after_parent
+    result, rows = self.call(api, proc_open)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-heap-trim-001/test_worker.py", line 72, in call
+    result = api.WarmupCleanupWorker().determine_available_memory()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_worker.py", line 18, in determine_available_memory
+    budget = super().determine_available_memory()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-heap-trim-001/test_worker.py", line 37, in determine_available_memory
+    raise MemoryError('unused CPU heap still retained before profile')
+MemoryError: unused CPU heap still retained before profile
+
+======================================================================
+FAIL: test_experimental_profile_selects_only_second_reclamation_variant (__main__.HeapTrimTests.test_experimental_profile_selects_only_second_reclamation_variant)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-heap-trim-001/test_worker.py", line 123, in test_experimental_profile_selects_only_second_reclamation_variant
+    self.assertEqual(experimental['launch']['env'].get(FLAG), '1')
+AssertionError: None != '1'
+
+======================================================================
+FAIL: test_flag_is_resolved_once_at_initialization (__main__.HeapTrimTests.test_flag_is_resolved_once_at_initialization)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-heap-trim-001/test_worker.py", line 103, in test_flag_is_resolved_once_at_initialization
+    self.assertEqual(events.count('trim'), count)
+AssertionError: 0 != 2
+
+======================================================================
+FAIL: test_parent_failure_propagates_without_post_profile_trim (__main__.HeapTrimTests.test_parent_failure_propagates_without_post_profile_trim)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-heap-trim-001/test_worker.py", line 109, in test_parent_failure_propagates_without_post_profile_trim
+    self.assertEqual(events.count('trim'), 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_zero_release_is_recorded_without_claiming_a_saving (__main__.HeapTrimTests.test_zero_release_is_recorded_without_claiming_a_saving)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/startup-heap-trim-001/test_worker.py", line 115, in test_zero_release_is_recorded_without_claiming_a_saving
+    self.assertEqual(len(rows), 2)
+AssertionError: 0 != 2
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.004s
+
+FAILED (failures=4, errors=1)
