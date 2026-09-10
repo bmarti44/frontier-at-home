@@ -1,0 +1,69 @@
+{
+  "reviewer": "/root/glm53_adversarial_reviewer",
+  "time_unix": 1789069066.0552993,
+  "candidate": 2,
+  "source_revision": "4255b3989b98a9f948de4b3825e81b28769c239d",
+  "verdict": "PASS",
+  "assessment": "Named H2 and H3 are closed. No high or critical regression found in the correction scope.",
+  "review_score": {
+    "value": 5,
+    "out_of": 5,
+    "scope": "Focused H2/H3 correction only; not the overall one-layer execution or feasibility result."
+  },
+  "findings": [],
+  "closures": [
+    {
+      "id": "H2",
+      "status": "CLOSED",
+      "evidence": "The exact original authentic preknown-beacon witness now fails. The unchanged actual archived beacon with its correct frozen timestamp passes the derived round/publication condition. Signed-round publication and selection match the frozen fetcher formula."
+    },
+    {
+      "id": "H3",
+      "status": "CLOSED",
+      "evidence": "Parsed documents derive from stable-read bytes and file identity. Prelaunch, postcapture, postscore and final inventory checks compare both snapshots. Each document mutated at capture/scoring/inventory fails; a same-byte replacement with a new inode also fails. Invocation digests come from the parsed snapshots."
+    }
+  ],
+  "sources": {
+    "run.py": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/run.py",
+      "size_bytes": 6843,
+      "sha256": "ee09cc1bf0c0f81b17c6475b23049444a540e34fd8d566f72208183c1968806a"
+    },
+    "test_review.py": {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py",
+      "size_bytes": 7395,
+      "sha256": "e53a98d17ec48405da71041d646a1c2da1486134b2a4ad2c407619678efd0bfb"
+    }
+  },
+  "prior_negative_receipt": {
+    "path": "/home/bmarti44/.cache/glm53-flash/bf16-one-layer-001-candidate1-adversarial-review.json",
+    "size_bytes": 6757,
+    "sha256": "48276b12534fdef49a0bd92b239c5cb9bd0405a4b701a837649b4d4230eb6d04"
+  },
+  "independent_controls": {
+    "interpreter": "/home/bmarti44/.cache/glm53-flash/native-runtime-002/runtime/bin/python3",
+    "flags": [
+      "-I",
+      "-B"
+    ],
+    "test_methods_passed": 5,
+    "additional_checks_passed": 3,
+    "harness": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-one-layer-001-adversarial-controls-002/check.py",
+      "size_bytes": 2898,
+      "sha256": "00df03792357563e8c45411d060cb6ab1819230622a5fd56664e144072e3356d"
+    },
+    "results": {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-one-layer-001-adversarial-controls-002/results.json",
+      "size_bytes": 506,
+      "sha256": "625e3529c717e597867b205bb3a972c5e7ae2e05f2e3efcbbe79631622085724"
+    },
+    "external_interface_scope": "Controller controls mock closed capture/host/BLS effects; actual new control code, filesystem snapshots and inner scorer execute. Original authentic beacon was cryptographically verified in candidate1 and reused here for the corrected admission assertion."
+  },
+  "limits": [
+    "H1 inner-evidence closure is assigned to the other persistent reviewer and is not attested here.",
+    "No weight payload download, Torch/CUDA import, GPU execution, service action or production mutation performed.",
+    "This source review does not establish one-layer feasibility, native full-model reference, fidelity, context, speed or promotion."
+  ],
+  "campaign_global_round": "Unknown; do not infer from the latest historical explicitly numbered round (49)."
+}

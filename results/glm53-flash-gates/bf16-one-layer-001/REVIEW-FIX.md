@@ -17,3 +17,11 @@ input bytes may be made canonical to close H1, with a new freeze and later seed.
 The regression results in candidate1-red.txt must fail on unchanged candidate 1
 and pass after only these named defects are fixed. This is gate candidate 1;
 three high findings are open. A later candidate must strictly reduce that count.
+
+Candidate 2 at `4255b398` passes the complete 40-test audit. Both persistent
+reviewers closed their original findings without a new high or critical finding:
+open high count decreased from three to zero. Their exact receipts are retained
+alongside the candidate. Closed host/identity/numerical components were unchanged.
+The inherited campaign-global counter is not recoverable from the recent
+unnumbered gates; the last known historical round 49 is not reported as current.
+This gate has two candidates. No native payload was downloaded before sign-off.

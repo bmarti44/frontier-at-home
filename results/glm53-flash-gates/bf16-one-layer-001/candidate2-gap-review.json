@@ -1,0 +1,74 @@
+{
+  "reviewer": "glm53_gap_reviewer",
+  "candidate": 2,
+  "source_revision": "4255b3989b98a9f948de4b3825e81b28769c239d",
+  "created_unix": 1789069071.6975894,
+  "scope": "Focused H1 closure only; outer H2/H3 assigned to other persistent reviewer. No closed component, tiny004/native math re-review, weights/downloads or GPU execution.",
+  "verdict": "PASS",
+  "critical_findings": 0,
+  "high_findings": 0,
+  "findings": [],
+  "closed_findings": [
+    "H1"
+  ],
+  "checks": {
+    "focused_submitted_tests_passed": 16,
+    "independent_actual28tensor_geometry_synthetic_controls": 9,
+    "independent_invalid_controls_rejected": 8,
+    "canonical_BF16_generator_checked_seeds": [
+      0,
+      42,
+      18446744073709551615
+    ],
+    "native_meta_plan_tensors": 28,
+    "native_meta_plan_bytes": 14825473772,
+    "native_module_digest_matches_frozen_selector_plan": true,
+    "preaudit_candidate_source_hashes_match": true,
+    "required_exact_phase_schemas_and_order_checked": true,
+    "host_counter_floor_timestamps_validated": true,
+    "CUDA_current_peak_reserved_capacity_lowerbounds_checked": true,
+    "selector_and_canonical_pinned_input_digest_bound": true
+  },
+  "limits": [
+    "All executed controls were CPU synthetic evidence tests, including controls using real meta-plan shapes; no real layer feasibility or output correctness is claimed.",
+    "Input generator change is confined to synthetic HC activations and directly closes H1 independent seed/input binding.",
+    "Stock native layer math, metadata conversion and closed lifecycle components were not re-reviewed."
+  ],
+  "files": [
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/probe.py",
+      "sha256": "27373478acff87e2aa1e753978bdf8a2b3aaa87a68806d03087557c4e10ebdb6",
+      "size_bytes": 21302
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_probe.py",
+      "sha256": "5097e4baa9ccc727751faf5774b07c2cd3ab16b86c3e2c586e9604d0a679241d",
+      "size_bytes": 6328
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py",
+      "sha256": "e53a98d17ec48405da71041d646a1c2da1486134b2a4ad2c407619678efd0bfb",
+      "size_bytes": 7395
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/PROTOCOL.md",
+      "sha256": "fd66903d84d9199ef439f7777a72a3a3c365b45ed0b875fcd717f0d173e8835c",
+      "size_bytes": 4270
+    },
+    {
+      "path": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/candidate2-preaudit.json",
+      "sha256": "65015147cc1bc80c642019751c7ce857c1021a8c23a797fce34da3b453f8226e",
+      "size_bytes": 3171
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-one-layer-001-candidate2-meta.json",
+      "sha256": "70a9130aedf926bb6b6cb21abd46b8ec8728d0da0c69a39116cc9521b7a8e07c",
+      "size_bytes": 3519
+    },
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/bf16-one-layer-001-candidate2-gap-controls.json",
+      "sha256": "880ff8fa840d63c9c1533808e62c05231af91d0981d0bb16164b232dd77c73b5",
+      "size_bytes": 1040
+    }
+  ]
+}
