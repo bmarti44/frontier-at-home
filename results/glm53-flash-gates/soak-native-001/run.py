@@ -79,6 +79,21 @@ def prepare(out, seed):
             rendered = template.render(messages=body['messages'], tools=[], add_generation_prompt=True,
                 reasoning_effort='low', clear_thinking=True)
             ids = tokenizer.encode(rendered, add_special_tokens=False).ids
+            # A prefix boundary can skip the desired size when retokenized with
+            # the instruction. Try trailing filler for a small undershoot and
+            # accept it only after measuring the complete rendered request.
+            missing = INPUT_TOKENS - len(ids)
+            if 0 < missing <= 2:
+                padded = art['fixture']['text'] + ' .' * missing
+                body['messages'][0]['content'] = padded + preparation.INSTRUCTION
+                rendered = template.render(messages=body['messages'], tools=[], add_generation_prompt=True,
+                    reasoning_effort='low', clear_thinking=True)
+                padded_ids = tokenizer.encode(rendered, add_special_tokens=False).ids
+                if len(padded_ids) == INPUT_TOKENS:
+                    art['fixture'].update(text=padded, fixture_sha256=hashlib.sha256(padded.encode()).hexdigest())
+                    ids = padded_ids
+                else:
+                    body['messages'][0]['content'] = art['fixture']['text'] + preparation.INSTRUCTION
             if len(ids) == INPUT_TOKENS:
                 break
             target += INPUT_TOKENS - len(ids)
