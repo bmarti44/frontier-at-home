@@ -14,7 +14,7 @@ import profile_resolver as resolver
 class ExperimentalProfiles(unittest.TestCase):
     def test_profiles_render_exact_geometry_and_containment(self):
         for name, cap, batch, kv in [('agent-fast', 65536, 512, 4294967296),
-                                     ('1m-experimental', 262144, 128, 9565304320)]:
+                                     ('1m-experimental', 262144, 256, 9565304320)]:
             p = resolver.load_profile('glm-5.3-flash', 'cuda-spark-128g-' + name + '.json')
             host = resolver.load_host(ROOT / 'configs/hosts/spark-aba1.json')
             d = resolver.resolve(p, resolver.load_model('glm-5.3-flash'), host, run_root='/tmp/glm-test')

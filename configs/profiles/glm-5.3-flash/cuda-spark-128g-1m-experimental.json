@@ -8,7 +8,7 @@
   "purpose": "Explicit experimental GLM serving; leaves production and reboot default unchanged",
   "status": {
     "state": "estimated",
-    "basis": "Experimental startup cleanup candidate completed 68 correct requests over 1800 seconds and stopped cleanly in soak-native-003. Fixed durability FAIL: request-window counts and 108 KiB new host swap; GLM cgroup swap zero. Prior context-direct-007 passed 1,000,512 aggregate tokens on the preceding startup configuration. Paired fidelity/switching pending; qualified performance not yet measured."
+    "basis": "Unqualified scheduler candidate: batch256/threshold64 with unchanged four262144-token slots and safeguards. First-window falsifier and fresh durability/direct-context confirmation pending. Prior context-direct-007 passed on the earlier startup/scheduler configuration; soak-native-003 failed window counts and host swap. Fidelity/switching pending; qualified performance not yet measured."
   },
   "engine": "vllm-exl3-glm53-local",
   "artifact_roles": {
@@ -80,7 +80,7 @@
       "--max-num-seqs",
       "4",
       "--max-num-batched-tokens",
-      "128",
+      "256",
       "--compilation-config",
       "{\"mode\":0}",
       "--logprobs-mode",
@@ -104,7 +104,7 @@
       "--default-chat-template-kwargs",
       "{\"reasoning_effort\":\"low\",\"clear_thinking\":true}",
       "--long-prefill-token-threshold",
-      "32",
+      "64",
       "--load-format",
       "instanttensor",
       "--dtype",

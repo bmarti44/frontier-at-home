@@ -57,7 +57,8 @@ class Window(unittest.TestCase):
         self.window.mkdir()
         self.start = 10**12
         self.rows = [{'kind': 'start', 'start_ns': self.start, 'deadline_ns': self.start + 300 * 10**9,
-                      'manifest_sha256': 'fixture-binding', 'launch_sha256': 'launch-binding'}]
+                      'manifest_sha256': 'fixture-binding', 'launch_sha256': 'launch-binding',
+                      'smoke': {}, 'observed_ns': self.start + 100000000}]
         self.results = {}
         for worker in range(4):
             for index in range(5):
@@ -70,7 +71,10 @@ class Window(unittest.TestCase):
                 (self.window / name).write_text('synthetic unit-test placeholder\n')
                 self.rows.append({'kind': 'request', 'worker': worker, 'index': index,
                                   'raw_path': name, 'verdict': 'PASS', **result})
-        self.rows.append({'kind': 'end', 'ended_ns': self.start + 251 * 10**9, 'stopped_on_failure': False})
+        self.rows[1:] = sorted(self.rows[1:], key=lambda row: row['end_ns'])
+        for row in self.rows[1:]: row['observed_ns'] = row['end_ns'] + 1
+        self.rows.append({'kind': 'end', 'ended_ns': self.start + 251 * 10**9,
+                          'observed_ns': self.start + 251 * 10**9 + 1, 'stopped_on_failure': False})
         (self.window / 'launch.json').write_text('{}')
         self.write()
 
@@ -80,6 +84,7 @@ class Window(unittest.TestCase):
     def score(self):
         runner = self.module.runner
         with patch.object(runner, 'verify', return_value='fixture-binding'), \
+             patch.object(runner, 'validate_smoke', return_value={}), \
              patch.object(self.module, 'check_launch'), \
              patch.object(runner.probe, 'sha', return_value='launch-binding'), \
              patch.object(runner, 'read', return_value={}), \
@@ -109,6 +114,13 @@ class Window(unittest.TestCase):
             (self.window / 'extra-raw.jsonl').unlink(missing_ok=True)
             self.rows, self.results = original, original_results
             self.write()
+
+    def test_failed_falsifier_cannot_admit_durability_requests(self):
+        with patch.object(self.module, 'score_first_window', return_value={'verdict': 'FAIL'}), \
+             patch.object(self.module.runner, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'falsifier must pass'):
+                self.module.run_full(self.out, Path('/unused'))
+            run.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()

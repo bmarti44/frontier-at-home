@@ -39,7 +39,9 @@ scripts/93_profile_serve.sh --profile glm-5.3-flash/cuda-spark-128g-1m-experimen
 
 Named profiles supply their exact settings and reject parameter overrides. The
 agent profile uses a 4 GiB KV reservation and 512-token prompt batches; the
-full-context profile uses a 9,565,304,320-byte reservation and 128-token batches.
+full-context profile uses a 9,565,304,320-byte reservation. Its current scheduler
+candidate uses 256-token batches and a 64-token prompt-chunk cap per conversation;
+that candidate awaits qualification.
 To list the profiles this host can serve:
 
 ```bash
@@ -59,6 +61,7 @@ completed 68 correct replies but failed its fixed request-count requirement and
 its prohibition on new host swap. Qualified production performance is not yet measured.
 The full-context profile now selects two startup-only memory cleanup flags;
 its latest launch and orderly stop completed with no recorded kernel OOM/Xid.
-The earlier aggregate million-token result used the preceding startup configuration.
+The earlier aggregate million-token result used the preceding startup and
+scheduler configuration.
 The agent profile's earlier basic chat, tool, four-image and 16-frame video checks
 used 224x224 fixtures; they do not establish maximum media or context capability.
