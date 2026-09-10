@@ -22,6 +22,13 @@ class ExecutedDependencyRoles(unittest.TestCase):
                     if role=='nvcc':bad['environment']['DG_JIT_NVCC_COMPILER']=bad['node']
                     with self.assertRaises(ValueError):probe.verify_frozen(root,bad)
 
+    def test_selected_node_cannot_omit_fixed_fetcher_node(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);manifest=review.frozen_fixture(root);old=manifest['node']
+            manifest['node']=manifest['external_dependencies']['cxx']
+            manifest['files']=[x for x in manifest['files'] if x['path']!=old]
+            with self.assertRaises(ValueError):probe.verify_frozen(root,manifest)
+
     def test_selected_wrapper_cannot_alias_unrelated_bound_node(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);manifest=review.frozen_fixture(root);old=manifest['wrapper']
