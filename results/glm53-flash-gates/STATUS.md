@@ -1,10 +1,10 @@
 # GLM-5.3-Flash CUDA status
 
 **GLM is runnable through named experimental profiles.** An earlier configuration
-passed the direct aggregate million-token context check; current settings still
-need confirmation. Qwen remains the recorded/reboot default.
-GLM is currently stopped. The latest reference probe completed one native layer,
-but its host-monitoring aggregation failed. Full model qualification remains incomplete.
+passed the direct aggregate million-token context check; the latest current-settings
+run failed its memory reserve. Qwen remains the recorded/reboot default.
+GLM is currently stopped. The corrected native reference probe passed one real
+layer, including host monitoring and cleanup. Full model qualification remains incomplete.
 
 The [passive unloaded control](host-swap-accounting-001/unloaded-control-001/README.md)
 completed all 121 samples with no swap activity. The subsequent
@@ -87,6 +87,15 @@ keeps active identity and memory cadence separate from the guard's existing
 five-second verified teardown. All 29 regression/mutation tests and the focused
 adversarial review passed. Original native004 remains FAIL; corrected native
 confirmation is pending.
+
+The [fresh native005 confirmation](bf16-one-layer-005/README.md) passed the inner
+probe, identity guard and corrected host scorer. Three whole shards and all 28
+GPU tensor checks passed, the complete layer output was finite, and cleanup
+left no process or cgroup behind. Available memory stayed above 40 GiB and swap
+counters stayed unchanged. All 41 frozen bindings and the runtime inventory were
+verified after the run. This establishes only one real KDA layer with synthetic
+516-token activations; a full native reference and the paired 100-case fidelity
+comparison are still pending. Original004 remains FAIL.
 
 The [current-profile preparation008](context-direct-008/preparation-summary.json)
 prepared four exact 250,128-token inputs but failed the separate 4,224-token startup

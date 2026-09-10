@@ -1,0 +1,41 @@
+{
+  "verdict": "PASS",
+  "scope": "One real BF16 KDA layer, synthetic activations; no native full-model reference, fidelity, speed or context result",
+  "failure": null,
+  "wrapper_started": true,
+  "host": {
+    "verdict": "PASS",
+    "qualification": "host_and_probe_identity_observations_only",
+    "unit": "glm52-glm53-bf16-layer-005-3042415.service",
+    "minimum_mem_available_kib": 48977572,
+    "maximum_cgroup_peak_bytes": 57864990720,
+    "memory_samples": 1264,
+    "identity_samples": 1369,
+    "identity_pid": 3042492,
+    "identity_start_ticks": 43285091,
+    "maximum_memory_sample_gap_seconds": 0.4508538246154785,
+    "maximum_identity_sample_gap_seconds": 0.2676424980163574,
+    "terminal_cleanup_seconds": 3.7009236812591553,
+    "whole_system_swap_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "required_separate_checks": [
+      "frozen runtime and metadata inventories",
+      "post-freeze verified public seed",
+      "inner probe correctness",
+      "model qualification"
+    ]
+  },
+  "inner": {
+    "verdict": "PASS",
+    "scope": "One-layer real weights and synthetic activation checks only",
+    "verified_shards": 3,
+    "verified_gpu_tensors": 28,
+    "converted_layer_bytes": 14825473772,
+    "finite_output_elements": 8454144,
+    "cuda_peak_allocated": 18664054272,
+    "forward_elapsed_seconds": 0.7510688304901123
+  },
+  "end_unix": 1789080426.674986
+}
