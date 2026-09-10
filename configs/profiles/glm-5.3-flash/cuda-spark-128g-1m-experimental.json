@@ -8,7 +8,7 @@
   "purpose": "Explicit experimental GLM serving; leaves production and reboot default unchanged",
   "status": {
     "state": "estimated",
-    "basis": "context-direct-007 PASS: 1,000,512 actual input tokens across four 262,144-token slots, final retrieval and native lifecycle/host checks. Paired fidelity and production switching pending; qualified performance not yet measured."
+    "basis": "Startup cache-release candidate: pre-profile cleanup enabled after soak-startup-001 driver allocation failure; confirmation pending. Prior context-direct-007 passed 1,000,512 aggregate input tokens on the preceding startup configuration. Paired fidelity and production switching pending; qualified performance not yet measured."
   },
   "engine": "vllm-exl3-glm53-local",
   "artifact_roles": {
@@ -51,7 +51,8 @@
       "INSTANTTENSOR_CHUNK_SIZE": "8388608",
       "INSTANTTENSOR_CONCURRENCY": "1",
       "INSTANTTENSOR_IO_DEPTH": "3",
-      "INSTANTTENSOR_BACKEND": "AIO"
+      "INSTANTTENSOR_BACKEND": "AIO",
+      "GLM53_RELEASE_LOAD_CACHE": "1"
     },
     "diagnostics_unset": [
       "GLM_KPOOL_TAIL_BOUNDS",
