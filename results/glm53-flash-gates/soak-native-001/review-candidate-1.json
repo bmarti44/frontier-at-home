@@ -1,0 +1,31 @@
+{
+  "candidate": "41f92aff",
+  "verdict": "CHANGES_REQUESTED",
+  "verified_high": 1,
+  "verified_critical": 0,
+  "findings": [
+    {
+      "id": "H1",
+      "severity": "high",
+      "finding": "Startup smoke missing, failed or forged summary can bypass client acceptance",
+      "fix": "Shared raw startup rescore before admission and final score, plus immutable startup hashes at admission"
+    },
+    {
+      "id": "M1",
+      "severity": "medium",
+      "finding": "Unused JSON numeric overflow1e999 evades nonfinite rejection",
+      "fix": "Strict finite float parsing in new client only"
+    },
+    {
+      "id": "M2",
+      "severity": "medium",
+      "finding": "Health/memory samples retained in RAM until shutdown",
+      "fix": "Incremental append/flush observation files; score exact equality against terminal monitor records"
+    }
+  ],
+  "red_tests": {
+    "total": 19,
+    "failures": 6
+  },
+  "note": "Original reviewer IDs retained in exact archived receipts; merged IDs used here."
+}

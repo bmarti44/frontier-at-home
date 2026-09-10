@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest import mock
@@ -38,6 +39,12 @@ class DurabilityEvidenceTests(unittest.TestCase):
         launch = {'arguments': ['--max-model-len', '262144', '--max-num-seqs', '4',
             '--max-num-batched-tokens', '128', '--long-prefill-token-threshold', '32', '--no-enable-prefix-caching']}
         api.probe.write(self.out / 'server-launch.json', launch)
+        smoke = self.out / 'smoke'
+        smoke.mkdir()
+        self.write_rows(smoke / 'raw.jsonl', self.native_rows(START - 100 * NANO, 'synthetic-startup'))
+        smoke_summary = api.score_request(smoke / 'raw.jsonl', self.ids, self.fixture)
+        smoke_summary.update(verdict='PASS', scope='startup correctness only', manifest_sha256=api.verify(self.out))
+        api.probe.write(smoke / 'summary.json', smoke_summary)
         entries = []
         for index in range(36):
             for worker in range(4):
@@ -50,6 +57,7 @@ class DurabilityEvidenceTests(unittest.TestCase):
                     'raw_path': name, 'verdict': 'PASS', 'observed_ns': result['end_ns'] + 100, **result})
         self.journal = [{'kind': 'start', 'observed_ns': START + 1, 'start_ns': START,
             'deadline_ns': START + 1800 * NANO, 'manifest_sha256': api.verify(self.out),
+            'smoke': {name: api.probe.sha(smoke / name) for name in ['raw.jsonl', 'summary.json']},
             'launch_sha256': api.probe.sha(self.out / 'server-launch.json')}] + entries + [
             {'kind': 'end', 'drained_ns': START + 1801 * NANO, 'ended_ns': START + 1801200000000,
              'observed_ns': START + 1801200000100, 'stopped_on_failure': False}]
@@ -60,6 +68,8 @@ class DurabilityEvidenceTests(unittest.TestCase):
             'health': [{'start_ns': START + i * NANO, 'end_ns': START + i * NANO + 100, 'status': 200, 'body': body}
                 for i in [*range(1, 1800, 30), 1801]]}
         api.probe.write(self.out / 'monitor.json', self.monitor)
+        self.write_rows(self.out / 'memory.jsonl', [{'observed_ns': START + row['t'] * NANO + 100, 'sample': row} for row in self.monitor['memory']])
+        self.write_rows(self.out / 'health.jsonl', [{'observed_ns': row['end_ns'] + 100, 'sample': row} for row in self.monitor['health']])
 
     def native_rows(self, start, response_id):
         def chunk(offset, choices, **fields):
@@ -90,6 +100,33 @@ class DurabilityEvidenceTests(unittest.TestCase):
 
     def test_complete_synthetic_trace_passes(self):
         self.assertTrue(self.verdict())
+
+    def test_startup_smoke_cannot_be_missing(self):
+        shutil.rmtree(self.out / 'smoke')
+        self.assertFalse(self.verdict())
+
+    def test_failed_startup_smoke_is_rejected(self):
+        summary = api.probe.read(self.out / 'smoke/summary.json')
+        summary['verdict'] = 'FAIL'
+        api.probe.write(self.out / 'smoke/summary.json', summary)
+        self.assertFalse(self.verdict())
+
+    def test_forged_startup_pass_does_not_replace_raw(self):
+        (self.out / 'smoke/raw.jsonl').write_text('{}\n')
+        self.assertFalse(self.verdict())
+
+    def test_unused_overflow_number_is_rejected(self):
+        path = self.out / 'raw.jsonl'
+        path.write_text(path.read_text().replace('"kind": "start"', '"unused_nonfinite": 1e999, "kind": "start"', 1))
+        self.assertFalse(self.verdict())
+
+    def test_incremental_memory_observations_are_required(self):
+        (self.out / 'memory.jsonl').unlink()
+        self.assertFalse(self.verdict())
+
+    def test_incremental_health_observations_are_required(self):
+        (self.out / 'health.jsonl').unlink()
+        self.assertFalse(self.verdict())
 
     def test_truncation_is_rejected(self):
         self.mutate_stream(lambda rows: rows[5]['chunk']['choices'][0].update(finish_reason='length'))
