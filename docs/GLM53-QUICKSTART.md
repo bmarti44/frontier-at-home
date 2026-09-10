@@ -69,7 +69,9 @@ used 224x224 fixtures; they do not establish maximum media or context capability
 
 The preceding final-warmup cleanup attempt passed correctness, the 20-request
 necessary window and host swap checks, but generated two additional kernel files.
-The latest replay reused all 2,486 prepared files and passed short correctness.
-It failed the host gate because one page was written to swap (4 KiB), so the
-necessary window and full-duration test were not admitted. GLM stopped cleanly
-and memory recovered; full qualification is still pending.
+Its replay failed a host swap-out check. The latest bounded CPU heap-trim
+experiment passed startup, short correctness and all 2,486 prepared-file checks,
+but one host swap-in page kept its verdict FAIL. No window or full-duration test
+was admitted. GLM stopped cleanly and memory recovered. Both startup reclamation
+alternatives are now recorded as an unsuccessful branch; full qualification
+remains pending, including investigation of host activity during measurement.

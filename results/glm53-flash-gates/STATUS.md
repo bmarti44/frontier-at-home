@@ -2,7 +2,7 @@
 
 **GLM is runnable through named experimental profiles, and the direct aggregate
 million-token context check passed.** Qwen remains the recorded/reboot default.
-GLM is currently stopped after a failed startup host check. Full model
+GLM is currently stopped after a failed host swap check. Full model
 qualification remains incomplete.
 
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
@@ -40,11 +40,27 @@ this correlation does not establish causation or exempt the attempt from its gat
 GLM cgroup swap and limit events remained zero. Shutdown, recovery, identity,
 default/proxy/guard and post-run artifact checks passed. GLM is stopped.
 
-The next bounded experiment already specified in the startup cleanup protocol is
-process-local CPU heap trimming after startup garbage collection. It has not been
-implemented or measured, and there is no demonstrated saving yet. Current-configuration
-direct context, sustained-load confirmation, native paired fidelity and production
-switching remain pending. Qualified production performance is not yet measured.
+The [second bounded startup experiment](soak-native-009/README.md) used process-local
+CPU heap trimming, with the preceding final-warmup cleanup disabled. It passed
+authenticated startup, the actual worker's frozen library check, short correctness
+and all 2,486 prepared-cache comparisons. A small measured memory release did not
+close the host gate: one page was read from swap during the smoke. Used swap and
+swap-out counters stayed unchanged; GLM cgroup swap and limit events remained zero.
+The attempt is **FAIL**, with no necessary window or full-duration admission.
+Both bounded reclamation alternatives have now been tried; this branch is
+**NO_RESULT**, and no third allocator variant is planned.
+
+Shutdown, recovery, identity and post-run artifact checks passed. The complete
+census also retained 17 swap-in pages after GLM stopped, during read-only service
+queries; this diagnostic interval is separate from the loaded failure. The next
+independent investigation concerns host activity and a quiet qualification window.
+Default/proxy/guard state remained unchanged. The legacy engine guard's existing
+open circuit breaker prevented restarts; these checks do not claim a running
+production model. No service or swap-policy settings were changed.
+
+Current-configuration direct context, sustained-load confirmation, the fixed
+100-case native BF16 fidelity reference, maximum media and production switching
+remain pending. Qualified production performance is not yet measured.
 
 The [preceding 256/64 test](soak-native-004/README.md) returned 17 correct replies,
 but admissions were `[5,4,4,4]` against the required five per worker. The bounded
