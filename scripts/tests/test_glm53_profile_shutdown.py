@@ -66,4 +66,14 @@ class ProfileShutdownTests(unittest.TestCase):
    api.stop_unit(record)
    stop.assert_called_once_with(['systemctl','--user','stop','fixture'],check=True,timeout=60)
    self.assertFalse(record['shutdown']['clean']);self.assertIn('expired',record['shutdown']['failure'])
+ def test_failed_shutdown_survives_cleanup_recheck_and_launcher_exit(self):
+  with tempfile.TemporaryDirectory() as directory:
+   out=Path(directory);state=out/'state.json';child=mock.Mock(pid=os.getpid(),returncode=0);child.poll.side_effect=[None,0]
+   snapshot={'profile_id':'glm-5.3-flash/cuda-spark-128g-agent-fast','safety':{'startup_timeout_seconds':10},'port':8015}
+   active={'ActiveState':'active','InvocationID':'fixture','ControlGroup':'/fake'};inactive={'ActiveState':'inactive'}
+   with mock.patch.object(api,'lifecycle_path',return_value=state),mock.patch.object(api.subprocess,'Popen',return_value=child),mock.patch.object(api,'unit_properties',side_effect=[active,active,active,inactive,inactive]),mock.patch.object(api,'authenticated_ready',return_value={'pass':True}),mock.patch.object(api,'orderly_api_stop',side_effect=TimeoutError('expired')),mock.patch.object(api,'verify_guard_completion'),mock.patch.object(api,'check_group_empty'),mock.patch.object(api.time,'sleep'),mock.patch.object(api.subprocess,'run') as fallback:
+    result=api.run_contained(['wrapper','--tag','glm-test'],{},out,snapshot)
+   self.assertEqual(fallback.call_count,1)
+   self.assertEqual(result,1,'cleanup recheck erased failed orderly shutdown')
+   final=json.loads(state.read_text());self.assertFalse(final['shutdown']['clean']);self.assertIn('expired',final['shutdown']['failure'])
 if __name__=='__main__':unittest.main()

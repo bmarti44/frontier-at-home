@@ -1,0 +1,17 @@
+{
+  "candidate": "fea51b3b",
+  "gate_candidate_count": 1,
+  "verdict": "FAIL",
+  "open_high_findings": [
+    {
+      "id": "S1",
+      "finding": "Later stop_unit cleanup resets a prior orderly timeout/fallback failure, allowing launcher exit0. Preserve first failure through wait_controller and final return."
+    }
+  ],
+  "open_critical_findings": [],
+  "reviewers": [
+    "glm53_adversarial_reviewer",
+    "glm53_gap_reviewer"
+  ],
+  "independent_witness": "Both reviewers reproduced non-sticky failure; gap reviewer also reproduced full launcher exit0 after forced cleanup."
+}
