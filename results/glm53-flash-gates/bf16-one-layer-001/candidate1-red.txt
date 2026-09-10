@@ -1,0 +1,81 @@
+FFF............FFFFF...
+======================================================================
+FAIL: test_manifest_mutation_rejected (test_review.Controller.test_manifest_mutation_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py", line 55, in test_manifest_mutation_rejected
+    def test_manifest_mutation_rejected(self):self.assertEqual(self.execute('manifest.json')['verdict'],'FAIL')
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PASS' != 'FAIL'
+- PASS
++ FAIL
+
+
+======================================================================
+FAIL: test_preknown_beacon_rejected (test_review.Controller.test_preknown_beacon_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py", line 54, in test_preknown_beacon_rejected
+    def test_preknown_beacon_rejected(self):self.assertEqual(self.execute(old_beacon=True)['verdict'],'FAIL')
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PASS' != 'FAIL'
+- PASS
++ FAIL
+
+
+======================================================================
+FAIL: test_randomness_mutation_rejected (test_review.Controller.test_randomness_mutation_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py", line 56, in test_randomness_mutation_rejected
+    def test_randomness_mutation_rejected(self):self.assertEqual(self.execute('randomness.json')['verdict'],'FAIL')
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'PASS' != 'FAIL'
+- PASS
++ FAIL
+
+
+======================================================================
+FAIL: test_reject_contradictory_phase_data (test_review.Review.test_reject_contradictory_phase_data)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py", line 18, in test_reject_contradictory_phase_data
+    with self.assertRaises((ValueError,KeyError)):p.score(self.root)
+AssertionError: (<class 'ValueError'>, <class 'KeyError'>) not raised
+
+======================================================================
+FAIL: test_reject_missing_input_digest (test_review.Review.test_reject_missing_input_digest)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py", line 21, in test_reject_missing_input_digest
+    with self.assertRaises((ValueError,KeyError)):p.score(self.root)
+AssertionError: (<class 'ValueError'>, <class 'KeyError'>) not raised
+
+======================================================================
+FAIL: test_reject_missing_phase_data (test_review.Review.test_reject_missing_phase_data)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py", line 13, in test_reject_missing_phase_data
+    with self.assertRaises((ValueError,KeyError)):p.score(self.root)
+AssertionError: (<class 'ValueError'>, <class 'KeyError'>) not raised
+
+======================================================================
+FAIL: test_reject_missing_selector (test_review.Review.test_reject_missing_selector)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py", line 24, in test_reject_missing_selector
+    with self.assertRaises((ValueError,KeyError,FileNotFoundError)):p.score(self.root)
+AssertionError: (<class 'ValueError'>, <class 'KeyError'>, <class 'FileNotFoundError'>) not raised
+
+======================================================================
+FAIL: test_reject_premature_completion (test_review.Review.test_reject_premature_completion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/bf16-one-layer-001/test_review.py", line 27, in test_reject_premature_completion
+    with self.assertRaises((ValueError,KeyError)):p.score(self.root)
+AssertionError: (<class 'ValueError'>, <class 'KeyError'>) not raised
+
+----------------------------------------------------------------------
+Ran 23 tests in 4.198s
+
+FAILED (failures=8)
