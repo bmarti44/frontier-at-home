@@ -41,7 +41,8 @@ Named profiles supply their exact settings and reject parameter overrides. The
 agent profile uses a 4 GiB KV reservation and 512-token prompt batches; the
 full-context profile uses a 9,565,304,320-byte reservation. Its current scheduler
 candidate uses 512-token batches and a 128-token prompt-chunk cap per conversation;
-that candidate awaits qualification.
+its 20-request necessary window passed, but the attempt failed host/frozen-cache
+checks and did not admit the full-duration test. Qualification remains incomplete.
 To list the profiles this host can serve:
 
 ```bash

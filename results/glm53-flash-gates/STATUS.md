@@ -2,13 +2,24 @@
 
 **GLM is runnable through named experimental profiles, and the direct aggregate
 million-token context check passed.** Qwen remains the recorded/reboot default.
-GLM is currently stopped after the completed durability attempt. Full model
+GLM is currently stopped after the completed short scheduler test. Full model
 qualification remains incomplete.
 
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
 512-token batches with a 128-token prompt-chunk cap per conversation, retaining
-all four 262,144-token slots and existing memory safeguards. Its first-window
-falsifier and fresh durability/direct-context confirmation are pending.
+all four 262,144-token slots and existing memory safeguards. The
+[20-request necessary window passed](soak-native-005/README.md): all four workers
+admitted five requests within 300 seconds and every reply was correct. Overall
+qualification remains **FAIL** because one host swap-in page occurred before the
+window and seven generated kernel files changed the frozen inputs. No full-duration
+run was admitted. Shutdown, recovery, identity, default/proxy/guard and post-run
+artifact checks passed; both persistent reviewers verified the complete archive.
+
+The next [prepared-kernel replay](soak-cache-replay-001/PROTOCOL.md) keeps the same
+scheduler and reuses those seven verified files. An external phase observer will
+narrow any swap activity without changing the acceptance rule. An unloaded
+120-second control observed no swap I/O; it does not establish attribution.
+Fresh durability and direct-context confirmation remain pending.
 
 The [preceding 256/64 test](soak-native-004/README.md) returned 17 correct replies,
 but admissions were `[5,4,4,4]` against the required five per worker. The bounded
