@@ -63,6 +63,14 @@ daemon-stop variations are not proposed. A temporary pause of the exact
 performed and is outside the installed Docker/containerd grant. Existing memory,
 OOM/Xid and swap checks would remain in force under a fresh baseline.
 
+A separate [small HTTP transfer diagnostic](bf16-transfer-001/attempt-001/README.md)
+passed byte equality, host safety and cleanup for four transfers of the same
+256 MiB shard prefix. Parallel ranges reduced elapsed download time in this
+sample, making them a justified option for a future native-reference probe.
+This does not verify a full shard or qualify model speed, native reference,
+fidelity or context. No model, service or swap setting changed. The temporary
+swap pause remains a separate prerequisite for the native campaign.
+
 The current full-context profile is the [second bounded scheduler configuration](soak-scheduler-002/PROTOCOL.md):
 512-token batches with a 128-token prompt-chunk cap per conversation, retaining
 all four 262,144-token slots and existing memory safeguards. The
@@ -414,7 +422,8 @@ shows that the old soak parser misses native GLM reasoning; the new evidence-onl
 client reuses the existing GLM stream and retrieval validators. No server change
 or repeated context ladder is planned for this gate.
 
-Direct aggregate context and experimental lifecycle are complete. The 100-case
+Direct aggregate context passed on an earlier configuration, and the experimental
+lifecycle passed; current settings still need direct confirmation. The 100-case
 paired fidelity gate, sustained operation, qualified performance, and production
 switching/rollback remain pending. Public native reference coverage is still
 insufficient for fidelity qualification. Owner adoption of any measured nonzero

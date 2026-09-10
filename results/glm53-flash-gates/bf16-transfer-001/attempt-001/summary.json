@@ -1,0 +1,47 @@
+{
+  "verdict": "PASS",
+  "scope": "Partial-file HTTP byte equivalence/transport diagnostic only; no model, GPU, full-shard or serving qualification",
+  "failure": null,
+  "wrapper_started": true,
+  "host": {
+    "verdict": "PASS",
+    "qualification": "host_and_probe_identity_observations_only",
+    "unit": "glm52-glm53-transfer-001-2918366.service",
+    "minimum_mem_available_kib": 120975948,
+    "maximum_cgroup_peak_bytes": 316928000,
+    "memory_samples": 127,
+    "identity_samples": 146,
+    "identity_pid": 2918436,
+    "identity_start_ticks": 42499895,
+    "maximum_memory_sample_gap_seconds": 0.29445505142211914,
+    "maximum_identity_sample_gap_seconds": 0.255523681640625,
+    "whole_system_swap_delta": {
+      "pswpin": 0,
+      "pswpout": 0
+    },
+    "required_separate_checks": [
+      "frozen runtime and metadata inventories",
+      "post-freeze verified public seed",
+      "inner probe correctness",
+      "model qualification"
+    ]
+  },
+  "inner": {
+    "verdict": "PASS",
+    "scope": "Partial-file HTTP byte equivalence and transport timing diagnostic only; no complete shard or model/quality/speed/context qualification",
+    "single_connection_seconds": [
+      9.499204402032774,
+      18.921045318013057
+    ],
+    "four_connections_seconds": [
+      3.921294706000481,
+      3.7717891359934583
+    ],
+    "timing_formula": "Mean single-connection elapsed seconds / mean four-connection elapsed seconds; two observations each, no confidence claim",
+    "observed_ratio": 3.694259714798546,
+    "paired_payloads_identical": true,
+    "partial_bytes_per_arm": 268435456,
+    "whole_shard_verified": false
+  },
+  "end_unix": 1789072235.2551107
+}
