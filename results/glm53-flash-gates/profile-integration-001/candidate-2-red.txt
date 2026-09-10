@@ -1,0 +1,88 @@
+........{"event": "ready", "profile": "glm-5.3-flash/cuda-spark-128g-agent-fast", "port": 8015, "output": "/tmp/tmpj3fj94ww"}
+..EE.....
+======================================================================
+ERROR: test_cleanup_retry_survives_operational_and_log_errors (test_glm53_experimental_profiles.ReviewRegression.test_cleanup_retry_survives_operational_and_log_errors) (stop_error='PermissionError')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 271, in wait_controller
+    child.wait(timeout=60)
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1197, in _execute_mock_call
+    raise result
+subprocess.TimeoutExpired: Command 'controller' timed out after 60 seconds
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 249, in test_cleanup_retry_survives_operational_and_log_errors
+    api.wait_controller(child,{},Path('/unused'))
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 275, in wait_controller
+    stop_unit(record)
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+PermissionError: control denied
+
+======================================================================
+ERROR: test_cleanup_retry_survives_operational_and_log_errors (test_glm53_experimental_profiles.ReviewRegression.test_cleanup_retry_survives_operational_and_log_errors) (stop_error='ValueError')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 271, in wait_controller
+    child.wait(timeout=60)
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1197, in _execute_mock_call
+    raise result
+subprocess.TimeoutExpired: Command 'controller' timed out after 60 seconds
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 275, in wait_controller
+    stop_unit(record)
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+ValueError: unobserved
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/tests/test_glm53_experimental_profiles.py", line 249, in test_cleanup_retry_survives_operational_and_log_errors
+    api.wait_controller(child,{},Path('/unused'))
+  File "/home/bmarti44/spark-deepseek-v4-flash/scripts/lib/glm53_profile.py", line 278, in wait_controller
+    save_record(path,record)
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+PermissionError: log denied
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.709s
+
+FAILED (errors=2)
+{"profile": "glm-5.3-flash/cuda-spark-128g-agent-fast", "state": "stopped", "output": "/tmp/tmpcge_so1u", "port": 8015, "qualified": false}

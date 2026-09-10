@@ -238,4 +238,15 @@ with p.preparing_session({'profile_id':'glm-5.3-flash/cuda-spark-128g-agent-fast
                 if child.poll() is None:child.terminate();child.wait(timeout=5)
                 child.stdout.close()
 
+
+
+    def test_cleanup_retry_survives_operational_and_log_errors(self):
+        import subprocess
+        api=self.api
+        for stop_error,log_error in [(PermissionError('control denied'),None),(ValueError('unobserved'),PermissionError('log denied'))]:
+            child=self.mock.Mock();child.wait.side_effect=[subprocess.TimeoutExpired('controller',60),0]
+            with self.subTest(stop_error=type(stop_error).__name__),self.mock.patch.object(api,'stop_unit',side_effect=stop_error),self.mock.patch.object(api,'save_record',side_effect=log_error):
+                api.wait_controller(child,{},Path('/unused'))
+                self.assertEqual(child.wait.call_count,2)
+
 if __name__ == '__main__': unittest.main()
