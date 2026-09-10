@@ -1,0 +1,84 @@
+{
+  "scope": "Full 1800-second native four-client durability attempt on the experimental aggregate-1M profile; short-prompt workload, not a context or production speed result",
+  "verdict": "FAIL",
+  "formula": "Unchanged soak-native-001/PROTOCOL.md and run.py client gate conjoined with native lifecycle, frozen bindings and host checks. Every required condition must pass. No statistical performance or fidelity verdict.",
+  "client_summary": {
+    "scope": "short-prompt sustained operation client checks",
+    "verdict": "FAIL",
+    "error": "ValueError('first window worker coverage')"
+  },
+  "failures": [
+    "First 300-second admissions per worker below five: [3, 3, 4, 3]",
+    "Final 300-second admissions per worker below five: [2, 3, 3, 2]",
+    "Whole-host swap use increased after preflight; GLM cgroup swap remained zero. Attribution is unknown."
+  ],
+  "checks": {
+    "fixed_durability_client_gate": false,
+    "all_completed_requests_independently_rescored_correct": true,
+    "full_1800_second_admission_and_bounded_drain": true,
+    "whole_host_no_new_swap": false,
+    "watchdog_floor_at_least_18_gib": true,
+    "all_watchdog_cgroup_swap_samples_zero": true,
+    "cgroup_swap_peak_zero_before_stop": true,
+    "identity_guard_and_clean_descendants": true,
+    "operator_stop_and_wrapper_exit_zero": true,
+    "processes_gone": true,
+    "profile_stopped": true,
+    "memory_recovery_above_110_gib": true,
+    "default_proxy_and_guards_unchanged": true,
+    "kernel_journal_clear": true,
+    "post_runtime_model_verification": true,
+    "frozen_source_bindings_unchanged": true,
+    "prepared_compiled_inputs_unchanged": true
+  },
+  "source_revision": "2f0cff89e6cf6aa664e7bbeb6fae59b07292940e",
+  "request_observations": {
+    "completed": 68,
+    "completed_per_worker": [
+      16,
+      17,
+      19,
+      16
+    ],
+    "input_tokens_per_request": 4224,
+    "first300s_admissions_per_worker": [
+      3,
+      3,
+      4,
+      3
+    ],
+    "last300s_admissions_per_worker": [
+      2,
+      3,
+      3,
+      2
+    ],
+    "admission_seconds": 1800,
+    "drain_completed_after_seconds": 1853.909702124,
+    "observations_ended_after_seconds": 1853.912129699,
+    "all_final_answers_and_negative_controls_correct": true
+  },
+  "host": {
+    "watchdog_samples": 7348,
+    "minimum_available_gib": 18.395496368408203,
+    "maximum_cgroup_swap_bytes": 0,
+    "host_used_swap_kib_before_midrun_prestop_after": [
+      168452,
+      168560,
+      168560,
+      168560
+    ],
+    "maximum_observed_increase_in_host_used_swap_kib": 108,
+    "identity_samples": 8142,
+    "client_memory_samples": 1853,
+    "health_probes": 63,
+    "all_health_statuses_200": true
+  },
+  "startup": {
+    "ready": true,
+    "retrieval_smoke": "PASS",
+    "observed_effect": "Verified-file startup advice reclaimed cached model pages before CUDA initialization; this launch loaded and served without recorded CUDA OOM. The two startup flags were jointly enabled; no isolated causal or performance claim."
+  },
+  "full_model_qualification": "NO_RESULT: fixed durability and no-new-host-swap gates failed; native 100-case paired fidelity and production switching remain pending",
+  "qualified_production_performance": null
+}
