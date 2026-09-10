@@ -2,7 +2,29 @@
 
 **GLM is runnable through named experimental profiles, and the direct aggregate
 million-token context check passed.** Qwen remains the recorded/reboot default.
-GLM is currently stopped after the completed qualification run.
+GLM is currently stopped after the completed durability attempt. Full model
+qualification remains incomplete.
+
+The [30-minute native durability attempt](soak-native-003/README.md) completed
+all 68 requests correctly and drained normally. Its fixed verdict is **FAIL**:
+the first/final five-minute windows admitted fewer than five requests per worker,
+and whole-host swap use increased by 108 KiB after preflight. GLM's cgroup swap
+samples and peak stayed zero; attribution of the host increase is unknown.
+The remaining client checks passed. The guard confirmed a clean stop with no
+surviving model processes, memory recovered to 114.882 GiB, and default/proxy/
+guard state stayed unchanged. All 2,463 prepared inputs and closed runtime/model
+inventories verified after stop. Independent scoped reviews and all 22 existing
+scorer mutation/regression tests are preserved with the failed attempt.
+
+Two earlier durability launches failed during CUDA allocation
+([startup001](soak-startup-001/README.md), [startup002](soak-startup-002/README.md)).
+The current experimental full-context profile enables startup-only allocator
+cleanup and verified-model file-cache advice. The latter reclaimed cached model
+pages before CUDA initialization, and the completed launch recorded no kernel
+OOM/Xid. Both flags were enabled together; their individual effects and production
+performance are not qualified. These flags are absent from the agent and
+production profiles. The context result below used the preceding startup
+configuration; this durability workload did not repeat the direct context test.
 
 The [latest completed context attempt](context-direct-007/README.md) passed all
 four final-answer retrieval checks and their negative controls. It processed
@@ -26,9 +48,9 @@ Use [the quickstart](../../docs/GLM53-QUICKSTART.md) for the repo's
 - `glm-5.3-flash/cuda-spark-128g-agent-fast`: four 65,536-token slots for agent work.
 - `glm-5.3-flash/cuda-spark-128g-1m-experimental`: four 262,144-token slots for large contexts.
 
-Both profiles remain experimental. Paired fidelity and production switching are
-pending. Qualified production performance is **not yet measured**. The context
-run's short outputs do not support a decode-speed claim.
+Both profiles remain experimental. Paired fidelity, a passing durability gate and
+production switching are pending. Qualified production performance is **not yet
+measured**. The context run's short outputs do not support a decode-speed claim.
 
 The successful candidate clarified only the test's answer-format instruction,
 with a fresh freeze, public seed and a 4,224-token startup correctness check.

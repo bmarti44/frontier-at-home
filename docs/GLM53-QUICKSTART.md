@@ -54,7 +54,11 @@ safety timeout. These profiles do not activate GLM in the production switch.
 The actual named-profile start/authentication/READY/stop lifecycle has passed,
 including a clean guard receipt and memory recovery. See [current GLM status](../results/glm53-flash-gates/STATUS.md)
 for the latest completed context result and remaining gates. Paired fidelity and
-production switching remain pending; qualified production performance is not yet
-measured.
+production switching remain pending. The latest 30-minute durability attempt
+completed 68 correct replies but failed its fixed request-count requirement and
+its prohibition on new host swap. Qualified production performance is not yet measured.
+The full-context profile now selects two startup-only memory cleanup flags;
+its latest launch and orderly stop completed with no recorded kernel OOM/Xid.
+The earlier aggregate million-token result used the preceding startup configuration.
 The agent profile's earlier basic chat, tool, four-image and 16-frame video checks
 used 224x224 fixtures; they do not establish maximum media or context capability.
