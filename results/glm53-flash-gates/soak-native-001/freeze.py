@@ -1,8 +1,9 @@
 """Freeze this named-profile candidate before fetching its confirmation seed."""
 import hashlib,importlib.util,json,shutil,subprocess,sys,time
 from pathlib import Path
-repo=Path('/home/bmarti44/spark-deepseek-v4-flash');base=Path('/home/bmarti44/.cache/glm53-flash');out=base/'soak-freeze-001'
+repo=Path('/home/bmarti44/spark-deepseek-v4-flash');base=Path('/home/bmarti44/.cache/glm53-flash');out=base/'soak-freeze-002'
 if subprocess.check_output(['git','status','--porcelain'],cwd=repo,text=True):raise ValueError('freeze requires clean source')
+if shutil.disk_usage(base).free < 2 * 1024**3:raise ValueError('freeze requires at least 2 GiB disk headroom')
 out.mkdir(exist_ok=False)
 sys.path.insert(0,str(repo/'scripts/lib'));import glm53_profile as api
 spec=importlib.util.spec_from_file_location('launcher',repo/'scripts/47_run_glm53_dev.py');launcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(launcher)
