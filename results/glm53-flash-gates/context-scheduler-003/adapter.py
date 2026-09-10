@@ -74,6 +74,7 @@ def main():
     if args.action == 'prepare':prepare.prepare(args.output, args.seed, args.server)
     elif args.action == 'bind':bind_launch(args.output, args.server)
     elif args.action == 'short':
+        probe.launch_check(args.server)
         result = short.main(args.output / 'short-correctness', args.server)
         verify_freeze(args.frozen)
         return result
