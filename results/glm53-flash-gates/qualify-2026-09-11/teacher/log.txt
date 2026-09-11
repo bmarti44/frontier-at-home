@@ -1,0 +1,80 @@
+$ /usr/bin/python3 /home/bmarti44/glm53-v2/scripts/49_score_teacher_windows.py --base-url http://127.0.0.1:8015 --model glm-5.3-flash --dataset-dir /home/bmarti44/models/teacher-logits/glm-5.3-flash --out /home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11/teacher --stack-label glm-5.3-flash-cuda-spark-128g-1m --profile-id glm-5.3-flash/cuda-spark-128g-1m
+teacher final-0000: nll_sum=3717.134058 top1=1222 cache_hit=True
+teacher final-0001: nll_sum=3691.583187 top1=1253 cache_hit=True
+teacher final-0002: nll_sum=1690.384543 top1=1652 cache_hit=True
+teacher final-0003: nll_sum=1105.716681 top1=1830 cache_hit=True
+teacher final-0004: nll_sum=3250.193167 top1=1224 cache_hit=True
+teacher final-0005: nll_sum=3973.394066 top1=1179 cache_hit=True
+teacher final-0006: nll_sum=962.527617 top1=1803 cache_hit=True
+teacher final-0007: nll_sum=1140.403309 top1=1831 cache_hit=True
+teacher final-0008: nll_sum=2361.705715 top1=1457 cache_hit=True
+teacher final-0009: nll_sum=3969.432193 top1=1206 cache_hit=True
+teacher final-0010: nll_sum=2484.203930 top1=1397 cache_hit=True
+teacher final-0011: nll_sum=1134.060357 top1=1825 cache_hit=True
+teacher final-0012: nll_sum=1426.697920 top1=1702 cache_hit=True
+teacher final-0013: nll_sum=2962.448907 top1=1391 cache_hit=True
+teacher final-0014: nll_sum=1175.259558 top1=1690 cache_hit=True
+teacher final-0015: nll_sum=1084.676902 top1=1821 cache_hit=True
+teacher final-0016: nll_sum=2199.791252 top1=1475 cache_hit=True
+teacher final-0017: nll_sum=2907.150933 top1=1395 cache_hit=True
+teacher final-0018: nll_sum=1767.869514 top1=1576 cache_hit=True
+teacher final-0019: nll_sum=1117.653830 top1=1826 cache_hit=True
+teacher final-0020: nll_sum=2363.516163 top1=1465 cache_hit=True
+teacher final-0021: nll_sum=3225.034129 top1=1350 cache_hit=True
+teacher final-0022: nll_sum=1632.458195 top1=1642 cache_hit=True
+teacher final-0023: nll_sum=1154.092861 top1=1832 cache_hit=True
+teacher final-0024: nll_sum=1887.700020 top1=1540 cache_hit=True
+candidate final-0000: nll_sum=3907.213431 top1=1171
+candidate final-0001: nll_sum=4097.500136 top1=1206
+candidate final-0002: nll_sum=1839.094533 top1=1615
+candidate final-0003: nll_sum=1102.548472 top1=1820
+candidate final-0004: nll_sum=3905.779773 top1=1112
+candidate final-0005: nll_sum=4188.848622 top1=1164
+candidate final-0006: nll_sum=1158.539389 top1=1754
+candidate final-0007: nll_sum=1096.261577 top1=1820
+candidate final-0008: nll_sum=2522.877259 top1=1431
+candidate final-0009: nll_sum=4249.849338 top1=1157
+candidate final-0010: nll_sum=2642.591894 top1=1366
+candidate final-0011: nll_sum=1115.044325 top1=1815
+candidate final-0012: nll_sum=1515.582637 top1=1678
+candidate final-0013: nll_sum=3242.810416 top1=1348
+candidate final-0014: nll_sum=1248.851601 top1=1681
+candidate final-0015: nll_sum=1092.774820 top1=1814
+candidate final-0016: nll_sum=2353.515263 top1=1453
+candidate final-0017: nll_sum=3156.206558 top1=1343
+candidate final-0018: nll_sum=1928.072207 top1=1562
+candidate final-0019: nll_sum=1069.959313 top1=1819
+candidate final-0020: nll_sum=2621.290866 top1=1412
+candidate final-0021: nll_sum=3549.582544 top1=1278
+candidate final-0022: nll_sum=1765.207648 top1=1611
+candidate final-0023: nll_sum=1115.169752 top1=1821
+candidate final-0024: nll_sum=1932.500610 top1=1550
+
+window      domain                              dNLL  top1 loss pp
+final-0000  axis1_general                   0.092858        2.4915
+final-0001  axis2_legal                     0.198298        2.2960
+final-0002  axis3_code_agentic              0.072648        1.8075
+final-0003  axis4_reasoning_termination    -0.001548        0.4885
+final-0004  axis1_general                   0.320267        5.4714
+final-0005  axis2_legal                     0.105254        0.7328
+final-0006  axis3_code_agentic              0.095756        2.3937
+final-0007  axis4_reasoning_termination    -0.021564        0.5374
+final-0008  axis1_general                   0.078735        1.2702
+final-0009  axis2_legal                     0.136989        2.3937
+final-0010  axis3_code_agentic              0.077376        1.5144
+final-0011  axis4_reasoning_termination    -0.009290        0.4885
+final-0012  axis1_general                   0.043422        1.1724
+final-0013  axis2_legal                     0.136962        2.1006
+final-0014  axis3_code_agentic              0.035951        0.4397
+final-0015  axis4_reasoning_termination     0.003956        0.3420
+final-0016  axis1_general                   0.075097        1.0747
+final-0017  axis2_legal                     0.121669        2.5403
+final-0018  axis3_code_agentic              0.078262        0.6839
+final-0019  axis4_reasoning_termination    -0.023300        0.3420
+final-0020  axis1_general                   0.125928        2.5892
+final-0021  axis2_legal                     0.158548        3.5173
+final-0022  axis3_code_agentic              0.064851        1.5144
+final-0023  axis4_reasoning_termination    -0.019015        0.5374
+final-0024  axis1_general                   0.021886       -0.4885
+
+FAIL: delta_nll mean=0.07879988224075864 upper95=0.10561757072931384 top1_loss_pp mean=1.5300439667806547 upper95=1.9663146545096817 scored=25 failed=0

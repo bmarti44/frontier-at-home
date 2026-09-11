@@ -18,6 +18,7 @@ readonly W7_ATTEMPT_DIGEST_ALLOWLIST='^results/glm52-gates/W7-equivalence-attemp
 readonly W8_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/W8-exact-preflight-review-r233-r234\.json:[0-9]+:  "(binary|patch)_sha256": "[0-9a-f]{64}",?$|^results/glm52-gates/harness/w8_exact_smoke_v1\.sh:[0-9]+:readonly (BINARY|MODEL|REQUEST|ENGINE_PATCH)_SHA256=[0-9a-f]{64}$|^results/glm52-gates/harness/ds4-w8-exact-ckv\.patch:[0-9]+:\+  (ordinary build [12]: )?[0-9a-f]{64}$'
 readonly W9_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/harness/w9_real_capture_v1\.sh:[0-9]+:readonly (BINARY|MODEL|TOKENIZER)_SHA256=[0-9a-f]{64}$|^scripts/93_score_w9_fp4_falsifier\.py:[0-9]+:        "tree_sha256": "[0-9a-f]{64}",$|^scripts/93_score_w9_fp4_falsifier\.py:[0-9]+:    "(kv\.f32|query\.f32|selected\.u32|selected-count\.u32|metadata\.json|W9_CAPTURE_COMPLETE)": "[0-9a-f]{64}",$|^scripts/96_verify_drand_receipt_w9\.mjs:[0-9]+:const PUBLIC_KEY = "[0-9a-f]{96}";$|^scripts/tests/test_glm52_goal\.py:[0-9]+:        seed = "[0-9a-f]{64}"$|^scripts/tests/test_glm52_goal\.py:[0-9]+:                "randomness": "[0-9a-f]{64}",$|^scripts/tests/test_glm52_goal\.py:[0-9]+:                "(signature|previous_signature)": "[0-9a-f]{192}"[,]?$|^results/glm52-gates/W9-real-capture-pass-a14e364/(off|on)/safety/main\.log:[0-9]+:[0-9T:+,.-]+ (candidate_src=[^ ]+ candidate_binary_sha256=[0-9a-f]{64} candidate_device_inode=[0-9:]+|executed_candidate_verified pid=[0-9]+ start_ticks=[0-9]+ path=[^ ]+ executed_binary_sha256=[0-9a-f]{64} device_inode=[0-9:]+|safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+)$|^results/glm52-gates/W9-real-capture-pass-a14e364/prompt-build\.txt:[0-9]+:tokens=8192 sha256=[0-9a-f]{64}$'
 readonly MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-goal/harness/decisive_matched\.sh:[0-9]+:TOKENIZER_NATIVE_SHA256=[0-9a-f]{64}$'
+readonly GLM53_PUBLIC_DIGEST_ALLOWLIST='^results/glm53-flash-gates/build-[a-z0-9-]+/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$|^results/(glm53-flash|qwen38)-gates/qualify-[0-9a-z-]+/(speed|context)/log\.txt:1:\$ /usr/bin/python3 [^ ]+/scripts/(30_bench_speed|50_probe_context)\.py .*--(output-)?tokenizer-sha256 [0-9a-f]{64}( .*)?$'
 
 readonly LINT_ALLOWLIST_FILE="$(
   cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
@@ -111,7 +112,7 @@ redact_matches() {
 
 scan_stream() {
   local matches
-  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST" || true)"
+  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_PUBLIC_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1
@@ -169,6 +170,9 @@ map_allowlist = {
     "test_hashes",
     "completed_arm_tree_sha256",
     "completed_result_sha256",
+    # scripts/94_qualify_profile.py manifests: script name -> sha256, fixture name -> sha256
+    "scripts",
+    "fixtures_sha256",
 }
 w3_campaign_raw = re.fullmatch(
     r"results/glm52-gates/W3-performance-campaign-[^/]+/raw\.jsonl",

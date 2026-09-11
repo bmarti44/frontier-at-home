@@ -1,0 +1,430 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "glm-5.3-flash/cuda-spark-128g-1m",
+  "stack_label": "glm-5.3-flash-cuda-spark-128g-1m",
+  "served_model": "glm-5.3-flash",
+  "out": "/home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells",
+  "start_unix": 1789107665.818214,
+  "end_unix": 1789110614.6005402,
+  "start_iso": "2026-09-11T06:21:05.923842+00:00",
+  "end_iso": "2026-09-11T07:10:14.600545+00:00",
+  "targets": {
+    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18, vision-2026-08-19); GLM must match or beat these to be 'as fast as qwen 3.8 27b'",
+    "decode_tok_s_min": {
+      "0": 17.46,
+      "28672": 26.71
+    },
+    "prefill_tok_s_min": {
+      "28672": 698.7
+    },
+    "ttft_s_max": {
+      "0": 0.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "vision_min": 0.64,
+    "delta_nll_max": 0.01,
+    "media_pass": true
+  },
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "OK",
+      "evidence": "speed/speed.json",
+      "start_unix": 1789107665.9773364,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/glm53-v2/scripts/30_bench_speed.py",
+        "--base-url",
+        "http://127.0.0.1:8015",
+        "--out",
+        "/home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells/speed/speed.json",
+        "--stack-label",
+        "glm-5.3-flash-cuda-spark-128g-1m",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "glm-5.3-flash",
+        "--output-tokenizer-path",
+        "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp/tokenizer.json",
+        "--output-tokenizer-sha256",
+        "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 340.4347690549912,
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": 20.021360982822657,
+            "median_ttft_s": 4.989318881999999,
+            "median_prefill_tok_s": 22.31866972056761,
+            "valid": true,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": 19.921070318156886,
+            "median_ttft_s": 71.56203857150001,
+            "median_prefill_tok_s": 422.6403044608502,
+            "valid": true,
+            "reps": 2
+          }
+        },
+        "suite_valid": true,
+        "stack_label": "glm-5.3-flash-cuda-spark-128g-1m"
+      },
+      "end_unix": 1789108006.4129295
+    },
+    "toolcall": {
+      "status": "OK",
+      "evidence": "toolcall/toolcall.json",
+      "start_unix": 1789108006.4135203,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/glm53-v2/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8015/v1",
+        "--model",
+        "glm-5.3-flash",
+        "--out",
+        "/home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 57.74560205795569,
+      "result": {
+        "passed": 20,
+        "total": 20,
+        "score": 1.0,
+        "suite": "toolcall-v1"
+      },
+      "end_unix": 1789108064.1598628
+    },
+    "vision": {
+      "status": "OK",
+      "evidence": "vision/summary.json",
+      "start_unix": 1789108064.1607795,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/glm53-v2/scripts/38_bench_vision.py",
+        "--base-url",
+        "http://127.0.0.1:8015",
+        "--out",
+        "/home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells/vision",
+        "--model-id",
+        "glm-5.3-flash"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 549.5983620270272,
+      "result": {
+        "accuracy": 0.73,
+        "n": 100,
+        "correct": 73,
+        "invalid_count": 12,
+        "error_count": 0,
+        "ok": true,
+        "suite": "mmmu-val-100"
+      },
+      "end_unix": 1789108613.7594633
+    },
+    "media": {
+      "status": "FAIL",
+      "evidence": "media/summary.json",
+      "start_unix": 1789108613.760449,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/glm53-v2/scripts/51_probe_media_max.py",
+        "--base-url",
+        "http://127.0.0.1:8015",
+        "--model",
+        "glm-5.3-flash",
+        "--out",
+        "/home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells/media",
+        "--stack-label",
+        "glm-5.3-flash-cuda-spark-128g-1m",
+        "--images",
+        "4",
+        "--image-size",
+        "512",
+        "--video-frames",
+        "16",
+        "--video-size",
+        "512"
+      ],
+      "skip_reason": null,
+      "exit_code": 2,
+      "wall_s": 0.04413841699715704,
+      "result": null,
+      "end_unix": 1789108613.8046856,
+      "status_reason": "script exit 2",
+      "log_tail": "$ /usr/bin/python3 /home/bmarti44/glm53-v2/scripts/51_probe_media_max.py --base-url http://127.0.0.1:8015 --model glm-5.3-flash --out /home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells/media --stack-label glm-5.3-flash-cuda-spark-128g-1m --images 4 --image-size 512 --video-frames 16 --video-size 512\nrefusing to overwrite non-empty /home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells/media"
+    },
+    "teacher": {
+      "status": "FAIL",
+      "evidence": "teacher/summary.json",
+      "start_unix": 1789108613.8051178,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/glm53-v2/scripts/49_score_teacher_windows.py",
+        "--base-url",
+        "http://127.0.0.1:8015",
+        "--model",
+        "glm-5.3-flash",
+        "--dataset-dir",
+        "/home/bmarti44/models/teacher-logits/glm-5.3-flash",
+        "--out",
+        "/home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells/teacher",
+        "--stack-label",
+        "glm-5.3-flash-cuda-spark-128g-1m",
+        "--profile-id",
+        "glm-5.3-flash/cuda-spark-128g-1m"
+      ],
+      "skip_reason": null,
+      "exit_code": 1,
+      "wall_s": 190.9693403209676,
+      "result": {
+        "verdict": "FAIL",
+        "delta_nll_mean": 0.08063994237674536,
+        "delta_nll_upper_95": 0.1081169577010214,
+        "top1_loss_pp_mean": 1.567171470444553,
+        "top1_loss_pp_upper_95": 2.020924405109163,
+        "top1_agreement_mean": 0.8714215925744992,
+        "windows_scored": 25,
+        "windows_failed": 0,
+        "fail_reasons": []
+      },
+      "end_unix": 1789108804.7746878,
+      "status_reason": "script exit 1",
+      "log_tail": "candidate final-0014: nll_sum=1245.115341 top1=1685\ncandidate final-0015: nll_sum=1093.583218 top1=1822\ncandidate final-0016: nll_sum=2413.624069 top1=1440\ncandidate final-0017: nll_sum=3154.773550 top1=1342\ncandidate final-0018: nll_sum=1935.197700 top1=1555\ncandidate final-0019: nll_sum=1069.369341 top1=1816\ncandidate final-0020: nll_sum=2617.963497 top1=1411\ncandidate final-0021: nll_sum=3563.423247 top1=1276\ncandidate final-0022: nll_sum=1766.296480 top1=1611\ncandidate final-0023: nll_sum=1108.584304 top1=1818\ncandidate final-0024: nll_sum=1930.640378 top1=1548\n\nwindow      domain                              dNLL  top1 loss pp\nfinal-0000  axis1_general                   0.088359        1.9541\nfinal-0001  axis2_legal                     0.198625        2.6380\nfinal-0002  axis3_code_agentic              0.072723        2.4426\nfinal-0003  axis4_reasoning_termination    -0.005956        0.3908\nfinal-0004  axis1_general                   0.324406        5.4714\nfinal-0005  axis2_legal                     0.111362        0.9282\nfinal-0006  axis3_code_agentic              0.098351        2.3449\nfinal-0007  axis4_reasoning_termination    -0.022881        0.1954\nfinal-0008  axis1_general                   0.079876        1.1236\nfinal-0009  axis2_legal                     0.140965        2.6869\nfinal-0010  axis3_code_agentic              0.084023        1.5144\nfinal-0011  axis4_reasoning_termination    -0.014197        0.3908\nfinal-0012  axis1_general                   0.045323        0.8305\nfinal-0013  axis2_legal                     0.139217        2.1983\nfinal-0014  axis3_code_agentic              0.034126        0.2443\nfinal-0015  axis4_reasoning_termination     0.004351       -0.0489\nfinal-0016  axis1_general                   0.104462        1.7098\nfinal-0017  axis2_legal                     0.120969        2.5892\nfinal-0018  axis3_code_agentic              0.081743        1.0259\nfinal-0019  axis4_reasoning_termination    -0.023588        0.4885\nfinal-0020  axis1_general                   0.124303        2.6380\nfinal-0021  axis2_legal                     0.165310        3.6150\nfinal-0022  axis3_code_agentic              0.065383        1.5144\nfinal-0023  axis4_reasoning_termination    -0.022232        0.6839\nfinal-0024  axis1_general                   0.020977       -0.3908\n\nFAIL: delta_nll mean=0.08063994237674536 upper95=0.1081169577010214 top1_loss_pp mean=1.567171470444553 upper95=2.020924405109163 scored=25 failed=0"
+    },
+    "soak": {
+      "status": "OK",
+      "evidence": "soak/soak.json",
+      "start_unix": 1789108804.775507,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/glm53-v2/scripts/35_soak.py",
+        "--base-url",
+        "http://127.0.0.1:8015",
+        "--stack-label",
+        "glm-5.3-flash-cuda-spark-128g-1m",
+        "--config-hash",
+        "glm-5.3-flash-cuda-spark-128g-1m-7bd1ea7ac25b",
+        "--out",
+        "/home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11-cells/soak/soak.json",
+        "--model",
+        "glm-5.3-flash"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 1809.822288134019,
+      "result": {
+        "pass": true,
+        "failed_gates": [],
+        "n_requests": 137,
+        "n_errors": 0,
+        "decode_overall_median_tok_s": 20.662009854203216,
+        "mem_available_min_gib": 15.249584197998047,
+        "duration_seconds_actual": 1809.7139439460007
+      },
+      "end_unix": 1789110614.5999703
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": 20.021360982822657,
+      "target": 17.46,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": 4.989318881999999,
+      "target": 0.5,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": 22.31866972056761,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": true,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": 19.921070318156886,
+      "target": 26.71,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": 71.56203857150001,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": 422.6403044608502,
+      "target": 698.7,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": true,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 20,
+      "target": 19,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "accuracy",
+      "measured": 0.73,
+      "target": 0.64,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "vision",
+      "metric": "n",
+      "measured": 100,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "teacher",
+      "metric": "delta_nll_mean",
+      "measured": 0.08063994237674536,
+      "target": 0.01,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "teacher",
+      "metric": "delta_nll_upper_95",
+      "measured": 0.1081169577010214,
+      "target": 0.01,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "teacher",
+      "metric": "top1_loss_pp_mean",
+      "measured": 1.567171470444553,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "teacher",
+      "metric": "top1_loss_pp_upper_95",
+      "measured": 2.020924405109163,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "teacher",
+      "metric": "verdict",
+      "measured": "FAIL",
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "pass",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "decode_overall_median_tok_s",
+      "measured": 20.662009854203216,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "FAIL",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}

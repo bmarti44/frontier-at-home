@@ -1,0 +1,188 @@
+{
+  "kind": "qualify-profile-manifest",
+  "schema_version": 1,
+  "kit": {
+    "script": "scripts/94_qualify_profile.py",
+    "sha256": "1bada751ac67c87a0d8a49067b866b0d9849c0d74c8def769830e02283e78aae",
+    "argv": [
+      "scripts/94_qualify_profile.py",
+      "--profile",
+      "qwen3.8-27b/cuda-spark-128g-1m",
+      "--host",
+      "/tmp/claude-1000/-home-bmarti44-spark-deepseek-v4-flash/9b86fdd2-f27a-41cb-84ad-a1995a8e44ab/scratchpad/host-worktree.json",
+      "--resummarize",
+      "--out",
+      "results/qwen38-gates/qualify-2026-09-11-kit-check"
+    ]
+  },
+  "dry_run": false,
+  "no_launch": true,
+  "start_unix": 1789117929.3305876,
+  "start_iso": "2026-09-11T09:12:09.409536+00:00",
+  "profile": {
+    "profile_id": "qwen3.8-27b/cuda-spark-128g-1m",
+    "model_slug": "qwen3.8-27b",
+    "profile_file": "/home/bmarti44/glm53-v2/configs/profiles/qwen3.8-27b/cuda-spark-128g-1m.json",
+    "profile_status": "qualified",
+    "profile_evidence": "results/qwen38-gates/trackc-1m-np4-2026-08-19/",
+    "mechanism": "systemd-run",
+    "stack_label": "qwen3.8-27b-cuda-spark-128g-1m",
+    "switch_alias": "qwen38-1m",
+    "rendered_port": 8013,
+    "served_model": "qwen3.8-27b",
+    "model_path": "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+    "tokenizer_path": "/home/bmarti44/models/qwen3.8-27b/tokenizer.json",
+    "tokenizer_sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+    "tokenizer_sha256_expected": null,
+    "slots": 4,
+    "tokens_per_slot": 262144,
+    "context_cap": 1048576,
+    "kill_floor_gib": 8,
+    "minimum_start_gib": 100,
+    "startup_timeout_seconds": 1800,
+    "safety": {
+      "kill_floor_gib": 8,
+      "minimum_start_gib": 100,
+      "sample_hz": 1,
+      "startup_timeout_seconds": 1800
+    },
+    "serving": {},
+    "containment": {
+      "memory_high": "88G",
+      "memory_max": "95G"
+    },
+    "digest_checks": [
+      {
+        "path": "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server",
+        "sha256": "bcef273b987786cd5d51e2f95a5b7d58ea70d3026b3733d67cdd8139331da7e9"
+      },
+      {
+        "path": "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+        "sha256": "e103abf9d914d1d7b2f2592f055f2759a71195c350a01c135f71aaae86bca52b"
+      },
+      {
+        "path": "/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf",
+        "sha256": "cb0a71fe9b84af2552fc6260acf8e9773a29d115c683aba01c72a7ac537b212b"
+      }
+    ],
+    "binary": "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17/src/build/bin/llama-server",
+    "binary_sha256": "bcef273b987786cd5d51e2f95a5b7d58ea70d3026b3733d67cdd8139331da7e9",
+    "binary_sha256_expected": "bcef273b987786cd5d51e2f95a5b7d58ea70d3026b3733d67cdd8139331da7e9",
+    "argv": [
+      "--model",
+      "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
+      "-ngl",
+      "99",
+      "-fa",
+      "on",
+      "--no-mmap",
+      "-c",
+      "1048576",
+      "--mmproj",
+      "/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf",
+      "--parallel",
+      "4",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "8013",
+      "--alias",
+      "qwen3.8-27b",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "8",
+      "--spec-draft-p-min",
+      "0.6",
+      "--chat-template-kwargs",
+      "{\"reasoning_effort\":\"low\"}",
+      "--cache-reuse",
+      "256"
+    ],
+    "env": {},
+    "check": {
+      "exit_code": 0,
+      "stdout": "{\n \"profile_id\": \"qwen3.8-27b/cuda-spark-128g-1m\",\n \"status\": \"qualified\",\n \"feasibility\": {\n  \"weights_gib\": 17.46,\n  \"kv_gib\": 64.0,\n  \"fit_gib\": 91.46,\n  \"usable_gib\": 114,\n  \"verdict\": \"feasible\"\n },\n \"missing_artifacts\": []\n}",
+      "stderr": ""
+    },
+    "reference_logits": null,
+    "qualification_targets": null,
+    "encoder": "qwen38",
+    "config_hash": "qwen3.8-27b-cuda-spark-128g-1m-30ace8dea489"
+  },
+  "port": 8015,
+  "base_url": "http://127.0.0.1:8015",
+  "out": "/home/bmarti44/glm53-v2/results/qwen38-gates/qualify-2026-09-11-kit-check",
+  "host": {
+    "uname": "Linux spark-aba1 6.17.0-1026-nvidia #26-Ubuntu SMP PREEMPT_DYNAMIC Thu Jun 25 00:57:17 UTC 2026 aarch64 aarch64",
+    "hostname": "spark-aba1",
+    "nproc": 20,
+    "python": "3.12.3",
+    "mem_total_kib": 125483612,
+    "mem_total_gib": 119.67,
+    "gpu_name": "NVIDIA GB10",
+    "gpu_driver": "580.159.03"
+  },
+  "git": {
+    "head": "21db1e51de67c82435b3e6efc339ef6cfb4322d6",
+    "branch": "glm53-v2",
+    "dirty": true
+  },
+  "scripts": {
+    "92_resolve_profile.py": "51d06e7b87d7e4542cbaf20784bf8abd1bbe5a794c30942e894462b97e6b6122",
+    "93_profile_serve.sh": "33efdc571a2801ec226f74df4091ff889b389b300aeff1366b03a8296846c078",
+    "30_bench_speed.py": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "39_bench_toolcall.py": "70c5abd36694d953dff1890aad94c9af84923b216fa45b5399cde13082fe5797",
+    "38_bench_vision.py": "4260f8950e69025d930f319a654ddce07ff8525198fd419a25cc07542c8d3171",
+    "51_probe_media_max.py": "84d477dfd73ef21546c7ed18694732c5d9dbf1d4c4f1cded8396ae2ef473abd2",
+    "49_score_teacher_windows.py": "036cabca94c42aa0adf3a33ff967c064cb26c2d6f910ff39310e0eff5f28b759",
+    "31_bench_accuracy.py": "cbe5249b6966895cf3834397f67f9010939cce36c3386f08943ea48db1e489b4",
+    "50_probe_context.py": "6ab6dd4d21bde45374d83be56f4ca1b5edc73e8527f518032716f71ec305c87d",
+    "35_soak.py": "199d42bfa2134667b23fdbc3ee50ffa81a94ced8a288d375d2b7096812ddbe86"
+  },
+  "cells_selected": [],
+  "cells_kept_from_previous_run": [
+    "speed",
+    "toolcall",
+    "vision"
+  ],
+  "cells": {
+    "vision": {
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/glm53-v2/scripts/38_bench_vision.py",
+        "--base-url",
+        "http://127.0.0.1:8015",
+        "--out",
+        "/home/bmarti44/glm53-v2/results/qwen38-gates/qualify-2026-09-11-kit-check/vision",
+        "--thinking-mode",
+        "chat",
+        "--model-id",
+        "qwen3.8-27b"
+      ],
+      "skip_reason": null,
+      "evidence": "vision/summary.json",
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 201.17651871504495,
+      "start_unix": 1789117134.947812,
+      "end_unix": 1789117336.1245823
+    },
+    "speed": {
+      "argv": null,
+      "skip_reason": null,
+      "evidence": "speed/speed.json",
+      "status": "OK",
+      "recovered_from_evidence": true
+    },
+    "toolcall": {
+      "argv": null,
+      "skip_reason": null,
+      "evidence": "toolcall/toolcall.json",
+      "status": "OK",
+      "recovered_from_evidence": true
+    }
+  },
+  "end_unix": 1789117929.441685,
+  "end_iso": "2026-09-11T09:12:09.441688+00:00"
+}

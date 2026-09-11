@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "status": "build_attempt_only",
+  "component": "exllamav3",
+  "source_manifest_sha256": "6a64193d207ce1142f8495f7b36dd8071086bf779890b574e1e577da8ad5860b",
+  "sources": {
+    "vllm": {
+      "base_revision": "878631b6079d2cf9fb80830ef9cb41b43aded098",
+      "revision": "1db42d865607c23521ff63972c042c311ecc7a5c",
+      "tree": "8a1f4f4e97fb4fc187754357deade1f5eb94da7a",
+      "patch_sha256": "8d565b70b603b12421154bac7f2e229f41435df29e13d6eb49c2cc4b51f12a5a"
+    },
+    "exllamav3": {
+      "base_revision": "17bc3923259ffd48aab742edd261a0ca45d55459",
+      "revision": "9f06ed63f28abccb9101cfa39b35ae1fed710f46",
+      "tree": "2a1486d6fe0c12384bdf0134db715066a015c44c",
+      "patch_sha256": "4ffdcbb086225768e57c1aaea651704cbfb11f598e8c339471402f8c11b06ec5"
+    },
+    "vllm-exl3": {
+      "base_revision": "6b26e5c9d35a455f61ee5b5529151ff2e5c08103",
+      "revision": "6b26e5c9d35a455f61ee5b5529151ff2e5c08103",
+      "tree": "f2365b2a74c79ecaefdc388c86f3fa61b1d724e9",
+      "patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "scorer_sha256": "e9cf9585af7abe29ddfa5f109f430c0584938196fca5f074936c86c1e3c0d9b1",
+  "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+  "wrapper_sha256": "08054584eb6422743901b4fbd90fc1e3ba1223f48d43ef6e46f46cb3ef23c3c1",
+  "safe_run_sha256": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+  "uv_sha256": "7e4b13d1dc30193acd1195e0263de5b9c2a5f9f7f685f6100876faff8b4ff60d",
+  "command": [
+    "/usr/bin/env",
+    "-i",
+    "CMAKE_BUILD_PARALLEL_LEVEL=2",
+    "CUDA_HOME=/usr/local/cuda-13.0",
+    "EXL3_EXT_INCLUDE=/home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3/exllamav3/exllamav3_ext",
+    "FLASHINFER_CUDA_ARCH_LIST=12.1a",
+    "HOME=/home/bmarti44",
+    "LANG=C.UTF-8",
+    "MAKEFLAGS=-j2",
+    "MAX_JOBS=2",
+    "NVCC_THREADS=1",
+    "PATH=/home/bmarti44/.cache/glm53-flash/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "PYTHONNOUSERSITE=1",
+    "TORCH_CUDA_ARCH_LIST=12.1a",
+    "VLLM_TARGET_DEVICE=cuda",
+    "VLLM_USE_PRECOMPILED=0",
+    "VLLM_USE_PRECOMPILED_RUST=0",
+    "/home/bmarti44/.local/bin/uv",
+    "build",
+    "--wheel",
+    "--no-build-isolation",
+    "--no-cache",
+    "--python",
+    "/home/bmarti44/.cache/glm53-flash/runtime/bin/python3",
+    "--out-dir",
+    "/home/bmarti44/.cache/glm53-flash/build-exllamav3-001/wheels",
+    "/home/bmarti44/.cache/glm53-flash/build-source-002/exllamav3"
+  ],
+  "start_unix": 1788921713.9599264
+}

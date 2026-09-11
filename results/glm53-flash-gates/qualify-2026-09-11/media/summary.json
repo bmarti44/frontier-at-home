@@ -1,0 +1,55 @@
+{
+  "kind": "media-max",
+  "schema_version": 1,
+  "stack_label": "glm-5.3-flash-cuda-spark-128g-1m",
+  "model": "glm-5.3-flash",
+  "declared": {
+    "images": 4,
+    "image_size": 512,
+    "video_frames": 16,
+    "video_size": 512
+  },
+  "checks": {
+    "images_at_max_answered": true,
+    "images_at_max_colours_in_order": true,
+    "images_over_max_rejected_400": true,
+    "video_at_max_answered": true,
+    "video_direction_right": true
+  },
+  "verdict": "PASS",
+  "colour_positions": [
+    0,
+    5,
+    12,
+    18
+  ],
+  "fixtures_sha256": {
+    "image-0-red.png": "564ef8f904ca49ea7df2545bd7b28b533eba1a6545fc6421e20568ad26c2ca7b",
+    "image-1-green.png": "878dfb6d111ec0b2806f0616b3cef9bc6bae0853d1ce6f964db9535534f22201",
+    "image-2-blue.png": "9541e6514d2f1a429ac95af125254c46a619283a94695e3b02757b0235da3807",
+    "image-3-yellow.png": "90305727fab3351e075746d674724dcc69441540828aa9c2de92e9658c2ec8db",
+    "image-4-purple.png": "a06044942545d86d3c74e50f6dd07ae969f2952397a263d373915f6f048fcb25",
+    "video.mp4": "33915cfa95e0eeec1189e6e2861c33de3773e53f2c564643ebc558a3e480d61d"
+  },
+  "cases": [
+    {
+      "case": "images-at-max",
+      "status": 200,
+      "wall_s": 3.6,
+      "text": "Red, green, blue, yellow"
+    },
+    {
+      "case": "images-over-max",
+      "status": 400,
+      "wall_s": 0.001,
+      "text": "{\"error\": {\"message\": \"each request allows up to four images OR one video\", \"type\": \"invalid_request_error\", \"code\": 400}}"
+    },
+    {
+      "case": "video-at-max",
+      "status": 200,
+      "wall_s": 3.915,
+      "text": "Right"
+    }
+  ],
+  "unix": 1789111588.3397512
+}

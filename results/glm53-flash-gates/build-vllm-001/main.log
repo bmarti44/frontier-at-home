@@ -1,0 +1,39 @@
+2026-09-09T02:50:29,783271056+00:00 SAFE_RUN start tag=glm53-build-vllm vlimit_kb=419430400 kill_floor_gib=18 min_start_gib=110 timeout_s=9000 allow_cgroup_high=0
+2026-09-09T02:50:29,791208275+00:00 cmd: /usr/bin/env -i CARGO_BUILD_JOBS=2 CARGO_HOME=/home/bmarti44/.cache/glm53-flash/build-vllm-001/cargo-home CMAKE_BUILD_PARALLEL_LEVEL=2 CUDA_HOME=/usr/local/cuda-13.0 EXL3_EXT_INCLUDE=/home/bmarti44/.cache/glm53-flash/build-source-003/exllamav3/exllamav3/exllamav3_ext FLASHINFER_CUDA_ARCH_LIST=12.1a HOME=/home/bmarti44 LANG=C.UTF-8 MAKEFLAGS=-j2 MAX_JOBS=2 NVCC_THREADS=1 PATH=/home/bmarti44/.cache/glm53-flash/rust-1.95.0-001/toolchain/bin:/home/bmarti44/.cache/glm53-flash/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 TORCH_CUDA_ARCH_LIST=12.1a VLLM_REQUIRE_RUST_FRONTEND=1 VLLM_TARGET_DEVICE=cuda VLLM_USE_PRECOMPILED=0 VLLM_USE_PRECOMPILED_RUST=0 /home/bmarti44/.local/bin/uv build --wheel --no-build-isolation --no-cache --python /home/bmarti44/.cache/glm53-flash/runtime/bin/python3 --out-dir /home/bmarti44/.cache/glm53-flash/build-vllm-001/wheels /home/bmarti44/.cache/glm53-flash/build-source-003/vllm
+2026-09-09T02:50:29,798112212+00:00 host: spark-aba1 kernel: 6.17.0-1026-nvidia
+2026-09-09T02:50:29,803490817+00:00 candidate_provenance_enabled=0
+2026-09-09T02:50:29,811551988+00:00 cgroup_verified path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-glm53-build-vllm-447627.service memory_high=95538905088 memory_max=99833872384 memory_swap_max=0 memory_oom_group=1
+MemTotal:       125483612 kB
+MemAvailable:   120562604 kB
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.03,"stable_samples_observed":3}
+2026-09-09T02:50:32,406410875+00:00 wrapper_pid=447680 engine_pid=447686 pgid=447680 (periodic sampler; actual cadence in samples.log)
+2026-09-09T04:37:58,105740571+00:00 cgroup_final current_bytes=13789605888 peak_bytes=20428468224 swap_current_bytes=0 events=low 0,high 0,max 0,oom 0,oom_kill 0,oom_group_kill 0,
+adding 'vllm/vllm_flash_attn/cute/named_barrier.py'
+adding 'vllm/vllm_flash_attn/cute/pack_gqa.py'
+adding 'vllm/vllm_flash_attn/cute/paged_kv.py'
+adding 'vllm/vllm_flash_attn/cute/pipeline.py'
+adding 'vllm/vllm_flash_attn/cute/seqlen_info.py'
+adding 'vllm/vllm_flash_attn/cute/sm100_hd256_2cta_fmha_backward.py'
+adding 'vllm/vllm_flash_attn/cute/sm100_hd256_2cta_fmha_backward_dkdvkernel.py'
+adding 'vllm/vllm_flash_attn/cute/sm100_hd256_2cta_fmha_backward_dqkernel.py'
+adding 'vllm/vllm_flash_attn/cute/sm100_hd256_2cta_fmha_forward.py'
+adding 'vllm/vllm_flash_attn/cute/sm90_config_search.py'
+adding 'vllm/vllm_flash_attn/cute/softmax.py'
+adding 'vllm/vllm_flash_attn/cute/testing.py'
+adding 'vllm/vllm_flash_attn/cute/tile_scheduler.py'
+adding 'vllm/vllm_flash_attn/cute/topk_gather_kv.py'
+adding 'vllm/vllm_flash_attn/cute/utils.py'
+adding 'vllm/vllm_flash_attn/layers/rotary.py'
+adding 'vllm/vllm_flash_attn/ops/triton/rotary.py'
+adding 'vllm-0.1.dev2+gc29d90310.dist-info/licenses/LICENSE'
+adding 'vllm-0.1.dev2+gc29d90310.dist-info/METADATA'
+adding 'vllm-0.1.dev2+gc29d90310.dist-info/WHEEL'
+adding 'vllm-0.1.dev2+gc29d90310.dist-info/entry_points.txt'
+adding 'vllm-0.1.dev2+gc29d90310.dist-info/top_level.txt'
+adding 'vllm-0.1.dev2+gc29d90310.dist-info/RECORD'
+removing build/bdist.linux-aarch64/wheel
+Successfully built /home/bmarti44/.cache/glm53-flash/build-vllm-001/wheels/vllm-0.1.dev2+gc29d90310-cp312-cp312-linux_aarch64.whl
+2026-09-09T04:37:58,201429491+00:00 safety_artifact_verified name=samples.log sha256=9cfa80bb02fdeb9c8204c614c829cd7f2b92a7d32b7ac85327976f01888e8119 size=4132953
+2026-09-09T04:37:58,214014956+00:00 safety_artifact_verified name=kernel.log sha256=fb7851d04ade166b9c76ac6c75c9124ea026bdf216a24ecf13a394cde57f932c size=2986
+2026-09-09T04:37:58,220127463+00:00 SAFE_RUN end rc=0 killed=no (124=timeout, 137=SIGKILL/ENOMEM-adjacent)
+MemAvailable:   121379948 kB

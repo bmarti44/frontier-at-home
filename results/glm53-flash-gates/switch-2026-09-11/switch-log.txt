@@ -1,0 +1,31 @@
+== 2026-09-11T09:16:11Z status before
+{"active_profile":"qwen38-1m","schema_version":1,"state":"recorded"}
+== 2026-09-11T09:16:11Z switch glm53-1m
+{"pass":true,"required_gib":110.0,"mem_available_gib":114.441,"stable_samples_observed":3}
+Waiting for glm53-1m load: MemAvailable=27.50 GiB
+
+real	0m54.301s
+user	0m2.530s
+sys	0m1.011s
+rc=0
+== 2026-09-11T09:17:05Z status after glm53-1m
+{"active_profile":"glm53-1m","schema_version":1,"state":"recorded"}
+MemAvailable:   16706884 kB
+{"object":"list","data":[{"id":"glm-5.3-flash","object":"model","created":1789118225,"owned_by":"vllm","root":"/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp","parent":null,"max_model_len":262144,"permission":[{"id":"modelperm-9b9e9964e1c8351c","object":"model_permission","created":1789118225,"a
+== 2026-09-11T09:17:05Z unauthenticated chat must be rejected
+HTTP 200
+== 2026-09-11T09:17:05Z switch back qwen38-1m
+{"pass":true,"required_gib":100.0,"mem_available_gib":115.369,"stable_samples_observed":3}
+
+real	0m54.582s
+user	0m9.381s
+sys	0m4.030s
+rc=0
+== 2026-09-11T09:18:00Z status after qwen38-1m
+{"active_profile":"qwen38-1m","schema_version":1,"state":"recorded"}
+MemAvailable:   21574784 kB
+== 2026-09-11T09:18:13Z auth model check with qwen38-1m active (same ports GLM used)
+engine port 8013 unauthenticated chat: HTTP 200
+auth proxy port 8010 unauthenticated chat: HTTP 401
+127.0.0.1:8013 users:(("llama-server",pid=3516980,fd=33))
+127.0.0.1:8010 

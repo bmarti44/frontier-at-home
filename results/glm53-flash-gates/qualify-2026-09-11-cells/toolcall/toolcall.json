@@ -1,0 +1,1498 @@
+{
+  "suite": "toolcall-v1",
+  "pins_sha256": "286ed4b759d68ef5fc2d2fb4f53b9b6c52a7731ec290a5ef86fa3648631165ec",
+  "model": "glm-5.3-flash",
+  "base_url": "http://127.0.0.1:8015/v1",
+  "config_digest": "6a0e4cd6ffc522ebf21816ee141f49cfbe43c6ce6b2c63996e22232c21706bad",
+  "per_case": [
+    {
+      "id": "typed-string",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Reykjavík"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Reykjavík"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-ba6472466198f32b",
+        "object": "chat.completion",
+        "created": 1789108006,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-881b592a2cd18b60",
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"Reykjavík\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 176,
+          "total_tokens": 192,
+          "completion_tokens": 16,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "typed-integer",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "reserve_room",
+        "arguments": {
+          "attendees": 7,
+          "room": "Cedar"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "reserve_room",
+        "required_args": {
+          "room": "Cedar",
+          "attendees": 7
+        }
+      },
+      "response": {
+        "id": "chatcmpl-aba5c30d138e41d7",
+        "object": "chat.completion",
+        "created": 1789108013,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-bdb4406106bb174e",
+                  "type": "function",
+                  "function": {
+                    "name": "reserve_room",
+                    "arguments": "{\"attendees\": 7, \"room\": \"Cedar\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 185,
+          "total_tokens": 205,
+          "completion_tokens": 20,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "typed-boolean",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "set_light",
+        "arguments": {
+          "light": "porch",
+          "on": true
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "set_light",
+        "required_args": {
+          "light": "porch",
+          "on": true
+        }
+      },
+      "response": {
+        "id": "chatcmpl-a446ce7109372fe6",
+        "object": "chat.completion",
+        "created": 1789108015,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-a284611e2e5e93fe",
+                  "type": "function",
+                  "function": {
+                    "name": "set_light",
+                    "arguments": "{\"light\": \"porch\", \"on\": true}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 180,
+          "total_tokens": 199,
+          "completion_tokens": 19,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "typed-array",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "label_issue",
+        "arguments": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "label_issue",
+        "required_args": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        }
+      },
+      "response": {
+        "id": "chatcmpl-ad7e5e48846ce138",
+        "object": "chat.completion",
+        "created": 1789108016,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-b29071258a2dafe3",
+                  "type": "function",
+                  "function": {
+                    "name": "label_issue",
+                    "arguments": "{\"issue\": 418, \"labels\": [\"bug\", \"urgent\", \"backend\"]}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 195,
+          "total_tokens": 222,
+          "completion_tokens": 27,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "choose-weather-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Nairobi"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Nairobi"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-8ea0900d9c91c5b5",
+        "object": "chat.completion",
+        "created": 1789108024,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-954c8d3feb560522",
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"Nairobi\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 261,
+          "total_tokens": 274,
+          "completion_tokens": 13,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "choose-calendar-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_calendar_event",
+        "arguments": {
+          "start": "2026-09-03T14:30:00Z",
+          "title": "Design Review"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_calendar_event",
+        "required_args": {
+          "title": "Design Review",
+          "start": "2026-09-03T14:30:00Z"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-9aae89242effabba",
+        "object": "chat.completion",
+        "created": 1789108025,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-bee33c45455fe9c8",
+                  "type": "function",
+                  "function": {
+                    "name": "create_calendar_event",
+                    "arguments": "{\"start\": \"2026-09-03T14:30:00Z\", \"title\": \"Design Review\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 278,
+          "total_tokens": 310,
+          "completion_tokens": 32,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "parallel-weather",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Oslo"
+        },
+        "tool_call_count": 2
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Oslo"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-899d0da70b704b22",
+        "object": "chat.completion",
+        "created": 1789108028,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-bf051af6c0ff34a3",
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"Oslo\"}"
+                  }
+                },
+                {
+                  "id": "chatcmpl-tool-85519c7d6d5540f8",
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"Lima\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 181,
+          "total_tokens": 205,
+          "completion_tokens": 24,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "parallel-inventory",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "check_inventory",
+        "arguments": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        },
+        "tool_call_count": 2
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "check_inventory",
+        "required_args": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-b6d903d101044ef2",
+        "object": "chat.completion",
+        "created": 1789108030,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-a0e24fec628bd22c",
+                  "type": "function",
+                  "function": {
+                    "name": "check_inventory",
+                    "arguments": "{\"sku\": \"AX-10\", \"warehouse\": \"east\"}"
+                  }
+                },
+                {
+                  "id": "chatcmpl-tool-ae3c325a6264d2e1",
+                  "type": "function",
+                  "function": {
+                    "name": "check_inventory",
+                    "arguments": "{\"sku\": \"BQ-22\", \"warehouse\": \"west\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 200,
+          "total_tokens": 239,
+          "completion_tokens": 39,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "multi-turn-weather-final",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "id": "chatcmpl-93d7e2e397d24cdb",
+        "object": "chat.completion",
+        "created": 1789108032,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The current temperature in Kyoto is 18°C, with clear skies.",
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "stop_reason": 154827,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 199,
+          "total_tokens": 215,
+          "completion_tokens": 16,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "multi-turn-order-final",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "id": "chatcmpl-9dacb9aecf8967af",
+        "object": "chat.completion",
+        "created": 1789108034,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "Order A-900 has been **shipped** and is expected to arrive on **August 22, 2026**.",
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "stop_reason": 154827,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 202,
+          "total_tokens": 230,
+          "completion_tokens": 28,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "no-tool-opinion",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "id": "chatcmpl-8b241ace363431d9",
+        "object": "chat.completion",
+        "created": 1789108036,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "\"Hello\" sounds friendlier. It's warm, casual, and universally used in everyday conversation, while \"Greetings\" feels more formal or ceremonial — like something you'd hear in a letter, a game, or a very official setting.",
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "stop_reason": 154827,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 177,
+          "total_tokens": 227,
+          "completion_tokens": 50,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "no-tool-translation",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "id": "chatcmpl-bd8c5dee521a1da2",
+        "object": "chat.completion",
+        "created": 1789108039,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "\"Good morning\" in Spanish is **\"Buenos días\"**.\n\nYou're right that none of my available tools (order lookup and weather) can handle translation, so I answered directly.",
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "stop_reason": 154827,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 223,
+          "total_tokens": 264,
+          "completion_tokens": 41,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "long-context-ticket",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_ticket",
+        "arguments": {
+          "component": "checkout-api",
+          "severity": 2,
+          "title": "Payments timeout"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_ticket",
+        "required_args": {
+          "title": "Payments timeout",
+          "severity": 2,
+          "component": "checkout-api"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-b28d67fd6f753056",
+        "object": "chat.completion",
+        "created": 1789108042,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-b491647c585008a1",
+                  "type": "function",
+                  "function": {
+                    "name": "create_ticket",
+                    "arguments": "{\"component\": \"checkout-api\", \"severity\": 2, \"title\": \"Payments timeout\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 253,
+          "total_tokens": 279,
+          "completion_tokens": 26,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "long-context-reference",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "track_shipment",
+        "arguments": {
+          "reference": "ZX-8841-Q"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "track_shipment",
+        "required_args": {
+          "reference": "ZX-8841-Q"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-97b7a5945ff82b64",
+        "object": "chat.completion",
+        "created": 1789108044,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-ae2e83ccc6363848",
+                  "type": "function",
+                  "function": {
+                    "name": "track_shipment",
+                    "arguments": "{\"reference\": \"ZX-8841-Q\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 224,
+          "total_tokens": 242,
+          "completion_tokens": 18,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "nested-json-shipment",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_shipment",
+        "arguments": {
+          "package": {
+            "dimensions_cm": {
+              "height": 10,
+              "length": 30,
+              "width": 20
+            },
+            "weight_kg": 2.5
+          },
+          "recipient": {
+            "address": {
+              "city": "London",
+              "country": "GB",
+              "line1": "12 St James Square",
+              "postal_code": "SW1Y 4LB"
+            },
+            "name": "Ada Lovelace"
+          }
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_shipment",
+        "required_args": {
+          "recipient": {
+            "name": "Ada Lovelace",
+            "address": {
+              "line1": "12 St James Square",
+              "city": "London",
+              "postal_code": "SW1Y 4LB",
+              "country": "GB"
+            }
+          },
+          "package": {
+            "dimensions_cm": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            },
+            "weight_kg": 2.5
+          }
+        }
+      },
+      "response": {
+        "id": "chatcmpl-b1c3c6e8e24e4d1d",
+        "object": "chat.completion",
+        "created": 1789108046,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-8dbb4834487c09bd",
+                  "type": "function",
+                  "function": {
+                    "name": "create_shipment",
+                    "arguments": "{\"package\": {\"dimensions_cm\": {\"height\": 10, \"length\": 30, \"width\": 20}, \"weight_kg\": 2.5}, \"recipient\": {\"address\": {\"city\": \"London\", \"country\": \"GB\", \"line1\": \"12 St James Square\", \"postal_code\": \"SW1Y 4LB\"}, \"name\": \"Ada Lovelace\"}}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 392,
+          "total_tokens": 487,
+          "completion_tokens": 95,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "nested-json-filter",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "search_products",
+        "arguments": {
+          "filter": {
+            "category": "laptops",
+            "features": [
+              "wifi6",
+              "backlit-keyboard"
+            ],
+            "price": {
+              "currency": "USD",
+              "max": 1500,
+              "min": 800
+            }
+          }
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "search_products",
+        "required_args": {
+          "filter": {
+            "category": "laptops",
+            "price": {
+              "min": 800,
+              "max": 1500,
+              "currency": "USD"
+            },
+            "features": [
+              "wifi6",
+              "backlit-keyboard"
+            ]
+          }
+        }
+      },
+      "response": {
+        "id": "chatcmpl-a0e42d85fe1f6dbd",
+        "object": "chat.completion",
+        "created": 1789108051,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-81f468176adfcf8c",
+                  "type": "function",
+                  "function": {
+                    "name": "search_products",
+                    "arguments": "{\"filter\": {\"category\": \"laptops\", \"features\": [\"wifi6\", \"backlit-keyboard\"], \"price\": {\"currency\": \"USD\", \"max\": 1500, \"min\": 800}}}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 280,
+          "total_tokens": 333,
+          "completion_tokens": 53,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "enum-unit",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_forecast",
+        "arguments": {
+          "city": "Toronto",
+          "unit": "fahrenheit"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_forecast",
+        "required_args": {
+          "city": "Toronto",
+          "unit": "fahrenheit"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-8ebc2fe5a9ddd202",
+        "object": "chat.completion",
+        "created": 1789108055,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-b8b20c0f0869b66c",
+                  "type": "function",
+                  "function": {
+                    "name": "get_forecast",
+                    "arguments": "{\"city\": \"Toronto\", \"unit\": \"fahrenheit\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 195,
+          "total_tokens": 215,
+          "completion_tokens": 20,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "enum-priority",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_task",
+        "arguments": {
+          "priority": "high",
+          "title": "Rotate signing key"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_task",
+        "required_args": {
+          "title": "Rotate signing key",
+          "priority": "high"
+        }
+      },
+      "response": {
+        "id": "chatcmpl-8af9e5b8a9dc258e",
+        "object": "chat.completion",
+        "created": 1789108057,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-9a09f9f2c89c2165",
+                  "type": "function",
+                  "function": {
+                    "name": "create_task",
+                    "arguments": "{\"priority\": \"high\", \"title\": \"Rotate signing key\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 194,
+          "total_tokens": 214,
+          "completion_tokens": 20,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "choose-email-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "send_email",
+        "arguments": {
+          "body": "Release can proceed.",
+          "subject": "Build green",
+          "to": "dev@example.com"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "send_email",
+        "required_args": {
+          "to": "dev@example.com",
+          "subject": "Build green",
+          "body": "Release can proceed."
+        }
+      },
+      "response": {
+        "id": "chatcmpl-af0832fb843d203f",
+        "object": "chat.completion",
+        "created": 1789108058,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-8bbeda8d5e06ba85",
+                  "type": "function",
+                  "function": {
+                    "name": "send_email",
+                    "arguments": "{\"body\": \"Release can proceed.\", \"subject\": \"Build green\", \"to\": \"dev@example.com\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 285,
+          "total_tokens": 315,
+          "completion_tokens": 30,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    },
+    {
+      "id": "typed-composite",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "deploy_service",
+        "arguments": {
+          "dry_run": true,
+          "notify": [
+            "alice",
+            "bob"
+          ],
+          "replicas": 3,
+          "service": "ledger",
+          "version": "v4.2"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "deploy_service",
+        "required_args": {
+          "service": "ledger",
+          "version": "v4.2",
+          "replicas": 3,
+          "dry_run": true,
+          "notify": [
+            "alice",
+            "bob"
+          ]
+        }
+      },
+      "response": {
+        "id": "chatcmpl-88003ae238cd769d",
+        "object": "chat.completion",
+        "created": 1789108061,
+        "model": "glm-5.3-flash",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-b410ef6c9a2f560c",
+                  "type": "function",
+                  "function": {
+                    "name": "deploy_service",
+                    "arguments": "{\"dry_run\": true, \"notify\": [\"alice\", \"bob\"], \"replicas\": 3, \"service\": \"ledger\", \"version\": \"v4.2\"}"
+                  }
+                }
+              ],
+              "reasoning": null
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "stop_reason": 154829,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev2+gc29d90310-20692dd8",
+        "usage": {
+          "prompt_tokens": 243,
+          "total_tokens": 289,
+          "completion_tokens": 46,
+          "prompt_tokens_details": null,
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "error": null
+    }
+  ],
+  "passed": 20,
+  "total": 20,
+  "score": 1.0
+}
