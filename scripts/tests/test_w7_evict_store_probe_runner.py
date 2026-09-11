@@ -19,7 +19,12 @@ RUNNER = ROOT / "scripts/93_run_w7_evict_store_probe.py"
 SPEC = importlib.util.spec_from_file_location("w7_evict_store_runner", RUNNER)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(MODULE)
+# The W7 runner binds to the Spark production checkout at import time;
+# off-host (CI) the campaign base is absent, so the whole module skips.
+try:
+    SPEC.loader.exec_module(MODULE)
+except FileNotFoundError as error:
+    raise unittest.SkipTest(f"Spark-bound campaign runner: {error}") from error
 
 
 @unittest.skipUnless(
