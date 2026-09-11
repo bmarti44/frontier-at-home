@@ -51,6 +51,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--api-key-file", type=Path)
     parser.add_argument("--request-timeout", type=int, default=300)
+    parser.add_argument("--model-id", help="served model id to use when /v1/models lists several aliases")
     args = parser.parse_args()
     args.base_url = args.base_url.rstrip("/")
     if not args.base_url:
@@ -228,7 +229,7 @@ class Client:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
-    def get_model(self) -> tuple[str, Any]:
+    def get_model(self, model_id: str | None = None) -> tuple[str, Any]:
         request = urllib.request.Request(
             self.base_url + "/v1/models", headers=self.headers(), method="GET"
         )
@@ -238,7 +239,11 @@ class Client:
         try:
             document = json.loads(raw)
             data = document["data"]
-            model = data[0]["id"] if len(data) == 1 else None
+            ids = [entry["id"] for entry in data]
+            if model_id is not None:
+                model = model_id if model_id in ids else None
+            else:
+                model = ids[0] if len(ids) == 1 else None
         except (UnicodeDecodeError, json.JSONDecodeError, KeyError, IndexError, TypeError) as error:
             raise RuntimeError("invalid /v1/models response") from error
         if status != 200 or not isinstance(model, str) or not model:
@@ -317,7 +322,7 @@ def main() -> int:
         if not rows:
             raise RuntimeError("no cases selected")
         client = Client(args.base_url, load_api_key(args.api_key_file), args.request_timeout)
-        model, models_response = client.get_model()
+        model, models_response = client.get_model(args.model_id) if args.model_id else client.get_model()
         args.out.mkdir(parents=True, exist_ok=True)
         transcript_path = args.out / "transcripts.jsonl"
         summary_path = args.out / "summary.json"

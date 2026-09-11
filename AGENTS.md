@@ -323,3 +323,5 @@ For a new model family:
    auth-rejection, and reboot-restore tests.
 9. Preserve a reviewed `PASS`, `FAIL`, `NO_RESULT`, or `NO_GO`; never substitute
    an optimistic narrative for a terminal measurement.
+10. Prove speed and fidelity with `scripts/94_qualify_profile.py --profile <id>`
+    (docs/QUALIFY-PROFILE.md); every README number comes from that bundle.
