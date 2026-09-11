@@ -1,0 +1,86 @@
+name: CI
+
+# Runs what the local git hooks and AGENTS.md require before a merge:
+#   1. verification/MANIFEST.sha256 matches the tree (byte-frozen harnesses).
+#   2. Secret lint (pinned gitleaks + scripts/lint_secrets.sh) over every
+#      commit in the pushed range, exactly like the pre-push hook.
+#   3. The hardware-free test suite under scripts/tests.
+# Nothing here loads a model or needs the Spark; measurements stay in
+# results/ bundles produced by scripts/94_qualify_profile.py.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.24.3
+  GITLEAKS_SHA256: 9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c
+
+jobs:
+  integrity:
+    name: manifest + secret lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Harness manifest matches the tree
+        run: sha256sum --check --quiet verification/MANIFEST.sha256
+
+      - name: Install pinned gitleaks
+        run: |
+          set -euo pipefail
+          curl -fsSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check --quiet
+          tar -xzf gitleaks.tar.gz gitleaks
+          install -m 0755 gitleaks bin/gitleaks
+          rm -f gitleaks gitleaks.tar.gz
+          bin/gitleaks version
+
+      - name: Secret lint self-test
+        run: scripts/lint_secrets.sh --self-test
+
+      - name: Secret lint over the pushed range
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Same stdin shape git gives the pre-push hook; an all-zero base
+          # (branch creation) makes the lint walk the whole history.
+          printf 'refs/heads/ci %s refs/heads/ci %s\n' "$HEAD_SHA" "$BASE_SHA" \
+            | scripts/lint_secrets.sh --pre-push
+
+  tests:
+    name: hardware-free test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            pytest==9.1.1 \
+            numpy==2.5.3 \
+            tokenizers==0.22.1 \
+            pyarrow==21.0.0 \
+            gguf==0.19.0
+
+      - name: Run scripts/tests
+        run: python -m pytest -q scripts/tests -p no:cacheprovider
