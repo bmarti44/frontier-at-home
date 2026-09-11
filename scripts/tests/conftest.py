@@ -46,6 +46,36 @@ SPARK_BOUND = {
         "journal witness bound to the Spark's trusted record",
     "test_dsv4_context_graduation.py::ContextProbeTests::test_journal_witness_is_process_linked_and_tamper_evident":
         "journal witness bound to the Spark's trusted record",
+    "test_dsv4_context_graduation.py::ContextProbeTests::test_freeze_verification_uses_git_tree_and_rejects_added_files":
+        "git history of the production checkout",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_collector_accepts_exact_owner_dsv4_safety_envelope":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_collector_accepts_exact_retained_authority_and_first_round":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_collector_independently_verifies_committed_randomness_and_arm_seed":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_collector_rejects_randomness_and_seed_mutations":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_collects_exact_twenty_safe_matched_records":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_rejects_a_swapped_deepseek_weight_generation":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_rejects_coherently_inflated_prompt_fields_without_raw_log_authority":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_rejects_inflated_usage_and_unbound_artifacts":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_rejects_live_environment_command_and_model_identity_drift":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_rejects_missing_memory_and_duplicate_server_identity":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_rejects_prefixed_or_killed_safety_marker":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_rejects_short_geometry_and_wrong_glm_profile":
+        "pinned nvm node binary for the drand verifier",
+    "test_matched_evidence.py::MatchedEvidenceTests::test_rejects_unequal_prompts_and_wrong_runtime_model":
+        "pinned nvm node binary for the drand verifier",
+    "test_w7_resume_production_scorer.py::W7ProductionScorerTest::test_passing_equivalence":
+        "pinned nvm node binary for the drand verifier",
     "test_dsv_matched_signal_cleanup.py::DsvMatchedSignalCleanupTests::test_term_int_and_hup_stop_the_exact_transient_unit":
         "/run/lock/frontier-at-home/inference.lock",
     "test_foundation_user_runtime.py::FoundationRuntimeTests::test_execute_arm_writes_fixed_baseline_from_production_probe":
