@@ -125,28 +125,51 @@ being qualified rather than a secondary fallback.
 
 ## Current model status and measurements
 
-Status below is current as of 2026-08-19. Four models are qualified on the
-CUDA reference host: Qwen 3.8 27B (`qwen38-1m` is the current serving default,
-owner decision 2026-08-21), DeepSeek V4 Flash (the safe fallback the switch
-restores to), and Laguna S 2.1, GLM-5.2 and GLM-5.3 Flash as switchable engines. Every other
-model/backend combination is N/A until someone qualifies it. A dash means this repository
-does not yet contain a qualifying measurement — it does not mean zero. Context
-size materially changes TTFT and prefill, so every number includes its
-measured prompt size. These are single-user measurements, not concurrency
-throughput. Performance cells use the fastest measured production path with
-diagnostics disabled. Evidence-mode, control-configuration, instrumented,
-smoke, and one-token diagnostic timings are kept in the evidence archive but
-never substituted for headline model speed.
+Five models are qualified on the CUDA reference host (NVIDIA GB10 DGX Spark,
+128 GB unified memory). `qwen38-1m` is the serving default (owner decision
+2026-08-21); the others are switchable engines. Every other model/backend
+combination is N/A until someone qualifies it. A dash means this repository
+does not yet contain a qualifying measurement, not zero. Every number carries
+its measured prompt size because context changes TTFT and prefill; all cells
+are single-user, diagnostics-off, fastest measured production path. One
+command reproduces a row: `scripts/94_qualify_profile.py --profile <model>/<profile>`
+([docs/QUALIFY-PROFILE.md](docs/QUALIFY-PROFILE.md)).
 
-### Claim progress
+### Speed
 
-| Model | Hardware / format | Context | Prefill t/s | Decode t/s | TTFT | Warm / short-prompt TTFT | Accuracy / fidelity | Current result, limitations, and caveats |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| **DeepSeek V4 Flash** | NVIDIA GB10 DGX Spark; UD-Q2_K_XL; llama.cpp | **1,000,044 tokens processed** with a `1,048,576` cap (qualified single-slot profile); installed default serves a `1,048,576` cap split across two 512k slots | **484.989 tok/s @ 4K**; **472.834 tok/s @ 16K**; **445.501 tok/s @ 28K** | **18.615 tok/s @ 4K**; **18.043 tok/s @ 16K**; **17.306 tok/s @ 28K** | **8.555 s @ 4K**; **34.761 s @ 16K**; **64.478 s @ 28K** | **0.421 s @ 52-token prompt**; agent-shaped cached turns process ~17 tokens ([agent-gate](results/agent-gate-2026-08-01.json)) | GSM8K holdout **97.00%** (97/100); MMLU-Pro holdout **74.09%** (183/247); HumanEval **73.78%** (121/164); composite **81.62%** | Qualified CUDA default; measurements predate the 2026-08-09 weights swap to the 0731 release — see the [DeepSeek notes](#deepseek-v4-flash-notes) below. Speed values are the 2026-08-01 five-rep suite on the installed 1M-fast profile (ub/b=2048, two 512k slots, owner-accepted 8 GiB watchdog floor). Direct 1M retrieval, negative control, generation, and safety checks passed on the single-slot ub=256 profile, which remains available via the engine switch; the installed default caps a single request at 512k tokens. The displayed latency/throughput measurements are the ≤28K suite, not a 1M speed claim. |
-| **GLM-5.2** | NVIDIA GB10 DGX Spark; full 256-expert model, dense Q4_0 + routed IQ2_XXS, direct-slot expert cache (owner-accepted candidate 2026-08-18) | Fast profile configured for **32,768 tokens**; direct 1M not yet qualified | — (28K bench cell not strict-valid: GLM THINKING token accounting; measured ~41 tok/s recorded in [the qualification bundle](results/glm52-gates/fullq4-qualification-2026-08-18/summary.md)) | **3.28 tok/s** (qualified diagnostics-off bench, shallow context); 28K cell — (same caveat; measured 2.27–2.77) | — | **21.5 s** warm short-prompt (second rep; residual cache warming in rep 1) | Full 100-case suite: mean NLL **0.5139**, hosted-reference top-1 **82.9%** (full-Q8 reference: 0.4672 / 83.4%) | Switchable production candidate (`scripts/52_engine_switch.sh glm52`), not the serving default. Decode improved 2.33→3.28 (shallow) via direct-slot dispatch + Q4_0 dense; fidelity delta owner-accepted. Expert prune, prefetch, GPU directory, and two kernel widenings were measured and rejected/neutral (see results/glm52-gates/). Remaining levers are multi-day kernel projects; parity with DSV4 is recorded as not achievable on this hardware. Spark-only: the engine is a repo-locally patched ds4 CUDA binary with no portable equivalent. |
-| **Qwen 3.8 27B** | NVIDIA GB10 DGX Spark; Q4_K_M GGUF + mmproj-f16; mainline llama.cpp b10488 | Fast profile configured for **32,768 tokens**; 1M profile (`qwen38-1m`) serves 1,048,576 as four native 262K slots | **698.7 tok/s @ 28K** | **17.46 tok/s @ 0-ctx**; **26.71 tok/s @ 28K** (production MTP profile n-max 8, p-min 0.6 — code-tuned, greedy-exact-validated) | **49.75 s @ 28K** | **0.39 s** short prompt | GSM8K holdout **98.00%** (98/100); MMLU-Pro holdout **85.02%** (210/247); HumanEval **79.27%** (130/164); MMMU-val-100 vision **64%** (0 transport errors) — reasoning effort low, 16384-token budget | Qualified switchable engine (`scripts/52_engine_switch.sh qwen38` / `qwen38-1m`). All cells strict-valid diagnostics-off ([speed](results/qwen38-gates/speed-2026-08-18/), [tune](results/qwen38-gates/tune-2026-08-19/summary.md), [accuracy](results/qwen38-gates/accuracy-2026-08-18/summary.md), [vision](results/qwen38-gates/vision-2026-08-19/summary.md)). MTP is byte-identical under greedy; deep-context decode exceeds shallow because draft acceptance rises on fixture continuations. |
-| **Laguna S 2.1** | NVIDIA GB10 DGX Spark; UD-Q4_K_XL GGUF (3 shards) + DFlash BF16 draft; poolside llama.cpp fork `laguna` @ 06f8cebd | Qualified profile serves **393,216 tokens** as four native 98,304-token slots (1M native declined: measured 52.8 KiB/token f16 KV does not fit beside 73.4 GB weights; 524,288 breached the 8 GiB watchdog floor under sustained load) | **622.4 tok/s @28K** | **25.55 tok/s @0**; **27.52 tok/s @28K** (strict cells on the switch-launched production shape, DFlash n-max 4; raw decode without the draft is 20.97 @28K; code probes 28-45 tok/s acceptance-dependent) | **57.16 s @28K** | **0.60 s** short-prompt | GSM8K holdout **86.00%** (86/100); MMLU-Pro holdout **63.56%** (157/247; 64 of 90 misses are 16,384-token max-thinking truncations); HumanEval **89.63%** (147/164 — best on this host, +10.4 over the qwen default); tool-call probe 14/20 vs qwen38-1m 19/20 on the same harness | Qualified CUDA **switchable engine — NOT the serving default** (owner decision 2026-08-21; qwen38-1m remains default). Switch in with `sudo scripts/52_engine_switch.sh laguna`, back with `... qwen38-1m`. Thinking `max` is the model default and self-budgets: math/knowledge suites are truncation-sensitive at the repo's 16,384-token budget; code strength is the qualification case. Evidence: results/laguna-gates/ (G1-G5). |
-| **GLM-5.3 Flash** | NVIDIA GB10 DGX Spark; EXL3 pack (2-bit routed experts + 3/4-bit dense, fp8 sparse-MLA KV); vLLM fork `878631b6` + vllm-exl3 0.4.2 + exllamav3 1.4.9 (`native-runtime-003`) | Profile `glm53-1m` serves **1,048,576 tokens** as four native 262,144-token slots; direct four-slot fill of **1,000,560 tokens** passed with 4/4 needles and a 13.38 GiB low point (10 GiB floor) | **512.5 tok/s @ 28K** cold prefix (warm prefix-cache ~3,400) | **20.06 tok/s @ 0-ctx**; **19.91 tok/s @ 28K** (no MTP: the SM120 sparse-MLA decode kernel has no shape for the MTP layer) | **59.05 s @ 28K** | **5.06 s** short prompt | Tool-call probe **20/20**; MMMU-val-100 vision **73%**; dNLL vs BF16 teacher logits **0.079** (upper-95 0.106; top-1 loss 1.53 pp over 25 x 2,047 positions) — fails the repo's 0.01 gate, which no 2-bit pack of a 320B model can meet in 120 GiB; GSM8K/MMLU-Pro/HumanEval not run (no GLM chat encoder registered) | Optional CUDA **switchable engine — NOT the serving default**. Decode at 0-ctx beats qwen38-1m (17.46); decode at 28K and prefill are below it. 30-minute soak passed (136 requests, 0 errors). One-command evidence: `scripts/94_qualify_profile.py --profile glm-5.3-flash/cuda-spark-128g-1m` -> [results/glm53-flash-gates/qualify-2026-09-11/](results/glm53-flash-gates/qualify-2026-09-11/SUMMARY.md); status in [STATUS.md](results/glm53-flash-gates/STATUS.md). |
+Prefill and TTFT are at a 28,672-token prompt; decode is tokens per second at
+an empty context and at 28K; short-prompt TTFT is the warm, ~50-token case.
+
+| Model | Format · engine | Context served | Prefill tok/s @28K | Decode tok/s @0 / @28K | TTFT @28K | Short-prompt TTFT |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| **Qwen 3.8 27B** (default) | Q4_K_M GGUF + mmproj · llama.cpp b10488, MTP draft | 1,048,576 as four 262K slots | **698.7** | **17.46** / **26.71** | 49.75 s | **0.39 s** |
+| **GLM-5.3 Flash** | EXL3 2-bit experts, fp8 KV · vLLM fork + vllm-exl3 | 1,048,576 as four 262K slots (1,000,560 filled, 4/4 needles) | 512.5 cold (~3,400 warm prefix) | **20.06** / 19.91 | 59.05 s | 5.06 s |
+| **Laguna S 2.1** | UD-Q4_K_XL GGUF + DFlash draft · poolside llama.cpp | 393,216 as four 98K slots | 622.4 | **25.55** / **27.52** | 57.16 s | 0.60 s |
+| **DeepSeek V4 Flash** | UD-Q2_K_XL GGUF · llama.cpp | 1,048,576 as two 512K slots (1,000,044 processed single-slot) | 445.5 (485.0 @4K) | 18.6 @4K / 17.31 | 64.48 s | 0.42 s |
+| **GLM-5.2** | dense Q4_0 + routed IQ2_XXS · patched ds4 CUDA (Spark-only) | 32,768 (1M not qualified) | — (28K cell not strict-valid; ~41 measured) | 3.28 shallow / 2.3–2.8 (not strict) | — | 21.5 s |
+
+### Accuracy and fidelity
+
+Task suites use the repo holdouts at reasoning effort low with a 16,384-token
+budget; vision is MMMU-val-100 in chat mode; the tool-call probe is 20 cases.
+Teacher fidelity is teacher-forced NLL against a reference, a diagnostic that is
+not task accuracy.
+
+| Model | GSM8K holdout | MMLU-Pro holdout | HumanEval | Vision MMMU-100 | Tool-call | Teacher fidelity |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| **Qwen 3.8 27B** (default) | **98.00%** (98/100) | **85.02%** (210/247) | 79.27% (130/164) | 64% | 19/20 | — |
+| **GLM-5.3 Flash** | not run | not run | not run | **73%** | **20/20** | dNLL **0.079** (upper-95 0.106), top-1 −1.53 pp vs BF16 teacher logits over 25 × 2,047 positions; fails the 0.01 gate |
+| **Laguna S 2.1** | 86.00% (86/100) | 63.56% (157/247) | **89.63%** (147/164) | — | 14/20 | — |
+| **DeepSeek V4 Flash** | 97.00% (97/100) | 74.09% (183/247) | 73.78% (121/164) | — | — | — |
+| **GLM-5.2** | — | — | — | — | — | mean NLL 0.5139, top-1 82.9% vs hosted FP8 over 100 cases (full-Q8 reference: 0.4672 / 83.4%) |
+
+### Status and caveats
+
+- **Qwen 3.8 27B** — serving default (`sudo scripts/52_engine_switch.sh qwen38-1m`). All cells strict-valid ([speed](results/qwen38-gates/speed-2026-08-18/), [tune](results/qwen38-gates/tune-2026-08-19/summary.md), [accuracy](results/qwen38-gates/accuracy-2026-08-18/summary.md), [vision](results/qwen38-gates/vision-2026-08-19/summary.md)); the kit reproduces the row ([kit check](results/qwen38-gates/qualify-2026-09-11-kit-check/SUMMARY.md)). MTP is byte-identical under greedy; 28K decode beats 0-ctx because draft acceptance rises on fixture continuations.
+- **GLM-5.3 Flash** — optional engine (`sudo scripts/52_engine_switch.sh glm53-1m`), not the default. Decode at 0-ctx beats Qwen; decode at 28K, prefill, and short-prompt TTFT are below it because the MTP layer cannot run on this stack (no SM120 sparse-MLA decode kernel shape for it). No 2-bit pack of a 320B model meets the 0.01 dNLL gate in 120 GiB. GSM8K/MMLU-Pro/HumanEval need a GLM chat encoder, not yet registered. 30-minute soak passed (136 requests, 0 errors). Evidence: [qualify-2026-09-11](results/glm53-flash-gates/qualify-2026-09-11/SUMMARY.md), [STATUS.md](results/glm53-flash-gates/STATUS.md).
+- **Laguna S 2.1** — switchable engine (`sudo scripts/52_engine_switch.sh laguna`). Thinking `max` is the model default and self-budgets, so math/knowledge suites are truncation-sensitive at 16,384 tokens (64 of 90 MMLU-Pro misses); code strength is the qualification case. 1M native declined: 52.8 KiB/token f16 KV does not fit beside 73.4 GB of weights. Evidence: results/laguna-gates/ (G1-G5).
+- **DeepSeek V4 Flash** — the switch's safe fallback (`sudo scripts/52_engine_switch.sh dsv4`). The endpoint has served the [0731 release](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731) since 2026-08-09; the numbers above are the audited pre-0731 baseline ([results/DECISION.md](results/DECISION.md)), and 0731 itself is not re-qualified for speed, soak, holdout, or context ([staging records](results/dsv4-0731-staging/)). Direct 1M retrieval and safety checks passed on the single-slot profile; the installed default caps one request at 512K.
+- **GLM-5.2** — switchable candidate (`sudo scripts/52_engine_switch.sh glm52`), Spark-only patched engine. Decode went 2.33 → 3.28 tok/s with direct-slot dispatch and Q4_0 dense; parity with DeepSeek is recorded as not achievable on this hardware ([qualification bundle](results/glm52-gates/fullq4-qualification-2026-08-18/summary.md), fidelity [G4-bench](results/glm52-gates/G4-bench.json)).
 
 Production traffic follows
 `Tailscale Serve → Caddy :8010 → authenticated streaming helper :8014 → engine :8013`.
@@ -154,41 +177,6 @@ The engine port is set by `scripts/52_engine_switch.sh` (`PORT=8013`). Listeners
 are loopback-only, Funnel is forbidden, credentials are stripped before the
 engine, and a watchdog protects unified CPU/GPU memory from a whole-system
 freeze.
-
-### DeepSeek V4 Flash notes
-
-The serving endpoint has loaded the
-[0731 release](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
-(unsloth UD-Q2_K_XL, revision `fbbb5b93`) since 2026-08-09; every measurement in
-the table above predates that swap and is the incumbent baseline, not a 0731
-result. 0731 is the installed default **and** it is not qualified — both are
-true: bring-up, weight integrity, token parity, golden correctness (11/11), and
-dev-split accuracy re-runs are recorded, but speed, soak, holdout, and context
-qualification have not been re-run. Key records:
-
-- [Bring-up + accuracy comparison](results/dsv4-0731-staging/bringup-llamacpp-2026-08-09.json)
-  — GSM8K dev at parity; MMLU-Pro dev showed a point-estimate regression under
-  the non-thinking contract this reasoning model is not meant to run in.
-- Thinking is the 0731 serving contract: the endpoint emits `reasoning_content`
-  unconditionally, so `scripts/31_bench_accuracy.py` defaults to
-  `--thinking-mode thinking`; reproducing a pre-0731 baseline requires
-  `--thinking-mode chat` explicitly.
-- **No verified local rollback path exists.** The pre-0731 anchors were deleted
-  at owner instruction; re-fetch digests live in the git history of
-  `weights/unsloth-ud-q2_k_xl/manifest.json` — see
-  [the accounting record](results/dsv4-0731-staging/thinking-default-and-disk-2026-08-09.json).
-- A separate 0731 evaluation on the **ds4** engine arm (the fast ≤28K
-  alternative, not the serving path) is preserved in
-  [results/dsv4-0731-staging/comparison-2026-08-09.json](results/dsv4-0731-staging/comparison-2026-08-09.json);
-  the historical engine decision and its override are
-  [results/DECISION.md](results/DECISION.md) and
-  [results/DECISION-OVERRIDE.md](results/DECISION-OVERRIDE.md).
-
-DeepSeek task accuracy is the audited llama.cpp result in
-[results/DECISION.md](results/DECISION.md). GLM fidelity is the teacher-forced
-comparison with a hosted FP8 reference in
-[results/glm52-gates/G4-bench.json](results/glm52-gates/G4-bench.json) —
-diagnostic fidelity, not task accuracy or qualification.
 
 ### Other backends
 
@@ -253,9 +241,9 @@ The short version:
 7. Never load two large models together. Experimental GLM runs use hard cgroup
    limits, disabled swap, continuous memory sampling, and an emergency kill
    floor.
-8. Keep the authenticated endpoint and rollback behavior unchanged; DeepSeek
-   remains the default until another profile passes all quality, safety,
-   direct-1M, switching, and review gates.
+8. Keep the authenticated endpoint and rollback behavior unchanged; the
+   serving default only changes after a profile passes all quality, safety,
+   direct-1M, switching, and review gates and the owner promotes it.
 
 At the start of claimed work, agents set a persistent goal for the chosen model
 and backend with the goal tool already provided by their harness. No separate
@@ -265,8 +253,8 @@ The stable operator interface is:
 
 ```bash
 scripts/52_engine_switch.sh status --json
-sudo scripts/52_engine_switch.sh glm52
-sudo scripts/52_engine_switch.sh dsv4
+sudo scripts/52_engine_switch.sh glm53-1m
+sudo scripts/52_engine_switch.sh qwen38-1m
 ```
 
 Avoid routine reboots and repeated interactive privilege requests. Use the
