@@ -1,0 +1,54 @@
+{
+  "index": 9207,
+  "task_id": 9396,
+  "rendered_prompt_sha256": "09c7aa46b948744d0cc7fb6f39fda3c1954c674a8d7346c1cf098a245d04ccc6",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "D = N λ/2 = 120 × 6438Å /2 = 120×3.219e-5 cm = 0.00386 cm? Hmm 6438 Å = 6.438e-5 cm; half = 3.219e-5; ×120 = 0.003863 cm. Not in options. Maybe minima count differently: D = Nλ = 0.00773 cm. Yes option D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.136347144027241
+  },
+  "response": {
+    "id": "cmpl-8c3ef2c601135fe4",
+    "object": "text_completion",
+    "created": 1789150296,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "D = N λ/2 = 120 × 6438Å /2 = 120×3.219e-5 cm = 0.00386 cm? Hmm 6438 Å = 6.438e-5 cm; half = 3.219e-5; ×120 = 0.003863 cm. Not in options. Maybe minima count differently: D = Nλ = 0.00773 cm. Yes option D.</think>Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 185,
+      "total_tokens": 294,
+      "completion_tokens": 109,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

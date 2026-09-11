@@ -1,0 +1,56 @@
+{
+  "index": 847,
+  "task_id": 847,
+  "rendered_prompt_sha256": "679d4e6f7350be8c1419bbab02e5f4bda2e4f5fa5069841667352f767ec000ae",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Rate = 225 per year, 3 years = 675, total 975.</think>Interest per year = 3/4 × 300 = $225. Over 3 years: 3 × 225 = $675. Total = 300 + 675 = 975.\n\nAnswer: 975",
+  "finish_reason": "stop",
+  "expected": "975",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.9876955290092155
+  },
+  "response": {
+    "id": "cmpl-973bf6e24ecf0595",
+    "object": "text_completion",
+    "created": 1789146189,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Rate = 225 per year, 3 years = 675, total 975.</think>Interest per year = 3/4 × 300 = $225. Over 3 years: 3 × 225 = $675. Total = 300 + 675 = 975.\n\nAnswer: 975",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 76,
+      "total_tokens": 146,
+      "completion_tokens": 70,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>Brenda invested $300 into a scheme that accumulates simple interest at the rate of three-quarters of the original amount per year. How much in total will she have after 3 years?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|assistant|><think>"
+}

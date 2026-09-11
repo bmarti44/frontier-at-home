@@ -1,0 +1,56 @@
+{
+  "index": 188,
+  "task_id": 188,
+  "rendered_prompt_sha256": "cfd8dfb25d6af07a43e1fb54cd2ed85fd84f00efa12d4d47d01bfb38baa2acac",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Profit per bag = 30-20-2=8. 400/8=50.</think>Profit per bag = 30 − 20 − 2 = $8. Bags = 400 ÷ 8 = 50.\n\nAnswer: 50",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.2537823200109415
+  },
+  "response": {
+    "id": "cmpl-a2010f355670d154",
+    "object": "text_completion",
+    "created": 1789146348,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Profit per bag = 30-20-2=8. 400/8=50.</think>Profit per bag = 30 − 20 − 2 = $8. Bags = 400 ÷ 8 = 50.\n\nAnswer: 50",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 102,
+      "total_tokens": 156,
+      "completion_tokens": 54,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>A trader buys some bags of wheat from a farmer at a rate of $20 per bag. If it costs $2 to transport each bag from the farm to the warehouse, and the trader made a total profit of $400 after selling all the bags at a rate of $30 each, how many bags did he sell?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|assistant|><think>"
+}

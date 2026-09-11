@@ -1,0 +1,54 @@
+{
+  "index": 7572,
+  "task_id": 7755,
+  "rendered_prompt_sha256": "163e030fef67153e4cb0e9e2d6ed0b8a249305488bef255a631775de2115592c",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Covariance (population): mean x=2.5, y=3.5. deviations (−1.5,−0.5,0.5,1.5) both. products: 2.25+0.25+0.25+2.25=5, /4=1.25. Sample: 5/3=1.67. Ambiguous; likely population 1.25 → E.</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='E' expected='F'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.429681479989085
+  },
+  "response": {
+    "id": "cmpl-a6c13de9d5aae783",
+    "object": "text_completion",
+    "created": 1789150094,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Covariance (population): mean x=2.5, y=3.5. deviations (−1.5,−0.5,0.5,1.5) both. products: 2.25+0.25+0.25+2.25=5, /4=1.25. Sample: 5/3=1.67. Ambiguous; likely population 1.25 → E.</think>Answer: E",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 123,
+      "total_tokens": 220,
+      "completion_tokens": 97,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

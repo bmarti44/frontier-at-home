@@ -1,0 +1,98 @@
+{
+  "kind": "qualify-profile-config-evidence",
+  "profile_id": "glm-5.3-flash/cuda-spark-128g-1m",
+  "server_binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+  "files": [
+    {
+      "path": "/home/bmarti44/.cache/glm53-flash/native-runtime-003/runtime/bin/python3",
+      "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+    },
+    {
+      "path": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp/model.safetensors.index.json",
+      "sha256": "b473ab466d030fc5136161ef3cd4290fb5a920622889e1849aadcc422b1b0da0"
+    },
+    {
+      "path": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp/mtp-layer45-k2.safetensors",
+      "sha256": "bcef29485572f2a61358ff5e003cea8f73c6e19ef8cefe139346d6a2da3ff357"
+    },
+    {
+      "path": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp/config.json",
+      "sha256": "9720357b44c3eaf9b19f8aa501e313c864f888d2f3897babf2d213797992ca8d"
+    },
+    {
+      "path": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp/quantization_config.json",
+      "sha256": "7ac43594d7f85a80a232b8f79d117c9ec560a40c12fc6dfccf3dd82cc5c78eb4"
+    },
+    {
+      "path": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp/tokenizer.json",
+      "sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+    },
+    {
+      "path": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp/chat_template.jinja",
+      "sha256": "34d5ee66b12fa6446cdae131c352b8f68cd85369e0e6fda115583805fada3891"
+    }
+  ],
+  "argv": [
+    "-B",
+    "-m",
+    "vllm.entrypoints.openai.api_server",
+    "--model",
+    "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp",
+    "--served-model-name",
+    "glm-5.3-flash",
+    "default",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8013",
+    "--quantization",
+    "exl3",
+    "--load-format",
+    "instanttensor",
+    "--dtype",
+    "bfloat16",
+    "--max-model-len",
+    "262144",
+    "--max-num-seqs",
+    "4",
+    "--kv-cache-dtype",
+    "fp8",
+    "--kv-cache-memory-bytes",
+    "10600000000",
+    "--enable-chunked-prefill",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "glm47",
+    "--reasoning-parser",
+    "glm45",
+    "--worker-cls",
+    "glm53_worker.ReleaseLoadCacheWorker",
+    "--middleware",
+    "glm53_runtime_policy.MediaPolicyMiddleware",
+    "--middleware",
+    "glm53_runtime_policy.SplitTerminalSseMiddleware",
+    "--limit-mm-per-prompt",
+    "{\"image\":{\"count\":4,\"width\":512,\"height\":512},\"video\":{\"count\":1,\"num_frames\":16,\"width\":512,\"height\":512}}",
+    "--media-io-kwargs",
+    "{\"video\":{\"num_frames\":16,\"max_frames\":16}}",
+    "--mm-processor-kwargs",
+    "{\"max_frames\":16,\"max_frame_count_dynamic\":16}",
+    "--default-chat-template-kwargs",
+    "{\"reasoning_effort\":\"low\",\"clear_thinking\":true}",
+    "--mm-processor-cache-gb",
+    "0",
+    "--skip-mm-profiling",
+    "--kernel-config",
+    "{\"enable_flashinfer_autotune\":false}",
+    "--logprobs-mode",
+    "raw_logprobs",
+    "--shutdown-timeout",
+    "10",
+    "--max-num-batched-tokens",
+    "2048",
+    "--long-prefill-token-threshold",
+    "1024",
+    "--compilation-config",
+    "{\"mode\":0,\"cudagraph_mode\":\"FULL_DECODE_ONLY\"}"
+  ]
+}

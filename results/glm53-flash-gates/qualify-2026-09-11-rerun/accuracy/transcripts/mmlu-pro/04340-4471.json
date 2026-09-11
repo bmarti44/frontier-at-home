@@ -1,0 +1,54 @@
+{
+  "index": 4340,
+  "task_id": 4471,
+  "rendered_prompt_sha256": "8d1f546b9f277972fb577941464070150f3686e249c7e95e10c2952d69fc6a6b",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Per ton (10^6 g): Al2O3 300 kg → mol 300/102=2.94 → CaCO3 6×2.94=17.65 mol ×100=1765 kg; SiO2 550/60=9.17 → 3×9.17=27.5 mol ×100=2750 kg. Total ~4515 kg ≈ 4.5×10^6 g. Closest A (4.80×10^6).</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='A' expected='D'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.521365013031755
+  },
+  "response": {
+    "id": "cmpl-807a480c22ee3de3",
+    "object": "text_completion",
+    "created": 1789147606,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Per ton (10^6 g): Al2O3 300 kg → mol 300/102=2.94 → CaCO3 6×2.94=17.65 mol ×100=1765 kg; SiO2 550/60=9.17 → 3×9.17=27.5 mol ×100=2750 kg. Total ~4515 kg ≈ 4.5×10^6 g. Closest A (4.80×10^6).</think>Answer: A",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 311,
+      "total_tokens": 424,
+      "completion_tokens": 113,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

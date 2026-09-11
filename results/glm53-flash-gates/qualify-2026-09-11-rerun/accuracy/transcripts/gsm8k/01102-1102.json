@@ -1,0 +1,55 @@
+{
+  "index": 1102,
+  "task_id": 1102,
+  "rendered_prompt_sha256": "a439f64e16324179ecc031b10b694de697429335504f7bd02bcbe58395e5f19a",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "85-15=70; pan 16, towels 27; total 113.</think>70 + 16 + 27 = 113\n\nAnswer: 113",
+  "finish_reason": "stop",
+  "expected": "113",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.357975893013645
+  },
+  "response": {
+    "id": "cmpl-bbe788980eb4c160",
+    "object": "text_completion",
+    "created": 1789146335,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "85-15=70; pan 16, towels 27; total 113.</think>70 + 16 + 27 = 113\n\nAnswer: 113",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 130,
+      "total_tokens": 165,
+      "completion_tokens": 35,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

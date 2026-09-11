@@ -1,0 +1,55 @@
+{
+  "index": 943,
+  "task_id": 943,
+  "rendered_prompt_sha256": "2abee04a898da3bbd81c14d8599d5cd5ddb5e01f735736b4ae9bdac0feb3a441",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "10 CDs ×15 =150, 40% off → 90. Sells 5 for $40 each = 200? \"sells them for 40\" likely $40 each → 200, so he's out 90-200 = -110? Classic GSM8K answer: 90 - 200 = -110? Actually known answer: he spent 90, got back 200, so he's out -110... GSM8K answer is 110? Let me recall: answer is -110? The known GSM8K answer: \"James gets 10 CDs... sells them for 40 each... how much money was he out?\" Answer: -110? Hmm, standard answer is 110? He was out 90, recouped 200, so net gain 110, \"out\" = -110. GSM8K answer is -110? I believe answer is -110... Actually GSM8K answer: \"He spent 90 and made 200 so he made a profit of 110\" → answer 110? The question \"how much money was he out\" — answer -110. I'll go with -110.</think>He spent 10 × $15 = $150, with 40% off → $90. He sold 5 CDs for $40 each = $200, so he actually made $110 profit.\n\nAnswer: -110",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='-110' expected='50'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 14.895058649010025
+  },
+  "response": {
+    "id": "cmpl-88c6f968d97f0fac",
+    "object": "text_completion",
+    "created": 1789146371,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "10 CDs ×15 =150, 40% off → 90. Sells 5 for $40 each = 200? \"sells them for 40\" likely $40 each → 200, so he's out 90-200 = -110? Classic GSM8K answer: 90 - 200 = -110? Actually known answer: he spent 90, got back 200, so he's out -110... GSM8K answer is 110? Let me recall: answer is -110? The known GSM8K answer: \"James gets 10 CDs... sells them for 40 each... how much money was he out?\" Answer: -110? Hmm, standard answer is 110? He was out 90, recouped 200, so net gain 110, \"out\" = -110. GSM8K answer is -110? I believe answer is -110... Actually GSM8K answer: \"He spent 90 and made 200 so he made a profit of 110\" → answer 110? The question \"how much money was he out\" — answer -110. I'll go with -110.</think>He spent 10 × $15 = $150, with 40% off → $90. He sold 5 CDs for $40 each = $200, so he actually made $110 profit.\n\nAnswer: -110",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 86,
+      "total_tokens": 373,
+      "completion_tokens": 287,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

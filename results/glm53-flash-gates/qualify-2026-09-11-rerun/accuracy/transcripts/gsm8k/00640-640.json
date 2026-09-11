@@ -1,0 +1,55 @@
+{
+  "index": 640,
+  "task_id": 640,
+  "rendered_prompt_sha256": "3e201aae8e9eccd40dd819324ef4a70c6448716e5c48ffac6abf27af40cbbeaf",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "King cab 7500, leather 2500, running boards 2000, lights 1500, towing package? Not priced — assume included? Towing package cost not given; likely assume it's included in base? Common answer: 30000+7500+2500+2000+1500=43500.</think>Base: $30,000. King cab: $7,500. Leather: 7500/3 = $2,500. Running boards: 2500 − 500 = $2,000. Lights: $1,500. Towing package is included with the truck.\n\nTotal: 30,000 + 7,500 + 2,500 + 2,000 + 1,500 = 43,500\n\nAnswer: 43500",
+  "finish_reason": "stop",
+  "expected": "43,500",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.056684843963012
+  },
+  "response": {
+    "id": "cmpl-a1e3abed762f322d",
+    "object": "text_completion",
+    "created": 1789146337,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "King cab 7500, leather 2500, running boards 2000, lights 1500, towing package? Not priced — assume included? Towing package cost not given; likely assume it's included in base? Common answer: 30000+7500+2500+2000+1500=43500.</think>Base: $30,000. King cab: $7,500. Leather: 7500/3 = $2,500. Running boards: 2500 − 500 = $2,000. Lights: $1,500. Towing package is included with the truck.\n\nTotal: 30,000 + 7,500 + 2,500 + 2,000 + 1,500 = 43,500\n\nAnswer: 43500",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 163,
+      "total_tokens": 331,
+      "completion_tokens": 168,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

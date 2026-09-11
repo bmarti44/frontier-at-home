@@ -58,6 +58,7 @@ PROFILE_KEYS = {
     "status", "engine", "artifact_roles", "launch", "containment", "safety",
     "memory_model", "offload", "context_cap", "port_role", "bench",
     "switch_alias", "verify_on_hardware", "serving", "qualification_targets",
+    "qualification_options",
 }
 LAUNCH_KEYS = {
     "mechanism", "user", "runuser", "delegate", "log_name", "env",

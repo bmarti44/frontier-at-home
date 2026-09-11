@@ -1,0 +1,67 @@
+{
+  "verdict": "FAIL",
+  "gates": {
+    "nll_gate": 0.01,
+    "top1_gate_pp": 0.5
+  },
+  "metrics": {
+    "delta_nll_mean": 0.07924419478214305,
+    "top1_loss_pp_mean": 1.4890083048363458,
+    "top1_agreement_mean": 0.8727503663898388,
+    "teacher_nll_mean": 1.0627276797019625,
+    "candidate_nll_mean": 1.1419718744841056,
+    "delta_nll_upper_95": 0.1060602553071481,
+    "top1_loss_pp_upper_95": 1.9069994700042763
+  },
+  "checks": {
+    "delta_nll_mean_le_gate": false,
+    "delta_nll_upper_95_le_gate": false,
+    "top1_loss_pp_mean_le_gate": false,
+    "all_windows_scored": true
+  },
+  "windows_scored": 25,
+  "windows_failed": 0,
+  "failures": [],
+  "fail_reasons": [
+    "delta_nll_mean_le_gate failed (delta_nll gate 0.01, top1 loss gate 0.5 pp)",
+    "delta_nll_upper_95_le_gate failed (delta_nll gate 0.01, top1 loss gate 0.5 pp)",
+    "top1_loss_pp_mean_le_gate failed (delta_nll gate 0.01, top1 loss gate 0.5 pp)"
+  ],
+  "per_domain": {
+    "axis1_general": {
+      "windows": 7,
+      "tokens": 14329,
+      "delta_nll_mean": 0.10859247849483215,
+      "top1_loss_pp_mean": 1.926163723916533,
+      "top1_agreement_mean": 0.8501640030706958
+    },
+    "axis2_legal": {
+      "windows": 6,
+      "tokens": 12282,
+      "delta_nll_mean": 0.14392160051793823,
+      "top1_loss_pp_mean": 2.2146230255658685,
+      "top1_agreement_mean": 0.809802963686696
+    },
+    "axis3_code_agentic": {
+      "windows": 6,
+      "tokens": 12282,
+      "delta_nll_mean": 0.07081836184331851,
+      "top1_loss_pp_mean": 1.4085653802312328,
+      "top1_agreement_mean": 0.894723986321446
+    },
+    "axis4_reasoning_termination": {
+      "windows": 6,
+      "tokens": 12282,
+      "delta_nll_mean": -0.01124704234629822,
+      "top1_loss_pp_mean": 0.33382185311838464,
+      "top1_agreement_mean": 0.9400749063670412
+    }
+  },
+  "formulas": {
+    "teacher_nll": "NLL = log(sum(exp(full-vocabulary FP32 logits))) - target logit, FP64 stable accumulation; top1 is first argmax; row i predicts token i+1",
+    "candidate_nll": "NLL = -prompt_logprobs[position][true token].logprob; top1 is the rank==1 entry",
+    "delta_nll": "per window (candidate_nll_sum - teacher_nll_sum) / tokens; token-weighted mean and one-sided 95% upper bound (glm52_goal._weighted_upper_95, effective-n t quantile)",
+    "top1_loss_pp": "per window 100 * (teacher_top1_correct - candidate_top1_correct) / tokens; token-weighted mean and one-sided 95% upper bound",
+    "top1_agreement": "token-weighted mean of candidate_top1_agrees_teacher / tokens"
+  }
+}

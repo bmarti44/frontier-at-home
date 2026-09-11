@@ -69,12 +69,24 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertIn("uname", manifest["host"])
         self.assertEqual(manifest["cells_selected"], ["speed", "toolcall", "vision", "media", "teacher", "accuracy", "context"])
         cells = manifest["cells"]
-        # No GLM encoder is registered; model.json declares reference_logits so teacher is planned.
-        self.assertIsNotNone(cells["accuracy"]["skip_reason"])
-        self.assertIn("encoder", cells["accuracy"]["skip_reason"])
+        # The glm53 encoder is registered, so the three suites are planned with
+        # GLM's own effort contract; model.json declares reference_logits so teacher is planned.
+        self.assertIsNone(cells["accuracy"]["skip_reason"])
+        # The manifest stores the accuracy plan as {suite: argv}.
+        self.assertEqual(sorted(cells["accuracy"]["argv"]), ["gsm8k", "humaneval", "mmlu-pro"])
+        for suite, suite_argv in cells["accuracy"]["argv"].items():
+            joined = " ".join(suite_argv)
+            self.assertIn("--encoder glm53", joined)
+            self.assertIn("--reasoning-effort low", joined)
+            # HumanEval has no holdout split; the bench accepts --split all only.
+            self.assertIn("--split all" if suite == "humaneval" else "--split holdout", joined)
         self.assertIsNone(cells["teacher"]["skip_reason"])
         self.assertIn("49_score_teacher_windows.py", " ".join(cells["teacher"]["argv"]))
         self.assertIn("teacher-logits/glm-5.3-flash", " ".join(cells["teacher"]["argv"]))
+        vision = cells["vision"]["argv"]
+        # the GLM profile declares qualification_options.vision_thinking_mode
+        self.assertEqual(vision[vision.index("--thinking-mode") + 1], "thinking")
+        self.assertEqual(manifest["profile"]["vision_thinking_mode"], "thinking")
         toolcall = cells["toolcall"]["argv"]
         self.assertIn("http://127.0.0.1:8099/v1", toolcall)
         self.assertEqual(toolcall[toolcall.index("--model") + 1], "glm-5.3-flash")
@@ -213,6 +225,39 @@ def _records():
 
 
 CELLS = ["speed", "toolcall", "vision", "media", "teacher", "accuracy", "context"]
+
+
+class PartialRerunSummary(unittest.TestCase):
+    """A one-cell re-run must render SUMMARY.md even when a kept cell FAILed earlier."""
+
+    def test_kept_failed_cell_renders_and_rerun_cell_uses_fresh_evidence(self) -> None:
+        tmp = Path(tempfile.mkdtemp(prefix="qualify-rerun-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "teacher").mkdir()
+        (tmp / "teacher" / "summary.json").write_text(json.dumps({
+            "verdict": "FAIL", "delta_nll_mean": 0.08, "delta_nll_upper95": 0.1,
+            "top1_loss_pp_mean": 1.5, "top1_loss_pp_upper95": 1.9, "windows_scored": 25, "fail_reasons": ["x"]}))
+        (tmp / "vision").mkdir()
+        (tmp / "vision" / "summary.json").write_text(json.dumps({
+            "ok": True, "suite": "mmmu-val-100", "n": 100, "correct": 77, "accuracy": 0.77,
+            "invalid_count": 9, "error_count": 0}))
+        (tmp / "manifest.json").write_text(json.dumps({"cells": {
+            "teacher": {"status": "FAIL", "exit_code": 1, "evidence": "teacher/summary.json", "argv": ["x"]},
+            "vision": {"status": "OK", "exit_code": 0, "evidence": "vision/summary.json", "argv": ["x"]},
+        }}))
+        previous = kit.load_previous_bundle(tmp, ["vision"])
+        self.assertEqual(sorted(previous), ["teacher"])
+        self.assertEqual(previous["teacher"]["record"]["status"], "FAIL")
+        self.assertIn("previous run", previous["teacher"]["record"]["status_reason"])
+        records = {"vision": {"status": "OK", "exit_code": 0, "evidence": "vision/summary.json",
+                              "result": kit.parse_cell_evidence("vision", tmp / "vision", {})},
+                   "teacher": previous["teacher"]["record"]}
+        resolved = {"profile_id": "m/p", "stack_label": "s", "served_model": "m",
+                    "qualification_targets": {"vision_min": 0.64, "delta_nll_max": 0.01}}
+        summary = kit.finalize_summary(resolved, records, ["vision", "teacher"], tmp, None, {})
+        text = kit.render_summary_md(summary)
+        self.assertIn("| vision | accuracy | 0.77 | >= 0.64 | PASS |", text)
+        self.assertIn("FAIL (script exit 1 in the previous run of this bundle)", text)
 
 
 class SummaryFormatting(unittest.TestCase):
@@ -361,6 +406,41 @@ class PartialRerunKeepsEarlierCells(unittest.TestCase):
             kept = kit.load_previous_bundle(out, ["speed"])
         self.assertEqual(kept["toolcall"]["record"]["status"], "FAIL")
         self.assertEqual(kit.load_previous_bundle(Path(tmp) / "absent", ["speed"]), {})
+
+
+class AccuracyResumeKeepsFinishedSuites(unittest.TestCase):
+    """A resumed accuracy cell keeps suites that already have results (holdout rows are spend-once)."""
+
+    def test_finished_suites_are_kept_and_only_missing_ones_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            cell_dir = out / "accuracy"
+            cell_dir.mkdir()
+            (cell_dir / "acc-gsm8k.json").write_text(json.dumps(
+                {"suite": "gsm8k", "split": "holdout", "n": 100, "correct": 94, "accuracy": 0.94}))
+            ran = []
+
+            def fake_run(argv, log_path):
+                ran.append(argv[-1])
+                (cell_dir / f"acc-{argv[-1]}.json").write_text(json.dumps(
+                    {"suite": argv[-1], "split": "all", "n": 164, "correct": 100, "accuracy": 0.61}))
+                return 0, 1.0
+
+            plan = {"suites": {"gsm8k": ["x", "gsm8k"], "humaneval": ["x", "humaneval"]},
+                    "skip_reason": None, "evidence": "accuracy/acc-<suite>.json"}
+            resolved = {"profile_id": "p", "binary_sha256": "0" * 64, "digest_checks": [], "argv": []}
+            saved = kit.run_subprocess
+            kit.run_subprocess = fake_run
+            try:
+                record = kit.run_cell("accuracy", plan, out, resolved)
+            finally:
+                kit.run_subprocess = saved
+            self.assertEqual(ran, ["humaneval"])
+            self.assertEqual(record["suites_kept_from_previous_run"], ["gsm8k"])
+            self.assertEqual(record["exit_code"], {"gsm8k": 0, "humaneval": 0})
+            self.assertEqual(record["status"], "OK")
+            self.assertEqual(record["result"]["suites"]["gsm8k"]["correct"], 94)
+            self.assertIn("(kept) acc-gsm8k.json", (cell_dir / "log.txt").read_text())
 
 
 class ResummarizeMode(unittest.TestCase):

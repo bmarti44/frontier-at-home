@@ -1,0 +1,54 @@
+{
+  "index": 9472,
+  "task_id": 9662,
+  "rendered_prompt_sha256": "d67b0a61275551037e2735430a23a05089c44b1c5643adfdc20dd8c8a53e2a48",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Vertex power: Fv = F/(1 - dF) with d=0.012, F=-10: 1 - dF = 1+0.12=1.12 → -10/1.12 = -8.93. G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.7067430409952067
+  },
+  "response": {
+    "id": "cmpl-aa8a24fee214b4fe",
+    "object": "text_completion",
+    "created": 1789150377,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Vertex power: Fv = F/(1 - dF) with d=0.012, F=-10: 1 - dF = 1+0.12=1.12 → -10/1.12 = -8.93. G.</think>Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 173,
+      "total_tokens": 234,
+      "completion_tokens": 61,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "index": 812,
+  "task_id": 812,
+  "rendered_prompt_sha256": "d65fc398d20807cb3392b9e40493763cd62925ac6a647b1ff6ef9ce9c1ada2d8",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "3×5=15, 4×6=24, 5×4=20, 6×7=42 =101. Drop one of each: subtract 5+6+4+7=22 → 79.</think>Total petals: 15+24+20+42 = 101. Dropping one of each removes 5+6+4+7 = 22 petals. Remaining: 101−22 = 79.\n\nAnswer: 79",
+  "finish_reason": "stop",
+  "expected": "79",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.571236172982026
+  },
+  "response": {
+    "id": "cmpl-bf59b720b8c45437",
+    "object": "text_completion",
+    "created": 1789146152,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "3×5=15, 4×6=24, 5×4=20, 6×7=42 =101. Drop one of each: subtract 5+6+4+7=22 → 79.</think>Total petals: 15+24+20+42 = 101. Dropping one of each removes 5+6+4+7 = 22 petals. Remaining: 101−22 = 79.\n\nAnswer: 79",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 155,
+      "total_tokens": 254,
+      "completion_tokens": 99,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

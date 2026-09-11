@@ -1,0 +1,55 @@
+{
+  "index": 845,
+  "task_id": 845,
+  "rendered_prompt_sha256": "41ec44c37ef239ae87be1df48f988c7a6ad09ff37ba3d0eecc698534ba430060",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "</think>Good at both: 20 − 5 − 8 = 7. Good at math = 5 + 7 = 12.\n\nAnswer: 12",
+  "finish_reason": "stop",
+  "expected": "12",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.2744228990050033
+  },
+  "response": {
+    "id": "cmpl-ae18e9c55b6df7de",
+    "object": "text_completion",
+    "created": 1789146323,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "</think>Good at both: 20 − 5 − 8 = 7. Good at math = 5 + 7 = 12.\n\nAnswer: 12",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 86,
+      "total_tokens": 121,
+      "completion_tokens": 35,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,55 @@
+{
+  "index": 1072,
+  "task_id": 1072,
+  "rendered_prompt_sha256": "ecdd25c652e4b18eb283473d6f47a33f31974f8e040b0a46aa1113628d889c8a",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Maggie left 45, Riza left 40, total 85.</think>Maggie: 60 − 15 = 45. Riza: 60 − 20 = 40. Total: 45 + 40 = 85.\n\nAnswer: 85",
+  "finish_reason": "stop",
+  "expected": "85",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.446235543000512
+  },
+  "response": {
+    "id": "cmpl-b2f3ef6b6f734ad3",
+    "object": "text_completion",
+    "created": 1789146318,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Maggie left 45, Riza left 40, total 85.</think>Maggie: 60 − 15 = 45. Riza: 60 − 20 = 40. Total: 45 + 40 = 85.\n\nAnswer: 85",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 74,
+      "total_tokens": 133,
+      "completion_tokens": 59,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

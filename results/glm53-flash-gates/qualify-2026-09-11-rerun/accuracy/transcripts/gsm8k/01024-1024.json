@@ -1,0 +1,55 @@
+{
+  "index": 1024,
+  "task_id": 1024,
+  "rendered_prompt_sha256": "2f4ad246c440f8008659fd9d9ef3e470f03eeadab1738b9083c7c102c4e9768f",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "80 + 240 = 320 - 20 = 300</think>80×1=80, 60×4=240, total 320. Minus 20 for sisters = 300.\n\nAnswer: 300",
+  "finish_reason": "stop",
+  "expected": "300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.792923054017592
+  },
+  "response": {
+    "id": "cmpl-8b0b100f262c1f84",
+    "object": "text_completion",
+    "created": 1789146204,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "80 + 240 = 320 - 20 = 300</think>80×1=80, 60×4=240, total 320. Minus 20 for sisters = 300.\n\nAnswer: 300",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 80,
+      "total_tokens": 126,
+      "completion_tokens": 46,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

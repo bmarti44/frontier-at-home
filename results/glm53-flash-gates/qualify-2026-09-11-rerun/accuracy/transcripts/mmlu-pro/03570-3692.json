@@ -1,0 +1,55 @@
+{
+  "index": 3570,
+  "task_id": 3692,
+  "rendered_prompt_sha256": "9b33e92fd136c795fec237b51caea5e9b527c5203654f4c356735cece8f6fa2e",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Solid: 60×0.0306×307=563.4; fusion 60×5.86=351.6; liquid: 60×0.0375×33=74.25. Total ≈989.3 → A.</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.8471370830084197
+  },
+  "response": {
+    "id": "cmpl-b1a6ce3f926ff285",
+    "object": "text_completion",
+    "created": 1789147398,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Solid: 60×0.0306×307=563.4; fusion 60×5.86=351.6; liquid: 60×0.0375×33=74.25. Total ≈989.3 → A.</think>Answer: A",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 163,
+      "total_tokens": 227,
+      "completion_tokens": 64,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>Determine the heat needed to raise 60 g ofPbfrom 20°C to 360°C, given its specific heats are 0.0306 (solid) and 0.0375 (liquid). Its heat of fusion is 5.86 cal/g; its melting point is 327°C.\n\nA. 990 cal\nB. 74 cal\nC. 352 cal\nD. 680 cal\nE. 564 cal\nF. 1250 cal\nG. 850 cal\nH. 420 cal\nI. 750 cal\nJ. 1100 cal\n\nReply with the single letter of the correct option in the form: Answer: <letter><|assistant|><think>"
+}

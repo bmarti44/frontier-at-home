@@ -1,0 +1,55 @@
+{
+  "index": 999,
+  "task_id": 999,
+  "rendered_prompt_sha256": "7a94d76ba77023105cd4e60fa317e3162a1ca683d06db72502f6fe1c81fdc163",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "4 kids ×1 +2 adults ×2 =6 units; adult =2/6=33.33%.</think>Total shares: 4 kids × 1 + 2 adults × 2 = 8 units. Each adult gets 2/8 = 25%.\n\nAnswer: 25",
+  "finish_reason": "stop",
+  "expected": "25",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.57531060394831
+  },
+  "response": {
+    "id": "cmpl-adbdc5b6d3752423",
+    "object": "text_completion",
+    "created": 1789146248,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "4 kids ×1 +2 adults ×2 =6 units; adult =2/6=33.33%.</think>Total shares: 4 kids × 1 + 2 adults × 2 = 8 units. Each adult gets 2/8 = 25%.\n\nAnswer: 25",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 85,
+      "total_tokens": 146,
+      "completion_tokens": 61,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

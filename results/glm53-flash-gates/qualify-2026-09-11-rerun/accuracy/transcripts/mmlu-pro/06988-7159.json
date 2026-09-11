@@ -1,0 +1,54 @@
+{
+  "index": 6988,
+  "task_id": 7159,
+  "rendered_prompt_sha256": "42eed780be0948f03e56c4954638e0759d44104709dfe027f71ac80423bd3e2b",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Money multiplier 1/0.1=10 → $5,000 total created. Answer A.</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='A' expected='H'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.873500835034065
+  },
+  "response": {
+    "id": "cmpl-b9fc9eaccfa465e6",
+    "object": "text_completion",
+    "created": 1789147656,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Money multiplier 1/0.1=10 → $5,000 total created. Answer A.</think>Answer: A",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 120,
+      "total_tokens": 146,
+      "completion_tokens": 26,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "index": 11922,
+  "task_id": 12147,
+  "rendered_prompt_sha256": "be72488ab7b7a8893267a1cfffd9b0010e50cc3021197b63f8f65c061e0041c1",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Classic problem: model scale 1:5? \"5 model\" likely 1:5 scale. Air speed = 3 fps ×? Reynolds similarity with air/water: ν_air/ν_water ≈ 1/13? Actually kinematic viscosity air ~1.6e-4 ft²/s? water ~1.2e-5? ratio ~13. V_m air = V_p water × (L ratio?) For Reynolds similarity: V_m L_m /ν_m = V_p L_p/ν_p. L_m = L_p/5. V_m = V_p × (L_p/L_m)(ν_m/ν_p) = 3 ×5×13 ≈ 195 fps. Drag ratio: F ∝ ρ V² L². F_m/F_p = (ρ_m/ρ_p)(V_m/V_p)(L_m/L_p)² = (1/800)(65)(1/25)= 65/20000 = 1/307. So F_p = 5×307 ≈ 1536 lb? Hmm too big. Maybe drag ratio uses dynamic pressure: F_p = F_m × (ρ_p/ρ_m)(V_p/V_m)²(L_p/L_m)² = 5×800×(3/195)²×25 = 5×800×(1/65²)×25 = 5×800×25/4225 ≈ 23.6 lb ≈ 24 lb. Yes! Answer I.</think>Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 16.786732997046784
+  },
+  "response": {
+    "id": "cmpl-928341660490c6f0",
+    "object": "text_completion",
+    "created": 1789149748,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Classic problem: model scale 1:5? \"5 model\" likely 1:5 scale. Air speed = 3 fps ×? Reynolds similarity with air/water: ν_air/ν_water ≈ 1/13? Actually kinematic viscosity air ~1.6e-4 ft²/s? water ~1.2e-5? ratio ~13. V_m air = V_p water × (L ratio?) For Reynolds similarity: V_m L_m /ν_m = V_p L_p/ν_p. L_m = L_p/5. V_m = V_p × (L_p/L_m)(ν_m/ν_p) = 3 ×5×13 ≈ 195 fps. Drag ratio: F ∝ ρ V² L². F_m/F_p = (ρ_m/ρ_p)(V_m/V_p)(L_m/L_p)² = (1/800)(65)(1/25)= 65/20000 = 1/307. So F_p = 5×307 ≈ 1536 lb? Hmm too big. Maybe drag ratio uses dynamic pressure: F_p = F_m × (ρ_p/ρ_m)(V_p/V_m)²(L_p/L_m)² = 5×800×(3/195)²×25 = 5×800×(1/65²)×25 = 5×800×25/4225 ≈ 23.6 lb ≈ 24 lb. Yes! Answer I.</think>Answer: I",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 180,
+      "total_tokens": 502,
+      "completion_tokens": 322,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

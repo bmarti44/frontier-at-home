@@ -1,0 +1,56 @@
+{
+  "index": 848,
+  "task_id": 848,
+  "rendered_prompt_sha256": "873d31b4815d8d1c08aae5534f6890b3cd369b84526c852d348b7a39f7e03b47",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "White no collars: 20. Floral no buttons: 30. Difference 10.</think>White shirts without collars: 40 − 20 = 20. Floral shirts without buttons: 50 − 20 = 30. Difference: 30 − 20 = 10.\n\nAnswer: 10",
+  "finish_reason": "stop",
+  "expected": "10",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.7847699690028094
+  },
+  "response": {
+    "id": "cmpl-a632398a84397151",
+    "object": "text_completion",
+    "created": 1789146172,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "White no collars: 20. Floral no buttons: 30. Difference 10.</think>White shirts without collars: 40 − 20 = 20. Floral shirts without buttons: 50 − 20 = 30. Difference: 30 − 20 = 10.\n\nAnswer: 10",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 88,
+      "total_tokens": 153,
+      "completion_tokens": 65,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>A clothing store has 40 white shirts and 50 floral shirts. Half of the white shirts have collars, and 20 of the floral shirts have buttons. How many more floral shirts with no buttons are there than white shirts with no collars?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|assistant|><think>"
+}

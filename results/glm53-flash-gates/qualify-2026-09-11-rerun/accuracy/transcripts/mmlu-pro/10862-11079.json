@@ -1,0 +1,54 @@
+{
+  "index": 10862,
+  "task_id": 11079,
+  "rendered_prompt_sha256": "95e5cca6325eb3c7ce27a23ff05ab171447e7bc98cd593bf3babc4a2bff393f6",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Mxyz: x moves to y from z. Marco doesn't move to Italy from Spain: ~Mmis.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.9763424809789285
+  },
+  "response": {
+    "id": "cmpl-b64bf69cbaf3f661",
+    "object": "text_completion",
+    "created": 1789150250,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Mxyz: x moves to y from z. Marco doesn't move to Italy from Spain: ~Mmis.</think>Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 123,
+      "total_tokens": 151,
+      "completion_tokens": 28,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

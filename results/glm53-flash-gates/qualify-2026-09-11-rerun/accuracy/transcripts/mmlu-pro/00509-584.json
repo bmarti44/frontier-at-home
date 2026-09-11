@@ -1,0 +1,55 @@
+{
+  "index": 509,
+  "task_id": 584,
+  "rendered_prompt_sha256": "5c79798ab8a2a83912b14bec3bc3e84aae0b2307cbe9ed293cbb8633262ec9ef",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "P1: 9000×.28/100=25.20. P2: 52000×.35/100=182 per year ×3=546. P3: 28000×.42/100=117.60. Answer J.</think>Answer: J",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='J' expected='D'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.011435264023021
+  },
+  "response": {
+    "id": "cmpl-8c3c6e5b2f2da30f",
+    "object": "text_completion",
+    "created": 1789147315,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "P1: 9000×.28/100=25.20. P2: 52000×.35/100=182 per year ×3=546. P3: 28000×.42/100=117.60. Answer J.</think>Answer: J",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 380,
+      "total_tokens": 441,
+      "completion_tokens": 61,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>Policy Face Value of Policy Premium Rate Term of Policy Premium 1 $ 9,000 $.28 per$100 1 year 2 $52,000 $.35 per$100 3 years 3 $28,000 $.42 per$100 1 year\n\nA. Policy 1: $52.00, Policy 2: $182.00, Policy 3: $28.00\nB. Policy 1: $28.00, Policy 2: $546.00, Policy 3: $117.60\nC. Policy 1: $28.00, Policy 2: $491.00, Policy 3: $117.00\nD. Policy 1: $25.20, Policy 2: $491.40, Policy 3: $117.60\nE. Policy 1: $52.00, Policy 2: $182.00, Policy 3: $117.60\nF. Policy 1: $28.00, Policy 2: $182.00, Policy 3: $117.60\nG. Policy 1: $25.20, Policy 2: $182.00, Policy 3: $176.40\nH. Policy 1: $52.00, Policy 2: $491.40, Policy 3: $28.00\nI. Policy 1: $25.20, Policy 2: $182.00, Policy 3: $117.60\nJ. Policy 1: $25.20, Policy 2: $546.00, Policy 3: $117.60\n\nReply with the single letter of the correct option in the form: Answer: <letter><|assistant|><think>"
+}

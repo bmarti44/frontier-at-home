@@ -1,0 +1,55 @@
+{
+  "index": 368,
+  "task_id": 368,
+  "rendered_prompt_sha256": "1296985a6993e6d0724261d41c0fc0a372aea8b3e3de5d3b450ff7bec85fdace",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "\"Three times more\" — likely means 3× Sara's total? Sara scored 8, so Erin now has 24? Then before = 24-14=10. But \"three times more than Sara who scored 8\" — Sara's total 8, Erin = 24, minus 14 = 10.</think>Erin now has 3 × 8 = 24 points. Before scoring 14, she had 24 − 14 = 10.\n\nAnswer: 10",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='10' expected='18'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.655494473001454
+  },
+  "response": {
+    "id": "cmpl-b66087c85be46629",
+    "object": "text_completion",
+    "created": 1789146110,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "\"Three times more\" — likely means 3× Sara's total? Sara scored 8, so Erin now has 24? Then before = 24-14=10. But \"three times more than Sara who scored 8\" — Sara's total 8, Erin = 24, minus 14 = 10.</think>Erin now has 3 × 8 = 24 points. Before scoring 14, she had 24 − 14 = 10.\n\nAnswer: 10",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 66,
+      "total_tokens": 170,
+      "completion_tokens": 104,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

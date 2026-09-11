@@ -1,0 +1,55 @@
+{
+  "index": 1259,
+  "task_id": 1259,
+  "rendered_prompt_sha256": "17832c4a24a0ba785d642a35be4db71c2b0e32237ba56fa5c2654fb97dd23de2",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "10 dozen=120 doughnuts, $2 each=$240/day, June 30 days → 7200.</think>120 doughnuts × $2 = $240 per day. June has 30 days: 240 × 30 = 7200.\n\nAnswer: 7200",
+  "finish_reason": "stop",
+  "expected": "7200",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.3896189850056544
+  },
+  "response": {
+    "id": "cmpl-98dcee3dbe9dc630",
+    "object": "text_completion",
+    "created": 1789146325,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "10 dozen=120 doughnuts, $2 each=$240/day, June 30 days → 7200.</think>120 doughnuts × $2 = $240 per day. June has 30 days: 240 × 30 = 7200.\n\nAnswer: 7200",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 76,
+      "total_tokens": 134,
+      "completion_tokens": 58,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,55 @@
+{
+  "index": 97,
+  "task_id": 97,
+  "rendered_prompt_sha256": "7d947e2ab44a1de37a94cd86bfad081e12f5dc5557b71a8133ab29275af74ca2",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "32 oz sauce = 64 oz tomatoes = 4 cans = 12 tomatoes.</think>32 oz sauce means 64 oz of tomatoes before cooking. 64/16 = 4 cans × 3 tomatoes = 12 tomatoes.\n\nAnswer: 12",
+  "finish_reason": "stop",
+  "expected": "12",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.135177643969655
+  },
+  "response": {
+    "id": "cmpl-9c509f1cc52bd553",
+    "object": "text_completion",
+    "created": 1789146406,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "32 oz sauce = 64 oz tomatoes = 4 cans = 12 tomatoes.</think>32 oz sauce means 64 oz of tomatoes before cooking. 64/16 = 4 cans × 3 tomatoes = 12 tomatoes.\n\nAnswer: 12",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 89,
+      "total_tokens": 141,
+      "completion_tokens": 52,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

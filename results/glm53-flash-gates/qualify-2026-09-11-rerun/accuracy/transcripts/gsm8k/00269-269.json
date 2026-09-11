@@ -1,0 +1,55 @@
+{
+  "index": 269,
+  "task_id": 269,
+  "rendered_prompt_sha256": "31bdd54a283fbf0da1adafee6b9e56af6d67c1aef76f76525831ce87a1b091b0",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "</think>16 balls → half are golf balls = 8 golf balls → half of those are blue = 4.\n\nAnswer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.8912280119839124
+  },
+  "response": {
+    "id": "cmpl-9ccd180ec5a0fad6",
+    "object": "text_completion",
+    "created": 1789146150,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "</think>16 balls → half are golf balls = 8 golf balls → half of those are blue = 4.\n\nAnswer: 4",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 74,
+      "total_tokens": 102,
+      "completion_tokens": 28,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

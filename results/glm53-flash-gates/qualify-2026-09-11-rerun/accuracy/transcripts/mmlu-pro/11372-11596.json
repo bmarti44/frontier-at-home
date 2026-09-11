@@ -1,0 +1,54 @@
+{
+  "index": 11372,
+  "task_id": 11596,
+  "rendered_prompt_sha256": "e6c7aa5416f3cc97ca0d5094ab439871c135dce00fb5571be90531637c313a1c",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Steady flow energy: W = m[(h1-h2)+(V1²-V2²)/2gc + g(z1-z2)/gc] + Q... Actually work output = Q + m(h1-h2 + KE + PE).\n\nKE: (100²-50²)/2 /32.2 = 7500/64.4 = 116.5 ft·lbf/lbm → /778 = 0.15 Btu/lbm. PE: 32.2*100/32.2=1000 ft·lbf → 1.286 Btu/lbm. h1-h2 = -20. Sum = -20+0.15+1.286 = -18.56. W = Q + m*(-18.56) = 50 - 92.8 = -42.8 ≈ -42? Hmm.\n\nArea: m v / V = 5*15/100 = 0.75 ft². That matches J (0.75) with -48.5? Or D 0.65 with -42. Hmm area 0.75 → J. But work -42.8 closer to D's -42. Let me recompute: maybe gc handling: KE = (V1²-V2²)/(2gc) = 7500/64.4=116.5 ft·lbf/lbm = 0.1498 Btu. PE = g(z1-z2)/gc = 100 ft·lbf/lbm = 0.1286 Btu. Sum = -20+0.1498+0.1286 = -19.72. W = 50 + 5*(-19.72) = 50-98.6 = -48.6 ≈ -48.5. Yes! J.</think>Answer: J",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 20.348509775009006
+  },
+  "response": {
+    "id": "cmpl-94e875767ba092ee",
+    "object": "text_completion",
+    "created": 1789148592,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Steady flow energy: W = m[(h1-h2)+(V1²-V2²)/2gc + g(z1-z2)/gc] + Q... Actually work output = Q + m(h1-h2 + KE + PE).\n\nKE: (100²-50²)/2 /32.2 = 7500/64.4 = 116.5 ft·lbf/lbm → /778 = 0.15 Btu/lbm. PE: 32.2*100/32.2=1000 ft·lbf → 1.286 Btu/lbm. h1-h2 = -20. Sum = -20+0.15+1.286 = -18.56. W = Q + m*(-18.56) = 50 - 92.8 = -42.8 ≈ -42? Hmm.\n\nArea: m v / V = 5*15/100 = 0.75 ft². That matches J (0.75) with -48.5? Or D 0.65 with -42. Hmm area 0.75 → J. But work -42.8 closer to D's -42. Let me recompute: maybe gc handling: KE = (V1²-V2²)/(2gc) = 7500/64.4=116.5 ft·lbf/lbm = 0.1498 Btu. PE = g(z1-z2)/gc = 100 ft·lbf/lbm = 0.1286 Btu. Sum = -20+0.1498+0.1286 = -19.72. W = 50 + 5*(-19.72) = 50-98.6 = -48.6 ≈ -48.5. Yes! J.</think>Answer: J",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 326,
+      "total_tokens": 715,
+      "completion_tokens": 389,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "index": 1006,
+  "task_id": 1086,
+  "rendered_prompt_sha256": "3799d23b79966e9e5f4143137aa721b7b1a3ec2c50fe2521d72d1d3d1d8038f2",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Classic: brothers guilty of conspiracy to murder uncle; physician death — transferred intent? They solicited housekeeper to kill uncle; physician death was accidental. Brothers not liable for physician's death? Housekeeper liable for murder of physician (transferred intent). Brothers: conspiracy to commit murder of uncle only? But they solicited housekeeper — solicitation merges into conspiracy. Answer I.</think>Answer: I",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='I' expected='C'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.038312471006066
+  },
+  "response": {
+    "id": "cmpl-88c09eda971103ca",
+    "object": "text_completion",
+    "created": 1789149977,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Classic: brothers guilty of conspiracy to murder uncle; physician death — transferred intent? They solicited housekeeper to kill uncle; physician death was accidental. Brothers not liable for physician's death? Housekeeper liable for murder of physician (transferred intent). Brothers: conspiracy to commit murder of uncle only? But they solicited housekeeper — solicitation merges into conspiracy. Answer I.</think>Answer: I",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 386,
+      "total_tokens": 467,
+      "completion_tokens": 81,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

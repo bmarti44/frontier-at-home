@@ -1,0 +1,55 @@
+{
+  "index": 1071,
+  "task_id": 1071,
+  "rendered_prompt_sha256": "6378166b9b375f2ceb364ffabc4d62f0953e8212fdf7e0cacd9ad9777b810def",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "25+7+13=45, minus 4 =41. 41-20=21 extra ×6=126+125=251.</think>Total invited: 25 + 7 + 13 = 45; minus 4 who can't come = 41 guests. Extra beyond 20: 21 × $6 = $126. Total: $125 + $126 = $251.\n\nAnswer: 251",
+  "finish_reason": "stop",
+  "expected": "251",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.115215339988936
+  },
+  "response": {
+    "id": "cmpl-a6b412a976d2ba9d",
+    "object": "text_completion",
+    "created": 1789146364,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "25+7+13=45, minus 4 =41. 41-20=21 extra ×6=126+125=251.</think>Total invited: 25 + 7 + 13 = 45; minus 4 who can't come = 41 guests. Extra beyond 20: 21 × $6 = $126. Total: $125 + $126 = $251.\n\nAnswer: 251",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 115,
+      "total_tokens": 206,
+      "completion_tokens": 91,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

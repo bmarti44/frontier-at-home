@@ -1,0 +1,54 @@
+{
+  "index": 12022,
+  "task_id": 12247,
+  "rendered_prompt_sha256": "5404b5497cab9cc52097185088183756857f358e1dba5e863d71e6df1b475909",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Classic problem: 1½ in sch 40 pipe, steam 100 psia (Tsat ~341°F), emissivity ~0.79? Standard answer ~0.65 lb/hr-ft? Let's compute.\n\n1½\" sch40: OD 1.9\", ID 1.61\". Tsat at 100 psia ≈ 341°F (abs 801R). Ambient 50°F (510R). Surface temp assume ~ pipe wall ~ steam temp minus small drop; assume surface ≈ 340°F? Actually conduction through steel wall small.\n\nHeat loss per ft: area outside = π×(1.9/12)×1 = 0.4974 ft²/ft.\n\nRadiation: ε≈0.79 (grey body). q_rad = εσA(Ts⁴−Ta⁴) = 0.79×0.4974×0.1714e-8×(801⁴−510⁴)/... per ft. 801⁴=4.12e11? 801⁴: 801²=641601, squared=4.117e11. 510⁴=6.78e10. Diff=3.44e11. q=0.1714e-8×3.44e11=589.6 Btu/hr-ft²... times ε×A: 0.79×0.4974×589.6=231.7 Btu/hr-ft.\n\nConvection: h=2, ΔT=801−510=291R. q=2×0.4974×291=289.5 Btu/hr-ft.\n\nTotal ≈521 Btu/hr-ft. Latent heat at 100 psia ≈ 882 Btu/lb. Cond = 521/882 = 0.59 lb/hr-ft ≈ 0.60. Answer J.</think>Answer: J",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 22.251188272959553
+  },
+  "response": {
+    "id": "cmpl-9726a8a2bb76c923",
+    "object": "text_completion",
+    "created": 1789149772,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Classic problem: 1½ in sch 40 pipe, steam 100 psia (Tsat ~341°F), emissivity ~0.79? Standard answer ~0.65 lb/hr-ft? Let's compute.\n\n1½\" sch40: OD 1.9\", ID 1.61\". Tsat at 100 psia ≈ 341°F (abs 801R). Ambient 50°F (510R). Surface temp assume ~ pipe wall ~ steam temp minus small drop; assume surface ≈ 340°F? Actually conduction through steel wall small.\n\nHeat loss per ft: area outside = π×(1.9/12)×1 = 0.4974 ft²/ft.\n\nRadiation: ε≈0.79 (grey body). q_rad = εσA(Ts⁴−Ta⁴) = 0.79×0.4974×0.1714e-8×(801⁴−510⁴)/... per ft. 801⁴=4.12e11? 801⁴: 801²=641601, squared=4.117e11. 510⁴=6.78e10. Diff=3.44e11. q=0.1714e-8×3.44e11=589.6 Btu/hr-ft²... times ε×A: 0.79×0.4974×589.6=231.7 Btu/hr-ft.\n\nConvection: h=2, ΔT=801−510=291R. q=2×0.4974×291=289.5 Btu/hr-ft.\n\nTotal ≈521 Btu/hr-ft. Latent heat at 100 psia ≈ 882 Btu/lb. Cond = 521/882 = 0.59 lb/hr-ft ≈ 0.60. Answer J.</think>Answer: J",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 264,
+      "total_tokens": 692,
+      "completion_tokens": 428,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "index": 3716,
+  "task_id": 3839,
+  "rendered_prompt_sha256": "3b5fa114369b61853384fbb9e3daeb19a51d018f849b5bdeb53f50b097fdbdca",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Δx = h/(4π m Δv)? Using h/(mΔv) ≈ 6.626e-27/(100*1e-5 cm/s?) Wait velocity 1 mm/s = 0.1 cm/s, Δv=1e-5 cm/s. m=100 g. Δx = 6.626e-27/(100*1e-5)=6.626e-24 cm. C.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.8521933410083875
+  },
+  "response": {
+    "id": "cmpl-b2540ab908d6f28e",
+    "object": "text_completion",
+    "created": 1789147413,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Δx = h/(4π m Δv)? Using h/(mΔv) ≈ 6.626e-27/(100*1e-5 cm/s?) Wait velocity 1 mm/s = 0.1 cm/s, Δv=1e-5 cm/s. m=100 g. Δx = 6.626e-27/(100*1e-5)=6.626e-24 cm. C.</think>Answer: C",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 232,
+      "total_tokens": 334,
+      "completion_tokens": 102,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

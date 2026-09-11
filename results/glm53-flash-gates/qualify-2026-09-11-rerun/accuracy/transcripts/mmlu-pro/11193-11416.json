@@ -1,0 +1,54 @@
+{
+  "index": 11193,
+  "task_id": 11416,
+  "rendered_prompt_sha256": "268a7105772300faa3d2a53b41a15f86b1fdb031e2a3bf2cc8461331f1e006a0",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Partial fractions: (3s+1)/((s-1)(s²+1)) = A/(s-1)+(Bs+C)/(s²+1). A=1 (check: at s=1: 4/2=2? wait (3+1)/(1+1)=2, so A=2). Then 3s+1 = 2(s²+1)+(Bs+C)(s-1) → 3s+1 = 2s²+2 + Bs²+(C-B)s - C. So s²: 2+B=0 → B=-2. s: C-B=3 → C=1. const: 2-C=1 → C=1 ✓. So f=2e^t -2cos t + sin t → G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.393275927053764
+  },
+  "response": {
+    "id": "cmpl-b558b724a28784d2",
+    "object": "text_completion",
+    "created": 1789148505,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Partial fractions: (3s+1)/((s-1)(s²+1)) = A/(s-1)+(Bs+C)/(s²+1). A=1 (check: at s=1: 4/2=2? wait (3+1)/(1+1)=2, so A=2). Then 3s+1 = 2(s²+1)+(Bs+C)(s-1) → 3s+1 = 2s²+2 + Bs²+(C-B)s - C. So s²: 2+B=0 → B=-2. s: C-B=3 → C=1. const: 2-C=1 → C=1 ✓. So f=2e^t -2cos t + sin t → G.</think>Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 222,
+      "total_tokens": 395,
+      "completion_tokens": 173,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

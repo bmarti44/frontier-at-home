@@ -1,0 +1,54 @@
+{
+  "index": 3214,
+  "task_id": 3335,
+  "rendered_prompt_sha256": "39675116aa3e95c890616da627f8e0f95f020503c8bebf33a412df7d3d799b4e",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Euphotic zone: light penetrates, nutrients upwelling. B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='B' expected='D'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6461836860398762
+  },
+  "response": {
+    "id": "cmpl-9f3e03751841f9d4",
+    "object": "text_completion",
+    "created": 1789147277,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Euphotic zone: light penetrates, nutrients upwelling. B.</think>Answer: B",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 113,
+      "total_tokens": 135,
+      "completion_tokens": 22,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "index": 528,
+  "task_id": 528,
+  "rendered_prompt_sha256": "c3216f13047718951a0567bfa8cdaab7983cd71810fd687d05c4f0b9dd99d7cf",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Ophelia: 20 sofas, 22 chairs. Jenna: 3×22=66 chairs, 64 sofas. Total sofas 84, chairs 88 → 172.</think>Ophelia: 20 sofas, 22 chairs. Jenna: 66 chairs, 64 sofas. Total = 84 sofas + 88 chairs = 172.\n\nAnswer: 172",
+  "finish_reason": "stop",
+  "expected": "172",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.4670753520331345
+  },
+  "response": {
+    "id": "cmpl-8aaff1cfeaa114e2",
+    "object": "text_completion",
+    "created": 1789146096,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Ophelia: 20 sofas, 22 chairs. Jenna: 3×22=66 chairs, 64 sofas. Total sofas 84, chairs 88 → 172.</think>Ophelia: 20 sofas, 22 chairs. Jenna: 66 chairs, 64 sofas. Total = 84 sofas + 88 chairs = 172.\n\nAnswer: 172",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 94,
+      "total_tokens": 173,
+      "completion_tokens": 79,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

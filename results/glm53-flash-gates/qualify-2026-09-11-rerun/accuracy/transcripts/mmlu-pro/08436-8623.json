@@ -1,0 +1,55 @@
+{
+  "index": 8436,
+  "task_id": 8623,
+  "rendered_prompt_sha256": "bf298c2aa83f72ecf57e4822f2ba4c4ea8472f54ac5f04b252e6ff3839c68931",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Classic: integral = π/4 = 0.78539815 → F.</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.85360822401708
+  },
+  "response": {
+    "id": "cmpl-a12621adb5993c61",
+    "object": "text_completion",
+    "created": 1789150153,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Classic: integral = π/4 = 0.78539815 → F.</think>Answer: F",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 170,
+      "total_tokens": 194,
+      "completion_tokens": 24,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>What is the value of the integral $\\int_0^{\\pi/2} 1/(1+(tan(x))^{\\sqrt{2}}) dx$?\n\nA. 0.56418958\nB. 2.71828183\nC. 0.63661977\nD. 3.14159265\nE. 1.04719755\nF. 0.78539815\nG. 0.70710678\nH. 2.35619449\nI. 1.57079633\nJ. 1.41421356\n\nReply with the single letter of the correct option in the form: Answer: <letter><|assistant|><think>"
+}

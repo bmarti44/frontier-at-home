@@ -39,6 +39,7 @@ ENCODER_PATHS = {
     "dsv4": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_dsv4.py",
     "laguna": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_laguna.py",
     "qwen38": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_qwen38.py",
+    "glm53": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_glm53.py",
 }
 # Public contracts of the pinned encoders. Validate here instead of relying on
 # encoder assertions so an incompatible request fails before dataset work.
@@ -46,6 +47,7 @@ ENCODER_REASONING_EFFORTS = {
     "dsv4": frozenset(("high", "max")),
     "laguna": frozenset(("off", "max")),
     "qwen38": frozenset(("low", "medium", "xhigh")),
+    "glm53": frozenset(("low", "high", "max")),
 }
 # Whether the encoder should emit the template's literal BOS text. Laguna's
 # GGUF sets add_bos_token=true (BOS == EOS == token 2), so llama.cpp adds the
@@ -55,6 +57,7 @@ ENCODER_EMIT_BOS_TEXT = {
     "dsv4": True,
     "laguna": False,
     "qwen38": True,
+    "glm53": True,
 }
 # Retain the historical constant for callers that inspect the default encoder.
 ENCODER_PATH = ENCODER_PATHS["dsv4"]
@@ -736,8 +739,14 @@ class Client:
             data = document["data"]
         except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as error:
             raise RuntimeError(f"invalid models response: {raw.decode('utf-8', errors='replace')}") from error
-        if not isinstance(data, list) or len(data) != 1:
+        if not isinstance(data, list) or not data:
             raise RuntimeError(f"expected exactly one model, received {data!r}")
+        if len(data) != 1:
+            # vLLM lists one entry per --served-model-name; aliases of the same
+            # weights (identical "root") are still exactly one served model.
+            roots = {entry.get("root") if isinstance(entry, dict) else None for entry in data}
+            if len(roots) != 1 or None in roots:
+                raise RuntimeError(f"expected exactly one model, received {data!r}")
         model = data[0].get("id") if isinstance(data[0], dict) else None
         if not isinstance(model, str) or not model:
             raise RuntimeError(f"model id is missing or invalid: {data[0]!r}")

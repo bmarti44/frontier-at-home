@@ -1,0 +1,54 @@
+{
+  "index": 9395,
+  "task_id": 9584,
+  "rendered_prompt_sha256": "3eae98b3d6f17a85f0b6595ad8da20cf12eb691204b97041b3856984f91d84c6",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Balmer isotope shift: Δν ≈ R·(1/4−1/9)·(μ difference). R_H=109678, R_D=109707? ΔR≈29.7 cm⁻¹? Actually ΔR ≈ 0.00027·R ≈ 29.7? Hmm known: isotope shift Hα ≈ 0.33 Å, ν shift ≈ 0.27 cm⁻¹? Known values: Δλ_Hα = 0.79 Å? Actually classic result: separation of Dα from Hα is 0.79 Å? Hmm. Known: Balmer isotope shift α: 0.33 Å? Let me compute: ν = R(1/4−1/9)=R·5/36. Δν = ΔR·5/36. ΔR = R_H(1−μ_H/μ_D)·... ΔR ≈ R·(m_e/M_H − m_e/M_D) ≈ 109737·(1/1836 − 1/3670) ≈ 109737·0.000272 ≈ 29.9 cm⁻¹. Δν_α = 29.9·5/36 = 4.15 cm⁻¹. Δν_β = 29.9·(1/4−1/16)=29.9·3/16=5.6 cm⁻¹. λ_α=6563 Å: Δλ = λ²Δν/(1e8) = 6563²·4.15/1e8 ≈ 1.79 Å. λ_β=4861: 4861²·5.6/1e8 ≈ 1.32 Å. Answer D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 21.050597589986864
+  },
+  "response": {
+    "id": "cmpl-95d89974eb44ad52",
+    "object": "text_completion",
+    "created": 1789150351,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Balmer isotope shift: Δν ≈ R·(1/4−1/9)·(μ difference). R_H=109678, R_D=109707? ΔR≈29.7 cm⁻¹? Actually ΔR ≈ 0.00027·R ≈ 29.7? Hmm known: isotope shift Hα ≈ 0.33 Å, ν shift ≈ 0.27 cm⁻¹? Known values: Δλ_Hα = 0.79 Å? Actually classic result: separation of Dα from Hα is 0.79 Å? Hmm. Known: Balmer isotope shift α: 0.33 Å? Let me compute: ν = R(1/4−1/9)=R·5/36. Δν = ΔR·5/36. ΔR = R_H(1−μ_H/μ_D)·... ΔR ≈ R·(m_e/M_H − m_e/M_D) ≈ 109737·(1/1836 − 1/3670) ≈ 109737·0.000272 ≈ 29.9 cm⁻¹. Δν_α = 29.9·5/36 = 4.15 cm⁻¹. Δν_β = 29.9·(1/4−1/16)=29.9·3/16=5.6 cm⁻¹. λ_α=6563 Å: Δλ = λ²Δν/(1e8) = 6563²·4.15/1e8 ≈ 1.79 Å. λ_β=4861: 4861²·5.6/1e8 ≈ 1.32 Å. Answer D.</think>Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 618,
+      "total_tokens": 1012,
+      "completion_tokens": 394,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

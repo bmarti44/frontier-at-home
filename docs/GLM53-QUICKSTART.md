@@ -41,22 +41,22 @@ scripts/94_qualify_profile.py --profile glm-5.3-flash/cuda-spark-128g-1m --with-
 
 See [QUALIFY-PROFILE](QUALIFY-PROFILE.md). Every number in the README row and
 in [STATUS](../results/glm53-flash-gates/STATUS.md) comes from one such run,
-`results/glm53-flash-gates/qualify-2026-09-11/` (about 80 minutes with the
+`results/glm53-flash-gates/qualify-2026-09-11-rerun/` (about 80 minutes with the
 soak and the four-slot 1M fill). Measured there, against the `qwen38-1m`
 targets declared in the profile's `qualification_targets`:
 
 | cell | GLM-5.3-Flash | qwen38-1m target | status |
 |---|---|---|---|
-| decode tok/s @ 0 ctx | 20.06 | >= 17.46 | PASS |
-| decode tok/s @ 28,672 | 19.91 | >= 26.71 | FAIL (Qwen uses MTP; GLM's MTP layer cannot run on this stack) |
-| prefill tok/s @ 28,672, cold prefix | 512.5 (warm prefix cache ~3,400) | >= 698.7 | FAIL |
-| TTFT short prompt / @ 28K | 5.06 s (reps 8.0 and 2.2) / 59.05 s | <= 0.5 s | FAIL |
+| decode tok/s @ 0 ctx | 20.12 | >= 17.46 | PASS |
+| decode tok/s @ 28,672 | 19.84 | >= 26.71 | FAIL (Qwen uses MTP; GLM's MTP layer cannot run on this stack) |
+| prefill tok/s @ 28,672, cold prefix | 513.3 (warm prefix cache ~3,400) | >= 698.7 | FAIL |
+| TTFT short prompt / @ 28K | 1.75 s (reps 1.20 and 2.29) / 58.93 s | <= 0.5 s | FAIL |
 | tool-call probe | 20/20 | >= 19 | PASS |
-| MMMU-val-100 | 73% | >= 64% | PASS |
+| MMMU-val-100 (thinking mode; chat mode 20%, unparseable answers) | 77% | >= 64% | PASS |
 | media at declared maximum (4 x 512px, 16-frame 512px video, 5th image -> 400) | PASS | PASS | PASS |
-| dNLL vs BF16 teacher logits (25 x 2,047 positions) | 0.079 (upper-95 0.106); top-1 loss 1.53 pp; agreement 87.2% | <= 0.01 | FAIL (unreachable at 2 bpw) |
-| four-slot 1M fill | 1,000,560 tokens, 4/4 needles, low point 13.38 GiB | PASS, floor 10 GiB | PASS |
-| 30-minute soak | 136 requests, 0 errors, 20.63 tok/s median, low point 14.23 GiB | | PASS |
+| dNLL vs BF16 teacher logits (25 x 2,047 positions) | 0.079 (upper-95 0.106); top-1 loss 1.49 pp (upper-95 1.91); agreement 87.3% | <= 0.01 | FAIL (unreachable at 2 bpw) |
+| four-slot 1M fill | 1,000,560 tokens, 4/4 needles, low point 13.30 GiB | PASS, floor 10 GiB | PASS |
+| 30-minute soak | 136 requests, 0 errors, 20.56 tok/s median, low point 14.15 GiB | | PASS |
 
 ## What is under the hood
 

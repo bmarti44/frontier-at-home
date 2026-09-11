@@ -1,0 +1,55 @@
+{
+  "index": 745,
+  "task_id": 745,
+  "rendered_prompt_sha256": "624a26141fc7a14435c60eaadef2003c787f7fac2c3bb2cf30639694c5dd3746",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Cost 5400. Value: 4000+1000+30*50=1500 → 6500. Profit 1100.</think>Cost: 3 × 1800 = 5400. Value: 4000 + 1000 + 30×50 = 6500. Profit = 6500 − 5400 = 1100.\n\nAnswer: 1100",
+  "finish_reason": "stop",
+  "expected": "1100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.864261713984888
+  },
+  "response": {
+    "id": "cmpl-8a1625fc86f0177c",
+    "object": "text_completion",
+    "created": 1789146290,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Cost 5400. Value: 4000+1000+30*50=1500 → 6500. Profit 1100.</think>Cost: 3 × 1800 = 5400. Value: 4000 + 1000 + 30×50 = 6500. Profit = 6500 − 5400 = 1100.\n\nAnswer: 1100",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 108,
+      "total_tokens": 194,
+      "completion_tokens": 86,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,593 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "glm-5.3-flash/cuda-spark-128g-1m",
+  "stack_label": "glm-5.3-flash-cuda-spark-128g-1m",
+  "served_model": "glm-5.3-flash",
+  "out": "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun",
+  "start_unix": 1789146018.3725948,
+  "end_unix": 1789150463.1200924,
+  "start_iso": "2026-09-11T17:00:18.479036+00:00",
+  "end_iso": "2026-09-11T18:14:23.120096+00:00",
+  "targets": {
+    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18, vision-2026-08-19); GLM must match or beat these to be 'as fast as qwen 3.8 27b'",
+    "decode_tok_s_min": {
+      "0": 17.46,
+      "28672": 26.71
+    },
+    "prefill_tok_s_min": {
+      "28672": 698.7
+    },
+    "ttft_s_max": {
+      "0": 0.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "vision_min": 0.64,
+    "delta_nll_max": 0.01,
+    "media_pass": true
+  },
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 302.8704990610131,
+      "start_unix": 1789137513.4809215,
+      "end_unix": 1789137816.3522243,
+      "evidence": "speed/speed.json",
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": 20.119222057793134,
+            "median_ttft_s": 1.745620529,
+            "median_prefill_tok_s": 39.586807053334915,
+            "valid": true,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": 19.844837551760058,
+            "median_ttft_s": 58.926466637999994,
+            "median_prefill_tok_s": 513.267045066041,
+            "valid": true,
+            "reps": 2
+          }
+        },
+        "suite_valid": true,
+        "stack_label": "glm-5.3-flash-cuda-spark-128g-1m"
+      }
+    },
+    "toolcall": {
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 47.2891924349824,
+      "start_unix": 1789137816.352841,
+      "end_unix": 1789137863.642587,
+      "evidence": "toolcall/toolcall.json",
+      "result": {
+        "passed": 20,
+        "total": 20,
+        "score": 1.0,
+        "suite": "toolcall-v1"
+      }
+    },
+    "vision": {
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 509.7608994549955,
+      "start_unix": 1789142992.7624848,
+      "end_unix": 1789143502.5236464,
+      "evidence": "vision/summary.json",
+      "result": {
+        "accuracy": 0.77,
+        "n": 100,
+        "correct": 77,
+        "invalid_count": 9,
+        "error_count": 0,
+        "ok": true,
+        "suite": "mmmu-val-100"
+      }
+    },
+    "media": {
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 10.001548918022308,
+      "start_unix": 1789138381.0995808,
+      "end_unix": 1789138391.1014454,
+      "evidence": "media/summary.json",
+      "result": {
+        "verdict": "PASS",
+        "checks": {
+          "images_at_max_answered": true,
+          "images_at_max_colours_in_order": true,
+          "images_over_max_rejected_400": true,
+          "video_at_max_answered": true,
+          "video_direction_right": true
+        },
+        "declared": {
+          "images": 4,
+          "image_size": 512,
+          "video_frames": 16,
+          "video_size": 512
+        }
+      }
+    },
+    "teacher": {
+      "status": "FAIL",
+      "exit_code": 1,
+      "wall_s": 97.69046690198593,
+      "start_unix": 1789138391.1022768,
+      "end_unix": 1789138488.7929163,
+      "evidence": "teacher/summary.json",
+      "status_reason": "script exit 1 in the previous run of this bundle",
+      "result": {
+        "verdict": "FAIL",
+        "delta_nll_mean": 0.07924419478214305,
+        "delta_nll_upper_95": 0.1060602553071481,
+        "top1_loss_pp_mean": 1.4890083048363458,
+        "top1_loss_pp_upper_95": 1.9069994700042763,
+        "top1_agreement_mean": 0.8727503663898388,
+        "windows_scored": 25,
+        "windows_failed": 0,
+        "fail_reasons": [
+          "delta_nll_mean_le_gate failed (delta_nll gate 0.01, top1 loss gate 0.5 pp)",
+          "delta_nll_upper_95_le_gate failed (delta_nll gate 0.01, top1 loss gate 0.5 pp)",
+          "top1_loss_pp_mean_le_gate failed (delta_nll gate 0.01, top1 loss gate 0.5 pp)"
+        ]
+      }
+    },
+    "accuracy": {
+      "status": "FAIL",
+      "evidence": "accuracy/acc-<suite>.json",
+      "start_unix": 1789146072.279925,
+      "argv": {
+        "gsm8k": [
+          "/usr/bin/python3",
+          "/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8015",
+          "--out",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/acc-gsm8k.json",
+          "--stack-label",
+          "glm-5.3-flash-cuda-spark-128g-1m",
+          "--suite",
+          "gsm8k",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/transcripts/gsm8k",
+          "--encoder",
+          "glm53",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "glm-5.3-flash/cuda-spark-128g-1m",
+          "--config-hash",
+          "glm-5.3-flash-cuda-spark-128g-1m-00bf8818bf52",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/config-evidence.json"
+        ],
+        "mmlu-pro": [
+          "/usr/bin/python3",
+          "/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8015",
+          "--out",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/acc-mmlu-pro.json",
+          "--stack-label",
+          "glm-5.3-flash-cuda-spark-128g-1m",
+          "--suite",
+          "mmlu-pro",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/transcripts/mmlu-pro",
+          "--encoder",
+          "glm53",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "glm-5.3-flash/cuda-spark-128g-1m",
+          "--config-hash",
+          "glm-5.3-flash-cuda-spark-128g-1m-00bf8818bf52",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/config-evidence.json"
+        ],
+        "humaneval": [
+          "/usr/bin/python3",
+          "/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8015",
+          "--out",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/acc-humaneval.json",
+          "--stack-label",
+          "glm-5.3-flash-cuda-spark-128g-1m",
+          "--suite",
+          "humaneval",
+          "--split",
+          "all",
+          "--transcripts-dir",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/transcripts/humaneval",
+          "--encoder",
+          "glm53",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "glm-5.3-flash/cuda-spark-128g-1m",
+          "--config-hash",
+          "glm-5.3-flash-cuda-spark-128g-1m-00bf8818bf52",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/config-evidence.json"
+        ]
+      },
+      "skip_reason": null,
+      "exit_code": {
+        "gsm8k": 0,
+        "mmlu-pro": 0,
+        "humaneval": 1
+      },
+      "wall_s": 4388.699174383946,
+      "result": {
+        "suites": {
+          "gsm8k": {
+            "accuracy": 0.94,
+            "n": 100,
+            "correct": 94,
+            "invalid_count": 0,
+            "split": "holdout",
+            "wilson95": [
+              0.8752318455410406,
+              0.9722138760368118
+            ]
+          },
+          "mmlu-pro": {
+            "accuracy": 0.8178137651821862,
+            "n": 247,
+            "correct": 202,
+            "invalid_count": 3,
+            "split": "holdout",
+            "wilson95": [
+              0.7649317567699908,
+              0.8609615893224759
+            ]
+          }
+        }
+      },
+      "end_unix": 1789150460.9796193,
+      "status_reason": "script exit {'gsm8k': 0, 'mmlu-pro': 0, 'humaneval': 1}",
+      "log_tail": "[219/247] index=9505 correct=True reason=correct\n[220/247] index=9530 correct=False reason=incorrect: parsed='I' expected='B'\n[221/247] index=9599 correct=True reason=correct\n[222/247] index=9622 correct=True reason=correct\n[223/247] index=9727 correct=True reason=correct\n[224/247] index=9788 correct=True reason=correct\n[225/247] index=9844 correct=False reason=incorrect: parsed='I' expected='B'\n[226/247] index=9916 correct=True reason=correct\n[227/247] index=9968 correct=True reason=correct\n[228/247] index=10035 correct=True reason=correct\n[229/247] index=10073 correct=True reason=correct\n[230/247] index=10104 correct=True reason=correct\n[231/247] index=10124 correct=True reason=correct\n[232/247] index=1922 correct=True reason=correct\n[233/247] index=2020 correct=True reason=correct\n[234/247] index=2089 correct=False reason=incorrect: parsed='G' expected='J'\n[235/247] index=2121 correct=True reason=correct\n[236/247] index=2206 correct=True reason=correct\n[237/247] index=2214 correct=True reason=correct\n[238/247] index=2255 correct=True reason=correct\n[239/247] index=2283 correct=True reason=correct\n[240/247] index=2337 correct=True reason=correct\n[241/247] index=2387 correct=True reason=correct\n[242/247] index=2415 correct=True reason=correct\n[243/247] index=2434 correct=True reason=correct\n[244/247] index=2454 correct=True reason=correct\n[245/247] index=2527 correct=True reason=correct\n[246/247] index=2603 correct=True reason=correct\n[247/247] index=2624 correct=True reason=correct\n$ /usr/bin/python3 /home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py --base-url http://127.0.0.1:8015 --out /home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/acc-humaneval.json --stack-label glm-5.3-flash-cuda-spark-128g-1m --suite humaneval --split all --transcripts-dir /home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/transcripts/humaneval --encoder glm53 --max-tokens 16384 --request-timeout 2700 --profile-id glm-5.3-flash/cuda-spark-128g-1m --config-hash glm-5.3-flash-cuda-spark-128g-1m-00bf8818bf52 --reasoning-effort low --config-evidence /home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/config-evidence.json\nTraceback (most recent call last):\n  File \"/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py\", line 1437, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py\", line 1235, in main\n    resolve_humaneval_runtime_digest() if args.suite == \"humaneval\" else None\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py\", line 345, in resolve_humaneval_runtime_digest\n    raise RuntimeError(f\"HumanEval Docker image inspection failed: {detail}\")\nRuntimeError: HumanEval Docker image inspection failed: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?"
+    },
+    "context": {
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 1796.3232565629878,
+      "start_unix": 1789138488.8028605,
+      "end_unix": 1789140285.1263883,
+      "evidence": "context/summary.json",
+      "result": {
+        "verdict": "PASS",
+        "total_tokens": 1000560,
+        "min_mem_available_gib": 13.302970886230469,
+        "memory_floor_gib": 10.0,
+        "needles_correct": 4,
+        "needles_total": 4,
+        "max_ttft_s": 1745.33839541,
+        "checks": {
+          "short_phase_ok": true,
+          "full_phase_ran": true,
+          "all_slots_ok": true,
+          "needles_all_correct": true,
+          "controls_ok": true,
+          "memory_floor_pass": true,
+          "total_tokens_ok": true
+        }
+      }
+    },
+    "soak": {
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 1806.0097432800103,
+      "start_unix": 1789140285.1268497,
+      "end_unix": 1789142091.1378605,
+      "evidence": "soak/soak.json",
+      "result": {
+        "pass": true,
+        "failed_gates": [],
+        "n_requests": 136,
+        "n_errors": 0,
+        "decode_overall_median_tok_s": 20.56222082971292,
+        "mem_available_min_gib": 14.151763916015625,
+        "duration_seconds_actual": 1805.968806232966
+      }
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": 20.119222057793134,
+      "target": 17.46,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": 1.745620529,
+      "target": 0.5,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": 39.586807053334915,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": true,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": 19.844837551760058,
+      "target": 26.71,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": 58.926466637999994,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": 513.267045066041,
+      "target": 698.7,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": true,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 20,
+      "target": 19,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "accuracy",
+      "measured": 0.77,
+      "target": 0.64,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "vision",
+      "metric": "n",
+      "measured": 100,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "media",
+      "metric": "verdict",
+      "measured": "PASS",
+      "target": "PASS",
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "media",
+      "metric": "images_at_max_answered",
+      "measured": true,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "media",
+      "metric": "images_at_max_colours_in_order",
+      "measured": true,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "media",
+      "metric": "images_over_max_rejected_400",
+      "measured": true,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "media",
+      "metric": "video_at_max_answered",
+      "measured": true,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "media",
+      "metric": "video_direction_right",
+      "measured": true,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "teacher",
+      "metric": "delta_nll_mean",
+      "measured": 0.07924419478214305,
+      "target": 0.01,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "teacher",
+      "metric": "delta_nll_upper_95",
+      "measured": 0.1060602553071481,
+      "target": 0.01,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "teacher",
+      "metric": "top1_loss_pp_mean",
+      "measured": 1.4890083048363458,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "teacher",
+      "metric": "top1_loss_pp_upper_95",
+      "measured": 1.9069994700042763,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "teacher",
+      "metric": "verdict",
+      "measured": "FAIL",
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "gsm8k",
+      "measured": 0.94,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "mmlu-pro",
+      "measured": 0.8178137651821862,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "verdict",
+      "measured": "PASS",
+      "target": "PASS",
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "context",
+      "metric": "total_tokens",
+      "measured": 1000560,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "min_mem_available_gib",
+      "measured": 13.302970886230469,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "pass",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "decode_overall_median_tok_s",
+      "measured": 20.56222082971292,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "FAIL",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}

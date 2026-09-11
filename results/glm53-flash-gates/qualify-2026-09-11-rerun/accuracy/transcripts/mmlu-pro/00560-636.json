@@ -1,0 +1,54 @@
+{
+  "index": 560,
+  "task_id": 636,
+  "rendered_prompt_sha256": "6605ceddce44894c6dd8bc8c46f39b78384239671fdcb9a6202ca909bc6150d1",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Vasicek: P(r,t,T) = A(t,T)e^{-B(t,T)r}. With same maturity length 2 years each time. P(0.04,0,2)=0.9445, P(0.05,1,3)=0.9321, P(r*,2,4)=0.8960.\n\nIn Vasicek, P(r,t,T) = exp(-B(t,T) r + A). For same τ=2, B(t,t+2) = (1-e^{-aτ})/a same for all t. So P = C e^{-B r} with same C. Then ln P linear in r: ln0.9445 = lnC - B·0.04; ln0.9321 = lnC - B·0.05. Difference: ln(0.9445/0.9321)=B·0.01 → B = ln(1.01330)/0.01 ≈ 0.01319/0.01=1.319. lnC = ln0.9445 + 1.319·0.04 = -0.05717+0.05276=-0.00441. Then ln0.8960 = -0.00441 -1.319 r → r = (0.00441+0.10966)/1.319... ln0.8960=-0.10966. r = (-0.10966+0.00441)/(-1.319)=0.10525/1.319=0.0798 ≈ 0.08. Answer E.</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 19.282043554994743
+  },
+  "response": {
+    "id": "cmpl-893f5b4bd216f80a",
+    "object": "text_completion",
+    "created": 1789147319,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Vasicek: P(r,t,T) = A(t,T)e^{-B(t,T)r}. With same maturity length 2 years each time. P(0.04,0,2)=0.9445, P(0.05,1,3)=0.9321, P(r*,2,4)=0.8960.\n\nIn Vasicek, P(r,t,T) = exp(-B(t,T) r + A). For same τ=2, B(t,t+2) = (1-e^{-aτ})/a same for all t. So P = C e^{-B r} with same C. Then ln P linear in r: ln0.9445 = lnC - B·0.04; ln0.9321 = lnC - B·0.05. Difference: ln(0.9445/0.9321)=B·0.01 → B = ln(1.01330)/0.01 ≈ 0.01319/0.01=1.319. lnC = ln0.9445 + 1.319·0.04 = -0.05717+0.05276=-0.00441. Then ln0.8960 = -0.00441 -1.319 r → r = (0.00441+0.10966)/1.319... ln0.8960=-0.10966. r = (-0.10966+0.00441)/(-1.319)=0.10525/1.319=0.0798 ≈ 0.08. Answer E.</think>Answer: E",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 220,
+      "total_tokens": 590,
+      "completion_tokens": 370,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

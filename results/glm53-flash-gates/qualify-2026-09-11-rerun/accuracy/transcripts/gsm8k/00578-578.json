@@ -1,0 +1,55 @@
+{
+  "index": 578,
+  "task_id": 578,
+  "rendered_prompt_sha256": "62ee07dd0374744f4a0d649fcdd28ddb09254806b64359d2a66616447e37c417",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "20 + 10 = 30, /5 = 6, ×(20-12)=8 → 48.</think>(20 + 20/2) ÷ 5 = 30 ÷ 5 = 6; 6 × (20 − 12) = 6 × 8 = 48.\n\nAnswer: 48",
+  "finish_reason": "stop",
+  "expected": "48",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.179662599985022
+  },
+  "response": {
+    "id": "cmpl-afa861620971243e",
+    "object": "text_completion",
+    "created": 1789146238,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "20 + 10 = 30, /5 = 6, ×(20-12)=8 → 48.</think>(20 + 20/2) ÷ 5 = 30 ÷ 5 = 6; 6 × (20 − 12) = 6 × 8 = 48.\n\nAnswer: 48",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 86,
+      "total_tokens": 159,
+      "completion_tokens": 73,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}
