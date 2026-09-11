@@ -120,6 +120,8 @@ SPARK_BOUND = {
         "dsv4 group and /run/dsv4 lock namespace",
     "test_w7_drand_verifier.py::W7DrandVerifierTest::test_pinned_default_chain_beacon_verifies":
         "pinned nvm node binary under /home/bmarti44",
+    "test_w7_drand_verifier.py::W7DrandVerifierTest::test_signature_round_previous_and_randomness_mutations_fail":
+        "pinned nvm node binary under /home/bmarti44",
     "test_w7_equivalence_launcher.py::W7EquivalenceLauncherTest::test_all_runtime_programs_are_kernel_sealed":
         "kernel-sealed runtime programs under /usr/local/libexec",
     "test_w7_resume_production_launcher.py::W7ProductionLauncherTest::test_all_runtime_programs_are_kernel_sealed":
