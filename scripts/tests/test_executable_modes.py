@@ -27,7 +27,6 @@ MUST_BE_EXECUTABLE = [
     "scripts/13_build_laguna_llamacpp.sh",
     "scripts/21_serve_llamacpp.sh",
     "scripts/22_serve_qwen38.sh",
-    "scripts/23_serve_qwen38_sglang.sh",
     "scripts/25_serve_laguna.sh",
     "scripts/42_verify_exposure.sh",
     "scripts/52_engine_switch.sh",
