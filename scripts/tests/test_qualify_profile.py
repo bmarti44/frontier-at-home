@@ -408,6 +408,41 @@ class PartialRerunKeepsEarlierCells(unittest.TestCase):
         self.assertEqual(kit.load_previous_bundle(Path(tmp) / "absent", ["speed"]), {})
 
 
+class AccuracyResumeKeepsFinishedSuites(unittest.TestCase):
+    """A resumed accuracy cell keeps suites that already have results (holdout rows are spend-once)."""
+
+    def test_finished_suites_are_kept_and_only_missing_ones_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            cell_dir = out / "accuracy"
+            cell_dir.mkdir()
+            (cell_dir / "acc-gsm8k.json").write_text(json.dumps(
+                {"suite": "gsm8k", "split": "holdout", "n": 100, "correct": 94, "accuracy": 0.94}))
+            ran = []
+
+            def fake_run(argv, log_path):
+                ran.append(argv[-1])
+                (cell_dir / f"acc-{argv[-1]}.json").write_text(json.dumps(
+                    {"suite": argv[-1], "split": "all", "n": 164, "correct": 100, "accuracy": 0.61}))
+                return 0, 1.0
+
+            plan = {"suites": {"gsm8k": ["x", "gsm8k"], "humaneval": ["x", "humaneval"]},
+                    "skip_reason": None, "evidence": "accuracy/acc-<suite>.json"}
+            resolved = {"profile_id": "p", "binary_sha256": "0" * 64, "digest_checks": [], "argv": []}
+            saved = kit.run_subprocess
+            kit.run_subprocess = fake_run
+            try:
+                record = kit.run_cell("accuracy", plan, out, resolved)
+            finally:
+                kit.run_subprocess = saved
+            self.assertEqual(ran, ["humaneval"])
+            self.assertEqual(record["suites_kept_from_previous_run"], ["gsm8k"])
+            self.assertEqual(record["exit_code"], {"gsm8k": 0, "humaneval": 0})
+            self.assertEqual(record["status"], "OK")
+            self.assertEqual(record["result"]["suites"]["gsm8k"]["correct"], 94)
+            self.assertIn("(kept) acc-gsm8k.json", (cell_dir / "log.txt").read_text())
+
+
 class ResummarizeMode(unittest.TestCase):
     def test_resummarize_selects_no_cell_and_implies_no_launch(self) -> None:
         args = kit.parse_args(["--profile", GLM_PROFILE, "--resummarize", "--out", "/tmp/x"])

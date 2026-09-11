@@ -922,12 +922,24 @@ def run_cell(name: str, plan: dict, out: Path, resolved: dict) -> dict:
         write_config_evidence(cell_dir, resolved)
         exits = {}
         wall = 0.0
+        kept = []
         for suite, argv in plan["suites"].items():
+            # A suite that already produced its result in this bundle is kept,
+            # not re-run: holdout rows are spend-once (31_bench_accuracy.py's
+            # ledger refuses a second draw), so a resume after one suite failed
+            # (e.g. HumanEval's Docker runtime was down) must not redo the rest.
+            if (cell_dir / f"acc-{suite}.json").is_file():
+                kept.append(suite)
+                exits[suite] = 0
+                with open(log_path, "a", encoding="utf-8") as log:
+                    log.write(f"$ (kept) acc-{suite}.json already present; suite not re-run\n")
+                continue
             code, seconds = run_subprocess(argv, log_path)
             exits[suite] = code
             wall += seconds
         record["exit_code"] = exits
         record["wall_s"] = wall
+        record["suites_kept_from_previous_run"] = kept
         failed = [s for s, c in exits.items() if c != 0]
     else:
         code, wall = run_subprocess(plan["argv"], log_path)

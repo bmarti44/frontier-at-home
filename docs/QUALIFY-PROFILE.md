@@ -93,4 +93,6 @@ rendered side by side; it never gates.
 3. Optional: a `reference_logits` block in `model.json` (teacher cell) and a
    chat encoder registered in `scripts/31_bench_accuracy.py` `ENCODER_PATHS`
    (accuracy cell; `--encoder NAME`). Without them those cells are SKIPPED
-   with a reason.
+   with a reason. GSM8K and MMLU-Pro run on `--accuracy-split` (default
+   holdout, ledger-recorded); HumanEval has no holdout split and always runs
+   `--split all` (164 problems).
