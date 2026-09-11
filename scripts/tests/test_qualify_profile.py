@@ -69,9 +69,17 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertIn("uname", manifest["host"])
         self.assertEqual(manifest["cells_selected"], ["speed", "toolcall", "vision", "media", "teacher", "accuracy", "context"])
         cells = manifest["cells"]
-        # No GLM encoder is registered; model.json declares reference_logits so teacher is planned.
-        self.assertIsNotNone(cells["accuracy"]["skip_reason"])
-        self.assertIn("encoder", cells["accuracy"]["skip_reason"])
+        # The glm53 encoder is registered, so the three suites are planned with
+        # GLM's own effort contract; model.json declares reference_logits so teacher is planned.
+        self.assertIsNone(cells["accuracy"]["skip_reason"])
+        # The manifest stores the accuracy plan as {suite: argv}.
+        self.assertEqual(sorted(cells["accuracy"]["argv"]), ["gsm8k", "humaneval", "mmlu-pro"])
+        for suite, suite_argv in cells["accuracy"]["argv"].items():
+            joined = " ".join(suite_argv)
+            self.assertIn("--encoder glm53", joined)
+            self.assertIn("--reasoning-effort low", joined)
+            # HumanEval has no holdout split; the bench accepts --split all only.
+            self.assertIn("--split all" if suite == "humaneval" else "--split holdout", joined)
         self.assertIsNone(cells["teacher"]["skip_reason"])
         self.assertIn("49_score_teacher_windows.py", " ".join(cells["teacher"]["argv"]))
         self.assertIn("teacher-logits/glm-5.3-flash", " ".join(cells["teacher"]["argv"]))

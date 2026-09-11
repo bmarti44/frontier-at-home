@@ -63,6 +63,7 @@ MODEL_ENCODERS = {
     "deepseek-v4-flash": "dsv4",
     "laguna-s-2.1": "laguna",
     "qwen3.8-27b": "qwen38",
+    "glm-5.3-flash": "glm53",
 }
 
 SPEED_CONTEXT_LEVELS = "0,28672"
@@ -463,9 +464,12 @@ def plan_cells(resolved: dict, args: argparse.Namespace, out: Path, base_url: st
     if encoder:
         suites = {}
         for suite in ACCURACY_SUITES:
+            # HumanEval has no dev/holdout split (31_bench_accuracy.py accepts
+            # --split all only); GSM8K and MMLU-Pro take the requested split.
+            split = "all" if suite == "humaneval" else args.accuracy_split
             suite_argv = [py, str(SCRIPTS / CELL_SCRIPTS["accuracy"]), "--base-url", base_url,
                           "--out", str(cell_dir("accuracy") / f"acc-{suite}.json"),
-                          "--stack-label", label, "--suite", suite, "--split", args.accuracy_split,
+                          "--stack-label", label, "--suite", suite, "--split", split,
                           "--transcripts-dir", str(cell_dir("accuracy") / "transcripts" / suite),
                           "--encoder", encoder, "--max-tokens", "16384",
                           "--request-timeout", "2700",
