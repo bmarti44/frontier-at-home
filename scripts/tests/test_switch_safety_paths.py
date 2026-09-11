@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 
 from scripts.tests.switch_safety_fixtures import (
@@ -194,6 +195,54 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             guard_args = (fixture.root / "guard.called").read_text()
             self.assertIn("--required-gib 100", guard_args)
             self.assertEqual(fixture.systemctl_calls(), [])
+
+    def test_glm53_guard_failure_under_if_caller_cannot_proceed(self):
+        with SwitchSafetyFixture() as fixture:
+            result = fixture.run_function(
+                "glm53_hashes_verified=true\n"
+                "if start_glm53_profile; then\n"
+                '    printf "STARTER_PROCEEDED\\n"\n'
+                "    exit 90\n"
+                "fi\n"
+                'printf "CALLER_CONTINUED\\n"'
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("pre-load memory release gate failed", result.stderr)
+            self.assertNotIn("STARTER_PROCEEDED", result.stdout)
+            self.assertNotIn("CALLER_CONTINUED", result.stdout)
+            guard_args = (fixture.root / "guard.called").read_text()
+            self.assertIn("--required-gib 110", guard_args)
+            self.assertEqual(fixture.systemctl_calls(), [])
+
+    def test_stop_glm53_live_start_ticks_mismatch_fails_closed(self):
+        with SwitchSafetyFixture() as fixture:
+            engine = fixture.spawn_sleep()
+            pgid, ticks = proc_identity(engine.pid)
+            record = fixture.state / "glm53.process.json"
+            record.write_text(json.dumps({
+                "pid": engine.pid, "pgid": pgid, "start_ticks": ticks + 1,
+                "exe_sha256": fixture.process_exe_sha256(engine.pid),
+                "unit": "glm53-engine.service",
+                "memwatch_pid": engine.pid, "memwatch_start_ticks": ticks,
+            }))
+            fixture.set_systemctl_responses({
+                "argv_prefix": [
+                    "show", "glm53-engine.service", "--property=MainPID", "--value",
+                ],
+                "stdout": f"{engine.pid}\n",
+                "returncode": 0,
+            })
+
+            result = fixture.run_function("stop_glm53_verified")
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("stale GLM-5.3 PID identity", result.stderr)
+            self.assertTrue(record.exists())
+            self.assertIsNone(engine.poll())
+            self.assertNotIn(
+                "stop", [call[0] for call in fixture.systemctl_calls()]
+            )
 
     def test_laguna_hash_verification_rejects_tampered_second_shard(self):
         with SwitchSafetyFixture() as fixture:
