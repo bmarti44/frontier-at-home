@@ -3,8 +3,9 @@
 **GLM has named experimental profiles; it is currently stopped.** The optional
 million-token profile has returned to 128-token batches and 32-token prompt chunks.
 An earlier configuration with that scheduler passed the direct context check;
-the subsequent larger-batch configuration failed its memory reserve. Fresh
-confirmation of the current settings is pending. Qwen remains the recorded/reboot default.
+the subsequent larger-batch configuration failed its memory reserve. The fresh direct011 startup reached authenticated READY, then stopped cleanly
+for an owner-requested Fable handoff before short or full-context requests.
+Current-settings full-context confirmation is still pending. Qwen remains the recorded/reboot default.
 The latest model-free workspace test failed its repeated-baseline byte comparison;
 the original runtime inventory passes again after exact bytecode restoration.
 The corrected native reference probe passed one real
