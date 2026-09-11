@@ -56,7 +56,9 @@ CONTROL_INSTALLER = ROOT / "scripts/53_install_switch_control.sh"
 # to the production paths captured in
 # scripts/tests/fixtures/profile-conformance/.
 FIXTURES = ROOT / "scripts/tests/fixtures/profile-conformance"
-SWITCH_ALIASES = ("dsv4", "glm52", "qwen38", "qwen38-1m", "laguna")
+SWITCH_ALIASES = ("dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m")
+PRODUCTION_REPO = "/home/bmarti44/spark-deepseek-v4-flash"
+GLM53_PROFILE = ROOT / "configs" / "profiles" / "glm-5.3-flash" / "cuda-spark-128g-1m.json"
 
 
 def switch_production_map(test_root: str) -> dict[str, str]:
@@ -79,7 +81,15 @@ def switch_production_map(test_root: str) -> dict[str, str]:
             "Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf",
         f"{test_root}/laguna-dflash.gguf":
             "/home/bmarti44/models/laguna-s-2.1/poolside/laguna-s-2.1-DFlash-BF16.gguf",
+        f"{test_root}/source/glm53-python3":
+            "/home/bmarti44/.cache/glm53-flash/native-runtime-003/runtime/bin/python3",
+        f"{test_root}/glm53-model-weights":
+            "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp",
+        f"{test_root}/cache": "/home/bmarti44/.cache",
         test_root: state,
+        # In test mode the switch renders from the checkout that owns it
+        # (a worktree or the production tree); fixtures pin the latter.
+        str(ROOT): PRODUCTION_REPO,
     }
 
 
@@ -453,6 +463,305 @@ class EngineSwitchTests(unittest.TestCase):
                 result.stderr,
             )
 
+    def test_glm53_1m_production_launcher_matches_the_pinned_profile(self):
+        snapshot = render_switch_snapshot("glm53-1m")
+        self.assertEqual(
+            snapshot["binary"],
+            "/home/bmarti44/.cache/glm53-flash/native-runtime-003/runtime/bin/python3",
+        )
+        argv = snapshot["argv"]
+        self.assertEqual(argv[:3], ["-B", "-m", "vllm.entrypoints.openai.api_server"])
+        self.assertEqual(
+            argv[argv.index("--model") + 1],
+            "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp",
+        )
+        index = argv.index("--served-model-name")
+        self.assertEqual(argv[index + 1:index + 3], ["glm-5.3-flash", "default"])
+        self.assertEqual(argv[argv.index("--port") + 1], "8013")
+        self.assertEqual(argv[argv.index("--max-model-len") + 1], "262144")
+        self.assertEqual(argv[argv.index("--max-num-seqs") + 1], "4")
+        self.assertFalse(any(token.startswith("{") and token.endswith("}")
+                             and "=" not in token and ":" not in token
+                             for token in argv), "unresolved placeholder")
+        # The profile env is rendered (placeholders resolved) and applied.
+        env = snapshot["env"]
+        self.assertEqual(env["VLLM_PLUGINS"], "vllm_exl3")
+        self.assertEqual(env["PYTHONPATH"], f"{PRODUCTION_REPO}/scripts/lib")
+        self.assertEqual(env["HOME"], "/home/bmarti44/.cache/glm53-flash/home")
+        self.assertTrue(env["PATH"].startswith(
+            "/home/bmarti44/.cache/glm53-flash/native-runtime-003/runtime/bin:"))
+        systemd = snapshot["systemd"]
+        self.assertEqual(systemd["unit"], "glm53-engine")
+        self.assertEqual(
+            systemd["server_log"], "/home/dsv4/ds4-project/engine-switch/glm53.server.log"
+        )
+        self.assertEqual(systemd["properties"]["MemorySwapMax"], "0")
+        self.assertEqual(systemd["properties"]["KillMode"], "control-group")
+        self.assertNotIn("RuntimeMaxSec", systemd["properties"])
+        source = SCRIPT.read_text()
+        self.assertNotIn("RuntimeMaxSec", source)
+        self.assertIn("expected=glm-5.3-flash", source)
+        self.assertIn("GLM-5.3 transient unit executed an unapproved binary", source)
+        self.assertIn("stop_glm53_verified", source)
+        self.assertIn("start_glm53-1m", source)
+        self.assertIn('systemctl show "$GLM53_UNIT"', source)
+        verify = source[
+            source.index("verify_glm53_profile_hashes() {"):
+            source.index("revalidate_glm53_identities() {")
+        ]
+        self.assertIn("profile_resolver.resolve(", verify)
+        self.assertIn('snapshot["digest_checks"]', verify)
+        self.assertIn("os.O_NOFOLLOW", verify)
+        self.assertIn('snapshot["binary"] != binary_path', verify)
+        self.assertIn("GLM-5.3 digest target escapes the approved artifacts", verify)
+
+    def test_glm53_1m_unit_launch_applies_profile_env_and_safety_floors(self):
+        profile = json.loads(GLM53_PROFILE.read_text())
+        self.assertEqual(profile["switch_alias"], "glm53-1m")
+        source = SCRIPT.read_text()
+        launcher = source[
+            source.index("launch_systemd_profile() {"):
+            source.index("render_snapshot() {")
+        ]
+        self.assertIn('read_profile_array env_pairs "$alias" env', launcher)
+        self.assertIn('property_args+=(--setenv "$pair")', launcher)
+        starter = source[
+            source.index("start_glm53_profile() {"):
+            source.index("start_glm53-1m() {")
+        ]
+        self.assertRegex(
+            starter,
+            r"(?s)03_memory_guard\.py.*?--timeout-seconds 180\s+\|\|\s+die",
+        )
+        self.assertIn(
+            f"--required-gib {profile['safety']['minimum_start_gib']} ", starter
+        )
+        self.assertIn(
+            f"--threshold-gib {profile['safety']['kill_floor_gib']} --interval-sec 1",
+            starter,
+        )
+        self.assertEqual(profile["safety"]["minimum_start_gib"], 110)
+        self.assertEqual(profile["safety"]["kill_floor_gib"], 10)
+        self.assertIn("ARMED $pid $pgid $ticks provisional", starter)
+        self.assertIn("ARMED $pid $pgid $ticks engine", starter)
+        self.assertIn("GLM-5.3 process record already exists", starter)
+
+    def test_glm53_1m_readiness_and_verification_bind_unit_model_and_context(self):
+        source = SCRIPT.read_text()
+        readiness = source[
+            source.index("verify_glm53_process_ready() {"):
+            source.index("wait_model_ready() {")
+        ]
+        for contract in (
+            'systemctl show "$GLM53_UNIT" --property=MainPID',
+            'proc_identity "$pid"',
+            'readlink -f "/proc/$pid/exe"',
+            'readlink -f "$GLM53_BINARY"',
+            'ss -H -ltnp "sport = :$PORT"',
+            'sockets == *"pid=$pid,"*',
+        ):
+            self.assertIn(contract, readiness)
+        context = source[
+            source.index("verify_glm53_context() {"):
+            source.index("verify_qwen_process_ready() {")
+        ]
+        self.assertIn('item.get("id") == "glm-5.3-flash"', context)
+        self.assertIn('cards[0].get("max_model_len") != 262144', context)
+        wait = source[
+            source.index("wait_model_ready() {"):source.index("verify_serving() {")
+        ]
+        self.assertIn("verify_glm53_process_ready", wait)
+        self.assertIn("verify_glm53_context", wait)
+        verify = source[
+            source.index("verify_serving() {"):source.index("commit_active() {")
+        ]
+        glm_block = verify[verify.index("if [[ $profile == glm53-1m ]]"):]
+        # The shared authenticated semantic probe (401 without a key, then a
+        # bearer-authenticated chat completion) runs after the GLM checks.
+        self.assertNotIn("return 0", glm_block.split("unauth=", 1)[0])
+        self.assertIn("verify_glm53_process_ready || return 1", glm_block)
+        self.assertIn("verify_glm53_context || return 1", glm_block)
+        self.assertIn('[[ $unauth == 401 ]] || return 1', glm_block)
+        stop = source[
+            source.index("stop_glm53_verified() {"):source.index("stop_profile() {")
+        ]
+        self.assertIn("stale GLM-5.3 PID identity; refusing to stop unit", stop)
+        self.assertIn("GLM-5.3 executable hash changed; refusing to stop unit", stop)
+        self.assertIn("GLM-5.3 unit is live without an identity record", stop)
+        self.assertIn("DISARMED $pid $expected_pgid $expected_ticks", stop)
+
+    def test_glm53_1m_hash_failure_is_rejected_before_active_profile_is_stopped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-1m"})
+            )
+            (root / "qwen-running").touch()
+            result = self.run_switch(root, "glm53-1m")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("glm-5.3", result.stderr.lower())
+            self.assertTrue((root / "qwen-running").exists())
+            self.assertFalse((root / "actions.log").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38-1m",
+            )
+
+    def test_glm53_1m_successful_launch_cleans_killed_unit_and_applies_env(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-1m"})
+            )
+            (root / "qwen-running").touch()
+            (root / "glm53-hashes-valid").touch()
+            (root / "glm53-unit-killed").touch()
+            result = self.run_switch(root, "glm53-1m")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "glm53-1m",
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("HASHES glm53-1m", actions)
+            self.assertIn("STOP qwen", actions)
+            self.assertIn("SYSTEMCTL reset-failed glm53-engine.service", actions)
+            self.assertIn("SYSTEMD_RUN --unit=glm53-engine", actions)
+            self.assertIn(f"{root}/source/glm53-python3 -B -m "
+                          "vllm.entrypoints.openai.api_server --model "
+                          f"{root}/glm53-model-weights", actions)
+            self.assertIn("--served-model-name glm-5.3-flash default", actions)
+            self.assertIn("--port 8013", actions)
+            self.assertIn("--setenv VLLM_PLUGINS=vllm_exl3", actions)
+            self.assertIn(f"--setenv PYTHONPATH={ROOT}/scripts/lib", actions)
+            self.assertIn("--property MemorySwapMax=0", actions)
+            self.assertIn("--property KillMode=control-group", actions)
+            self.assertIn(
+                f"--property StandardOutput=append:{root}/glm53.server.log", actions
+            )
+            self.assertNotIn("RuntimeMaxSec", actions)
+            self.assertIn("START glm53-1m", actions)
+            self.assertIn("WAIT glm53-1m", actions)
+            self.assertIn("VERIFY glm53-1m", actions)
+            self.assertFalse((root / "glm53-unit-killed").exists())
+            self.assertFalse((root / "qwen-running").exists())
+            self.assertTrue((root / "glm53-running").exists())
+
+    def test_glm53_1m_startup_death_rolls_back_to_qwen38_1m(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-1m"})
+            )
+            (root / "qwen-running").touch()
+            (root / "qwen-hashes-valid").touch()
+            (root / "glm53-hashes-valid").touch()
+            (root / "fail-glm53-start").touch()
+            result = self.run_switch(root, "glm53-1m")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("GLM-5.3 transient unit failed to start", result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38-1m",
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertNotIn("START glm53-1m", actions)
+            self.assertIn("STOP glm53", actions)
+            self.assertIn("HASHES qwen38-1m", actions)
+            self.assertLess(actions.index("STOP glm53"), actions.index("START qwen38-1m"))
+            self.assertIn("WAIT qwen38-1m", actions)
+            self.assertIn("VERIFY qwen38-1m", actions)
+            self.assertIn("-c 1048576", actions)
+            self.assertTrue((root / "qwen-running").exists())
+            self.assertFalse((root / "glm53-running").exists())
+
+    def test_glm53_1m_wrong_model_identity_rolls_back_to_qwen38_1m(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38-1m"})
+            )
+            (root / "qwen-running").touch()
+            (root / "qwen-hashes-valid").touch()
+            (root / "glm53-hashes-valid").touch()
+            (root / "fail-glm53-1m-verify").touch()
+            result = self.run_switch(root, "glm53-1m")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38-1m",
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("START glm53-1m", actions)
+            self.assertIn("VERIFY glm53-1m", actions)
+            self.assertLess(actions.index("VERIFY glm53-1m"), actions.index("STOP glm53"))
+            self.assertLess(actions.index("STOP glm53"), actions.index("START qwen38-1m"))
+            self.assertIn("VERIFY qwen38-1m", actions)
+            self.assertTrue((root / "qwen-running").exists())
+            self.assertFalse((root / "glm53-running").exists())
+
+    def test_status_accepts_glm53_1m(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "glm53-1m"})
+            )
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["active_profile"], "glm53-1m")
+        source = SCRIPT.read_text()
+        self.assertIn(
+            "status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m|laguna|glm53-1m",
+            source,
+        )
+
+    def test_stop_halts_glm53_1m_without_touching_active_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "glm53-1m"})
+            )
+            (root / "glm53-running").touch()
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("STOPPED glm53-1m", result.stdout)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "glm53-1m",
+            )
+            self.assertFalse((root / "glm53-running").exists())
+            self.assertIn("STOP glm53", (root / "actions.log").read_text())
+
+    def test_restore_glm53_1m_start_failure_falls_back_to_dsv4(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "glm53-1m"})
+            )
+            (root / "glm53-hashes-valid").touch()
+            (root / "fail-glm53-start").touch()
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            self.assertIn(
+                "RESTORE FAILED for recorded profile glm53-1m; falling back to dsv4",
+                result.stderr,
+            )
+            self.assertIn(
+                "RESTORE FALLBACK committed dsv4 in active.json", result.stderr
+            )
+
+    def test_glm53_1m_is_not_the_default_and_qwen38_1m_is_untouched(self):
+        source = SCRIPT.read_text()
+        self.assertIn("expected=deepseek-v4-flash", source)
+        self.assertIn('[[ $command != dsv4 ]] || die "dsv4 boot restoration failed"', source)
+        # The qwen38-1m launch assembly is unchanged by the GLM alias: no env
+        # is injected into its transient unit and its floor stays at 8 GiB.
+        self.assertEqual(render_switch_snapshot("qwen38-1m")["env"], {})
+        self.assertIn("[[ $profile != qwen38-1m ]] || watchdog_floor_gib=8", source)
+
     def test_background_spawns_close_the_switch_lock_fd(self):
         # Regression for the 2026-08-21 deadlock: a memwatch spawned without
         # `9>&-` inherited the switch.lock open-file description, so the lock
@@ -579,7 +888,7 @@ class EngineSwitchTests(unittest.TestCase):
             ("DSV4_SERVER_BINARY",
              "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server"),
             ("DSV4_BUILD_MANIFEST",
-             f"{ROOT}/configs/build-manifests/llamacpp-fusion.json"),
+             f"{PRODUCTION_REPO}/configs/build-manifests/llamacpp-fusion.json"),
             ("DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB", "8"),
             ("DSV4_MEM_FLOOR_GIB", "8"),
             ("DSV4_WATCHDOG_FLOOR_GIB", "8"),

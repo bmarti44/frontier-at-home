@@ -23,7 +23,14 @@ SCRIPT = ROOT / "scripts/93_score_w9_fp4_falsifier.py"
 SPEC = importlib.util.spec_from_file_location("w9_fp4", SCRIPT)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(MODULE)
+# The W9 scorer snapshots the root-owned runtime tree at import time;
+# off-host (CI) that tree does not exist, so the whole module skips.
+try:
+    SPEC.loader.exec_module(MODULE)
+except ValueError as error:
+    if "runtime tree root" not in str(error):
+        raise
+    raise unittest.SkipTest(f"Spark-bound W9 scorer: {error}") from error
 
 
 class W9Fp4FalsifierTests(unittest.TestCase):

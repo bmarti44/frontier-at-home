@@ -19,9 +19,15 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "59_requant_glm_dense.py"
 GGUF_PY = ROOT / "results" / "glm52-gates" / "harness" / "gguf-py"
-sys.path.insert(0, os.fspath(GGUF_PY))
-from gguf import quants
-from gguf.constants import GGMLQuantizationType
+# Prefer the harness copy pinned with the GLM-5.2 evidence; fall back to an
+# installed gguf package (CI pins one) so the requant maths is still tested.
+if GGUF_PY.is_dir():
+    sys.path.insert(0, os.fspath(GGUF_PY))
+try:
+    from gguf import quants
+    from gguf.constants import GGMLQuantizationType
+except ImportError as error:  # pragma: no cover - environment dependent
+    raise unittest.SkipTest(f"gguf package unavailable: {error}") from error
 
 
 def load_module():

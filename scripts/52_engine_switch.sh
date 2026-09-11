@@ -15,14 +15,21 @@ if [[ -n ${ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT:-} ]]; then
     PROD_LAGUNA_BINARY=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/bin/laguna-server
     PROD_LAGUNA_MODEL=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/models/laguna-00001-of-00003.gguf
     PROD_LAGUNA_DRAFT=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/models/laguna-dflash.gguf
+    PROD_GLM53_BINARY=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/bin/glm53-python3
+    PROD_GLM53_MODEL=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/models/glm53-weights
+    PROD_CACHE_ROOT=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/cache
 else
     REPO=/home/bmarti44/spark-deepseek-v4-flash
     PROD_STATE=/home/dsv4/ds4-project/engine-switch
     PROD_LAGUNA_BINARY=/home/bmarti44/.cache/llamacpp-laguna-06f8cebd/src/build/bin/llama-server
     PROD_LAGUNA_MODEL=/home/bmarti44/models/laguna-s-2.1/unsloth/UD-Q4_K_XL/Laguna-S-2.1-UD-Q4_K_XL-00001-of-00003.gguf
     PROD_LAGUNA_DRAFT=/home/bmarti44/models/laguna-s-2.1/poolside/laguna-s-2.1-DFlash-BF16.gguf
+    PROD_GLM53_BINARY=/home/bmarti44/.cache/glm53-flash/native-runtime-003/runtime/bin/python3
+    PROD_GLM53_MODEL=/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp
+    PROD_CACHE_ROOT=/home/bmarti44/.cache
 fi
-readonly REPO PROD_STATE PROD_LAGUNA_BINARY PROD_LAGUNA_MODEL PROD_LAGUNA_DRAFT
+readonly PROD_STATE PROD_LAGUNA_BINARY PROD_LAGUNA_MODEL PROD_LAGUNA_DRAFT \
+    PROD_GLM53_BINARY PROD_GLM53_MODEL PROD_CACHE_ROOT
 readonly PROD_BINARY=/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server
 readonly PROD_GGUF=/home/bmarti44/models/glm52-full-denseq40.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-fullq4-production-profile.json
@@ -49,6 +56,12 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     LAGUNA_BINARY=$STATE/source/laguna-server
     LAGUNA_MODEL=$STATE/laguna-model-00001-of-00003.gguf
     LAGUNA_DRAFT=$STATE/laguna-dflash.gguf
+    GLM53_BINARY=$STATE/source/glm53-python3
+    GLM53_MODEL=$STATE/glm53-model-weights
+    CACHE_ROOT=$STATE/cache
+    # Render profiles from the checkout that owns this script so a worktree's
+    # tests exercise its own configs/profiles rather than the production tree.
+    REPO=$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/.." && pwd -P)
 else
     unset ENGINE_SWITCH_TEST_ROOT ENGINE_PORT DS4_GLM_TOPK_KEEP \
         DS4_GLM_TOPK_SKIP_LOAD DS4_GLM_DISABLE_STREAMING_TOKEN_PREFILL \
@@ -62,9 +75,12 @@ else
     LAGUNA_BINARY=$PROD_LAGUNA_BINARY
     LAGUNA_MODEL=$PROD_LAGUNA_MODEL
     LAGUNA_DRAFT=$PROD_LAGUNA_DRAFT
+    GLM53_BINARY=$PROD_GLM53_BINARY
+    GLM53_MODEL=$PROD_GLM53_MODEL
+    CACHE_ROOT=$PROD_CACHE_ROOT
 fi
-readonly STATE BINARY GGUF QWEN_BINARY QWEN_MODEL QWEN_MMPROJ \
-    LAGUNA_BINARY LAGUNA_MODEL LAGUNA_DRAFT
+readonly REPO STATE BINARY GGUF QWEN_BINARY QWEN_MODEL QWEN_MMPROJ \
+    LAGUNA_BINARY LAGUNA_MODEL LAGUNA_DRAFT GLM53_BINARY GLM53_MODEL CACHE_ROOT
 readonly ACTIVE=$STATE/active.json
 readonly LOCK=$STATE/switch.lock
 readonly GLM_PROCESS=$STATE/glm52.process.json
@@ -81,12 +97,19 @@ readonly LAGUNA_UNIT=laguna-engine.service
 readonly LAGUNA_WATCHDOG_TARGET=$STATE/laguna.memwatch.target
 readonly LAGUNA_WATCHDOG_READY=$STATE/laguna.memwatch.ready
 readonly LAGUNA_WATCHDOG_LOG=$STATE/laguna.memwatch.log
+readonly GLM53_PROCESS=$STATE/glm53.process.json
+readonly GLM53_UNIT=glm53-engine.service
+readonly GLM53_WATCHDOG_TARGET=$STATE/glm53.memwatch.target
+readonly GLM53_WATCHDOG_READY=$STATE/glm53.memwatch.ready
+readonly GLM53_WATCHDOG_LOG=$STATE/glm53.memwatch.log
 rollback_needed=false
 previous_profile=
 qwen_hashes_verified_profile=
 qwen_verified_identities=
 laguna_hashes_verified=false
 laguna_verified_identities=
+glm53_hashes_verified=false
+glm53_verified_identities=
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -129,6 +152,9 @@ readonly PROFILE_GLM52=configs/profiles/glm-5.2/cuda-spark-128g.json
 readonly PROFILE_QWEN38=configs/profiles/qwen3.8-27b/cuda-spark-128g.json
 readonly PROFILE_QWEN38_1M=configs/profiles/qwen3.8-27b/cuda-spark-128g-1m.json
 readonly PROFILE_LAGUNA=configs/profiles/laguna-s-2.1/cuda-spark-128g.json
+readonly PROFILE_GLM53_1M=configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json
+# Host file the GLM-5.3 digest inventory renders against (docs/PROFILE-SCHEMA.md).
+readonly GLM53_HOST_CONFIG=configs/hosts/spark-aba1.json
 
 profile_path_for() {
     case "$1" in
@@ -137,6 +163,7 @@ profile_path_for() {
         qwen38) printf '%s\n' "$PROFILE_QWEN38" ;;
         qwen38-1m) printf '%s\n' "$PROFILE_QWEN38_1M" ;;
         laguna) printf '%s\n' "$PROFILE_LAGUNA" ;;
+        glm53-1m) printf '%s\n' "$PROFILE_GLM53_1M" ;;
         *) die "no profile for alias $1" ;;
     esac
 }
@@ -229,7 +256,7 @@ subst_placeholders() {
 
 launch_systemd_profile() {
     local alias=$1 binary=$2 model=$3 mmproj=$4 draft=$5
-    local -a argv props property_args subs
+    local -a argv props env_pairs property_args subs
     local unit log_name pair
     read_profile_array argv "$alias" args
     (( ${#argv[@]} > 0 )) || die "$alias profile rendered an empty argv"
@@ -237,6 +264,10 @@ launch_systemd_profile() {
     [[ -z $mmproj ]] || subs+=("mmproj=$mmproj")
     [[ -z $draft ]] || subs+=("draft_model=$draft")
     subst_placeholders argv "${subs[@]}"
+    # The profile env (vLLM runtime PATH/HOME/plugin settings for glm53-1m;
+    # empty for the llama-server profiles) becomes the unit environment.
+    read_profile_array env_pairs "$alias" env
+    subst_placeholders env_pairs "port=$PORT" "repo=$REPO" "cache_root=$CACHE_ROOT"
     read_profile_array props "$alias" properties
     (( ${#props[@]} > 0 )) || die "$alias profile rendered no containment properties"
     unit=$(profile_field "$alias" unit | tr -d '\0') || die "$alias unit render failed"
@@ -244,6 +275,9 @@ launch_systemd_profile() {
     property_args=()
     for pair in "${props[@]}"; do
         property_args+=(--property "$pair")
+    done
+    for pair in "${env_pairs[@]}"; do
+        property_args+=(--setenv "$pair")
     done
     systemd-run --unit="$unit" --collect --quiet \
         "${property_args[@]}" \
@@ -287,35 +321,47 @@ print(json.dumps({"alias": alias, "mechanism": "setsid-memwatch",
                   "argv": rest[count:]}, indent=1))
 PY
             ;;
-        qwen38|qwen38-1m|laguna)
+        qwen38|qwen38-1m|laguna|glm53-1m)
             local binary model mmproj draft unit log_name
             case "$alias" in
                 laguna)
                     binary=$LAGUNA_BINARY model=$LAGUNA_MODEL
                     mmproj= draft=$LAGUNA_DRAFT
                     ;;
+                glm53-1m)
+                    binary=$GLM53_BINARY model=$GLM53_MODEL
+                    mmproj= draft=
+                    ;;
                 *)
                     binary=$QWEN_BINARY model=$QWEN_MODEL
                     mmproj=$QWEN_MMPROJ draft=
                     ;;
             esac
-            local -a argv props subs
+            local -a argv props env_pairs subs
             read_profile_array argv "$alias" args
             subs=("model=$model" "port=$PORT")
             [[ -z $mmproj ]] || subs+=("mmproj=$mmproj")
             [[ -z $draft ]] || subs+=("draft_model=$draft")
             subst_placeholders argv "${subs[@]}"
+            read_profile_array env_pairs "$alias" env
+            subst_placeholders env_pairs "port=$PORT" "repo=$REPO" \
+                "cache_root=$CACHE_ROOT"
             read_profile_array props "$alias" properties
             unit=$(profile_field "$alias" unit | tr -d '\0')
             log_name=$(profile_field "$alias" log_name | tr -d '\0')
             clean_python - "$alias" "$binary" "$unit" \
                 "$STATE/$log_name.server.log" "${#props[@]}" \
-                "${props[@]}" "${argv[@]}" <<'PY'
+                "${#env_pairs[@]}" "${props[@]}" "${env_pairs[@]}" \
+                "${argv[@]}" <<'PY'
 import json, sys
-alias, binary, unit, server_log, count, *rest = sys.argv[1:]
+alias, binary, unit, server_log, count, env_count, *rest = sys.argv[1:]
 count = int(count)
+env_count = int(env_count)
 print(json.dumps({"alias": alias, "mechanism": "systemd-run",
-                  "binary": binary, "env": {}, "argv": rest[count:],
+                  "binary": binary,
+                  "env": dict(pair.split("=", 1)
+                              for pair in rest[count:count + env_count]),
+                  "argv": rest[count + env_count:],
                   "systemd": {"unit": unit,
                               "properties": dict(
                                   pair.split("=", 1) for pair in rest[:count]),
@@ -352,7 +398,7 @@ state = "inactive"
 try:
     with open(path, encoding="utf-8") as stream:
         value = json.load(stream)
-    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna"}:
+    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m"}:
         profile = value["profile"]
         state = "recorded"
 except (OSError, ValueError, TypeError):
@@ -369,7 +415,7 @@ try:
     with open(sys.argv[1], encoding="utf-8") as stream:
         value = json.load(stream)
     profile = value.get("profile")
-    print(profile if profile in {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna"} else "")
+    print(profile if profile in {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m"} else "")
 except (OSError, ValueError, TypeError):
     print("")
 PY
@@ -651,6 +697,108 @@ for label, path, follow_symlinks in paths:
 PY
 }
 
+# GLM-5.3 launch truth is the declarative profile: the digest inventory the
+# resolver renders (interpreter sha256 plus the weight pack's index/config/
+# quantization/tokenizer/chat-template files) is the approved artifact set,
+# and the rendered binary/model/port must match the paths this switch launches.
+verify_glm53_profile_hashes() {
+    glm53_verified_identities=$(clean_python - "$REPO" "$PROFILE_GLM53_1M" \
+            "$GLM53_HOST_CONFIG" "$GLM53_BINARY" "$GLM53_MODEL" "$PORT" <<'PY'
+import hashlib, json, os, stat, sys
+repo, relpath, host_relpath, binary_path, model_path, port = sys.argv[1:]
+sys.path.insert(0, repo + "/scripts/lib")
+import profile_resolver
+parts = relpath.split("/")
+profile = profile_resolver.load_profile(parts[-2], parts[-1])
+if profile.get("switch_alias") != "glm53-1m":
+    raise SystemExit("GLM-5.3 profile identity is not approved")
+model = profile_resolver.load_model(profile["model"])
+host = profile_resolver.load_host(os.path.join(repo, host_relpath))
+snapshot = profile_resolver.resolve(profile, model, host)
+
+def digest_and_identity(path):
+    descriptor = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+    value = hashlib.sha256()
+    with os.fdopen(descriptor, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode):
+            raise SystemExit(f"GLM-5.3 artifact is not a regular file: {path}")
+        for chunk in iter(lambda: stream.read(16 * 1024 * 1024), b""):
+            value.update(chunk)
+        after = os.fstat(stream.fileno())
+    fields = lambda item: (
+        item.st_dev, item.st_ino, item.st_mode, item.st_nlink, item.st_size,
+        item.st_mtime_ns, item.st_ctime_ns,
+    )
+    if fields(before) != fields(after):
+        raise SystemExit(f"GLM-5.3 artifact changed during verification: {path}")
+    return value.hexdigest(), fields(after)
+
+if snapshot["mechanism"] != "systemd-run":
+    raise SystemExit("GLM-5.3 launch mechanism is not approved")
+if snapshot["port"] != int(port) or snapshot["context_cap"] != 1048576:
+    raise SystemExit("GLM-5.3 serving topology is not approved")
+serving = snapshot.get("serving") or {}
+if serving.get("parallel_slots") != 4 or serving.get("request_context_cap") != 262144:
+    raise SystemExit("GLM-5.3 slot topology is not approved")
+if snapshot["binary"] != binary_path:
+    raise SystemExit("GLM-5.3 binary path is not approved")
+argv = snapshot["argv"]
+try:
+    if argv[argv.index("--model") + 1] != model_path:
+        raise SystemExit("GLM-5.3 model path is not approved")
+    if argv[argv.index("--port") + 1] != port:
+        raise SystemExit("GLM-5.3 port is not approved")
+except (ValueError, IndexError):
+    raise SystemExit("GLM-5.3 launch argv lacks its model or port")
+if not stat.S_ISDIR(os.lstat(model_path).st_mode):
+    raise SystemExit("GLM-5.3 weight pack is not a directory")
+checks = snapshot["digest_checks"]
+if not isinstance(checks, list) or not checks:
+    raise SystemExit("GLM-5.3 digest inventory is empty")
+identities = {}
+for check in checks:
+    path = check.get("path")
+    expected = check.get("sha256")
+    if not isinstance(path, str) or not isinstance(expected, str):
+        raise SystemExit("GLM-5.3 digest check lacks a sha256")
+    if path != binary_path and os.path.dirname(path) != model_path:
+        raise SystemExit(f"GLM-5.3 digest target escapes the approved artifacts: {path}")
+    if path in identities:
+        raise SystemExit(f"GLM-5.3 digest inventory repeats {path}")
+    digest, identity = digest_and_identity(path)
+    if digest != expected:
+        raise SystemExit(f"GLM-5.3 artifact hash is not approved: {path}")
+    identities[path] = identity
+if binary_path not in identities:
+    raise SystemExit("GLM-5.3 binary digest is not pinned")
+if all(path == binary_path for path in identities):
+    raise SystemExit("GLM-5.3 weight pack digests are not pinned")
+print(json.dumps(identities, separators=(",", ":"), sort_keys=True))
+PY
+    ) || die "GLM-5.3 artifact verification failed"
+    glm53_hashes_verified=true
+}
+
+revalidate_glm53_identities() {
+    [[ -n $glm53_verified_identities ]] || die "GLM-5.3 artifacts lack verified identities"
+    clean_python - "$glm53_verified_identities" "$GLM53_BINARY" "$GLM53_MODEL" <<'PY'
+import json, os, stat, sys
+expected = json.loads(sys.argv[1])
+binary_path, model_path = sys.argv[2:]
+if binary_path not in expected:
+    raise SystemExit("GLM-5.3 verified inventory lacks the binary")
+for path, fields in sorted(expected.items()):
+    if path != binary_path and os.path.dirname(path) != model_path:
+        raise SystemExit(f"GLM-5.3 verified inventory escapes the approved artifacts: {path}")
+    info = os.lstat(path)
+    actual = [info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+              info.st_size, info.st_mtime_ns, info.st_ctime_ns]
+    if not stat.S_ISREG(info.st_mode) or actual != fields:
+        raise SystemExit(f"GLM-5.3 artifact identity changed after hash approval: {path}")
+PY
+}
+
 proc_identity() {
     local pid=$1 line
     [[ $pid =~ ^[0-9]+$ && $pid -gt 1 && -r /proc/$pid/stat ]] || return 1
@@ -858,6 +1006,78 @@ PY
     rm -f -- "$LAGUNA_PROCESS" "$LAGUNA_WATCHDOG_TARGET" "$LAGUNA_WATCHDOG_READY"
 }
 
+stop_glm53_verified() {
+    local values pid expected_pgid expected_ticks expected_sha expected_unit
+    local memwatch_pid memwatch_ticks current current_pgid current_ticks
+    local exe unit_pid cmdline ready
+    if [[ ! -f $GLM53_PROCESS ]]; then
+        if ! unit_pid=$(systemctl show "$GLM53_UNIT" --property=MainPID --value \
+                2>/dev/null); then
+            die "cannot query GLM-5.3 unit MainPID; refusing to assume it is stopped"
+        fi
+        if [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+            die "GLM-5.3 unit is live without an identity record; refusing to continue"
+        fi
+        return 0
+    fi
+    values=$(clean_python - "$GLM53_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"], value["exe_sha256"],
+      value["unit"], value["memwatch_pid"], value["memwatch_start_ticks"])
+PY
+    ) || die "invalid GLM-5.3 process record"
+    read -r pid expected_pgid expected_ticks expected_sha expected_unit \
+        memwatch_pid memwatch_ticks <<<"$values"
+    [[ $expected_unit == "$GLM53_UNIT" ]] ||
+        die "GLM-5.3 process record names an unexpected unit"
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    if ! unit_pid=$(systemctl show "$GLM53_UNIT" --property=MainPID --value \
+            2>/dev/null); then
+        die "cannot query GLM-5.3 unit MainPID; refusing to stop it"
+    fi
+    if [[ -n $current ]]; then
+        read -r current_pgid current_ticks <<<"$current"
+        exe=$(readlink -f "/proc/$pid/exe") ||
+            die "cannot resolve recorded GLM-5.3 executable"
+        [[ $unit_pid == "$pid" && $current_pgid == "$expected_pgid" &&
+                $current_ticks == "$expected_ticks" ]] ||
+            die "stale GLM-5.3 PID identity; refusing to stop unit"
+        [[ $(sha256 "$exe") == "$expected_sha" ]] ||
+            die "GLM-5.3 executable hash changed; refusing to stop unit"
+        systemctl stop "$GLM53_UNIT"
+        for _ in $(seq 1 600); do
+            [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] && break
+            sleep 0.1
+        done
+        [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] ||
+            die "GLM-5.3 transient unit did not stop its recorded process"
+    elif [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+        die "GLM-5.3 unit has an unrecorded live MainPID; refusing to stop it"
+    fi
+    if [[ $(proc_identity "$memwatch_pid" 2>/dev/null || true) == *" $memwatch_ticks" ]]; then
+        cmdline=$(tr '\0' ' ' <"/proc/$memwatch_pid/cmdline")
+        [[ $cmdline == *"$REPO/scripts/01_memwatch.sh"* &&
+                $cmdline == *"$GLM53_WATCHDOG_TARGET"* ]] ||
+            die "GLM-5.3 memwatch identity changed; refusing to disarm"
+        printf 'DISARM %s %s %s\n' "$pid" "$expected_pgid" "$expected_ticks" \
+            >"$GLM53_WATCHDOG_TARGET.tmp"
+        mv -- "$GLM53_WATCHDOG_TARGET.tmp" "$GLM53_WATCHDOG_TARGET"
+        for _ in $(seq 1 50); do
+            [[ -d /proc/$memwatch_pid ]] || break
+            sleep 0.1
+        done
+        ready=$(cat "$GLM53_WATCHDOG_READY" 2>/dev/null) ||
+            die "GLM-5.3 memwatch disarm acknowledgement is missing"
+        [[ $ready == "DISARMED $pid $expected_pgid $expected_ticks" ]] ||
+            die "GLM-5.3 memwatch disarm acknowledgement does not match engine identity"
+        [[ ! -d /proc/$memwatch_pid ]] ||
+            die "GLM-5.3 memwatch did not accept authenticated disarm"
+    fi
+    rm -f -- "$GLM53_PROCESS" "$GLM53_WATCHDOG_TARGET" "$GLM53_WATCHDOG_READY"
+}
+
 stop_profile() {
     case "$1" in
         dsv4)
@@ -877,6 +1097,7 @@ stop_profile() {
         glm52) stop_glm_verified ;;
         qwen38|qwen38-1m) stop_qwen_verified ;;
         laguna) stop_laguna_verified ;;
+        glm53-1m) stop_glm53_verified ;;
         "") return 0 ;;
         *) die "unknown previous profile $1" ;;
     esac
@@ -1215,6 +1436,228 @@ start_laguna() {
     start_laguna_profile
 }
 
+launch_glm53-1m() {
+    launch_systemd_profile glm53-1m "$GLM53_BINARY" "$GLM53_MODEL" "" ""
+}
+
+cleanup_glm53_killed_unit() {
+    local load_state active_state
+    load_state=$(systemctl show "$GLM53_UNIT" --property=LoadState --value \
+        2>/dev/null || true)
+    [[ -z $load_state || $load_state == not-found ]] && return 0
+    active_state=$(systemctl show "$GLM53_UNIT" --property=ActiveState --value \
+        2>/dev/null || true)
+    if [[ $active_state == failed || $active_state == inactive ]]; then
+        systemctl reset-failed "$GLM53_UNIT" 2>/dev/null || true
+        for _ in $(seq 1 50); do
+            load_state=$(systemctl show "$GLM53_UNIT" --property=LoadState --value \
+                2>/dev/null || true)
+            [[ -z $load_state || $load_state == not-found ]] && return 0
+            sleep 0.1
+        done
+    fi
+    die "GLM-5.3 transient unit already exists (LoadState=$load_state, ActiveState=$active_state)"
+}
+
+start_glm53_profile() {
+    local pid identity pgid ticks exe_sha approved_sha unit_pid current
+    local live_exe approved_exe
+    local memwatch_pid memwatch_identity memwatch_ticks ready
+    [[ ! -e $GLM53_PROCESS ]] ||
+        die "GLM-5.3 process record already exists; refusing a second model"
+    { "$glm53_hashes_verified" || verify_glm53_profile_hashes; } ||
+        die "GLM-5.3 artifact verification failed"
+    # safety.minimum_start_gib (110) and safety.kill_floor_gib (10) from the
+    # glm53-1m profile: the AGENTS.md 1M gate floor; the cgroup limit is blind
+    # to CUDA unified memory on GB10, so the external memwatch is the guard.
+    "$REPO/scripts/03_memory_guard.py" --required-gib 110 \
+        --stable-samples 3 --interval-seconds 1 --timeout-seconds 180 ||
+        die "pre-load memory release gate failed"
+    cleanup_glm53_killed_unit ||
+        die "GLM-5.3 killed-unit cleanup failed"
+    rm -f -- "$GLM53_PROCESS.tmp" "$GLM53_WATCHDOG_TARGET" \
+        "$GLM53_WATCHDOG_READY" ||
+        die "GLM-5.3 stale startup-state cleanup failed"
+    "$REPO/scripts/01_memwatch.sh" \
+        --target-file "$GLM53_WATCHDOG_TARGET" \
+        --ready-file "$GLM53_WATCHDOG_READY" \
+        --threshold-gib 10 --interval-sec 1 --log "$GLM53_WATCHDOG_LOG" 9>&- &
+    memwatch_pid=$!
+    memwatch_ticks=
+    ready=
+    for _ in $(seq 1 50); do
+        memwatch_identity=$(proc_identity "$memwatch_pid" 2>/dev/null || true)
+        memwatch_ticks=${memwatch_identity#* }
+        ready=$(cat "$GLM53_WATCHDOG_READY" 2>/dev/null || true)
+        [[ -n $memwatch_ticks && $ready == READY ]] && break
+        sleep 0.1
+    done
+    if [[ -z $memwatch_ticks || $ready != READY ]]; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 memory watchdog failed to initialize"
+    fi
+    if ! revalidate_glm53_identities; then
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 artifact identity changed before execution"
+    fi
+    if ! launch_glm53-1m; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 transient unit failed to start"
+    fi
+    pid=
+    identity=
+    for _ in $(seq 1 100); do
+        unit_pid=$(systemctl show "$GLM53_UNIT" --property=MainPID --value \
+            2>/dev/null || true)
+        if [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+            pid=$unit_pid
+            identity=$(proc_identity "$pid" 2>/dev/null || true)
+            [[ -n $identity ]] && break
+        fi
+        sleep 0.1
+    done
+    if [[ -z $pid || -z $identity ]]; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 transient unit died before identity capture"
+    fi
+    if ! read -r pgid ticks <<<"$identity"; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 process identity could not be parsed"
+    fi
+    if [[ $pgid != "$pid" ]]; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 transient-unit server is not its process-group leader"
+    fi
+    if ! live_exe=$(readlink -f "/proc/$pid/exe"); then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 transient unit executable could not be resolved"
+    fi
+    if ! approved_exe=$(readlink -f "$GLM53_BINARY"); then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 approved executable could not be resolved"
+    fi
+    if [[ $live_exe != "$approved_exe" ]]; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 transient unit executable identity is wrong"
+    fi
+    if ! exe_sha=$(sha256 "/proc/$pid/exe"); then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 executable could not be hashed after launch"
+    fi
+    if ! approved_sha=$(clean_python - "$REPO" "$PROFILE_GLM53_1M" <<'PY'
+import sys
+repo, relpath = sys.argv[1:]
+sys.path.insert(0, repo + "/scripts/lib")
+import profile_resolver
+parts = relpath.split("/")
+profile = profile_resolver.load_profile(parts[-2], parts[-1])
+model = profile_resolver.load_model(profile["model"])
+print(model["engines"][profile["engine"]]["binary_sha256"])
+PY
+    ); then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 approved executable hash could not be read"
+    fi
+    if [[ $exe_sha != "$approved_sha" ]]; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 transient unit executed an unapproved binary"
+    fi
+    if ! clean_python - "$GLM53_PROCESS.tmp" "$pid" "$pgid" "$ticks" \
+            "$exe_sha" "$GLM53_UNIT" "$memwatch_pid" "$memwatch_ticks" <<'PY'
+import json, os, sys
+path, pid, pgid, ticks, digest, unit, watchdog_pid, watchdog_ticks = sys.argv[1:]
+with open(path, "x", encoding="utf-8") as stream:
+    json.dump({"schema_version":1, "pid":int(pid), "pgid":int(pgid),
+               "start_ticks":int(ticks), "exe_sha256":digest, "unit":unit,
+               "memwatch_pid":int(watchdog_pid),
+               "memwatch_start_ticks":int(watchdog_ticks)}, stream)
+    stream.flush(); os.fsync(stream.fileno())
+PY
+    then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$GLM53_PROCESS.tmp" || true
+        die "GLM-5.3 process identity record could not be created"
+    fi
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    if [[ $current != "$identity" ]]; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$GLM53_PROCESS.tmp" || true
+        die "GLM-5.3 process identity changed before record publication"
+    fi
+    if ! mv -- "$GLM53_PROCESS.tmp" "$GLM53_PROCESS"; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        die "GLM-5.3 process identity record could not be published"
+    fi
+    if ! printf '%s %s %s provisional\n' "$pid" "$pgid" "$ticks" \
+            >"$GLM53_WATCHDOG_TARGET.tmp"; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$GLM53_PROCESS" "$GLM53_WATCHDOG_TARGET.tmp" || true
+        die "GLM-5.3 provisional watchdog target could not be written"
+    fi
+    if ! mv -- "$GLM53_WATCHDOG_TARGET.tmp" "$GLM53_WATCHDOG_TARGET"; then
+        systemctl stop "$GLM53_UNIT" 2>/dev/null || true
+        kill -TERM "$memwatch_pid" 2>/dev/null || true
+        wait "$memwatch_pid" 2>/dev/null || true
+        rm -f -- "$GLM53_PROCESS" "$GLM53_WATCHDOG_TARGET.tmp" || true
+        die "GLM-5.3 provisional watchdog target could not be published"
+    fi
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$GLM53_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] ||
+        die "GLM-5.3 memory watchdog did not arm provisional process"
+    printf '%s %s %s engine\n' "$pid" "$pgid" "$ticks" \
+        >"$GLM53_WATCHDOG_TARGET.tmp" ||
+        die "GLM-5.3 final watchdog target could not be written"
+    mv -- "$GLM53_WATCHDOG_TARGET.tmp" "$GLM53_WATCHDOG_TARGET" ||
+        die "GLM-5.3 final watchdog target could not be published"
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$GLM53_WATCHDOG_READY" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks engine" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks engine" ]] ||
+        die "GLM-5.3 memory watchdog did not arm final process"
+}
+
+start_glm53-1m() {
+    start_glm53_profile
+}
+
 cleanup_qwen_killed_unit() {
     local load_state active_state
     load_state=$(systemctl show "$QWEN_UNIT" --property=LoadState --value \
@@ -1492,6 +1935,23 @@ for slot in value:
 PY
 }
 
+# vLLM has no /slots; its model card carries max_model_len, which must equal
+# the profile's request_context_cap (4 native 262,144-token slots).
+verify_glm53_context() {
+    local body
+    body=$(clean_curl -fsS --max-time 5 \
+        "http://127.0.0.1:$PORT/v1/models") || return 1
+    clean_python - "$body" <<'PY'
+import json, sys
+value = json.loads(sys.argv[1])
+cards = [item for item in value["data"] if item.get("id") == "glm-5.3-flash"]
+if len(cards) != 1:
+    raise SystemExit("GLM-5.3 model card is missing")
+if cards[0].get("max_model_len") != 262144:
+    raise SystemExit("GLM-5.3 per-request context is not 262144 (4 x 262K)")
+PY
+}
+
 verify_qwen_process_ready() {
     local values pid expected_pgid expected_ticks expected_exe expected_unit
     local unit_pid identity pgid ticks live_exe sockets
@@ -1548,12 +2008,41 @@ PY
             $sockets == *"pid=$pid,"* ]]
 }
 
+verify_glm53_process_ready() {
+    local values pid expected_pgid expected_ticks expected_unit
+    local unit_pid identity pgid ticks live_exe expected_exe sockets
+    [[ -r $GLM53_PROCESS ]] || return 1
+    values=$(clean_python - "$GLM53_PROCESS" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"], value["unit"])
+PY
+    ) || return 1
+    read -r pid expected_pgid expected_ticks expected_unit <<<"$values"
+    [[ $expected_unit == "$GLM53_UNIT" ]] || return 1
+    unit_pid=$(systemctl show "$GLM53_UNIT" --property=MainPID --value \
+        2>/dev/null || true)
+    [[ $unit_pid == "$pid" ]] || return 1
+    identity=$(proc_identity "$pid" 2>/dev/null || true)
+    [[ -n $identity ]] || return 1
+    read -r pgid ticks <<<"$identity"
+    [[ $pgid == "$expected_pgid" && $ticks == "$expected_ticks" ]] || return 1
+    live_exe=$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)
+    expected_exe=$(readlink -f "$GLM53_BINARY" 2>/dev/null || true)
+    [[ -n $live_exe && $live_exe == "$expected_exe" ]] || return 1
+    sockets=$(ss -H -ltnp "sport = :$PORT" 2>/dev/null) || return 1
+    [[ -n $sockets && $sockets == *"127.0.0.1:$PORT"* &&
+            $sockets == *"pid=$pid,"* ]]
+}
+
 wait_model_ready() {
     local profile=$1 expected body deadline probe_count=0 available
     expected=deepseek-v4-flash
     [[ $profile == glm52 ]] && expected=glm-5.2
     [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
     [[ $profile == laguna ]] && expected=laguna-s-2.1
+    [[ $profile == glm53-1m ]] && expected=glm-5.3-flash
     deadline=$((SECONDS + 1800))
     while (( SECONDS < deadline )); do
         body=$(clean_curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
@@ -1577,7 +2066,13 @@ PY
                                     "http://127.0.0.1:$PORT/health" >/dev/null &&
                                 verify_laguna_process_ready &&
                                 verify_laguna_context; }; then
-                            return 0
+                            if [[ $profile != glm53-1m ]] || { \
+                                    clean_curl -fsS --max-time 3 \
+                                        "http://127.0.0.1:$PORT/health" >/dev/null &&
+                                    verify_glm53_process_ready &&
+                                    verify_glm53_context; }; then
+                                return 0
+                            fi
                         fi
                     fi
                 fi
@@ -1601,6 +2096,7 @@ verify_serving() {
     [[ $profile == glm52 ]] && expected=glm-5.2
     [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
     [[ $profile == laguna ]] && expected=laguna-s-2.1
+    [[ $profile == glm53-1m ]] && expected=glm-5.3-flash
     body=$(clean_curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
     clean_python - "$expected" "$body" <<'PY'
@@ -1626,6 +2122,12 @@ PY
             "http://127.0.0.1:$PORT/health" >/dev/null || return 1
         verify_laguna_process_ready || return 1
         verify_laguna_context || return 1
+    fi
+    if [[ $profile == glm53-1m ]]; then
+        clean_curl -fsS --max-time 5 \
+            "http://127.0.0.1:$PORT/health" >/dev/null || return 1
+        verify_glm53_process_ready || return 1
+        verify_glm53_context || return 1
     fi
     unauth=$(clean_curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
@@ -1710,6 +2212,10 @@ restore_profile() {
         verify_laguna_profile_hashes || return 1
         revalidate_laguna_identities || return 1
     fi
+    if [[ $profile == glm53-1m ]]; then
+        verify_glm53_profile_hashes || return 1
+        revalidate_glm53_identities || return 1
+    fi
     verify_serving "$profile" && return 0
     if [[ $profile != dsv4 || -e /run/dsv4/llamacpp.state.json ]]; then
         stop_profile "$profile" || return 1
@@ -1729,6 +2235,9 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         if [[ $* == *laguna-engine* ]]; then
             [[ ! -e $STATE/fail-laguna-start ]] || return 1
             : >"$STATE/laguna-running"
+        elif [[ $* == *glm53-engine* ]]; then
+            [[ ! -e $STATE/fail-glm53-start ]] || return 1
+            : >"$STATE/glm53-running"
         else
             [[ ! -e $STATE/fail-qwen-start ]] || return 1
             : >"$STATE/qwen-running"
@@ -1758,6 +2267,17 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         fi
         if [[ $verb == reset-failed && $property == "$LAGUNA_UNIT" ]]; then
             rm -f -- "$STATE/laguna-unit-killed"
+        fi
+        if [[ $verb == show && $property == "$GLM53_UNIT" ]]; then
+            if [[ $* == *--property=LoadState* ]]; then
+                [[ -e $STATE/glm53-unit-killed ]] && printf 'loaded\n' || printf 'not-found\n'
+            elif [[ $* == *--property=ActiveState* ]]; then
+                [[ -e $STATE/glm53-unit-killed ]] && printf 'failed\n' || printf 'inactive\n'
+            fi
+            return 0
+        fi
+        if [[ $verb == reset-failed && $property == "$GLM53_UNIT" ]]; then
+            rm -f -- "$STATE/glm53-unit-killed"
         fi
     }
     dsv4_launcher() {
@@ -1793,6 +2313,18 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     revalidate_laguna_identities() {
         [[ $laguna_verified_identities == test ]]
     }
+    verify_glm53_profile_hashes() {
+        if [[ ! -e $STATE/glm53-hashes-valid ]]; then
+            echo "GLM-5.3 test artifact hashes are not approved" >&2
+            return 1
+        fi
+        glm53_hashes_verified=true
+        glm53_verified_identities=test
+        test_action "HASHES glm53-1m"
+    }
+    revalidate_glm53_identities() {
+        [[ $glm53_verified_identities == test ]]
+    }
     stop_qwen_verified() {
         test_action "STOP qwen"
         rm -f -- "$STATE/qwen-running"
@@ -1800,6 +2332,10 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     stop_laguna_verified() {
         test_action "STOP laguna"
         rm -f -- "$STATE/laguna-running"
+    }
+    stop_glm53_verified() {
+        test_action "STOP glm53"
+        rm -f -- "$STATE/glm53-running"
     }
     start_qwen_profile() {
         local profile=$1 _manifest_path=$2 verify_function=$3
@@ -1814,16 +2350,28 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         launch_laguna || die "Laguna transient unit failed to start"
         test_action "START laguna"
     }
+    start_glm53_profile() {
+        "$glm53_hashes_verified" || verify_glm53_profile_hashes
+        cleanup_glm53_killed_unit
+        launch_glm53-1m || die "GLM-5.3 transient unit failed to start"
+        test_action "START glm53-1m"
+    }
+    test_running_marker() {
+        case "$1" in
+            dsv4) printf dsv4 ;;
+            laguna) printf laguna ;;
+            glm53-1m) printf glm53 ;;
+            *) printf qwen ;;
+        esac
+    }
     wait_model_ready() {
         test_action "WAIT $1"
-        [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || \
-            { [[ $1 == laguna ]] && printf laguna || printf qwen; })-running ]]
+        [[ -e $STATE/$(test_running_marker "$1")-running ]]
     }
     verify_serving() {
         test_action "VERIFY $1"
         [[ ! -e $STATE/fail-$1-verify ]] &&
-            [[ -e $STATE/$([[ $1 == dsv4 ]] && printf dsv4 || \
-                { [[ $1 == laguna ]] && printf laguna || printf qwen; })-running ]]
+            [[ -e $STATE/$(test_running_marker "$1")-running ]]
     }
 fi
 
@@ -1850,8 +2398,8 @@ if [[ $command == status ]]; then
 fi
 [[ $command == restore || $command == stop || $command == dsv4 || \
         $command == glm52 || $command == qwen38 || $command == qwen38-1m || \
-        $command == laguna ]] ||
-    die "usage: $0 status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m|laguna"
+        $command == laguna || $command == glm53-1m ]] ||
+    die "usage: $0 status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m|laguna|glm53-1m"
 if [[ $command == stop ]]; then
     # Gate-window helper: stop the active engine but leave active.json
     # untouched so `restore` brings the same profile back afterwards.
@@ -1898,6 +2446,9 @@ fi
 if [[ $command == laguna ]]; then
     verify_laguna_profile_hashes
 fi
+if [[ $command == glm53-1m ]]; then
+    verify_glm53_profile_hashes
+fi
 mkdir -p -- "$STATE"
 acquire_switch_lock
 if [[ $command == qwen38 || $command == qwen38-1m ]]; then
@@ -1905,6 +2456,9 @@ if [[ $command == qwen38 || $command == qwen38-1m ]]; then
 fi
 if [[ $command == laguna ]]; then
     revalidate_laguna_identities
+fi
+if [[ $command == glm53-1m ]]; then
+    revalidate_glm53_identities
 fi
 previous_profile=$(read_active_profile)
 if [[ $previous_profile == "$command" ]] && verify_serving "$command"; then

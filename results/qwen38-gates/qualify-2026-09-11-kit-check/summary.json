@@ -1,0 +1,188 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "qwen3.8-27b/cuda-spark-128g-1m",
+  "stack_label": "qwen3.8-27b-cuda-spark-128g-1m",
+  "served_model": "qwen3.8-27b",
+  "out": "/home/bmarti44/glm53-v2/results/qwen38-gates/qualify-2026-09-11-kit-check",
+  "start_unix": 1789117929.3305876,
+  "end_unix": 1789117929.441685,
+  "start_iso": "2026-09-11T09:12:09.409536+00:00",
+  "end_iso": "2026-09-11T09:12:09.441688+00:00",
+  "targets": null,
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "OK",
+      "status_reason": "recovered from evidence on disk (not in the previous manifest)",
+      "exit_code": null,
+      "wall_s": null,
+      "evidence": "speed/speed.json",
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": 22.077769662724254,
+            "median_ttft_s": 0.5053978125,
+            "median_prefill_tok_s": 192.9530703407942,
+            "valid": true,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": 28.631909102216838,
+            "median_ttft_s": 50.225672711499996,
+            "median_prefill_tok_s": 690.9075140011096,
+            "valid": true,
+            "reps": 2
+          }
+        },
+        "suite_valid": true,
+        "stack_label": "qwen3.8-27b-cuda-spark-128g-1m"
+      }
+    },
+    "toolcall": {
+      "status": "OK",
+      "status_reason": "recovered from evidence on disk (not in the previous manifest)",
+      "exit_code": null,
+      "wall_s": null,
+      "evidence": "toolcall/toolcall.json",
+      "result": {
+        "passed": 19,
+        "total": 20,
+        "score": 0.95,
+        "suite": "toolcall-v1"
+      }
+    },
+    "vision": {
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 201.17651871504495,
+      "start_unix": 1789117134.947812,
+      "end_unix": 1789117336.1245823,
+      "evidence": "vision/summary.json",
+      "result": {
+        "accuracy": 0.64,
+        "n": 100,
+        "correct": 64,
+        "invalid_count": 3,
+        "error_count": 0,
+        "ok": true,
+        "suite": "mmmu-val-100"
+      }
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": 22.077769662724254,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": 0.5053978125,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": 192.9530703407942,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": 28.631909102216838,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": 50.225672711499996,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": 690.9075140011096,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 19,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "accuracy",
+      "measured": 0.64,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "n",
+      "measured": 100,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "MEASURED",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}

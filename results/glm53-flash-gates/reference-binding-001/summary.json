@@ -1,0 +1,41 @@
+{
+  "verdict": "PASS",
+  "scope": "tokenizer and BF16 output-head/final-norm byte binding only; not native reference equivalence or fidelity qualification",
+  "tokenizer": {
+    "sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+  },
+  "tensors": [
+    {
+      "name": "lm_head.weight",
+      "reference_key": "weight",
+      "size_bytes": 1268776960,
+      "byte_identical": true,
+      "first_difference": null,
+      "reference_file": {
+        "sha256": "47eaf729c93346a2394a72a83da2ae4126dadc51155be477d212a3f0fe3085d0"
+      },
+      "reference_tensor": {
+        "sha256": "aa21c427970f64edd82669db3a8fb46613084e8bc271a3728784a52eb3f25ab4"
+      },
+      "candidate_tensor": {
+        "sha256": "aa21c427970f64edd82669db3a8fb46613084e8bc271a3728784a52eb3f25ab4"
+      }
+    },
+    {
+      "name": "model.language_model.norm.weight",
+      "reference_key": "weight",
+      "size_bytes": 8192,
+      "byte_identical": true,
+      "first_difference": null,
+      "reference_file": {
+        "sha256": "c228a123dee3062c3ad0129094e9d98a264e33087ee88d79c8d6c5a6e60f2fed"
+      },
+      "reference_tensor": {
+        "sha256": "aeae580add5eb1328bd06dbf47a218b316e01d7ecf857fb4ab8e987973f7ed22"
+      },
+      "candidate_tensor": {
+        "sha256": "aeae580add5eb1328bd06dbf47a218b316e01d7ecf857fb4ab8e987973f7ed22"
+      }
+    }
+  ]
+}

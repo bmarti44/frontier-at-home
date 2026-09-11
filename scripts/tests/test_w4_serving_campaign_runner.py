@@ -16,7 +16,12 @@ SPEC = importlib.util.spec_from_file_location(
     "w4_serving_runner", ROOT / "scripts/102_run_w4_serving_campaign.py")
 assert SPEC and SPEC.loader
 RUNNER = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(RUNNER)
+# The W4 runner binds to the Spark production checkout at import time;
+# off-host (CI) the campaign base is absent, so the whole module skips.
+try:
+    SPEC.loader.exec_module(RUNNER)
+except FileNotFoundError as error:
+    raise unittest.SkipTest(f"Spark-bound campaign runner: {error}") from error
 
 
 class W4ServingContainmentTest(unittest.TestCase):

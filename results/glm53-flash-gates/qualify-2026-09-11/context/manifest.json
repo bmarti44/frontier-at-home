@@ -1,0 +1,674 @@
+{
+  "script_sha256": "6ab6dd4d21bde45374d83be56f4ca1b5edc73e8527f518032716f71ec305c87d",
+  "fixture_sha256": "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031",
+  "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+  "base_url": "http://127.0.0.1:8015",
+  "model": "glm-5.3-flash",
+  "stack_label": "glm-5.3-flash-cuda-spark-128g-1m",
+  "profile_id": "glm-5.3-flash/cuda-spark-128g-1m",
+  "args": {
+    "base_url": "http://127.0.0.1:8015",
+    "model": "glm-5.3-flash",
+    "stack_label": "glm-5.3-flash-cuda-spark-128g-1m",
+    "tokenizer_sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d",
+    "out": "/home/bmarti44/glm53-v2/results/glm53-flash-gates/qualify-2026-09-11/context",
+    "tokenizer_path": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp/tokenizer.json",
+    "slots": 4,
+    "tokens_per_slot": 250128,
+    "fixture": "/home/bmarti44/glm53-v2/fixtures/ctx-32k.txt",
+    "seed": 42,
+    "max_tokens": 512,
+    "request_timeout": 3600,
+    "api_key_file": null,
+    "mem_floor_gib": 10.0,
+    "extra_body": "{}",
+    "profile_id": "glm-5.3-flash/cuda-spark-128g-1m",
+    "phase": "both"
+  },
+  "models_response": {
+    "status": 200,
+    "body": {
+      "object": "list",
+      "data": [
+        {
+          "id": "glm-5.3-flash",
+          "object": "model",
+          "created": 1789111686,
+          "owned_by": "vllm",
+          "root": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp",
+          "parent": null,
+          "max_model_len": 262144,
+          "permission": [
+            {
+              "id": "modelperm-92f7f37951ef17cb",
+              "object": "model_permission",
+              "created": 1789111686,
+              "allow_create_engine": false,
+              "allow_sampling": true,
+              "allow_logprobs": true,
+              "allow_search_indices": false,
+              "allow_view": true,
+              "allow_fine_tuning": false,
+              "organization": "*",
+              "group": null,
+              "is_blocking": false
+            }
+          ]
+        },
+        {
+          "id": "default",
+          "object": "model",
+          "created": 1789111686,
+          "owned_by": "vllm",
+          "root": "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp",
+          "parent": null,
+          "max_model_len": 262144,
+          "permission": [
+            {
+              "id": "modelperm-b042527e830cf9d0",
+              "object": "model_permission",
+              "created": 1789111686,
+              "allow_create_engine": false,
+              "allow_sampling": true,
+              "allow_logprobs": true,
+              "allow_search_indices": false,
+              "allow_view": true,
+              "allow_fine_tuning": false,
+              "organization": "*",
+              "group": null,
+              "is_blocking": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "host": {
+    "uname": {
+      "system": "Linux",
+      "node": "spark-aba1",
+      "release": "6.17.0-1026-nvidia",
+      "version": "#26-Ubuntu SMP PREEMPT_DYNAMIC Thu Jun 25 00:57:17 UTC 2026",
+      "machine": "aarch64",
+      "processor": "aarch64"
+    },
+    "nproc": 20,
+    "mem_total_kib": 125483612
+  },
+  "start_unix": 1789111686.4530053,
+  "needle_fractions": [
+    0.02,
+    0.2,
+    0.45,
+    0.7,
+    0.9,
+    0.98
+  ],
+  "phases": {
+    "short": [
+      {
+        "slot": 0,
+        "client_prompt_tokens": 4096,
+        "needles": [
+          {
+            "animal": "lynx",
+            "code": "43620311",
+            "char_offset": 1023,
+            "token_offset": 215,
+            "relative_position": 0.052490234375
+          },
+          {
+            "animal": "jackal",
+            "code": "93837171",
+            "char_offset": 4062,
+            "token_offset": 862,
+            "relative_position": 0.21044921875
+          },
+          {
+            "animal": "gecko",
+            "code": "70184057",
+            "char_offset": 9136,
+            "token_offset": 1960,
+            "relative_position": 0.478515625
+          },
+          {
+            "animal": "otter",
+            "code": "24671919",
+            "char_offset": 14207,
+            "token_offset": 3052,
+            "relative_position": 0.7451171875
+          },
+          {
+            "animal": "falcon",
+            "code": "68488794",
+            "char_offset": 18159,
+            "token_offset": 3906,
+            "relative_position": 0.95361328125
+          },
+          {
+            "animal": "ibex",
+            "code": "72802305",
+            "char_offset": 18200,
+            "token_offset": 3920,
+            "relative_position": 0.95703125
+          }
+        ],
+        "controls": [
+          "bison",
+          "ocelot"
+        ],
+        "target_animal": "lynx",
+        "target_code": "43620311",
+        "target_needle_index": 0,
+        "asked_animals": [
+          "lynx",
+          "gecko",
+          "falcon"
+        ],
+        "asked_codes": [
+          "43620311",
+          "70184057",
+          "68488794"
+        ],
+        "asked_needle_indices": [
+          0,
+          2,
+          4
+        ]
+      },
+      {
+        "slot": 1,
+        "client_prompt_tokens": 4096,
+        "needles": [
+          {
+            "animal": "falcon",
+            "code": "46094722",
+            "char_offset": 1028,
+            "token_offset": 221,
+            "relative_position": 0.053955078125
+          },
+          {
+            "animal": "puffin",
+            "code": "87790949",
+            "char_offset": 4517,
+            "token_offset": 965,
+            "relative_position": 0.235595703125
+          },
+          {
+            "animal": "bison",
+            "code": "54052635",
+            "char_offset": 8984,
+            "token_offset": 1925,
+            "relative_position": 0.469970703125
+          },
+          {
+            "animal": "ibex",
+            "code": "94747188",
+            "char_offset": 13723,
+            "token_offset": 2948,
+            "relative_position": 0.7197265625
+          },
+          {
+            "animal": "tapir",
+            "code": "42712142",
+            "char_offset": 17323,
+            "token_offset": 3730,
+            "relative_position": 0.91064453125
+          },
+          {
+            "animal": "jackal",
+            "code": "23941921",
+            "char_offset": 18237,
+            "token_offset": 3926,
+            "relative_position": 0.95849609375
+          }
+        ],
+        "controls": [
+          "marten",
+          "koala"
+        ],
+        "target_animal": "jackal",
+        "target_code": "23941921",
+        "target_needle_index": 5,
+        "asked_animals": [
+          "jackal",
+          "puffin",
+          "ibex"
+        ],
+        "asked_codes": [
+          "23941921",
+          "87790949",
+          "94747188"
+        ],
+        "asked_needle_indices": [
+          5,
+          1,
+          3
+        ]
+      },
+      {
+        "slot": 2,
+        "client_prompt_tokens": 4096,
+        "needles": [
+          {
+            "animal": "ibex",
+            "code": "26673972",
+            "char_offset": 899,
+            "token_offset": 193,
+            "relative_position": 0.047119140625
+          },
+          {
+            "animal": "marten",
+            "code": "84104268",
+            "char_offset": 4484,
+            "token_offset": 965,
+            "relative_position": 0.235595703125
+          },
+          {
+            "animal": "otter",
+            "code": "56410561",
+            "char_offset": 9551,
+            "token_offset": 2059,
+            "relative_position": 0.502685546875
+          },
+          {
+            "animal": "jackal",
+            "code": "30308760",
+            "char_offset": 13832,
+            "token_offset": 2968,
+            "relative_position": 0.724609375
+          },
+          {
+            "animal": "koala",
+            "code": "15747625",
+            "char_offset": 17661,
+            "token_offset": 3778,
+            "relative_position": 0.92236328125
+          },
+          {
+            "animal": "lynx",
+            "code": "79522534",
+            "char_offset": 18470,
+            "token_offset": 3958,
+            "relative_position": 0.96630859375
+          }
+        ],
+        "controls": [
+          "bison",
+          "badger"
+        ],
+        "target_animal": "otter",
+        "target_code": "56410561",
+        "target_needle_index": 2,
+        "asked_animals": [
+          "otter",
+          "koala",
+          "ibex"
+        ],
+        "asked_codes": [
+          "56410561",
+          "15747625",
+          "26673972"
+        ],
+        "asked_needle_indices": [
+          2,
+          4,
+          0
+        ]
+      },
+      {
+        "slot": 3,
+        "client_prompt_tokens": 4096,
+        "needles": [
+          {
+            "animal": "otter",
+            "code": "86020398",
+            "char_offset": 996,
+            "token_offset": 205,
+            "relative_position": 0.050048828125
+          },
+          {
+            "animal": "marten",
+            "code": "99837212",
+            "char_offset": 4002,
+            "token_offset": 850,
+            "relative_position": 0.20751953125
+          },
+          {
+            "animal": "jackal",
+            "code": "52669173",
+            "char_offset": 9517,
+            "token_offset": 2051,
+            "relative_position": 0.500732421875
+          },
+          {
+            "animal": "bison",
+            "code": "22193074",
+            "char_offset": 14007,
+            "token_offset": 3018,
+            "relative_position": 0.73681640625
+          },
+          {
+            "animal": "koala",
+            "code": "68068775",
+            "char_offset": 17336,
+            "token_offset": 3742,
+            "relative_position": 0.91357421875
+          },
+          {
+            "animal": "heron",
+            "code": "80610007",
+            "char_offset": 17979,
+            "token_offset": 3890,
+            "relative_position": 0.94970703125
+          }
+        ],
+        "controls": [
+          "badger",
+          "walrus"
+        ],
+        "target_animal": "bison",
+        "target_code": "22193074",
+        "target_needle_index": 3,
+        "asked_animals": [
+          "bison",
+          "heron",
+          "marten"
+        ],
+        "asked_codes": [
+          "22193074",
+          "80610007",
+          "99837212"
+        ],
+        "asked_needle_indices": [
+          3,
+          5,
+          1
+        ]
+      }
+    ],
+    "full": [
+      {
+        "slot": 0,
+        "client_prompt_tokens": 250128,
+        "needles": [
+          {
+            "animal": "lynx",
+            "code": "43620311",
+            "char_offset": 23692,
+            "token_offset": 5077,
+            "relative_position": 0.020297607624896054
+          },
+          {
+            "animal": "jackal",
+            "code": "93837171",
+            "char_offset": 233450,
+            "token_offset": 50070,
+            "relative_position": 0.20017750911533294
+          },
+          {
+            "animal": "gecko",
+            "code": "70184057",
+            "char_offset": 525692,
+            "token_offset": 112732,
+            "relative_position": 0.4506972430115781
+          },
+          {
+            "animal": "otter",
+            "code": "24671919",
+            "char_offset": 817127,
+            "token_offset": 175254,
+            "relative_position": 0.7006572634810977
+          },
+          {
+            "animal": "falcon",
+            "code": "68488794",
+            "char_offset": 1050032,
+            "token_offset": 225218,
+            "relative_position": 0.9004109895733384
+          },
+          {
+            "animal": "ibex",
+            "code": "72802305",
+            "char_offset": 1143464,
+            "token_offset": 245263,
+            "relative_position": 0.9805499584212883
+          }
+        ],
+        "controls": [
+          "bison",
+          "ocelot"
+        ],
+        "target_animal": "lynx",
+        "target_code": "43620311",
+        "target_needle_index": 0,
+        "asked_animals": [
+          "lynx",
+          "gecko",
+          "falcon"
+        ],
+        "asked_codes": [
+          "43620311",
+          "70184057",
+          "68488794"
+        ],
+        "asked_needle_indices": [
+          0,
+          2,
+          4
+        ]
+      },
+      {
+        "slot": 1,
+        "client_prompt_tokens": 250128,
+        "needles": [
+          {
+            "animal": "falcon",
+            "code": "46094722",
+            "char_offset": 23511,
+            "token_offset": 5053,
+            "relative_position": 0.020201656751743107
+          },
+          {
+            "animal": "puffin",
+            "code": "87790949",
+            "char_offset": 233412,
+            "token_offset": 50079,
+            "relative_position": 0.2002134906927653
+          },
+          {
+            "animal": "bison",
+            "code": "54052635",
+            "char_offset": 524962,
+            "token_offset": 112605,
+            "relative_position": 0.4501895029744771
+          },
+          {
+            "animal": "ibex",
+            "code": "94747188",
+            "char_offset": 816643,
+            "token_offset": 175161,
+            "relative_position": 0.70028545384763
+          },
+          {
+            "animal": "tapir",
+            "code": "42712142",
+            "char_offset": 1049747,
+            "token_offset": 225158,
+            "relative_position": 0.9001711123904561
+          },
+          {
+            "animal": "jackal",
+            "code": "23941921",
+            "char_offset": 1143371,
+            "token_offset": 245266,
+            "relative_position": 0.9805619522804324
+          }
+        ],
+        "controls": [
+          "marten",
+          "koala"
+        ],
+        "target_animal": "jackal",
+        "target_code": "23941921",
+        "target_needle_index": 5,
+        "asked_animals": [
+          "jackal",
+          "puffin",
+          "ibex"
+        ],
+        "asked_codes": [
+          "23941921",
+          "87790949",
+          "94747188"
+        ],
+        "asked_needle_indices": [
+          5,
+          1,
+          3
+        ]
+      },
+      {
+        "slot": 2,
+        "client_prompt_tokens": 250128,
+        "needles": [
+          {
+            "animal": "ibex",
+            "code": "26673972",
+            "char_offset": 23721,
+            "token_offset": 5067,
+            "relative_position": 0.02025762809441566
+          },
+          {
+            "animal": "marten",
+            "code": "84104268",
+            "char_offset": 233818,
+            "token_offset": 50146,
+            "relative_position": 0.20048135354698393
+          },
+          {
+            "animal": "otter",
+            "code": "56410561",
+            "char_offset": 525342,
+            "token_offset": 112728,
+            "relative_position": 0.4506812511993859
+          },
+          {
+            "animal": "jackal",
+            "code": "30308760",
+            "char_offset": 816752,
+            "token_offset": 175179,
+            "relative_position": 0.7003574170024948
+          },
+          {
+            "animal": "koala",
+            "code": "15747625",
+            "char_offset": 1050374,
+            "token_offset": 225268,
+            "relative_position": 0.9006108872257405
+          },
+          {
+            "animal": "lynx",
+            "code": "79522534",
+            "char_offset": 1143416,
+            "token_offset": 245288,
+            "relative_position": 0.9806499072474892
+          }
+        ],
+        "controls": [
+          "bison",
+          "badger"
+        ],
+        "target_animal": "otter",
+        "target_code": "56410561",
+        "target_needle_index": 2,
+        "asked_animals": [
+          "otter",
+          "koala",
+          "ibex"
+        ],
+        "asked_codes": [
+          "56410561",
+          "15747625",
+          "26673972"
+        ],
+        "asked_needle_indices": [
+          2,
+          4,
+          0
+        ]
+      },
+      {
+        "slot": 3,
+        "client_prompt_tokens": 250128,
+        "needles": [
+          {
+            "animal": "otter",
+            "code": "86020398",
+            "char_offset": 24156,
+            "token_offset": 5187,
+            "relative_position": 0.02073738246018039
+          },
+          {
+            "animal": "marten",
+            "code": "99837212",
+            "char_offset": 233607,
+            "token_offset": 50089,
+            "relative_position": 0.2002534702232457
+          },
+          {
+            "animal": "jackal",
+            "code": "52669173",
+            "char_offset": 525330,
+            "token_offset": 112666,
+            "relative_position": 0.45043337811040746
+          },
+          {
+            "animal": "bison",
+            "code": "22193074",
+            "char_offset": 816927,
+            "token_offset": 175232,
+            "relative_position": 0.7005693085140408
+          },
+          {
+            "animal": "koala",
+            "code": "68068775",
+            "char_offset": 1050430,
+            "token_offset": 225299,
+            "relative_position": 0.9007348237702296
+          },
+          {
+            "animal": "heron",
+            "code": "80610007",
+            "char_offset": 1143234,
+            "token_offset": 245238,
+            "relative_position": 0.9804500095950873
+          }
+        ],
+        "controls": [
+          "badger",
+          "walrus"
+        ],
+        "target_animal": "bison",
+        "target_code": "22193074",
+        "target_needle_index": 3,
+        "asked_animals": [
+          "bison",
+          "heron",
+          "marten"
+        ],
+        "asked_codes": [
+          "22193074",
+          "80610007",
+          "99837212"
+        ],
+        "asked_needle_indices": [
+          3,
+          5,
+          1
+        ]
+      }
+    ]
+  },
+  "end_unix": 1789113485.078787
+}

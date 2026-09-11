@@ -1,0 +1,63 @@
+{
+  "verdict": "FAIL",
+  "gates": {
+    "nll_gate": 0.01,
+    "top1_gate_pp": 0.5
+  },
+  "metrics": {
+    "delta_nll_mean": 0.08063994237674536,
+    "top1_loss_pp_mean": 1.567171470444553,
+    "top1_agreement_mean": 0.8714215925744992,
+    "teacher_nll_mean": 1.0627276797019625,
+    "candidate_nll_mean": 1.143367622078708,
+    "delta_nll_upper_95": 0.1081169577010214,
+    "top1_loss_pp_upper_95": 2.020924405109163
+  },
+  "checks": {
+    "delta_nll_mean_le_gate": false,
+    "delta_nll_upper_95_le_gate": false,
+    "top1_loss_pp_mean_le_gate": false,
+    "all_windows_scored": true
+  },
+  "windows_scored": 25,
+  "windows_failed": 0,
+  "failures": [],
+  "fail_reasons": [],
+  "per_domain": {
+    "axis1_general": {
+      "windows": 7,
+      "tokens": 14329,
+      "delta_nll_mean": 0.11252930069946909,
+      "top1_loss_pp_mean": 1.905227161700049,
+      "top1_agreement_mean": 0.8462558447902855
+    },
+    "axis2_legal": {
+      "windows": 6,
+      "tokens": 12282,
+      "delta_nll_mean": 0.14607457066722426,
+      "top1_loss_pp_mean": 2.442598925256473,
+      "top1_agreement_mean": 0.8088259241165934
+    },
+    "axis3_code_agentic": {
+      "windows": 6,
+      "tokens": 12282,
+      "delta_nll_mean": 0.07272464089355693,
+      "top1_loss_pp_mean": 1.5144113336590133,
+      "top1_agreement_mean": 0.8930141670737665
+    },
+    "axis4_reasoning_termination": {
+      "windows": 6,
+      "tokens": 12282,
+      "delta_nll_mean": -0.014083635807056096,
+      "top1_loss_pp_mean": 0.3501058459534278,
+      "top1_agreement_mean": 0.9417847256147207
+    }
+  },
+  "formulas": {
+    "teacher_nll": "NLL = log(sum(exp(full-vocabulary FP32 logits))) - target logit, FP64 stable accumulation; top1 is first argmax; row i predicts token i+1",
+    "candidate_nll": "NLL = -prompt_logprobs[position][true token].logprob; top1 is the rank==1 entry",
+    "delta_nll": "per window (candidate_nll_sum - teacher_nll_sum) / tokens; token-weighted mean and one-sided 95% upper bound (glm52_goal._weighted_upper_95, effective-n t quantile)",
+    "top1_loss_pp": "per window 100 * (teacher_top1_correct - candidate_top1_correct) / tokens; token-weighted mean and one-sided 95% upper bound",
+    "top1_agreement": "token-weighted mean of candidate_top1_agrees_teacher / tokens"
+  }
+}

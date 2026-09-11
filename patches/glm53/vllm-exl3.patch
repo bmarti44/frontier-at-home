@@ -1,0 +1,35 @@
+diff --git a/src/vllm_exl3/exl3.py b/src/vllm_exl3/exl3.py
+index 59eebed..adf19c2 100644
+--- a/src/vllm_exl3/exl3.py
++++ b/src/vllm_exl3/exl3.py
+@@ -27,6 +27,9 @@ from __future__ import annotations
+ import importlib
+ import math
+ import os
++
++# Resolve once at import; no diagnostic work in apply/decode.
++_GLM53_BF16_SHARD_FIX = os.environ.get("GLM53_EXL3_BF16_SHARD_FIX") == "1"
+ from typing import TYPE_CHECKING, Any
+ 
+ import re
+@@ -62,6 +65,8 @@ try:
+     # Under the "vllm." hierarchy so vLLM's logging config actually emits these
+     # INFO lines; a bare module name is dropped and the load log shows nothing.
+     logger = init_logger("vllm." + __name__)
++    if _GLM53_BF16_SHARD_FIX:
++        logger.info("GLM53_EXL3_BF16_SHARD_FIX=1: preserve BF16 shard geometry")
+ except ImportError:
+     import logging
+     _VLLM_AVAILABLE = False
+@@ -2626,7 +2631,10 @@ class Exl3LinearMethod(LinearMethodBase):
+         true_in = int(in_per_partition)
+         true_out_sizes = [int(s) for s in output_partition_sizes]
+         in_per_partition = _exl3_pad128(true_in)
+-        output_partition_sizes = [_exl3_pad128(s) for s in true_out_sizes]
++        output_partition_sizes = [
++            s if _GLM53_BF16_SHARD_FIX and i in bf16_shards else _exl3_pad128(s)
++            for i, s in enumerate(true_out_sizes)
++        ]
+         padded = in_per_partition != true_in or output_partition_sizes != true_out_sizes
+         if padded and (bf16_shards or n_shards > 1):
+             raise NotImplementedError(

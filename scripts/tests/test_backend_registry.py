@@ -71,7 +71,6 @@ class BackendRegistryTests(unittest.TestCase):
             self.backends["cuda"]["serve_scripts"],
             {
                 "qwen38": "scripts/22_serve_qwen38.sh",
-                "qwen38-sglang": "scripts/23_serve_qwen38_sglang.sh",
                 "laguna-s-2.1": "scripts/25_serve_laguna.sh",
             },
         )

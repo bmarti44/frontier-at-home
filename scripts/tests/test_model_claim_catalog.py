@@ -158,7 +158,11 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertNotIn("pull_request.head.sha", workflow)
         self.assertNotIn("exec(", workflow)
         self.assertNotIn("\n        run:", workflow)
-        self.assertNotIn("pull-requests: write", workflow)
+        # Labelling a pull request needs pull-requests: write; the token is
+        # still never exposed to fork content (no checkout, no run steps)
+        # and never gets contents: write.
+        self.assertIn("pull-requests: write", workflow)
+        self.assertNotIn("contents: write", workflow)
         action_refs = re.findall(r"^\s+uses:\s+(\S+)$", workflow, re.MULTILINE)
         self.assertEqual(
             action_refs,
