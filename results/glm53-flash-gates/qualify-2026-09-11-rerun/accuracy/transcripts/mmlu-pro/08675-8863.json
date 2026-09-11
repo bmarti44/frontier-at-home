@@ -1,0 +1,54 @@
+{
+  "index": 8675,
+  "task_id": 8863,
+  "rendered_prompt_sha256": "4954cb46a39dad8b304e4342de19fb460229e86adc5537fe6350c9b7ec2cf0d8",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Future value: 1000*(1+0.08/12)^36 + 25*[((1+r)^36-1)/r] with deposits at end of month. r=0.0066667. (1+r)^36 ≈ e^(36*ln(1.0066667)) ln≈0.0066445*36=0.239202 → e^0.239202≈1.27024. So 1000*1.27024=1270.24. Annuity: (0.27024/0.0066667)=40.536*25=1013.4. Total ≈2283.6. Answer G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.640917623997666
+  },
+  "response": {
+    "id": "cmpl-a8ae3c68f4320906",
+    "object": "text_completion",
+    "created": 1789150174,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Future value: 1000*(1+0.08/12)^36 + 25*[((1+r)^36-1)/r] with deposits at end of month. r=0.0066667. (1+r)^36 ≈ e^(36*ln(1.0066667)) ln≈0.0066445*36=0.239202 → e^0.239202≈1.27024. So 1000*1.27024=1270.24. Annuity: (0.27024/0.0066667)=40.536*25=1013.4. Total ≈2283.6. Answer G.</think>Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 154,
+      "total_tokens": 314,
+      "completion_tokens": 160,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

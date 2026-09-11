@@ -1,0 +1,54 @@
+{
+  "index": 389,
+  "task_id": 463,
+  "rendered_prompt_sha256": "405246b34d14e227853402506df218c6407519f279e42ea0ba48c3df802a6b76",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "LIFO: 30 units from latest purchases: Feb14 45 @2.00 =90? Wait quantities: 35@2.50, 10@2.20, 45@2.00? Total 90. Take 30 from Feb14: 30×2.00=60. Answer H.</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='H' expected='I'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.353633833990898
+  },
+  "response": {
+    "id": "cmpl-a4beb6e9607394e2",
+    "object": "text_completion",
+    "created": 1789147308,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "LIFO: 30 units from latest purchases: Feb14 45 @2.00 =90? Wait quantities: 35@2.50, 10@2.20, 45@2.00? Total 90. Take 30 from Feb14: 30×2.00=60. Answer H.</think>Answer: H",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 195,
+      "total_tokens": 268,
+      "completion_tokens": 73,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "index": 8110,
+  "task_id": 8296,
+  "rendered_prompt_sha256": "159a6086ef2a65a002c78fd06a3df4e6ca3a53f6e3560fe381e0fd5a71679925",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Divergence: 3(x²+y²+z²). Ellipsoid x²+y²+z²/4=1. Use Gauss: ∫∫∫ 3(x²+y²+z²) dV. Ellipsoid: x²+y²+z²/4=1, i.e. x²+y²+z² = 1 - 3z²/4 on surface... compute volume integral: transform z=2w: x²+y²+w²=1 sphere radius1, dV=2 dV'. Integral of 3(x²+y²+z²)=3(x²+y²+4w²) over sphere radius1 times 2. ∫(x²+y²) over unit sphere = 2·(4π/15)? Actually ∫∫∫ x² dV over unit ball = 4π/15. So ∫(x²+y²)=8π/15, ∫4w²=4·4π/15=16π/15. Sum=24π/15=8π/5. Times 3 times 2: 3·2·8π/5=48π/5=30.159... Answer C.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 13.575214869983029
+  },
+  "response": {
+    "id": "cmpl-aa443994e95b0bee",
+    "object": "text_completion",
+    "created": 1789150115,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Divergence: 3(x²+y²+z²). Ellipsoid x²+y²+z²/4=1. Use Gauss: ∫∫∫ 3(x²+y²+z²) dV. Ellipsoid: x²+y²+z²/4=1, i.e. x²+y²+z² = 1 - 3z²/4 on surface... compute volume integral: transform z=2w: x²+y²+w²=1 sphere radius1, dV=2 dV'. Integral of 3(x²+y²+z²)=3(x²+y²+4w²) over sphere radius1 times 2. ∫(x²+y²) over unit sphere = 2·(4π/15)? Actually ∫∫∫ x² dV over unit ball = 4π/15. So ∫(x²+y²)=8π/15, ∫4w²=4·4π/15=16π/15. Sum=24π/15=8π/5. Times 3 times 2: 3·2·8π/5=48π/5=30.159... Answer C.</think>Answer: C",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 194,
+      "total_tokens": 451,
+      "completion_tokens": 257,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

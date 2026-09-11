@@ -1,0 +1,56 @@
+{
+  "index": 126,
+  "task_id": 126,
+  "rendered_prompt_sha256": "92ce6d1bce47f9486a6370a14471af183b377853c9816f6d346a639520fc3f26",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "</think>Fish sausages: 38 + 6 = 44. Total: 38 + 44 = 82.\n\nAnswer: 82",
+  "finish_reason": "stop",
+  "expected": "82",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.0846815159893595
+  },
+  "response": {
+    "id": "cmpl-8f26503e25d7ec8d",
+    "object": "text_completion",
+    "created": 1789146386,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "</think>Fish sausages: 38 + 6 = 44. Total: 38 + 44 = 82.\n\nAnswer: 82",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 91,
+      "total_tokens": 122,
+      "completion_tokens": 31,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>Dylan needed chicken sausages and fish sausages to make sausage buns at a party. He bought 38 chicken sausages and 6 more fish sausages than chicken sausages. How many sausages did Dylan buy in all?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|assistant|><think>"
+}

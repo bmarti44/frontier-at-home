@@ -1,0 +1,55 @@
+{
+  "index": 73,
+  "task_id": 73,
+  "rendered_prompt_sha256": "4857dcd26fff2e5ba16596db5d59ae3ce21b63200f8b2310d0438f301ace73fb",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "5×150=750, 2% interest per unit: 150×0.02=3 per unit → 15 total → 765/3=255.</think>Total: 5 × $150 = $750. Interest: 2% of $150 = $3 per unit × 5 = $15. Total with interest = $765. Monthly payment = $765 ÷ 3 = $255.\n\nAnswer: 255",
+  "finish_reason": "stop",
+  "expected": "255",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.261448203003965
+  },
+  "response": {
+    "id": "cmpl-bc7de7d438ff0edb",
+    "object": "text_completion",
+    "created": 1789146260,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "5×150=750, 2% interest per unit: 150×0.02=3 per unit → 15 total → 765/3=255.</think>Total: 5 × $150 = $750. Interest: 2% of $150 = $3 per unit × 5 = $15. Total with interest = $765. Monthly payment = $765 ÷ 3 = $255.\n\nAnswer: 255",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 80,
+      "total_tokens": 175,
+      "completion_tokens": 95,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

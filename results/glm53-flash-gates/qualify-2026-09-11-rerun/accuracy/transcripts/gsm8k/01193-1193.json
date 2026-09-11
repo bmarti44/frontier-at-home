@@ -1,0 +1,55 @@
+{
+  "index": 1193,
+  "task_id": 1193,
+  "rendered_prompt_sha256": "f45f31e829f9c00ea42998af9241efb730c80cf1f61f45f449a220aa18c1c506",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "</think>Dishwasher: 6×0.50=3.00; laundry 3.00; trash 2×0.75=1.50; room 1.50. Total = 9.00\n\nAnswer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.186877972970251
+  },
+  "response": {
+    "id": "cmpl-a307187ea4782981",
+    "object": "text_completion",
+    "created": 1789146138,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "</think>Dishwasher: 6×0.50=3.00; laundry 3.00; trash 2×0.75=1.50; room 1.50. Total = 9.00\n\nAnswer: 9",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 125,
+      "total_tokens": 177,
+      "completion_tokens": 52,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

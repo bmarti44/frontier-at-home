@@ -1,0 +1,54 @@
+{
+  "index": 9274,
+  "task_id": 9463,
+  "rendered_prompt_sha256": "7840a2bf6cc509cbb93ef6dbde53c6f15cc2d2d0e72e88d59b5e164f181b6e57",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "v = sqrt(γRT/M). γ = v²M/(RT) = 334²·0.0288/(8.314·273) ≈ 111556·0.0288=3212.8; /2269 ≈1.416. G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.315755481016822
+  },
+  "response": {
+    "id": "cmpl-8131fb70cc8b5bf9",
+    "object": "text_completion",
+    "created": 1789150302,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "v = sqrt(γRT/M). γ = v²M/(RT) = 334²·0.0288/(8.314·273) ≈ 111556·0.0288=3212.8; /2269 ≈1.416. G.</think>Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 166,
+      "total_tokens": 239,
+      "completion_tokens": 73,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

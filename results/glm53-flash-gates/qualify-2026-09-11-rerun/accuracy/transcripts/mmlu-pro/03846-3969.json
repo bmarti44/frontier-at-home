@@ -1,0 +1,54 @@
+{
+  "index": 3846,
+  "task_id": 3969,
+  "rendered_prompt_sha256": "45905a70461acda1aad3b6cc9b176263def857c3d15d16e64c4646e9420db9a1",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Clapeyron: dT/dP = T ΔV/ΔH. ΔV=41 cm³/kg; molar mass 32 g → ΔV per mol = 41×0.032 = 1.312 cm³/mol = 1.312e-6 m³. ΔH=422 cal=1764 J. dT/dP = 392.5 K ×1.312e-6/1764 ≈ 2.92e-7 K/Pa. ΔP=1000 atm=1.013e8 Pa → ΔT≈29.6 K → ~149°C. Answer B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.8976019700057805
+  },
+  "response": {
+    "id": "cmpl-a77173c4a57c1e16",
+    "object": "text_completion",
+    "created": 1789147574,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Clapeyron: dT/dP = T ΔV/ΔH. ΔV=41 cm³/kg; molar mass 32 g → ΔV per mol = 41×0.032 = 1.312 cm³/mol = 1.312e-6 m³. ΔH=422 cal=1764 J. dT/dP = 392.5 K ×1.312e-6/1764 ≈ 2.92e-7 K/Pa. ΔP=1000 atm=1.013e8 Pa → ΔT≈29.6 K → ~149°C. Answer B.</think>Answer: B",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 128,
+      "total_tokens": 274,
+      "completion_tokens": 146,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

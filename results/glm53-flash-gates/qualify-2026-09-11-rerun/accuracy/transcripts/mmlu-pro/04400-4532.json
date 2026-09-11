@@ -1,0 +1,54 @@
+{
+  "index": 4400,
+  "task_id": 4532,
+  "rendered_prompt_sha256": "f82a09da4853538fb7ab8b454a7bfbf8ae7846e0ebbe7f8f0984150e76499e21",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Compute salinity = total salts = 26.518+2.447+3.305+1.141+0.725+0.202+0.083 = 34.421 g/kg → 3.44%. Chlorinity: Cl from NaCl 26.518×35.45/58.44=16.08; MgCl2 2.447×70.9/95.2=1.82; CaCl2 1.141×70.9/110.98=0.729; KCl 0.725×35.45/74.55=0.345; NaBr? Br not Cl. Total Cl ≈ 18.97 g/kg → 1.9%. Salinity 3.44% → E.</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.833051785011776
+  },
+  "response": {
+    "id": "cmpl-bb3482866e5b2ba5",
+    "object": "text_completion",
+    "created": 1789147612,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Compute salinity = total salts = 26.518+2.447+3.305+1.141+0.725+0.202+0.083 = 34.421 g/kg → 3.44%. Chlorinity: Cl from NaCl 26.518×35.45/58.44=16.08; MgCl2 2.447×70.9/95.2=1.82; CaCl2 1.141×70.9/110.98=0.729; KCl 0.725×35.45/74.55=0.345; NaBr? Br not Cl. Total Cl ≈ 18.97 g/kg → 1.9%. Salinity 3.44% → E.</think>Answer: E",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 326,
+      "total_tokens": 505,
+      "completion_tokens": 179,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

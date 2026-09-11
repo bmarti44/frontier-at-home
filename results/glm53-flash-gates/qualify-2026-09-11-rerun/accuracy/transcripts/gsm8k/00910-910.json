@@ -1,0 +1,55 @@
+{
+  "index": 910,
+  "task_id": 910,
+  "rendered_prompt_sha256": "efe59a6c026b9586e5cb38da4bc2aeb82aea41a81e0887a7ae6f839fa6050080",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Smith: 2*200+100=500; total 700.</think>Smith's farm: 2×200 + 100 = 500 acres. Together: 200 + 500 = 700.\n\nAnswer: 700",
+  "finish_reason": "stop",
+  "expected": "700",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8912589789833874
+  },
+  "response": {
+    "id": "cmpl-9dfd551e29abaec0",
+    "object": "text_completion",
+    "created": 1789146271,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Smith: 2*200+100=500; total 700.</think>Smith's farm: 2×200 + 100 = 500 acres. Together: 200 + 500 = 700.\n\nAnswer: 700",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 72,
+      "total_tokens": 120,
+      "completion_tokens": 48,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

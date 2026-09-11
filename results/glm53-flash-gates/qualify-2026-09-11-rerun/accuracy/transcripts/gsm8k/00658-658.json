@@ -1,0 +1,55 @@
+{
+  "index": 658,
+  "task_id": 658,
+  "rendered_prompt_sha256": "fd91cb24dacf36799b1644a7819572dd1aa789c7851654f54939a8801e7edc63",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Rice 30, pork 50, beans 40. Total 120.</think>Rice: 30. Pork: 30+20=50. Beans: (30+50)/2=40. Total = 30+50+40=120.\n\nAnswer: 120",
+  "finish_reason": "stop",
+  "expected": "120",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.558820116042625
+  },
+  "response": {
+    "id": "cmpl-aae4ea32482c7cf4",
+    "object": "text_completion",
+    "created": 1789146197,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Rice 30, pork 50, beans 40. Total 120.</think>Rice: 30. Pork: 30+20=50. Beans: (30+50)/2=40. Total = 30+50+40=120.\n\nAnswer: 120",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 108,
+      "total_tokens": 168,
+      "completion_tokens": 60,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,54 @@
+{
+  "index": 10523,
+  "task_id": 10733,
+  "rendered_prompt_sha256": "a28ea8f340672943555f4880ddf305fa433eea17f2bac3435d83550381962330",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Statement 1: joint entropy ≤ sum, so False. Statement 2: moralization adds edges (marry parents), never decreases—False. Answer F.</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.5545636520255357
+  },
+  "response": {
+    "id": "cmpl-b31e161f1e619d76",
+    "object": "text_completion",
+    "created": 1789147637,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Statement 1: joint entropy ≤ sum, so False. Statement 2: moralization adds edges (marry parents), never decreases—False. Answer F.</think>Answer: F",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 167,
+      "total_tokens": 205,
+      "completion_tokens": 38,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

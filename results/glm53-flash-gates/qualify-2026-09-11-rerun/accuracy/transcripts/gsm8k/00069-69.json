@@ -1,0 +1,56 @@
+{
+  "index": 69,
+  "task_id": 69,
+  "rendered_prompt_sha256": "724f1992958a83762a6da08a352f98d6e8eaf2f06b066c19a006c63f10f2d47e",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "</think>8 weeks × $5 = $40. $100 − $40 = $60.\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.7063782030018046
+  },
+  "response": {
+    "id": "cmpl-b698b7f4454b2420",
+    "object": "text_completion",
+    "created": 1789146133,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "</think>8 weeks × $5 = $40. $100 − $40 = $60.\n\nAnswer: 60",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 87,
+      "total_tokens": 111,
+      "completion_tokens": 24,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>Bailey starts with a certain amount of money. Then she receives a weekly allowance of $5 for 8 weeks. At the end of the 8 weeks, if she has a total of $100, how much money did Bailey start with?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|assistant|><think>"
+}

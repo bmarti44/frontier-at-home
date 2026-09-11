@@ -1,0 +1,54 @@
+{
+  "index": 6407,
+  "task_id": 6572,
+  "rendered_prompt_sha256": "dfc28eb7f439fd34d236887e0bf375262c443dfc92ac98eb81b2efdaa7935e37",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "This is from a known question (BMJ/UpToDate style). Correct answer: D? Let me recall: \"Women over 80 with osteopenia have above-average bone density for their age\" — yes, because T-score vs young adult; osteopenia T-score -1 to -2.5 vs young normal; at age 80 average is much lower, so osteopenia means above average for age. Answer D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.453928912989795
+  },
+  "response": {
+    "id": "cmpl-b39af30afdfe063f",
+    "object": "text_completion",
+    "created": 1789149939,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "This is from a known question (BMJ/UpToDate style). Correct answer: D? Let me recall: \"Women over 80 with osteopenia have above-average bone density for their age\" — yes, because T-score vs young adult; osteopenia T-score -1 to -2.5 vs young normal; at age 80 average is much lower, so osteopenia means above average for age. Answer D.</think>Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 247,
+      "total_tokens": 341,
+      "completion_tokens": 94,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

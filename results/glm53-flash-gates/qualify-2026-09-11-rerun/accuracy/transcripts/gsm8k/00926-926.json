@@ -1,0 +1,55 @@
+{
+  "index": 926,
+  "task_id": 926,
+  "rendered_prompt_sha256": "e43b7656cf5a4278f29de179d33c7c17d5fa265a0c48bce20053dc250f061f09",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Spent: 5×10=50, 8×7=56, popcorn 2×8=16, candy 4×2=8 → 130. Remaining 20. Friday ticket 10 + popcorn 8 + candy 2 = 20 → 1 movie.</think>Spent so far: 5×10=50, 8×7=56, popcorn 2×8=16, candy 4×2=8 → total 130. Remaining: 150−130=20. Friday night: ticket $10 + popcorn $8 + candy $2 = $20, exactly enough for 1 movie.\n\nAnswer: 1",
+  "finish_reason": "stop",
+  "expected": "1",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.560227457026485
+  },
+  "response": {
+    "id": "cmpl-bb4342cbeb95350d",
+    "object": "text_completion",
+    "created": 1789146116,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Spent: 5×10=50, 8×7=56, popcorn 2×8=16, candy 4×2=8 → 130. Remaining 20. Friday ticket 10 + popcorn 8 + candy 2 = 20 → 1 movie.</think>Spent so far: 5×10=50, 8×7=56, popcorn 2×8=16, candy 4×2=8 → total 130. Remaining: 150−130=20. Friday night: ticket $10 + popcorn $8 + candy $2 = $20, exactly enough for 1 movie.\n\nAnswer: 1",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 162,
+      "total_tokens": 301,
+      "completion_tokens": 139,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,55 @@
+{
+  "index": 1014,
+  "task_id": 1014,
+  "rendered_prompt_sha256": "5805a057c81b279b32894a510a9eda7030d0ccdee886204358d9675d09696a0c",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Peaches 3×0.5=1.5, pears 4×0.5=2, kiwis 2×1=2, apples 5×0.75=3.75. Total 9.25. Left 0.75 → 3 plums.</think>Spent: 1.50 + 2.00 + 2.00 + 3.75 = 9.25. Remaining: 0.75 → 3 plums.\n\nAnswer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.049793543992564
+  },
+  "response": {
+    "id": "cmpl-bc3a639bc56c24c6",
+    "object": "text_completion",
+    "created": 1789146394,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Peaches 3×0.5=1.5, pears 4×0.5=2, kiwis 2×1=2, apples 5×0.75=3.75. Total 9.25. Left 0.75 → 3 plums.</think>Spent: 1.50 + 2.00 + 2.00 + 3.75 = 9.25. Remaining: 0.75 → 3 plums.\n\nAnswer: 3",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 125,
+      "total_tokens": 234,
+      "completion_tokens": 109,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

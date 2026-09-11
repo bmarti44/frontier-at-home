@@ -1,0 +1,54 @@
+{
+  "index": 10250,
+  "task_id": 10455,
+  "rendered_prompt_sha256": "7fd2d0b997abdd79add0a884f7aa69075512ed8e7252743c8b8189df8de3ce84",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "K-fold cost linear in K.</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.1190812299610116
+  },
+  "response": {
+    "id": "cmpl-85cbd2df8176848f",
+    "object": "text_completion",
+    "created": 1789147631,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "K-fold cost linear in K.</think>Answer: H",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 98,
+      "total_tokens": 110,
+      "completion_tokens": 12,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

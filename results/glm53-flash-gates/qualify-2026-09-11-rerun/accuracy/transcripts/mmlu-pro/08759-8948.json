@@ -1,0 +1,54 @@
+{
+  "index": 8759,
+  "task_id": 8948,
+  "rendered_prompt_sha256": "16beab9a52dc702bae999caf1c27eb9ebe67a7de5428e2145ebc2eb16dba9d86",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "n≡3 mod5, 4 mod7, 2 mod9. Check options: 233: 233 mod5=3, mod7=233-231=2 no. 173: mod5=3, mod7=173-168=5 no. 372: mod5=2 no. 142: mod5=2. 263: mod5=3, mod7=263-259=4 ✓, mod9=263-252=11→2 ✓. Answer D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.68503975198837
+  },
+  "response": {
+    "id": "cmpl-b9e0b7bdac36de0f",
+    "object": "text_completion",
+    "created": 1789150185,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "n≡3 mod5, 4 mod7, 2 mod9. Check options: 233: 233 mod5=3, mod7=233-231=2 no. 173: mod5=3, mod7=173-168=5 no. 372: mod5=2 no. 142: mod5=2. 263: mod5=3, mod7=263-259=4 ✓, mod9=263-252=11→2 ✓. Answer D.</think>Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 126,
+      "total_tokens": 248,
+      "completion_tokens": 122,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

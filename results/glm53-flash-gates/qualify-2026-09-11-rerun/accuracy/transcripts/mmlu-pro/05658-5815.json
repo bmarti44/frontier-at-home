@@ -1,0 +1,55 @@
+{
+  "index": 5658,
+  "task_id": 5815,
+  "rendered_prompt_sha256": "d23eabbd7e87adb8337cfbd30bd16e4bdd5f02c580493544a61ef5a41d40d560",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.7642466110410169
+  },
+  "response": {
+    "id": "cmpl-b1676aaed974d817",
+    "object": "text_completion",
+    "created": 1789150224,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "</think>Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 95,
+      "total_tokens": 100,
+      "completion_tokens": 5,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "rendered_prompt": "[gMASK]<sop><|system|>Reasoning Effort: Low<|user|>What disease is sometimes referred to as the 'royaldisease'?\n\nA. scurvy\nB. rickets\nC. polio\nD. hemophilia\nE. measles\nF. typhoid\nG. malaria\nH. smallpox\nI. tuberculosis\nJ. leprosy\n\nReply with the single letter of the correct option in the form: Answer: <letter><|assistant|><think>"
+}

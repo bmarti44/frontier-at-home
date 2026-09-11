@@ -1,0 +1,54 @@
+{
+  "index": 8542,
+  "task_id": 8730,
+  "rendered_prompt_sha256": "49261955ff5a8c69ce4ee011074e854fe4f4f7b877798a23ba44f8fb9ac7f3e9",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Cycle of 5: (k-1)^n + (-1)^n(k-1) = 2^5 -2 = 30.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.3427048249868676
+  },
+  "response": {
+    "id": "cmpl-b423336b6662a4a4",
+    "object": "text_completion",
+    "created": 1789150162,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Cycle of 5: (k-1)^n + (-1)^n(k-1) = 2^5 -2 = 30.</think>Answer: C",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 108,
+      "total_tokens": 144,
+      "completion_tokens": 36,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

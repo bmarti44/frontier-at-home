@@ -1,0 +1,54 @@
+{
+  "index": 12008,
+  "task_id": 12233,
+  "rendered_prompt_sha256": "b83956be716e1aff27f45bf0c32e7ddfee02d51843c7f8dfde2c3dffe23ff138",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "ANSI roller chain power: for #40 chain (1/2 pitch)... 3/4 in pitch is #50 chain. Power formula: P = 0.12? Standard: HP = 600? For #50 chain at 500 rpm with 34 teeth... Typical formula: HP = (v/1000)... Use ANSI: HP = 0.12·? Known table: #50 chain, 34 teeth, 500 rpm → about 5.7 hp? Answer D (5.73).</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='D' expected='F'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.25211375701474
+  },
+  "response": {
+    "id": "cmpl-8a6ec97a0dc2bd05",
+    "object": "text_completion",
+    "created": 1789149765,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "ANSI roller chain power: for #40 chain (1/2 pitch)... 3/4 in pitch is #50 chain. Power formula: P = 0.12? Standard: HP = 600? For #50 chain at 500 rpm with 34 teeth... Typical formula: HP = (v/1000)... Use ANSI: HP = 0.12·? Known table: #50 chain, 34 teeth, 500 rpm → about 5.7 hp? Answer D (5.73).</think>Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 133,
+      "total_tokens": 246,
+      "completion_tokens": 113,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

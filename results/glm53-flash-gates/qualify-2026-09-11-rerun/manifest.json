@@ -3,26 +3,29 @@
   "schema_version": 1,
   "kit": {
     "script": "scripts/94_qualify_profile.py",
-    "sha256": "b55dcaed5aea719a6b6848a2a70cf5a78648e5370b836e23ff501de40b9b1fe2",
+    "sha256": "42462e42feb6d446dacac663e454f75afe34ce17aedd9cfe6a5e9ba74df47be5",
     "argv": [
       "scripts/94_qualify_profile.py",
       "--profile",
       "glm-5.3-flash/cuda-spark-128g-1m",
-      "--resummarize",
+      "--cells",
+      "accuracy",
       "--out",
-      "results/glm53-flash-gates/qualify-2026-09-11-rerun"
+      "results/glm53-flash-gates/qualify-2026-09-11-rerun",
+      "--port",
+      "8015"
     ]
   },
   "dry_run": false,
-  "no_launch": true,
-  "start_unix": 1789143617.9906518,
-  "start_iso": "2026-09-11T16:20:18.109884+00:00",
+  "no_launch": false,
+  "start_unix": 1789151120.2032046,
+  "start_iso": "2026-09-11T18:25:20.296840+00:00",
   "profile": {
     "profile_id": "glm-5.3-flash/cuda-spark-128g-1m",
     "model_slug": "glm-5.3-flash",
     "profile_file": "/home/bmarti44/spark-deepseek-v4-flash/configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json",
     "profile_status": "qualified",
-    "profile_evidence": "results/glm53-flash-gates/qualify-2026-09-11/",
+    "profile_evidence": "results/glm53-flash-gates/qualify-2026-09-11-rerun/",
     "mechanism": "systemd-run",
     "stack_label": "glm-5.3-flash-cuda-spark-128g-1m",
     "switch_alias": "glm53-1m",
@@ -218,7 +221,7 @@
       "vision_thinking_mode": "thinking"
     },
     "vision_thinking_mode": "thinking",
-    "encoder": null,
+    "encoder": "glm53",
     "config_hash": "glm-5.3-flash-cuda-spark-128g-1m-00bf8818bf52"
   },
   "port": 8015,
@@ -235,8 +238,8 @@
     "gpu_driver": "580.159.03"
   },
   "git": {
-    "head": "4bb4a9d06c0b4563900528cad80e09cced65b4f0",
-    "branch": "main",
+    "head": "34a9febadd3f139595d77508b7c0aea8683de724",
+    "branch": "glm53/rerun-2026-09-11",
     "dirty": true
   },
   "scripts": {
@@ -247,13 +250,14 @@
     "38_bench_vision.py": "4260f8950e69025d930f319a654ddce07ff8525198fd419a25cc07542c8d3171",
     "51_probe_media_max.py": "84d477dfd73ef21546c7ed18694732c5d9dbf1d4c4f1cded8396ae2ef473abd2",
     "49_score_teacher_windows.py": "036cabca94c42aa0adf3a33ff967c064cb26c2d6f910ff39310e0eff5f28b759",
-    "31_bench_accuracy.py": "cbe5249b6966895cf3834397f67f9010939cce36c3386f08943ea48db1e489b4",
+    "31_bench_accuracy.py": "cb4052f68cd6bcb9fa8f0b56a23b006d16ea5ef09f6bd51f94c3881593990f2b",
     "50_probe_context.py": "6ab6dd4d21bde45374d83be56f4ca1b5edc73e8527f518032716f71ec305c87d",
     "35_soak.py": "199d42bfa2134667b23fdbc3ee50ffa81a94ced8a288d375d2b7096812ddbe86"
   },
-  "cells_selected": [],
+  "cells_selected": [
+    "accuracy"
+  ],
   "cells_kept_from_previous_run": [
-    "accuracy",
     "context",
     "media",
     "soak",
@@ -380,16 +384,6 @@
       "start_unix": 1789138391.1022768,
       "end_unix": 1789138488.7929163
     },
-    "accuracy": {
-      "argv": {},
-      "skip_reason": "requires an encoder registered for the model in scripts/31_bench_accuracy.py ENCODER_PATHS (none declared for 'glm-5.3-flash'; pass --encoder if one exists)",
-      "evidence": "accuracy/",
-      "status": "SKIPPED",
-      "exit_code": null,
-      "wall_s": null,
-      "start_unix": 1789138488.7933385,
-      "end_unix": 1789138488.7933397
-    },
     "context": {
       "argv": [
         "/usr/bin/python3",
@@ -468,8 +462,106 @@
       "wall_s": 509.7608994549955,
       "start_unix": 1789142992.7624848,
       "end_unix": 1789143502.5236464
+    },
+    "accuracy": {
+      "argv": {
+        "gsm8k": [
+          "/usr/bin/python3",
+          "/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8015",
+          "--out",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/acc-gsm8k.json",
+          "--stack-label",
+          "glm-5.3-flash-cuda-spark-128g-1m",
+          "--suite",
+          "gsm8k",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/transcripts/gsm8k",
+          "--encoder",
+          "glm53",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "glm-5.3-flash/cuda-spark-128g-1m",
+          "--config-hash",
+          "glm-5.3-flash-cuda-spark-128g-1m-00bf8818bf52",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/config-evidence.json"
+        ],
+        "mmlu-pro": [
+          "/usr/bin/python3",
+          "/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8015",
+          "--out",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/acc-mmlu-pro.json",
+          "--stack-label",
+          "glm-5.3-flash-cuda-spark-128g-1m",
+          "--suite",
+          "mmlu-pro",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/transcripts/mmlu-pro",
+          "--encoder",
+          "glm53",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "glm-5.3-flash/cuda-spark-128g-1m",
+          "--config-hash",
+          "glm-5.3-flash-cuda-spark-128g-1m-00bf8818bf52",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/config-evidence.json"
+        ],
+        "humaneval": [
+          "/usr/bin/python3",
+          "/home/bmarti44/spark-deepseek-v4-flash/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8015",
+          "--out",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/acc-humaneval.json",
+          "--stack-label",
+          "glm-5.3-flash-cuda-spark-128g-1m",
+          "--suite",
+          "humaneval",
+          "--split",
+          "all",
+          "--transcripts-dir",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/transcripts/humaneval",
+          "--encoder",
+          "glm53",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "glm-5.3-flash/cuda-spark-128g-1m",
+          "--config-hash",
+          "glm-5.3-flash-cuda-spark-128g-1m-00bf8818bf52",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/spark-deepseek-v4-flash/results/glm53-flash-gates/qualify-2026-09-11-rerun/accuracy/config-evidence.json"
+        ]
+      },
+      "skip_reason": null,
+      "evidence": "accuracy/acc-<suite>.json"
     }
   },
-  "end_unix": 1789143618.13802,
-  "end_iso": "2026-09-11T16:20:18.138023+00:00"
+  "served_models_listed": [
+    "glm-5.3-flash",
+    "default"
+  ]
 }

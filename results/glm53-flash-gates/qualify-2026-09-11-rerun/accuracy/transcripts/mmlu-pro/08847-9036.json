@@ -1,0 +1,54 @@
+{
+  "index": 8847,
+  "task_id": 9036,
+  "rendered_prompt_sha256": "6e3fec409231190a33a3d98357479056758dabed942d34d9bf534a5a3a658ba3",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Monthly payment: 100000 * (0.0075)/(1-(1.0075)^-360). 1.0075^360 ≈ e^(360*0.007472)=e^2.6899≈14.72. Payment=750/(1-1/14.72)=750*14.72/13.72≈804.6. D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.012408472946845
+  },
+  "response": {
+    "id": "cmpl-b5247d9f81b4af9e",
+    "object": "text_completion",
+    "created": 1789150195,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Monthly payment: 100000 * (0.0075)/(1-(1.0075)^-360). 1.0075^360 ≈ e^(360*0.007472)=e^2.6899≈14.72. Payment=750/(1-1/14.72)=750*14.72/13.72≈804.6. D.</think>Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 140,
+      "total_tokens": 228,
+      "completion_tokens": 88,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

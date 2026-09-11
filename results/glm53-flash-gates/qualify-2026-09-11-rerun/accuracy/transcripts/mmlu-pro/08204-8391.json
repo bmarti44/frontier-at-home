@@ -1,0 +1,54 @@
+{
+  "index": 8204,
+  "task_id": 8391,
+  "rendered_prompt_sha256": "e85bf654b301a4b05ed718e4611cf1d5eb860e3644f06764cf3ca3742a770a60",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "3x(x+5)=2(3x+x+5)=8x+10 → 3x²+15x=8x+10 → 3x²+7x-10=0 → x=1 (or -10/3). F.</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.6726193579961546
+  },
+  "response": {
+    "id": "cmpl-ad3c0f118cae4b65",
+    "object": "text_completion",
+    "created": 1789150128,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "3x(x+5)=2(3x+x+5)=8x+10 → 3x²+15x=8x+10 → 3x²+7x-10=0 → x=1 (or -10/3). F.</think>Answer: F",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 138,
+      "total_tokens": 199,
+      "completion_tokens": 61,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

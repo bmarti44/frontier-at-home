@@ -1,0 +1,54 @@
+{
+  "index": 81,
+  "task_id": 152,
+  "rendered_prompt_sha256": "6501e1583f91875e84359b47bb700bdeb476323f87899a961eb97599f59fea73",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Invoice 416.50 less 15% → 354.025, less 2.5% → 345.17. Terms 2% 10-EOM: EOM means end of month; 2% 10-EOM = 2% discount if paid within 10 days after end of month. March 2 invoice, EOM March 31, +10 days = April 10. Paid April 10 → discount applies: 345.17 × 0.98 = 338.27. Answer E.</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.746165307005867
+  },
+  "response": {
+    "id": "cmpl-9d3a4d73dc17792c",
+    "object": "text_completion",
+    "created": 1789147283,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Invoice 416.50 less 15% → 354.025, less 2.5% → 345.17. Terms 2% 10-EOM: EOM means end of month; 2% 10-EOM = 2% discount if paid within 10 days after end of month. March 2 invoice, EOM March 31, +10 days = April 10. Paid April 10 → discount applies: 345.17 × 0.98 = 338.27. Answer E.</think>Answer: E",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 163,
+      "total_tokens": 285,
+      "completion_tokens": 122,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

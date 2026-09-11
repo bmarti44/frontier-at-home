@@ -1,0 +1,54 @@
+{
+  "index": 276,
+  "task_id": 348,
+  "rendered_prompt_sha256": "e36ea976c68cddcb76ce0b12a59c8c28eaa79614e289905eb282328632b34cab",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "17400/1000=17.4 ×24.90=433.26 ×0.28=121.31 → F</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.3090393629972823
+  },
+  "response": {
+    "id": "cmpl-ae1ee51cf75b2fe9",
+    "object": "text_completion",
+    "created": 1789147302,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "17400/1000=17.4 ×24.90=433.26 ×0.28=121.31 → F</think>Answer: F",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 170,
+      "total_tokens": 203,
+      "completion_tokens": 33,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

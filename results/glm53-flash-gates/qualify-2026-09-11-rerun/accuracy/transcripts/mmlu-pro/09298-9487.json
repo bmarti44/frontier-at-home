@@ -1,0 +1,54 @@
+{
+  "index": 9298,
+  "task_id": 9487,
+  "rendered_prompt_sha256": "d7ad7d65db0f244b8ff2dcaa4490168aa524a650e0799f42f258e820a1b909b7",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "n = PV/RT = 97.5e3*230e-6/(8.314*296.25)=22.425/2462.6≈0.00911 mol. Mean molar mass = 0.3554/0.00911 ≈ 39.0 g/mol. Butane 58, ethane 30: x*58+(1-x)*30=39 → x=9/28≈0.32. Answer H.</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.234223062987439
+  },
+  "response": {
+    "id": "cmpl-a616c71952cece41",
+    "object": "text_completion",
+    "created": 1789150306,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "n = PV/RT = 97.5e3*230e-6/(8.314*296.25)=22.425/2462.6≈0.00911 mol. Mean molar mass = 0.3554/0.00911 ≈ 39.0 g/mol. Butane 58, ethane 30: x*58+(1-x)*30=39 → x=9/28≈0.32. Answer H.</think>Answer: H",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 189,
+      "total_tokens": 300,
+      "completion_tokens": 111,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

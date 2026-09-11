@@ -1,0 +1,54 @@
+{
+  "index": 1539,
+  "task_id": 1631,
+  "rendered_prompt_sha256": "76819b058744297c84c5d9b25ea39c9a04490be54c8420903f4e2093267989e2",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Which is NOT true? Multiple false statements... B (judge), C (defendant right to present evidence — false), D (Miranda — false), E (open to public — false), G (unanimous — false, federal requires 12 of 16? Actually federal grand jury needs concurrence of 12 of at least 16, not unanimous). Hmm many false. But question likely expects single answer... Perhaps intended: which is not true — pick one? Common bar question: \"Which of the following is NOT true about grand jury proceedings?\" with answer being... Actually typical answer: defendant has no right to present evidence, no Miranda, no counsel, secret, not open, no exclusion, not unanimous, 12 jurors? Federal grand jury: 16-23 jurors, 12 votes needed. So \"jury made up of 12 people\" is false too. Many false. But maybe the intended single answer is B? Hmm.\n\nGiven ambiguity, choose the most commonly cited false statement... The question lists many; maybe it's a \"select all\" but asks single letter. Perhaps the intended answer is B (conducted by a judge — false, conducted by prosecutor). But C, D, E, G, I also false. Hmm.\n\nMaybe the question intends \"which is not true\" and expects the one that's false among true ones? But most listed are false except A, F, H. So the answer could be any of B, C, D, E, G, I. The \"single letter\" requirement... I'll pick B? Actually maybe the intended answer is C? Hmm.\n\nStandard exam: \"Which of the following is NOT true about grand jury proceedings?\" Options often: conducted in secret (true), conducted by prosecutor not judge, defendant has no right... The classic answer: \"The proceedings are conducted by a judge\" is not true. I'll answer B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='B' expected='D'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 20.2730007370119
+  },
+  "response": {
+    "id": "cmpl-ba93fa212ac33792",
+    "object": "text_completion",
+    "created": 1789150047,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Which is NOT true? Multiple false statements... B (judge), C (defendant right to present evidence — false), D (Miranda — false), E (open to public — false), G (unanimous — false, federal requires 12 of 16? Actually federal grand jury needs concurrence of 12 of at least 16, not unanimous). Hmm many false. But question likely expects single answer... Perhaps intended: which is not true — pick one? Common bar question: \"Which of the following is NOT true about grand jury proceedings?\" with answer being... Actually typical answer: defendant has no right to present evidence, no Miranda, no counsel, secret, not open, no exclusion, not unanimous, 12 jurors? Federal grand jury: 16-23 jurors, 12 votes needed. So \"jury made up of 12 people\" is false too. Many false. But maybe the intended single answer is B? Hmm.\n\nGiven ambiguity, choose the most commonly cited false statement... The question lists many; maybe it's a \"select all\" but asks single letter. Perhaps the intended answer is B (conducted by a judge — false, conducted by prosecutor). But C, D, E, G, I also false. Hmm.\n\nMaybe the question intends \"which is not true\" and expects the one that's false among true ones? But most listed are false except A, F, H. So the answer could be any of B, C, D, E, G, I. The \"single letter\" requirement... I'll pick B? Actually maybe the intended answer is C? Hmm.\n\nStandard exam: \"Which of the following is NOT true about grand jury proceedings?\" Options often: conducted in secret (true), conducted by prosecutor not judge, defendant has no right... The classic answer: \"The proceedings are conducted by a judge\" is not true. I'll answer B.</think>Answer: B",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 143,
+      "total_tokens": 536,
+      "completion_tokens": 393,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "index": 11582,
+  "task_id": 11806,
+  "rendered_prompt_sha256": "663e3143f15edc75c7f7dfcc7cd24207ed27e08e582ccb70d33b7708e9abc2c8",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Compute evaporation rate. D=0.03 cm, v=225 cm/s, air at 145°F (63°C), film temp ~ (145+70)/2=107.5°F ≈ 42°C. Vapor pressure at 70°F = 0.0247 atm, air dry so pA∞=0.\n\nUse Frössling equation: Sh = 2 + 0.6 Sc^0.5 Re^0.5.\n\nDiffusivity of water vapor in air at ~42°C: D ≈ 0.26 cm²/s? At 25°C D=0.25; at 42°C ~0.28. Sc = μ/ρD. Air μ at 42°C ≈ 0.0193 cP, ρ ≈ 0.0011 g/cm³. Sc = 0.0193/(0.0011×0.28) ≈ 0.62. Re = 225×0.03×0.0011/0.0193 ≈ 0.385. Sh = 2 + 0.6×0.79×0.62 = 2+0.294=2.294. k_c = Sh·D/d = 2.294×0.28/0.03 = 21.4 cm/s.\n\nN = k_c (cA_s - cA∞) = 21.4 × (0.0247/(82.1×343.7))... c = p/RT: R=82.06 cm³·atm/mol, T=70°F=294.3K. c_s = 0.0247/(82.06×294.3)=1.023e-6 mol/cm³. N = 21.4×1.023e-6 = 2.19e-5 mol/cm²/s. Area = πd² = π×9e-4=2.827e-3 cm². Rate = 6.2e-8 mol/s. Hmm ~6.2e-8, close to G (6.62e-8). But correction factor for non-bulk? Also Stefan flow correction: use flux = k_c c ln? For low pA, negligible.\n\nAnswer G.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='G' expected='F'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 25.968844451010227
+  },
+  "response": {
+    "id": "cmpl-849a176b2e8c7cbe",
+    "object": "text_completion",
+    "created": 1789148677,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Compute evaporation rate. D=0.03 cm, v=225 cm/s, air at 145°F (63°C), film temp ~ (145+70)/2=107.5°F ≈ 42°C. Vapor pressure at 70°F = 0.0247 atm, air dry so pA∞=0.\n\nUse Frössling equation: Sh = 2 + 0.6 Sc^0.5 Re^0.5.\n\nDiffusivity of water vapor in air at ~42°C: D ≈ 0.26 cm²/s? At 25°C D=0.25; at 42°C ~0.28. Sc = μ/ρD. Air μ at 42°C ≈ 0.0193 cP, ρ ≈ 0.0011 g/cm³. Sc = 0.0193/(0.0011×0.28) ≈ 0.62. Re = 225×0.03×0.0011/0.0193 ≈ 0.385. Sh = 2 + 0.6×0.79×0.62 = 2+0.294=2.294. k_c = Sh·D/d = 2.294×0.28/0.03 = 21.4 cm/s.\n\nN = k_c (cA_s - cA∞) = 21.4 × (0.0247/(82.1×343.7))... c = p/RT: R=82.06 cm³·atm/mol, T=70°F=294.3K. c_s = 0.0247/(82.06×294.3)=1.023e-6 mol/cm³. N = 21.4×1.023e-6 = 2.19e-5 mol/cm²/s. Area = πd² = π×9e-4=2.827e-3 cm². Rate = 6.2e-8 mol/s. Hmm ~6.2e-8, close to G (6.62e-8). But correction factor for non-bulk? Also Stefan flow correction: use flux = k_c c ln? For low pA, negligible.\n\nAnswer G.</think>Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 283,
+      "total_tokens": 785,
+      "completion_tokens": 502,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

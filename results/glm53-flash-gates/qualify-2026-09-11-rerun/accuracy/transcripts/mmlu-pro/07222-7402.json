@@ -1,0 +1,54 @@
+{
+  "index": 7222,
+  "task_id": 7402,
+  "rendered_prompt_sha256": "bf93252e2c64078f2567d5eee32a66e0088eeab1e8048ec1700abe5939ddd098",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Deficit $30B financed by bonds; Fed buys bonds to create money: money multiplier 5, so Fed can buy $8B bonds ($8B×5=$40B). Government must sell $30B bonds; Fed buys $8B, public holds $22B. National debt increases by $30B? Debt increases by full deficit $30B regardless. Answer A.</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='A' expected='B'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.834434741991572
+  },
+  "response": {
+    "id": "cmpl-a2dfd9d63da55279",
+    "object": "text_completion",
+    "created": 1789147660,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Deficit $30B financed by bonds; Fed buys bonds to create money: money multiplier 5, so Fed can buy $8B bonds ($8B×5=$40B). Government must sell $30B bonds; Fed buys $8B, public holds $22B. National debt increases by $30B? Debt increases by full deficit $30B regardless. Answer A.</think>Answer: A",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 149,
+      "total_tokens": 233,
+      "completion_tokens": 84,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

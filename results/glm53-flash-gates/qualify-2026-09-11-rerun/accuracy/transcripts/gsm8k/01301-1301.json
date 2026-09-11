@@ -1,0 +1,55 @@
+{
+  "index": 1301,
+  "task_id": 1301,
+  "rendered_prompt_sha256": "d6c81524aba3a3369d1f614e3584cab310788656c4a8a24ffa70f1f1e7277f2c",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "9-1-2=6 oatmeal; 4-1=3 choc; 5-1-2=2 sugar. Bake 4 each: 10,7,6 = 23.</think>Oatmeal: 9−1−2=6; chocolate: 4−1=3; sugar: 5−1−2=2. Baking adds 4 each: 6+4=10, 3+4=7, 2+4=6. Total: 10+7+6=23.\n\nAnswer: 23",
+  "finish_reason": "stop",
+  "expected": "23",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.634682513016742
+  },
+  "response": {
+    "id": "cmpl-81a539ac66a2312c",
+    "object": "text_completion",
+    "created": 1789146358,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "9-1-2=6 oatmeal; 4-1=3 choc; 5-1-2=2 sugar. Bake 4 each: 10,7,6 = 23.</think>Oatmeal: 9−1−2=6; chocolate: 4−1=3; sugar: 5−1−2=2. Baking adds 4 each: 6+4=10, 3+4=7, 2+4=6. Total: 10+7+6=23.\n\nAnswer: 23",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 115,
+      "total_tokens": 236,
+      "completion_tokens": 121,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,55 @@
+{
+  "index": 547,
+  "task_id": 547,
+  "rendered_prompt_sha256": "adc336f468ca2cf52aa1ca9abd2d332b69c869856e658e871a8ade7099a8502c",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Round1: Ali calls 3. Round2: 9. Round3: 27. Round4: 81.</think>Each round triples: 3, 9, 27, then 81.\n\nAnswer: 81",
+  "finish_reason": "stop",
+  "expected": "81",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.991880243003834
+  },
+  "response": {
+    "id": "cmpl-ac995fb1ca00e608",
+    "object": "text_completion",
+    "created": 1789146219,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Round1: Ali calls 3. Round2: 9. Round3: 27. Round4: 81.</think>Each round triples: 3, 9, 27, then 81.\n\nAnswer: 81",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 88,
+      "total_tokens": 137,
+      "completion_tokens": 49,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

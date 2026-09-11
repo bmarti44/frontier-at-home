@@ -1,0 +1,55 @@
+{
+  "index": 651,
+  "task_id": 651,
+  "rendered_prompt_sha256": "4845aac9774db5852dbbdf65d2fa7525aac7673d18028ba8f2ca4ae353ed1b3b",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Red 400 = half green → green 800, month1 = 1200. Month2 = 900. Total 2100.</think>Month 1: red $400 = half of green, so green = $800. Total month 1 = $1200.\nMonth 2 = 3/4 × 1200 = $900.\nTotal = 1200 + 900 = 2100.\n\nAnswer: 2100",
+  "finish_reason": "stop",
+  "expected": "2100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.17051846900722
+  },
+  "response": {
+    "id": "cmpl-826b8d3fb2489422",
+    "object": "text_completion",
+    "created": 1789146388,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Red 400 = half green → green 800, month1 = 1200. Month2 = 900. Total 2100.</think>Month 1: red $400 = half of green, so green = $800. Total month 1 = $1200.\nMonth 2 = 3/4 × 1200 = $900.\nTotal = 1200 + 900 = 2100.\n\nAnswer: 2100",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 108,
+      "total_tokens": 200,
+      "completion_tokens": 92,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

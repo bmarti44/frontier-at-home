@@ -1,0 +1,55 @@
+{
+  "index": 1212,
+  "task_id": 1212,
+  "rendered_prompt_sha256": "29a6c92a42d010b7bb0d867ed185429219228b6857bd19858e8aaac708ab526e",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Ali's class 120. John's classes: 1/8 of 120 = 15 each, two classes = 30. Combined capacity of both schools: Ali's school 120 + John's 30 = 150.</think>Ali's class capacity: 120. John's classes: 120 × 1/8 = 15 each, so 2 × 15 = 30. Combined: 120 + 30 = 150.\n\nAnswer: 150",
+  "finish_reason": "stop",
+  "expected": "150",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.472302216978278
+  },
+  "response": {
+    "id": "cmpl-a82abe66c5f5ea84",
+    "object": "text_completion",
+    "created": 1789146104,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Ali's class 120. John's classes: 1/8 of 120 = 15 each, two classes = 30. Combined capacity of both schools: Ali's school 120 + John's 30 = 150.</think>Ali's class capacity: 120. John's classes: 120 × 1/8 = 15 each, so 2 × 15 = 30. Combined: 120 + 30 = 150.\n\nAnswer: 150",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 100,
+      "total_tokens": 199,
+      "completion_tokens": 99,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

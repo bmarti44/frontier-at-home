@@ -1,0 +1,55 @@
+{
+  "index": 844,
+  "task_id": 844,
+  "rendered_prompt_sha256": "eadef4b62a11cc69e19169fb036f2c9356439368732794ee4af12de1ea229491",
+  "rendering": "official-encoder-glm53-thinking-effort-low",
+  "encoder": "glm53",
+  "completion": "Jack: 60 dishes, socks = 30. Peter: socks = 2×30=60, dishes = 60/2=30. Total socks 90, dishes 90 → 180.</think>Jack: 60 dishes, 30 socks. Peter: 60 socks, 30 dishes. Total = 90 socks + 90 dishes = 180.\n\nAnswer: 180",
+  "finish_reason": "stop",
+  "expected": "180",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "glm-5.3-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.627844858972821
+  },
+  "response": {
+    "id": "cmpl-a585636e4855b7ff",
+    "object": "text_completion",
+    "created": 1789146251,
+    "model": "glm-5.3-flash",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Jack: 60 dishes, socks = 30. Peter: socks = 2×30=60, dishes = 60/2=30. Total socks 90, dishes 90 → 180.</think>Jack: 60 dishes, 30 socks. Peter: 60 socks, 30 dishes. Total = 90 socks + 90 dishes = 180.\n\nAnswer: 180",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 154827,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.1.dev2+gc29d90310-e67be2f2",
+    "usage": {
+      "prompt_tokens": 85,
+      "total_tokens": 167,
+      "completion_tokens": 82,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}
