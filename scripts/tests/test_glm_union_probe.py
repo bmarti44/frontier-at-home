@@ -199,6 +199,8 @@ class UnionTargetTests(unittest.TestCase):
             self.assertEqual(np.unique(value[0]).size, 256)
 
     def test_probe_head_training_path_is_finite_and_replayable_on_cpu(self) -> None:
+        if importlib.util.find_spec("torch") is None:
+            self.skipTest("torch is not installed")
         features = np.linspace(-1, 1, 96, dtype=np.float32).reshape(16, 6)
         targets = np.zeros((16, 3, 256), dtype=np.bool_)
         for row in range(16):

@@ -888,7 +888,7 @@ class EngineSwitchTests(unittest.TestCase):
             ("DSV4_SERVER_BINARY",
              "/home/dsv4/llamacpp-project/src/llama.cpp-fusion/build/bin/llama-server"),
             ("DSV4_BUILD_MANIFEST",
-             f"{ROOT}/configs/build-manifests/llamacpp-fusion.json"),
+             f"{PRODUCTION_REPO}/configs/build-manifests/llamacpp-fusion.json"),
             ("DSV4_CONTEXT_QUALIFICATION_FLOOR_GIB", "8"),
             ("DSV4_MEM_FLOOR_GIB", "8"),
             ("DSV4_WATCHDOG_FLOOR_GIB", "8"),

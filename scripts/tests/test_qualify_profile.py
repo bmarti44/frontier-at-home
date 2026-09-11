@@ -82,9 +82,12 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertEqual(context[context.index("--slots") + 1], "4")
         self.assertEqual(context[context.index("--tokens-per-slot") + 1], "250128")  # 262144 - 12016 headroom
         self.assertEqual(context[context.index("--mem-floor-gib") + 1], "10")
-        if profile["tokenizer_sha256"]:
+        # The kit validates output token ids against the on-disk tokenizer digest,
+        # or the profile's expected digest when the weights are not on this host.
+        expected_sha = profile["tokenizer_sha256"] or profile.get("tokenizer_sha256_expected")
+        if expected_sha:
             speed = cells["speed"]["argv"]
-            self.assertEqual(speed[speed.index("--output-tokenizer-sha256") + 1], profile["tokenizer_sha256"])
+            self.assertEqual(speed[speed.index("--output-tokenizer-sha256") + 1], expected_sha)
             self.assertIn("--extra-body", speed)
         else:
             self.assertIsNotNone(cells["speed"]["skip_reason"])
