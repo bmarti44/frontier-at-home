@@ -227,6 +227,10 @@ launch_server() {
     binary=$(snap 'd["binary"]')
     mapfile -t argv < <(snap '"\n".join(d["argv"])')
     mapfile -t env_pairs < <(snap '"\n".join(f"{k}={v}" for k, v in d["env"].items())')
+    # A profile with an empty env renders one blank line; drop it or `env -i ""` fails.
+    local kept=()
+    for pair in "${env_pairs[@]}"; do [[ -n $pair ]] && kept+=("$pair"); done
+    env_pairs=("${kept[@]}")
     # Honor a port override by rewriting the rendered port in argv.
     if [[ -n $PORT_OVERRIDE ]]; then
         local original

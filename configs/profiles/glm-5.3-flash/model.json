@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "model": "glm-5.3-flash",
+  "identity_manifest": "weights/glm-5.3-flash/manifest.json",
+  "artifacts": {
+    "exl3-k2-densek4": {
+      "kind": "safetensors-dir",
+      "path": "{cache_root}/glm53-flash/model-weights-001",
+      "weights_gib": 79.3,
+      "note": "Pack A: vcruz305/GLM-5.3-Flash-EXL3-K2 @ ca0bcdae routed experts (2 bpw) + turboderp dense overlay; MTP layer 45 NOT included (selected download). Measured resident 79.27 GiB (server-20260910-200747).",
+      "shards": [
+        {
+          "path": "{model}/model.safetensors.index.json",
+          "sha256": "807dd9e12275e66309fdfa2f05ef74cc074e6d66a7c847160e5f0631f102056b"
+        },
+        {
+          "path": "{model}/config.json",
+          "sha256": "9720357b44c3eaf9b19f8aa501e313c864f888d2f3897babf2d213797992ca8d"
+        },
+        {
+          "path": "{model}/quantization_config.json",
+          "sha256": "7ac43594d7f85a80a232b8f79d117c9ec560a40c12fc6dfccf3dd82cc5c78eb4"
+        },
+        {
+          "path": "{model}/tokenizer.json",
+          "sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+        },
+        {
+          "path": "{model}/chat_template.jinja",
+          "sha256": "34d5ee66b12fa6446cdae131c352b8f68cd85369e0e6fda115583805fada3891"
+        }
+      ]
+    },
+    "exl3-turboderp-2.05": {
+      "kind": "safetensors-dir",
+      "path": "{model_root}/glm-5.3-flash/turboderp-2.05bpw",
+      "weights_gib": 79.4,
+      "note": "Pack B: turboderp/GLM-5.3-Flash-exl3 branch 2.05bpw @ 51058cd551c7e570d87bd32a4adee720edce2349 (85.23 GB), self-calibrated; independent 25-window KLD 0.12 / top-1 0.889 vs BF16. All 24 files verified against Hub LFS sha256 on 2026-09-10 (weights/glm-5.3-flash/manifest.json). Contains MTP layer 45 (3,508 tensors, shard 11).",
+      "shards": [
+        {
+          "path": "{model}/model.safetensors.index.json",
+          "sha256": "9509363becd75ed23fc60fd678cd4dd3de214c4fa4df177f8d13ab7a09bc4ecb"
+        },
+        {
+          "path": "{model}/config.json",
+          "sha256": "43921c0b6dd51805a243649a647417230ef9cb9ba8e26ae06a461c3f7e08d037"
+        },
+        {
+          "path": "{model}/quantization_config.json",
+          "sha256": "22a0eb34458b7a5951a5f20aa30290b6cd330085db3585dd83993bf7bb83ae2c"
+        },
+        {
+          "path": "{model}/tokenizer.json",
+          "sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+        },
+        {
+          "path": "{model}/chat_template.jinja",
+          "sha256": "41cff9af7b3a86c96751b107a8444f245fbda0bd5320b636a5bb1f7f4ba1a5c3"
+        }
+      ]
+    },
+    "exl3-k2-densek4-mtp": {
+      "kind": "safetensors-dir",
+      "path": "{model_root}/glm-5.3-flash/k2-densek4-mtp",
+      "weights_gib": 81.3,
+      "note": "Pack A + MTP: hardlinks of every pack A file plus mtp-layer45-k2.safetensors (3,481 layer-45 tensors extracted from vcruz305/GLM-5.3-Flash-EXL3-K2 @ ca0bcdae shards 103-106, LFS sha256-verified; see mtp-provenance.json) and an index that maps layer 45 to it. Enables --speculative-config mtp.",
+      "shards": [
+        {
+          "path": "{model}/model.safetensors.index.json",
+          "sha256": "b473ab466d030fc5136161ef3cd4290fb5a920622889e1849aadcc422b1b0da0"
+        },
+        {
+          "path": "{model}/mtp-layer45-k2.safetensors",
+          "sha256": "bcef29485572f2a61358ff5e003cea8f73c6e19ef8cefe139346d6a2da3ff357"
+        },
+        {
+          "path": "{model}/config.json",
+          "sha256": "9720357b44c3eaf9b19f8aa501e313c864f888d2f3897babf2d213797992ca8d"
+        },
+        {
+          "path": "{model}/quantization_config.json",
+          "sha256": "7ac43594d7f85a80a232b8f79d117c9ec560a40c12fc6dfccf3dd82cc5c78eb4"
+        },
+        {
+          "path": "{model}/tokenizer.json",
+          "sha256": "19e773648cb4e65de8660ea6365e10acca112d42a854923df93db4a6f333a82d"
+        },
+        {
+          "path": "{model}/chat_template.jinja",
+          "sha256": "34d5ee66b12fa6446cdae131c352b8f68cd85369e0e6fda115583805fada3891"
+        }
+      ]
+    }
+  },
+  "engines": {
+    "vllm-exl3-glm53": {
+      "binary_path": "{cache_root}/glm53-flash/native-runtime-002/runtime/bin/python3",
+      "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+      "build_manifest": "configs/build-manifests/glm53-flash-local.json",
+      "note": "vLLM fork ZJY0516/vllm 878631b6 + patches/glm53/vllm.patch (wheel c29d90310), vllm-exl3 0.4.0, exllamav3 1.4.4, flashinfer 0.6.18rc10, torch 2.13.0+cu130. See configs/build-manifests/glm53-flash-sources.json."
+    },
+    "vllm-exl3-glm53-r003": {
+      "binary_path": "{cache_root}/glm53-flash/native-runtime-003/runtime/bin/python3",
+      "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+      "build_manifest": "configs/build-manifests/glm53-flash-local.json",
+      "note": "Same vLLM fork wheel c29d90310 / flashinfer 0.6.18rc10 / torch 2.13.0+cu130 as runtime-002, with exllamav3 1.4.9 (v1.4.9 5be88657, aarch64 patch ported) and vllm-exl3 0.4.2 (vcruz305 d3cfd394, BF16-shard flag patch). Build record: ~/.cache/glm53-flash/native-runtime-003/{manifest.json,REPORT.md}; wheels sha256 exllamav3 28ef8a94..., vllm_exl3 1d905ded.... Also carries a ninja binary for flashinfer JIT."
+    }
+  },
+  "backend_support": {
+    "cuda": {
+      "supported": true,
+      "hardware_class": [
+        "spark"
+      ],
+      "note": "vLLM + vllm-exl3 native kernels for sm_121; expert pack sized for 128 GiB unified memory."
+    },
+    "apple-silicon": {
+      "supported": false,
+      "reason": "EXL3 kernels are CUDA-only"
+    },
+    "rocm": {
+      "supported": false,
+      "reason": "EXL3 kernels are CUDA-only"
+    },
+    "cpu": {
+      "supported": false,
+      "reason": "EXL3 kernels are CUDA-only"
+    },
+    "vulkan": {
+      "supported": false,
+      "reason": "EXL3 kernels are CUDA-only"
+    },
+    "intel-xe": {
+      "supported": false,
+      "reason": "EXL3 kernels are CUDA-only"
+    },
+    "qualcomm": {
+      "supported": false,
+      "reason": "EXL3 kernels are CUDA-only"
+    },
+    "tenstorrent": {
+      "supported": false,
+      "reason": "EXL3 kernels are CUDA-only"
+    }
+  },
+  "reference_logits": {
+    "dataset_dir": "{model_root}/teacher-logits/glm-5.3-flash",
+    "source": "brandonmusic/GLM-5.3-Flash-BF16-Teacher-Logits (zai-org/GLM-5.3-Flash-BF16 a6c167b6), 25 qualification-only windows x 2047 positions, full 154,880 vocab fp32; per-window sha256 verified 2026-09-10 (dataset-manifest.json)",
+    "scorer": "scripts/49_score_teacher_windows.py"
+  }
+}

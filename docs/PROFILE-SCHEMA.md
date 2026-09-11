@@ -40,7 +40,7 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   instead of `sha256`.
 - `launch.mechanism` — how the process is started:
   - `systemd-run`: transient unit with `containment` properties + flock
-    (qwen38, qwen38-1m, laguna).
+    (qwen38, qwen38-1m, laguna, glm53-1m).
   - `setsid-memwatch`: memory_guard → memwatch arm → `setsid env -i`
     (glm52). `memory_guard.required_gib` = `safety.minimum_start_gib`;
     `memwatch.threshold_gib` = `safety.kill_floor_gib`.
@@ -68,9 +68,39 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   tweaked config" re-spends. Re-running a spent rowset requires an
   owner-authorized `DSV4_LEDGER_NAMESPACE`; the profile system never mints
   namespaces.
-- `switch_alias` — reserved for the five production aliases pinned by the
-  AGENTS.md operator CLI (`dsv4|glm52|qwen38|qwen38-1m|laguna`); exactly one
-  profile may carry each.
+- `switch_alias` — reserved for the six production aliases pinned by the
+  AGENTS.md operator CLI (`dsv4|glm52|qwen38|qwen38-1m|laguna|glm53-1m`);
+  exactly one profile may carry each.
+
+- `serving` — optional explicit topology for a multi-sequence engine (vLLM):
+  `parallel_slots`, `request_context_cap`, `max_images`, `max_videos`, and
+  `video_frames` are positive integers. The first two multiply to
+  `context_cap` (aggregate tokens) and must match `--max-num-seqs` and
+  `--max-model-len`. Snapshots with this field also carry `safety`.
+
+- `qualification_targets` — optional; read only by
+  `scripts/94_qualify_profile.py` (docs/QUALIFY-PROFILE.md), never by the
+  launch path. Per-cell pass thresholds: `decode_tok_s_min`,
+  `prefill_tok_s_min`, `ttft_s_max` (objects keyed by context level, e.g.
+  `"28672"`), `toolcall_min` (passed cases), `vision_min` (accuracy),
+  `delta_nll_max`, `top1_loss_pp_max`, `accuracy_min` (per suite),
+  `context_pass`, `media_pass`, `soak_pass` (booleans). Absent → the kit reports
+  "measured" only. The resolver's `PROFILE_KEYS` allowlist must admit this
+  key before a committed profile may carry it; until then pass the same
+  object to the kit with `--targets FILE`.
+
+## `model.json`: optional `reference_logits`
+
+`model.json` may declare `"reference_logits": {"dataset_dir": "<path>",
+"note": "..."}` pointing at the BF16 teacher-logits dataset
+(`dataset-manifest.json` + per-window token `.npy` / logits safetensors, the
+input of `scripts/49_score_teacher_windows.py`). `dataset_dir` accepts the
+`{repo}` / `{model_root}` / `{cache_root}` host placeholders. The
+qualification kit runs its teacher cell only when this block exists and
+records the cell SKIPPED with a reason otherwise. As with
+`qualification_targets`, the resolver's model.json key allowlist must admit
+`reference_logits` before it is committed; `--reference-logits-dir DIR`
+is the kit-side equivalent meanwhile.
 
 ## `extends` merge rules (deliberately crude)
 
