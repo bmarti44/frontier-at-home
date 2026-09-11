@@ -75,6 +75,10 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertIsNone(cells["teacher"]["skip_reason"])
         self.assertIn("49_score_teacher_windows.py", " ".join(cells["teacher"]["argv"]))
         self.assertIn("teacher-logits/glm-5.3-flash", " ".join(cells["teacher"]["argv"]))
+        vision = cells["vision"]["argv"]
+        # the GLM profile declares qualification_options.vision_thinking_mode
+        self.assertEqual(vision[vision.index("--thinking-mode") + 1], "thinking")
+        self.assertEqual(manifest["profile"]["vision_thinking_mode"], "thinking")
         toolcall = cells["toolcall"]["argv"]
         self.assertIn("http://127.0.0.1:8099/v1", toolcall)
         self.assertEqual(toolcall[toolcall.index("--model") + 1], "glm-5.3-flash")
@@ -213,6 +217,39 @@ def _records():
 
 
 CELLS = ["speed", "toolcall", "vision", "media", "teacher", "accuracy", "context"]
+
+
+class PartialRerunSummary(unittest.TestCase):
+    """A one-cell re-run must render SUMMARY.md even when a kept cell FAILed earlier."""
+
+    def test_kept_failed_cell_renders_and_rerun_cell_uses_fresh_evidence(self) -> None:
+        tmp = Path(tempfile.mkdtemp(prefix="qualify-rerun-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        (tmp / "teacher").mkdir()
+        (tmp / "teacher" / "summary.json").write_text(json.dumps({
+            "verdict": "FAIL", "delta_nll_mean": 0.08, "delta_nll_upper95": 0.1,
+            "top1_loss_pp_mean": 1.5, "top1_loss_pp_upper95": 1.9, "windows_scored": 25, "fail_reasons": ["x"]}))
+        (tmp / "vision").mkdir()
+        (tmp / "vision" / "summary.json").write_text(json.dumps({
+            "ok": True, "suite": "mmmu-val-100", "n": 100, "correct": 77, "accuracy": 0.77,
+            "invalid_count": 9, "error_count": 0}))
+        (tmp / "manifest.json").write_text(json.dumps({"cells": {
+            "teacher": {"status": "FAIL", "exit_code": 1, "evidence": "teacher/summary.json", "argv": ["x"]},
+            "vision": {"status": "OK", "exit_code": 0, "evidence": "vision/summary.json", "argv": ["x"]},
+        }}))
+        previous = kit.load_previous_bundle(tmp, ["vision"])
+        self.assertEqual(sorted(previous), ["teacher"])
+        self.assertEqual(previous["teacher"]["record"]["status"], "FAIL")
+        self.assertIn("previous run", previous["teacher"]["record"]["status_reason"])
+        records = {"vision": {"status": "OK", "exit_code": 0, "evidence": "vision/summary.json",
+                              "result": kit.parse_cell_evidence("vision", tmp / "vision", {})},
+                   "teacher": previous["teacher"]["record"]}
+        resolved = {"profile_id": "m/p", "stack_label": "s", "served_model": "m",
+                    "qualification_targets": {"vision_min": 0.64, "delta_nll_max": 0.01}}
+        summary = kit.finalize_summary(resolved, records, ["vision", "teacher"], tmp, None, {})
+        text = kit.render_summary_md(summary)
+        self.assertIn("| vision | accuracy | 0.77 | >= 0.64 | PASS |", text)
+        self.assertIn("FAIL (script exit 1 in the previous run of this bundle)", text)
 
 
 class SummaryFormatting(unittest.TestCase):

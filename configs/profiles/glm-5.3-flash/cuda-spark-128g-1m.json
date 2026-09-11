@@ -8,9 +8,9 @@
   "purpose": "Optional GLM-5.3-Flash for agentic work: four native 262,144-token slots (1,048,576 total), fp8 sparse-MLA KV, MTP k=2, decode CUDA graphs, prefix cache on. Never the default.",
   "status": {
     "state": "qualified",
-    "decision": "measured 2026-09-11 by scripts/94_qualify_profile.py: 4x262,144 slots hold 1,000,560 tokens (low point 13.38 GiB), 30-min soak, tools 20/20, MMMU 73%, media at declared max; decode 20.06 tok/s @0 / 19.91 @28K, prefill 512 tok/s @28K; dNLL 0.079 vs BF16 teacher (fails the 0.01 gate). Optional engine; adoption vs qwen38-1m is the owner's call.",
+    "decision": "measured 2026-09-11 by scripts/94_qualify_profile.py (full run, then the vision cell in thinking mode): 4x262,144 slots hold 1,000,560 tokens (low point 13.30 GiB), 30-min soak 136 requests 0 errors, tools 20/20, MMMU 77% (thinking mode; chat mode 20% unparseable), media at declared max; decode 20.12 tok/s @0 (beats qwen38-1m 17.46) but 19.84 @28K, prefill 513 tok/s @28K and TTFT 1.75 s short prompt miss the Qwen targets (no MTP on this stack); dNLL 0.079 vs BF16 teacher fails the 0.01 gate. Optional engine; owner accepts the tradeoff (2026-09-11), qwen38-1m stays default.",
     "qualified_at": "2026-09-11",
-    "evidence": "results/glm53-flash-gates/qualify-2026-09-11/"
+    "evidence": "results/glm53-flash-gates/qualify-2026-09-11-rerun/"
   },
   "engine": "vllm-exl3-glm53-r003",
   "artifact_roles": {
@@ -171,5 +171,9 @@
     "vision_min": 0.64,
     "delta_nll_max": 0.01,
     "media_pass": true
+  },
+  "qualification_options": {
+    "note": "vision runs the model's own (thinking) template mode: in chat mode GLM-5.3-Flash answers MMMU with working notes ending in 'X.X' or a letter glued to prose, which the fixed 38_bench_vision parser rejects (77/100 unparseable, 20%; results/glm53-flash-gates/qualify-2026-09-11-rerun/vision-chat-mode/). Thinking mode with reasoning_effort low emits bare letters.",
+    "vision_thinking_mode": "thinking"
   }
 }

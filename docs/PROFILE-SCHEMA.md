@@ -89,6 +89,12 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   key before a committed profile may carry it; until then pass the same
   object to the kit with `--targets FILE`.
 
+- `qualification_options` — optional; read only by the kit. Non-threshold
+  settings a model needs to be measured fairly: `vision_thinking_mode`
+  (`chat`, the README default, or `thinking`) selects the template mode of
+  the MMMU cell; a `note` explains why. The kit records the mode in the
+  cell's argv, and `--vision-thinking-mode` overrides it.
+
 ## `model.json`: optional `reference_logits`
 
 `model.json` may declare `"reference_logits": {"dataset_dir": "<path>",

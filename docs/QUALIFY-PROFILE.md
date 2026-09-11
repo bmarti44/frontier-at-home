@@ -24,7 +24,7 @@ and no model on disk.
 |---|---|---|---|
 | speed | decode tok/s, TTFT, prefill tok/s at ctx 0 and 28,672 (2 reps + 1 warm-up, seed 42, `min_tokens` 320, output-token validation against the model tokenizer) | `30_bench_speed.py` | `speed/speed.json` |
 | toolcall | deterministic tool-call probe, temperature 0 | `39_bench_toolcall.py` | `toolcall/toolcall.json` |
-| vision | MMMU-val-100 accuracy through chat completions, chat (non-thinking) template mode like the README rows | `38_bench_vision.py` | `vision/summary.json` |
+| vision | MMMU-val-100 accuracy through chat completions, chat (non-thinking) template mode like the README rows, unless the profile's `qualification_options.vision_thinking_mode` or `--vision-thinking-mode` selects `thinking` | `38_bench_vision.py` | `vision/summary.json` |
 | media | the profile's declared `--limit-mm-per-prompt` maximum: N solid-colour images at WxH named in order, one F-frame video's motion direction, and N+1 images rejected with 400 | `51_probe_media_max.py` | `media/summary.json` |
 | teacher | token-weighted delta-NLL / top-1 loss vs BF16 teacher logits (AGENTS.md fidelity limits) | `49_score_teacher_windows.py` | `teacher/summary.json` |
 | accuracy | gsm8k / mmlu-pro / humaneval (holdout by default; `--accuracy-split dev`) | `31_bench_accuracy.py` x3 | `accuracy/acc-<suite>.json` |

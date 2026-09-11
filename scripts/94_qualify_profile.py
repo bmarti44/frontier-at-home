@@ -252,6 +252,8 @@ def resolve_profile(args: argparse.Namespace) -> dict:
             reference_logits["dataset_dir"] = str(REPO_ROOT / reference_logits["dataset_dir"])
 
     targets = raw_profile.get("qualification_targets")
+    options = raw_profile.get("qualification_options") or {}
+    vision_thinking_mode = args.vision_thinking_mode or options.get("vision_thinking_mode") or "chat"
     if args.targets:
         targets = read_json(Path(args.targets))
 
@@ -293,6 +295,8 @@ def resolve_profile(args: argparse.Namespace) -> dict:
         "check": check_result,
         "reference_logits": reference_logits,
         "qualification_targets": targets,
+        "qualification_options": options or None,
+        "vision_thinking_mode": vision_thinking_mode,
         "encoder": encoder,
         "config_hash": config_hash,
     }
@@ -415,10 +419,13 @@ def plan_cells(resolved: dict, args: argparse.Namespace, out: Path, base_url: st
     }
 
     # vision ----------------------------------------------------------------
-    # chat (non-thinking) rendering, the mode of every README vision number:
-    # thinking models spend the 256-token answer budget reasoning otherwise.
+    # Template mode for the answer: chat (non-thinking) by default, the mode of
+    # the README rows (thinking models spend the 256-token answer budget
+    # reasoning otherwise). A profile whose model answers unparseably in chat
+    # mode declares qualification_options.vision_thinking_mode; --vision-thinking-mode
+    # overrides. The mode is part of the recorded argv either way.
     vision_argv = [py, str(SCRIPTS / CELL_SCRIPTS["vision"]), "--base-url", base_url,
-                   "--out", str(cell_dir("vision")), "--thinking-mode", "chat"]
+                   "--out", str(cell_dir("vision")), "--thinking-mode", resolved["vision_thinking_mode"]]
     if args.vision_limit:
         vision_argv += ["--limit", str(args.vision_limit)]
     if served:
@@ -809,7 +816,7 @@ def render_summary_md(summary: dict) -> str:
             target = _fmt(row["target"])
             if row["target"] is not None and row.get("target_mode") in ("min", "max"):
                 target = (">= " if row["target_mode"] == "min" else "<= ") + target
-            status = row["status"] if cell["status"] != "FAIL" else f"FAIL ({cell['status_reason']})"
+            status = row["status"] if cell["status"] != "FAIL" else f"FAIL ({cell.get('status_reason') or 'see log'})"
             lines.append(f"| {name} | {row['metric']} | {_fmt(row['measured'])} | {target} |" +
                          (f" {_fmt(row['baseline'])} |" if has_baseline else "") + f" {status} | {evidence} |")
     lines.append("")
@@ -972,6 +979,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--reference-logits-dir", help="teacher dataset dir (overrides model.json reference_logits)")
     parser.add_argument("--teacher-windows", help="49_score_teacher_windows.py --windows, e.g. 0-24")
     parser.add_argument("--vision-limit", type=int, help="38_bench_vision.py --limit")
+    parser.add_argument("--vision-thinking-mode", choices=("chat", "thinking"),
+                        help="38_bench_vision.py --thinking-mode (overrides the profile's qualification_options; default chat)")
     args = parser.parse_args(argv)
     if args.baseline and args.baseline_results:
         parser.error("--baseline and --baseline-results are mutually exclusive")
@@ -1007,6 +1016,8 @@ def load_previous_bundle(out: Path, cells: list[str]) -> dict[str, dict]:
             plan["suites"] = entry.get("argv") or {}
         record = {k: entry.get(k) for k in ("status", "exit_code", "wall_s", "start_unix", "end_unix")}
         record["evidence"] = entry.get("evidence")
+        if record["status"] == "FAIL":
+            record["status_reason"] = f"script exit {entry.get('exit_code')} in the previous run of this bundle"
         if entry.get("skip_reason"):
             record["status"] = "SKIPPED"
             record["status_reason"] = entry["skip_reason"]
@@ -1099,7 +1110,7 @@ def main(argv: list[str] | None = None) -> int:
               f"kill floor {resolved['kill_floor_gib']} GiB")
         print(f"  tokenizer: {resolved['tokenizer_path']} sha256={resolved['tokenizer_sha256'] or 'absent'}")
         print(f"  check: exit {resolved['check']['exit_code']}")
-        print(f"  targets: {'declared' if resolved['qualification_targets'] else 'none'}; encoder: {resolved['encoder']}")
+        print(f"  targets: {'declared' if resolved['qualification_targets'] else 'none'}; encoder: {resolved['encoder']}; vision mode: {resolved['vision_thinking_mode']}")
         for name in cells:
             plan = plans[name]
             if plan.get("skip_reason"):
@@ -1156,8 +1167,11 @@ def main(argv: list[str] | None = None) -> int:
         records[name] = entry["record"]
     all_cells = [name for name in CELL_ORDER if name in records]
     summary = finalize_summary(resolved, records, all_cells, out, baseline, manifest, interrupted)
+    # Render before writing anything so a renderer fault can never leave a
+    # fresh summary.json beside a stale SUMMARY.md from an earlier run.
+    summary_md = render_summary_md(summary)
     write_json(out / "summary.json", summary)
-    (out / "SUMMARY.md").write_text(render_summary_md(summary), encoding="utf-8")
+    (out / "SUMMARY.md").write_text(summary_md, encoding="utf-8")
     print(f"{summary['verdict']}: {out / 'SUMMARY.md'}")
     return 0 if summary["verdict"] in ("PASS", "MEASURED") else 1
 
