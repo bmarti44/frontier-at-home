@@ -16,7 +16,9 @@
 ## Arms
 1. **Greedy text smoke.** Run:
 
-   `ds4 --cuda -m Q2 --ssd-streaming -c 8192 --nothink --temp 0 -n 128 -p "<fixed prompt>"`
+   `ds4 --cuda -m Q2 --ssd-streaming --ssd-streaming-cache-experts 48gb -c 8192 --nothink --temp 0 -n 128 -p "Explain in three sentences why the sky is blue."`
+
+   The cache is explicit (48 GB, the same as arm 2). Automatic sizing could exceed `MemoryMax`.
 
    PASS requires all of:
    - exit 0;
@@ -38,3 +40,4 @@
   - `MemoryHigh=72G`, `MemoryMax=76G`.
 - Sizing: 48 GB expert cache (44.7 GiB), plus 8.1 GiB dense, plus runtime and file-cache headroom. Physical 119.7 GiB − 76 GiB leaves 43.7 GiB, which is at least the 40 GiB floor.
 - Any OOM, cgroup kill, swap, Xid, short output, timeout or surviving descendant is a FAIL.
+- Runner: `results/dsv41-flash-gates/harness/run_smoke.sh` (`text` \| `fidelity`).
