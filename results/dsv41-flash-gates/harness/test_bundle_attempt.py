@@ -109,7 +109,8 @@ class BundleMutations(unittest.TestCase):
     def put(self, name, rec=None, **over):
         """Write a phase record where and when the runner would."""
         if rec is None:
-            rec = frozen_check(name, recorded_at=self.at[name], **over)
+            over.setdefault("recorded_at", self.at[name])
+            rec = frozen_check(name, **over)
         self.write(name, rec)
         t = rec.get("recorded_at", self.at[name]) if isinstance(rec.get("recorded_at"), (int, float)) \
             else self.at[name]

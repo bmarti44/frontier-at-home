@@ -16,7 +16,7 @@ is written to) and recorded_at. verify() takes {file name: (record, mtime)}
 and requires the phase to equal the file name, mtime to agree with
 recorded_at, and the times to follow the run: the launch check within
 LAUNCH_WINDOW_S before started_at, the post-run check after finished_at, and
-the post-score check after the post-run check. It also re-hashes every
+the post-score check strictly after the post-run check. It also re-hashes every
 tracked component and external fixture on disk at bundling time.
 """
 import hashlib
@@ -121,7 +121,7 @@ def phase_timing(by_name, start, finish):
         reasons.append("launch check is not just before started_at")
     if POST_RUN in at and not (finish - 1.0 <= at[POST_RUN] <= finish + POST_WINDOW_S):
         reasons.append("post-run check is not just after finished_at")
-    if POST_SCORE in at and not (POST_RUN in at and at[POST_RUN] <= at[POST_SCORE] <= at[POST_RUN] + POST_WINDOW_S):
+    if POST_SCORE in at and not (POST_RUN in at and at[POST_RUN] < at[POST_SCORE] <= at[POST_RUN] + POST_WINDOW_S):
         reasons.append("post-score check is not just after the post-run check")
     return reasons
 
