@@ -10,7 +10,7 @@ readonly MODEL=/home/bmarti44/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.
 readonly FIX=$SRC/gguf-tools/quality-testing/deepseek-v4.1-flash-20260919-router
 readonly WRAPPER=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly LOCK=/run/lock/frontier-at-home/inference.lock
-readonly FROZEN=$REPO/results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c4.json
+readonly FROZEN=$REPO/results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c5.json
 readonly BUNDLER=$REPO/results/dsv41-flash-gates/harness/bundle_attempt.py
 readonly PROMPT='Explain in three sentences why the sky is blue.'
 readonly LONG_PROMPT='Write a detailed, multi-paragraph explanation of how a CPU pipeline works, covering fetch, decode, execute, memory access, write-back, hazards, and branch prediction.'
@@ -56,11 +56,14 @@ sys.exit(0 if ok else 21)
 PY
 }
 
-# Every frozen harness, scorer, fixture and reference hash must match before
-# use (review round 2, H3 remainder).
-python3 - "$FROZEN" "$REPO" "$FIX" <<'PY' > "$out/frozen-check.json" || { echo "frozen input mismatch" >&2; exit 22; }
+# Every frozen harness, scorer, fixture and reference hash must match: at
+# launch, after the run and after scoring (review round 2 H3 remainder;
+# round 3 finding 3). $1 = output file name. The bundler requires every
+# check it expects to be present and ok.
+frozen_check() {
+  python3 - "$FROZEN" "$REPO" "$FIX" "$1" <<'PY' > "$out/$1"
 import hashlib, json, os, sys
-frozen, repo, fix = sys.argv[1:]
+frozen, repo, fix, phase = sys.argv[1:]
 f = json.load(open(frozen))
 h = lambda p: hashlib.sha256(open(p, "rb").read()).hexdigest()
 paths = {
@@ -75,9 +78,11 @@ res = {name: h(p) == f["component_sha256"][name] for name, p in paths.items()}
 res["fixed_scorer"] = h(os.path.join(repo, "results/dsv41-flash-gates/harness/score_fidelity.py")) == f["fixed_scorer_sha256"]
 res["fixture"] = h(os.path.join(fix, "manifest.tsv")) == f["fixture_sha256"]
 res["reference"] = h(os.path.join(fix, "results/base-default.tsv")) == f["raw_artifact_sha256"]
-print(json.dumps({"ok": all(res.values()), "checks": res}, sort_keys=True))
+print(json.dumps({"phase": phase, "ok": all(res.values()), "checks": res}, sort_keys=True))
 sys.exit(0 if all(res.values()) else 22)
 PY
+}
+frozen_check frozen-check.json || { echo "frozen input mismatch" >&2; exit 22; }
 
 case $arm in
   text)
@@ -133,12 +138,19 @@ post = json.load(open(os.path.join(d, "identity-post.json")))
 json.dump({"verified": pre["ok"] and post["ok"] and post_rc == 0, "pre": pre, "post": post},
           open(os.path.join(d, "identity.json"), "w"), indent=1, sort_keys=True)
 PY
+# A mismatch after launch is recorded, not fatal here: the bundler FAILs it.
+frozen_check frozen-check-post-run.json || true
 if [[ $arm == fidelity && -f $out/cuda.tsv ]]; then
+  # Score from in-bundle copies so the bundler can re-run the frozen scorer
+  # on exactly these bytes (review round 3, finding 1).
+  cp "$FIX/results/base-default.tsv" "$out/metal-reference.tsv"
+  cp "$FIX/manifest.tsv" "$out/fixture-manifest.tsv"
   score_rc=0
   python3 "$REPO/results/dsv41-flash-gates/harness/score_fidelity.py" "$out/cuda.tsv" \
-    "$FIX/results/base-default.tsv" "$FIX/manifest.tsv" "$out/fidelity-summary.json" \
+    "$out/metal-reference.tsv" "$out/fixture-manifest.tsv" "$out/fidelity-summary.json" \
     > "$out/fidelity-score.log" 2>&1 || score_rc=$?
   echo "$score_rc" > "$out/fidelity-score-exit.txt"
+  frozen_check frozen-check-post-score.json || true
 fi
 # The runner's exit status is the bundled verdict (0 PASS, 1 FAIL,
 # 2 PENDING_REVIEW); the engine's own status stays in exit_code.txt.

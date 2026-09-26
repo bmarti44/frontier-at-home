@@ -5,19 +5,33 @@ Builds synthetic attempt directories from the real, clean diag-cache42gb run
 (its containment logs and timestamps) and checks that every missing, stale or
 failing piece of evidence yields FAIL, that the text arm stays PENDING_REVIEW
 without an explicit review, and that exit codes are 0/1/2.
+
+Candidate 5 (review round 3) adds: text reviews bound to the output.txt hash,
+fidelity bundles re-scored from in-bundle copies at frozen hashes with scorer
+exit 0, frozen-input checks after the run and after scoring, and full-UTC
+start/finish bounds on artifact mtimes.
 """
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLER = os.path.join(HERE, "bundle_attempt.py")
+SCORER = os.path.join(HERE, "score_fidelity.py")
 SOURCE = os.path.join(HERE, "..", "smoke-2026-09-25", "diag-cache42gb")
-KEEP = ["command.txt", "unit.txt", "started_at.txt", "finished_at.txt", "exit_code.txt", "containment"]
+KEEP = ["command.txt", "unit.txt", "exit_code.txt", "containment"]
+FIX = ("/home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/"
+       "deepseek-v4.1-flash-20260919-router")
+
+
+def utc(ts):
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(ts)) + ",%09d+00:00" % int((ts % 1) * 1e9)
 
 
 def steps(n):
@@ -38,11 +52,16 @@ class BundleMutations(unittest.TestCase):
                 shutil.copytree(src, os.path.join(self.d, name))
             else:
                 shutil.copy2(src, os.path.join(self.d, name))
-        # Fresh timestamps for everything except started_at.txt's content.
+        # Fresh mtimes inside a run window that brackets "now".
+        now = time.time()
         for root, _, files in os.walk(self.d):
             for f in files:
                 os.utime(os.path.join(root, f))
+        self.write("started_at.txt", utc(now - 60) + "\n")
+        self.write("finished_at.txt", utc(now + 60) + "\n")
         self.write("identity.json", {"verified": True})
+        for name in ("frozen-check.json", "frozen-check-post-run.json"):
+            self.write(name, {"ok": True})
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -53,6 +72,24 @@ class BundleMutations(unittest.TestCase):
                 f.write(obj)
             else:
                 json.dump(obj, f)
+
+    def review(self, ok, output=None):
+        if output is None:
+            with open(os.path.join(self.d, "output.txt"), "rb") as f:
+                output = f.read()
+        self.write("text-review.json", {"coherent_on_topic": ok,
+                                        "artifact_sha256": {"output.txt": hashlib.sha256(output).hexdigest()}})
+
+    def fidelity(self, cuda_src=None):
+        """A self-comparison fidelity attempt scored exactly as the runner does."""
+        shutil.copy(cuda_src or os.path.join(FIX, "results", "base-default.tsv"), os.path.join(self.d, "cuda.tsv"))
+        shutil.copy(os.path.join(FIX, "results", "base-default.tsv"), os.path.join(self.d, "metal-reference.tsv"))
+        shutil.copy(os.path.join(FIX, "manifest.tsv"), os.path.join(self.d, "fixture-manifest.tsv"))
+        rc = subprocess.run([sys.executable, SCORER] + [os.path.join(self.d, n) for n in
+                            ("cuda.tsv", "metal-reference.tsv", "fixture-manifest.tsv", "fidelity-summary.json")],
+                            capture_output=True).returncode
+        self.write("fidelity-score-exit.txt", f"{rc}\n")
+        self.write("frozen-check-post-score.json", {"ok": True})
 
     def bundle(self, arm):
         proc = subprocess.run([sys.executable, BUNDLER, self.d, arm], capture_output=True, text=True)
@@ -107,13 +144,43 @@ class BundleMutations(unittest.TestCase):
 
     def test_text_negative_review_fails(self):
         self.write("steps.json", steps(130))
-        self.write("text-review.json", {"coherent_on_topic": False})
+        self.bundle("text")
+        self.review(False)
         self.assertEqual(self.bundle("text"), (1, "FAIL"))
 
     def test_text_positive_review_passes(self):
         self.write("steps.json", steps(130))
-        self.write("text-review.json", {"coherent_on_topic": True})
+        self.bundle("text")
+        self.review(True)
         self.assertEqual(self.bundle("text"), (0, "PASS"))
+
+    def test_text_unbound_review_fails(self):
+        self.write("steps.json", steps(130))
+        self.write("text-review.json", {"coherent_on_topic": True})
+        self.assertEqual(self.bundle("text"), (1, "FAIL"))
+
+    def test_text_review_of_other_output_fails(self):
+        self.write("steps.json", steps(130))
+        self.review(True, output=b"a different, coherent answer")
+        self.assertEqual(self.bundle("text"), (1, "FAIL"))
+
+    def test_missing_post_run_frozen_check_fails(self):
+        os.remove(os.path.join(self.d, "frozen-check-post-run.json"))
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_post_run_frozen_mismatch_fails(self):
+        self.write("frozen-check-post-run.json", {"ok": False})
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_non_utc_start_fails(self):
+        self.write("started_at.txt", utc(time.time() - 60).replace("+00:00", "-12:00") + "\n")
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_artifact_after_finish_fails(self):
+        p = os.path.join(self.d, "containment", "cmd.log")
+        later = time.time() + 3600
+        os.utime(p, (later, later))
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def test_fidelity_summary_without_tsv_fails(self):
         self.write("fidelity-summary.json", {"verdict": "PASS"})
@@ -122,6 +189,51 @@ class BundleMutations(unittest.TestCase):
     def test_fidelity_failed_score_fails(self):
         self.write("cuda.tsv", "id\tnll\ncase_000\t1.0\n")
         self.write("fidelity-summary.json", {"verdict": "FAIL"})
+        self.assertEqual(self.bundle("fidelity"), (1, "FAIL"))
+
+    def test_fidelity_clean_self_comparison_passes(self):
+        self.fidelity()
+        self.assertEqual(self.bundle("fidelity"), (0, "PASS"))
+        with open(os.path.join(self.d, "raw.jsonl")) as f:
+            kinds = [json.loads(l)["type"] for l in f]
+        self.assertEqual(kinds.count("fidelity_case"), 112)
+        self.assertEqual(kinds.count("fidelity_reference_case"), 112)
+
+    def test_fidelity_scorer_nonzero_exit_fails(self):
+        self.fidelity()
+        self.write("fidelity-score-exit.txt", "1\n")
+        self.assertEqual(self.bundle("fidelity"), (1, "FAIL"))
+
+    def test_fidelity_forged_summary_fails(self):
+        self.fidelity()
+        p = os.path.join(self.d, "fidelity-summary.json")
+        with open(p) as f:
+            s = json.load(f)
+        s["nll_delta_upper95"] = 0.0
+        s["cases"] = 111
+        self.write("fidelity-summary.json", s)
+        self.assertEqual(self.bundle("fidelity"), (1, "FAIL"))
+
+    def test_fidelity_cuda_swapped_after_scoring_fails(self):
+        self.fidelity()
+        with open(os.path.join(self.d, "cuda.tsv")) as f:
+            rows = f.read().splitlines()
+        head, body = rows[0], rows[1:]
+        nll = head.split("\t").index("nll")
+        body = ["\t".join(c if i != nll else str(float(c) * 1.5) for i, c in enumerate(r.split("\t")))
+                for r in body]
+        self.write("cuda.tsv", "\n".join([head] + body) + "\n")
+        self.assertEqual(self.bundle("fidelity"), (1, "FAIL"))
+
+    def test_fidelity_tampered_reference_copy_fails(self):
+        self.fidelity()
+        with open(os.path.join(self.d, "metal-reference.tsv"), "a") as f:
+            f.write("\n")
+        self.assertEqual(self.bundle("fidelity"), (1, "FAIL"))
+
+    def test_fidelity_missing_post_score_check_fails(self):
+        self.fidelity()
+        os.remove(os.path.join(self.d, "frozen-check-post-score.json"))
         self.assertEqual(self.bundle("fidelity"), (1, "FAIL"))
 
 

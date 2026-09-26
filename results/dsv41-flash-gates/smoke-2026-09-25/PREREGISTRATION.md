@@ -99,3 +99,22 @@ Frozen inputs: `frozen-inputs-c4.json`. It adds `test_bundle_attempt.py`.
 4. **H3 remainder.** Before launch, the runner verifies the frozen hashes of the harness scripts, the fixed scorer script, the fixture manifest and the Metal reference TSV (`frozen-check.json`; mismatch is exit 22).
 
 `harness/test_bundle_attempt.py` holds 15 mutation tests covering these paths. All pass. The post-hoc bundles of earlier attempts were regenerated with this bundler and remain FAIL.
+
+## Candidate 5 (2026-09-26, after GPT-6 sol high review round 3)
+
+Round 3 found 3 HIGH findings and 1 MEDIUM. Each narrows a round-2 item; none is a new finding class. The count stayed at 3. No acceptance arm ran under candidate 4. These changes close only those findings.
+
+Frozen inputs: `frozen-inputs-c5.json`.
+
+1. **Fidelity bound to a successful, reproducible score (round 3, finding 1).**
+   - The runner copies the Metal reference and fixture manifest into the attempt (`metal-reference.tsv`, `fixture-manifest.tsv`) and scores from those copies.
+   - The bundler requires:
+     - scorer exit status 0;
+     - the bundled copies and the scorer at their frozen hashes;
+     - a re-run of the frozen scorer on the bundled `cuda.tsv` and copies that reproduces `fidelity-summary.json` exactly, ignoring only its three path fields.
+   - `raw.jsonl` holds both arms' case rows.
+2. **Text review bound to the output (finding 2).** `text-review.json` must record `artifact_sha256["output.txt"]`, and it must equal the hash of the `output.txt` the bundler reconstructs from the engine's token bytes. Otherwise the result is FAIL.
+3. **Frozen inputs verified at use (finding 3).** The frozen-input check runs at launch (a mismatch aborts, exit 22), after the run, and after scoring. The bundler requires every expected check to be present and `ok`, and records them in `manifest.json`.
+4. **Timestamps (finding 4, MEDIUM).** `started_at` and `finished_at` must be full ISO timestamps with a UTC offset; anything else is FAIL. Required artifacts must be written after the start. Engine-written artifacts (containment logs, `steps.json`, `cuda.tsv`) must not be newer than `finished_at`. Both bounds have a 1 s tolerance.
+
+`harness/test_bundle_attempt.py` has 12 new mutation tests, 27 in total. All 12 fail against the candidate-4 bundler and pass on candidate 5. The derived post-hoc bundles were regenerated and remain FAIL.

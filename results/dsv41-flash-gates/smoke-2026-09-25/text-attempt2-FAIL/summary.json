@@ -2,6 +2,7 @@
  "arm": "text",
  "checks": {
   "exit_code_zero": false,
+  "frozen_inputs_verified_throughout": false,
   "identity_verified_pre_and_post": false,
   "mem_low_at_or_above_kill_floor": true,
   "memory_samples_present": true,
@@ -9,6 +10,7 @@
   "required_artifacts_fresh": true,
   "required_artifacts_present": false,
   "steps_at_least_128": false,
+  "timestamps_full_utc": true,
   "wrapper_not_killed": true
  },
  "derived_post_hoc": true,
@@ -16,10 +18,13 @@
  "metrics": {
   "emitted_steps": null,
   "kernel_fault_lines": 1,
+  "late_artifacts": [],
   "mem_avail_low_kib": 55594080,
   "memory_sample_count": 85,
   "missing_artifacts": [
    "identity.json",
+   "frozen-check.json",
+   "frozen-check-post-run.json",
    "steps.json"
   ],
   "stale_artifacts": [],
