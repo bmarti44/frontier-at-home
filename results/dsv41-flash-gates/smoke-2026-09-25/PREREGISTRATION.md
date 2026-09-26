@@ -41,3 +41,16 @@
 - Sizing: 48 GB expert cache (44.7 GiB), plus 8.1 GiB dense, plus runtime and file-cache headroom. Physical 119.7 GiB − 76 GiB leaves 43.7 GiB, which is at least the 40 GiB floor.
 - Any OOM, cgroup kill, swap, Xid, short output, timeout or surviving descendant is a FAIL.
 - Runner: `results/dsv41-flash-gates/harness/run_smoke.sh` (`text` \| `fidelity`).
+
+## Candidate 2 revision (2026-09-25, after text attempt 2 FAILED)
+
+These changes target only the two observed failures. The fidelity arm has not been run.
+
+1. **Expert cache 48 GB → 42 GB in both arms.**
+   - A 48 GB target makes ds4 allocate one 40.88 GiB dynamic cache. That reproducibly emits a kernel `NVRM NV_ERR_NO_MEMORY` line, seen in text attempt 2 and `diag-cache48gb`.
+   - 4, 24, 36 and 42 GB targets loaded clean (`diag-cache*`).
+2. **Text arm criterion.** The three-sentence prompt ends at EOS near 100 tokens, so "128 tokens produced" was unreachable. The arm now uses a long-form prompt with `-n 256`.
+   - New PASS rule: exit 0, empty wrapper `kernel.log`, and at least 128 tokens produced (engine stops at `-n` or EOS; count verified by retokenizing the output with the model tokenizer through `ds4 --dump-tokens --raw`).
+   - Coherent, on-topic text is saved verbatim and reviewed by eye.
+   - Decode speed is not measured in this arm.
+3. **Runner fix.** The kernel-event capture used `journalctl --since` with an unparseable timestamp. The wrapper's own `kernel.log` remains the authoritative Xid/OOM check.

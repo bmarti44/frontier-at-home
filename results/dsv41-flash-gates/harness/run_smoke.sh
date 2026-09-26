@@ -11,6 +11,7 @@ readonly FIX=$SRC/gguf-tools/quality-testing/deepseek-v4.1-flash-20260919-router
 readonly WRAPPER=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly LOCK=/run/lock/frontier-at-home/inference.lock
 readonly PROMPT='Explain in three sentences why the sky is blue.'
+readonly LONG_PROMPT='Write a detailed, multi-paragraph explanation of how a CPU pipeline works, covering fetch, decode, execute, memory access, write-back, hazards, and branch prediction.'
 
 arm=${1:?arm}; out=${2:?outdir}
 mkdir -p "$out"
@@ -29,12 +30,12 @@ python3 "$REPO/scripts/03_memory_guard.py" --required-gib 110 --timeout-seconds 
 case $arm in
   text)
     timeout_s=900
-    cmd=("$SRC/ds4" --cuda -m "$MODEL" --ssd-streaming --ssd-streaming-cache-experts 48gb
-         -c 8192 --nothink --temp 0 -n 128 -p "$PROMPT") ;;
+    cmd=("$SRC/ds4" --cuda -m "$MODEL" --ssd-streaming --ssd-streaming-cache-experts 42gb
+         -c 8192 --nothink --temp 0 -n 256 -p "$LONG_PROMPT") ;;
   fidelity)
     timeout_s=5400
     cmd=("$SRC/gguf-tools/quality-testing/score_official" "$MODEL" "$FIX/manifest.tsv"
-         "$out/cuda.tsv" 34816 --ssd-streaming --ssd-streaming-cache-experts 48gb) ;;
+         "$out/cuda.tsv" 34816 --ssd-streaming --ssd-streaming-cache-experts 42gb) ;;
   diag)
     timeout_s=900
     cache=${3:?cache size, e.g. 4gb}
@@ -64,6 +65,6 @@ date -u --iso-8601=ns > "$out/finished_at.txt"
 echo "$rc" > "$out/exit_code.txt"
 crash=$(ls -d /home/bmarti44/.local/state/glm52-crashlog/*-"$unit" 2>/dev/null | tail -1 || true)
 [[ -n $crash ]] && cp -a "$crash" "$out/containment"
-journalctl -k --since "$(cat "$out/started_at.txt")" --no-pager 2>/dev/null | grep -E 'NVRM|Xid|oom' > "$out/kernel-events.txt" || true
+journalctl -k --since "$(date -d "$(sed 's/,/./' "$out/started_at.txt")" '+%Y-%m-%d %H:%M:%S')" --no-pager 2>/dev/null | grep -E 'NVRM|Xid|oom' > "$out/kernel-events.txt" || true
 echo "arm=$arm rc=$rc out=$out"
 exit "$rc"
