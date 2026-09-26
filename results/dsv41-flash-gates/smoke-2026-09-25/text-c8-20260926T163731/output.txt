@@ -1,0 +1,9 @@
+# How a CPU Pipeline Works
+
+## The Basic Idea of Pipelining
+
+A CPU pipeline is a technique for increasing instruction throughput by overlapping the execution of multiple instructions. Rather than completing one instruction from start to finish before beginning the next, the processor breaks instruction processing into discrete stages and works on several instructions simultaneously—each at a different stage of completion. This is closely analogous to an assembly line: while one car is being painted, another is having its engine installed, and a third is being welded. The key insight is that each stage of the pipeline is specialized hardware that performs one well-defined task, and if the stages are balanced, the pipeline can complete one instruction per clock cycle in steady state (this is called the *ideal CPI of 1*). The classic five-stage RISC pipeline—used in designs like MIPS and early ARM cores—consists of: Instruction Fetch (IF), Instruction Decode/Register Read (ID), Execute (EX), Memory Access (MEM), and Write-Back (WB).
+
+## The Five Stages
+
+**Fetch (IF).** The pipeline reads the next instruction from memory. The program counter (PC) holds the address of the instruction to fetch; the instruction memory is indexed by the PC, and the fetched instruction is placed
