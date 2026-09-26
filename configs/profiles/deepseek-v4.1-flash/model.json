@@ -1,0 +1,43 @@
+{
+ "schema_version": 1,
+ "model": "deepseek-v4.1-flash",
+ "identity_manifest": "weights/deepseek-v4.1-flash/manifest.json",
+ "artifacts": {
+  "ds4-q2": {
+   "kind": "gguf",
+   "path": "{model_root}/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.gguf",
+   "identity": {
+    "first_bytes": 1048576,
+    "first_bytes_sha256": "f7b02eadba19f0beabc5549d39d5520db21bc8acf57ddcf47f11f02e322542c8",
+    "size_bytes": 365713686528,
+    "device": 66306,
+    "inode": 3855305,
+    "full_sha256_pin": "configs/pins/ds41f-weights.json"
+   },
+   "weights_gib": 340.6,
+   "note": "antirez/deepseek-v4.1-flash-gguf @ dd8a266f Q2: IQ2_XXS routed gate/up, Q2_K routed down, Q8 attention/shared/output; 151.77 GiB main weights plus 188.83 GiB native FP8 Engram tables that ds4 reads from disk. The full-file sha256 is pinned in configs/pins/ds41f-weights.json and was verified independently on 2026-09-25 (weights/deepseek-v4.1-flash/manifest.json). The switch checks the sampled identity (first MiB sha256, size, device, inode) because hashing 365.7 GB on every switch is not practical."
+  }
+ },
+ "engines": {
+  "ds4-v41": {
+   "build_manifest": "configs/build-manifests/ds4-v41.json",
+   "binary_path": "{cache_root}/ds4-v41-0aaea5a2/ds4-server",
+   "binary_sha256": "6bf4f8df9f0613afaa7e3ffe7a189770b5388333facef24e3878a7259de47c26",
+   "note": "upstream antirez/ds4 @ 0aaea5a2 (V4.1 CUDA text path), make cuda-spark for sm_121; clean detached worktree, no local patches"
+  }
+ },
+ "backend_support": {
+  "cuda": {
+   "supported": true,
+   "hardware_class": ["spark"],
+   "note": "ds4 CUDA with --ssd-streaming: routed experts and Engram tables stream from NVMe; sized for 128 GB unified memory. V4.1 vision is Metal-only upstream."
+  },
+  "apple-silicon": {"supported": false, "reason": "not attempted: this integration targets the Spark CUDA build of ds4"},
+  "rocm": {"supported": false, "reason": "ds4 has no ROCm backend"},
+  "cpu": {"supported": false, "reason": "a 365.7 GB Q2 GGUF with SSD streaming has no practical CPU path"},
+  "vulkan": {"supported": false, "reason": "ds4 has no Vulkan backend"},
+  "intel-xe": {"supported": false, "reason": "ds4 has no Intel backend"},
+  "qualcomm": {"supported": false, "reason": "ds4 has no Qualcomm backend"},
+  "tenstorrent": {"supported": false, "reason": "ds4 has no Tenstorrent backend"}
+ }
+}
