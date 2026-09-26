@@ -10,6 +10,14 @@ round 5, finding 3): it trusts nothing in the records it can recompute. The
 commit must exist, every tracked component at that commit must hash to the
 recorded value, the recorded map must be complete and equal the frozen-inputs
 expectations, and the harness, scorer and frozen file on disk must match.
+
+Candidate 8 (review round 6): each record carries its phase (the file name it
+is written to) and recorded_at. verify() takes {file name: (record, mtime)}
+and requires the phase to equal the file name, mtime to agree with
+recorded_at, and the times to follow the run: the launch check within
+LAUNCH_WINDOW_S before started_at, the post-run check after finished_at, and
+the post-score check after the post-run check. It also re-hashes every
+tracked component and external fixture on disk at bundling time.
 """
 import hashlib
 import json
@@ -17,6 +25,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 REPO = "/home/bmarti44/spark-deepseek-v4-flash"
 FIX = ("/home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/"
@@ -40,6 +49,12 @@ UNTRACKED = {
 CHECK_KEYS = sorted(list(TRACKED) + list(UNTRACKED) +
                     ["frozen_inputs", "frozen_inputs_committed", "frozen_paths_clean"])
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+LAUNCH = "frozen-check.json"
+POST_RUN = "frozen-check-post-run.json"
+POST_SCORE = "frozen-check-post-score.json"
+LAUNCH_WINDOW_S = 60.0   # launch check -> started_at (identity check in between)
+POST_WINDOW_S = 600.0    # finished_at -> post-run, post-run -> post-score (scoring)
+MTIME_SLACK_S = 5.0
 
 
 def sha(data):
@@ -81,16 +96,42 @@ def record(frozen_path, phase):
     status = git("status", "--porcelain", "--", rel, *TRACKED.values())
     checks["frozen_paths_clean"] = status.returncode == 0 and status.stdout == b""
     head = git("rev-parse", "HEAD")
-    return {"phase": phase, "ok": all(checks.values()), "checks": checks,
+    return {"phase": phase, "recorded_at": time.time(), "ok": all(checks.values()), "checks": checks,
             "commit": head.stdout.decode().strip() if head.returncode == 0 else None,
             "frozen_inputs_path": rel, "component_sha256": actual}
 
 
-def verify(records, frozen_path, bundler_path):
-    """Return (ok, reasons) for a set of phase records."""
+def phase_timing(by_name, start, finish):
+    """Reasons the records' phases and times do not fit this run."""
     reasons = []
-    if not records or not all(isinstance(r, dict) for r in records):
+    if start is None or finish is None:
+        return ["run start/finish unknown"]
+    at = {}
+    for name, (r, mtime) in by_name.items():
+        t = r.get("recorded_at")
+        if r.get("phase") != name:
+            reasons.append(f"{name}: phase {r.get('phase')!r} is not its file name")
+        if not isinstance(t, (int, float)) or isinstance(t, bool):
+            reasons.append(f"{name}: recorded_at missing")
+            continue
+        if mtime is None or not (t - 1.0 <= mtime <= t + MTIME_SLACK_S):
+            reasons.append(f"{name}: file mtime disagrees with recorded_at")
+        at[name] = t
+    if LAUNCH in at and not (start - LAUNCH_WINDOW_S <= at[LAUNCH] <= start + 1.0):
+        reasons.append("launch check is not just before started_at")
+    if POST_RUN in at and not (finish - 1.0 <= at[POST_RUN] <= finish + POST_WINDOW_S):
+        reasons.append("post-run check is not just after finished_at")
+    if POST_SCORE in at and not (POST_RUN in at and at[POST_RUN] <= at[POST_SCORE] <= at[POST_RUN] + POST_WINDOW_S):
+        reasons.append("post-score check is not just after the post-run check")
+    return reasons
+
+
+def verify(by_name, frozen_path, bundler_path, start=None, finish=None):
+    """Return (ok, reasons) for {file name: (record, mtime)} of one attempt."""
+    if not by_name or not all(isinstance(v, tuple) and isinstance(v[0], dict) for v in by_name.values()):
         return False, ["missing or malformed record"]
+    records = [v[0] for v in by_name.values()]
+    reasons = phase_timing(by_name, start, finish)
     for r in records:
         c = r.get("checks")
         if r.get("ok") is not True or not isinstance(c, dict) or sorted(c) != CHECK_KEYS \
@@ -117,8 +158,11 @@ def verify(records, frozen_path, bundler_path):
         blob = git("show", f"{commit}:{path}")
         if blob.returncode != 0 or sha(blob.stdout) != amap.get(name):
             reasons.append(f"{name} at {commit} does not match the recorded hash")
-    for name, path in (("bundle_attempt.py", bundler_path), ("frozen_check.py", os.path.abspath(__file__)),
-                       ("score_fidelity.py", os.path.join(REPO, TRACKED["score_fidelity.py"]))):
+    on_disk = {n: os.path.join(REPO, p) for n, p in TRACKED.items()}
+    on_disk.update(UNTRACKED)
+    on_disk["bundle_attempt.py"] = bundler_path
+    on_disk["frozen_check.py"] = os.path.abspath(__file__)
+    for name, path in on_disk.items():
         if sha_file(path) != amap.get(name):
             reasons.append(f"{name} on disk differs from the recorded hash")
     return not reasons, reasons

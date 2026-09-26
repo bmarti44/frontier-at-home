@@ -60,7 +60,7 @@ import frozen_check  # noqa: E402
 KILL_FLOOR_KIB = 40 * 1024 * 1024
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCORER = os.path.join(HERE, "score_fidelity.py")
-FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c7.json")
+FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c8.json")
 REQUIRED = {
     "all": ["command.txt", "unit.txt", "started_at.txt", "finished_at.txt", "exit_code.txt",
             "identity.json", "frozen-check.json", "frozen-check-post-run.json",
@@ -133,9 +133,14 @@ def rescore(d):
         return load_json(out)
 
 
-def frozen_consistent(checks):
+def frozen_consistent(d, checks, start, finish):
     """Independent re-verification of every phase record (frozen_check.verify)."""
-    return frozen_check.verify(list(checks.values()), FROZEN, os.path.abspath(__file__))
+    by_name = {}
+    for name, rec in checks.items():
+        if not isinstance(rec, dict):
+            return False, [f"{name}: missing or malformed"]
+        by_name[name] = (rec, os.path.getmtime(os.path.join(d, name)))
+    return frozen_check.verify(by_name, FROZEN, os.path.abspath(__file__), start, finish)
 
 
 def strip_paths(summary):
@@ -172,7 +177,10 @@ def main():
     finish = parse_utc(read(os.path.join(d, "finished_at.txt")))
     stale, late = [], []
     if start is not None and finish is not None:
-        stale = [n for n in required if n not in missing and n != "started_at.txt"
+        # frozen-check.json precedes started_at; frozen_check.verify bounds it
+        # to the launch window instead.
+        stale = [n for n in required if n not in missing
+                 and n not in ("started_at.txt", "frozen-check.json")
                  and os.path.getmtime(os.path.join(d, n)) < start - 1.0]
         late = [n for n in DURING_RUN if n in required and n not in missing
                 and os.path.getmtime(os.path.join(d, n)) > finish + 1.0]
@@ -250,7 +258,7 @@ def main():
                              os.path.basename(FROZEN): sha256_or_none(FROZEN)},
         "artifact_sha256": files,
     }
-    frozen_ok, frozen_reasons = frozen_consistent(frozen_checks)
+    frozen_ok, frozen_reasons = frozen_consistent(d, frozen_checks, start, finish)
     checks = {
         "required_artifacts_present": not missing,
         "timestamps_full_utc": start is not None and finish is not None and start <= finish,

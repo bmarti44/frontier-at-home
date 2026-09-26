@@ -18,6 +18,10 @@ Candidate 7 (review round 5): records come from frozen_check.record() at the
 committed HEAD (so this suite must run on a clean, committed candidate;
 test_genuine_record_is_ok says so if not), and forged records - invented
 commit, abbreviated map, altered hashes, missing checks - must FAIL.
+
+Candidate 8 (review round 6): records carry their phase (file name) and
+recorded_at, placed in time as the runner writes them; a launch record
+replayed into later phases and fixture drift after the run must FAIL.
 """
 import hashlib
 import json
@@ -32,7 +36,7 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLER = os.path.join(HERE, "bundle_attempt.py")
 SCORER = os.path.join(HERE, "score_fidelity.py")
-FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c7.json")
+FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c8.json")
 sys.path.insert(0, HERE)
 import frozen_check as fc  # noqa: E402
 GENUINE = fc.record(FROZEN, "genuine")
@@ -45,6 +49,9 @@ FIX = ("/home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/"
 def sha(path):
     with open(path, "rb") as f:
         return hashlib.sha256(f.read()).hexdigest()
+
+
+LAUNCH, POST_RUN, POST_SCORE = fc.LAUNCH, fc.POST_RUN, fc.POST_SCORE
 
 
 def frozen_check(phase, **over):
@@ -78,14 +85,16 @@ class BundleMutations(unittest.TestCase):
                 shutil.copy2(src, os.path.join(self.d, name))
         # Fresh mtimes inside a run window that brackets "now".
         now = time.time()
+        self.start, self.finish = now - 60, now + 60
+        self.at = {LAUNCH: self.start - 2, POST_RUN: self.finish + 2, POST_SCORE: self.finish + 10}
         for root, _, files in os.walk(self.d):
             for f in files:
                 os.utime(os.path.join(root, f))
         self.write("started_at.txt", utc(now - 60) + "\n")
         self.write("finished_at.txt", utc(now + 60) + "\n")
         self.write("identity.json", {"verified": True})
-        for name in ("frozen-check.json", "frozen-check-post-run.json"):
-            self.write(name, frozen_check(name))
+        for name in (LAUNCH, POST_RUN):
+            self.put(name)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -96,6 +105,15 @@ class BundleMutations(unittest.TestCase):
                 f.write(obj)
             else:
                 json.dump(obj, f)
+
+    def put(self, name, rec=None, **over):
+        """Write a phase record where and when the runner would."""
+        if rec is None:
+            rec = frozen_check(name, recorded_at=self.at[name], **over)
+        self.write(name, rec)
+        t = rec.get("recorded_at", self.at[name]) if isinstance(rec.get("recorded_at"), (int, float)) \
+            else self.at[name]
+        os.utime(os.path.join(self.d, name), (t, t))
 
     def review(self, ok, output=None):
         if output is None:
@@ -113,7 +131,7 @@ class BundleMutations(unittest.TestCase):
                             ("cuda.tsv", "metal-reference.tsv", "fixture-manifest.tsv", "fidelity-summary.json")],
                             capture_output=True).returncode
         self.write("fidelity-score-exit.txt", f"{rc}\n")
-        self.write("frozen-check-post-score.json", frozen_check("frozen-check-post-score.json"))
+        self.put(POST_SCORE)
 
     def bundle(self, arm):
         proc = subprocess.run([sys.executable, BUNDLER, self.d, arm], capture_output=True, text=True)
@@ -193,7 +211,7 @@ class BundleMutations(unittest.TestCase):
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def test_post_run_frozen_mismatch_fails(self):
-        self.write("frozen-check-post-run.json", {"ok": False})
+        self.put(POST_RUN, ok=False)
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def test_genuine_record_is_ok(self):
@@ -201,12 +219,12 @@ class BundleMutations(unittest.TestCase):
         self.assertEqual(self.bundle("diag"), (0, "PASS"))
 
     def test_bare_ok_frozen_check_fails(self):
-        self.write("frozen-check-post-run.json", {"ok": True})
+        self.put(POST_RUN, {"ok": True})
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def write_all(self, **over):
-        for name in ("frozen-check.json", "frozen-check-post-run.json"):
-            self.write(name, frozen_check(name, **over))
+        for name in (LAUNCH, POST_RUN):
+            self.put(name, **over)
 
     def test_invented_commit_fails(self):
         # Sol round 5: consistent phases, ok=true, commit 111...111.
@@ -234,14 +252,68 @@ class BundleMutations(unittest.TestCase):
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def test_frozen_commit_changed_between_phases_fails(self):
-        self.write("frozen-check-post-run.json", frozen_check("post", commit="2" * 40))
+        self.put(POST_RUN, commit="2" * 40)
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def test_frozen_hashes_changed_between_phases_fails(self):
-        rec = frozen_check("post")
+        rec = frozen_check(POST_RUN, recorded_at=self.at[POST_RUN])
         rec["component_sha256"]["run_smoke.sh"] = "0" * 64
-        self.write("frozen-check-post-run.json", rec)
+        self.put(POST_RUN, rec)
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_launch_record_replayed_into_post_run_fails(self):
+        # Sol round 6: the launch record copied verbatim into a later phase.
+        with open(os.path.join(self.d, LAUNCH)) as f:
+            launch = json.load(f)
+        self.put(POST_RUN, launch)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_launch_record_replayed_with_phase_renamed_fails(self):
+        with open(os.path.join(self.d, LAUNCH)) as f:
+            launch = json.load(f)
+        launch["phase"] = POST_RUN
+        self.put(POST_RUN, launch)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_launch_record_replayed_into_post_score_fails(self):
+        self.fidelity()
+        with open(os.path.join(self.d, POST_RUN)) as f:
+            rec = json.load(f)
+        rec["phase"] = POST_SCORE
+        self.put(POST_SCORE, rec)
+        self.assertEqual(self.bundle("fidelity"), (1, "FAIL"))
+
+    def test_mtime_disagreeing_with_recorded_at_fails(self):
+        os.utime(os.path.join(self.d, POST_RUN), (self.at[POST_RUN] + 120,) * 2)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_stale_launch_record_fails(self):
+        self.put(LAUNCH, recorded_at=self.start - 3600)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_missing_recorded_at_fails(self):
+        rec = frozen_check(POST_RUN)
+        rec.pop("recorded_at", None)
+        self.put(POST_RUN, rec)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_fixture_drift_at_bundling_fails(self):
+        # Records genuine, but an external fixture no longer hashes to them.
+        drift = dict(fc.UNTRACKED)
+        tmp = os.path.join(self.tmp.name, "drifted-manifest.tsv")
+        with open(fc.UNTRACKED["fixture_manifest.tsv"], "rb") as f, open(tmp, "wb") as g:
+            g.write(f.read() + b"\n")
+        drift["fixture_manifest.tsv"] = tmp
+        env = dict(os.environ, PYTHONPATH=HERE)
+        code = ("import sys, frozen_check as fc, runpy; fc.UNTRACKED.update(%r); "
+                "sys.argv = ['bundle_attempt.py', %r, 'diag']; "
+                "runpy.run_path(%r, run_name='__main__')" % (drift, self.d, BUNDLER))
+        proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env)
+        with open(os.path.join(self.d, "summary.json")) as f:
+            summary = json.load(f)
+        self.assertEqual((proc.returncode, summary["verdict"]), (1, "FAIL"))
+        self.assertIn("fixture_manifest.tsv on disk differs from the recorded hash",
+                      summary["metrics"]["frozen_check_failures"])
 
     def test_non_utc_start_fails(self):
         self.write("started_at.txt", utc(time.time() - 60).replace("+00:00", "-12:00") + "\n")
