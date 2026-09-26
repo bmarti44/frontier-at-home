@@ -248,7 +248,16 @@ The operator interface must remain:
 scripts/52_engine_switch.sh status --json
 sudo scripts/52_engine_switch.sh glm52
 sudo scripts/52_engine_switch.sh dsv4
+sudo scripts/52_engine_switch.sh dsv41flash
 ```
+
+`dsv41flash` (DeepSeek V4.1 Flash on ds4) is the first generic alias: the
+switch drives it entirely from its profile's `switch` block
+(`docs/PROFILE-SCHEMA.md`, `scripts/lib/switch_generic.py`). A new model
+alias needs only a profile, `model.json`, a conformance fixture and the
+test-table entries, with no new switch code. The switch refuses any generic
+profile that is not `qualified`, so `dsv41flash` stays refused until its gates
+pass and the profile status flips.
 
 The switch must serialize on one lock, verify hashes, stop only the
 identity-verified process group, validate authentication/health/semantics and
