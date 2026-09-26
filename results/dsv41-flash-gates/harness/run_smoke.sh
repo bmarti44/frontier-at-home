@@ -13,7 +13,16 @@ readonly PROMPT='Explain in three sentences why the sky is blue.'
 
 arm=${1:?arm}; out=${2:?outdir}
 mkdir -p "$out"
-[[ -z $(pgrep -f 'ds4-server|llama-server|vllm' || true) ]] || { echo "another engine is running" >&2; exit 3; }
+# Match real engine executables (exe basename) or python vLLM servers; never
+# match shell command lines that merely mention an engine name.
+engines=$(for d in /proc/[0-9]*; do
+  exe=$(readlink "$d/exe" 2>/dev/null) || continue
+  case ${exe##*/} in
+    ds4|ds4-server|ds4-agent|ds4-bench|ds4-eval|score_official|llama-server) echo "${d#/proc/} $exe" ;;
+    python3*) tr '\0' ' ' < "$d/cmdline" 2>/dev/null | grep -q 'vllm' && echo "${d#/proc/} vllm" ;;
+  esac
+done)
+[[ -z $engines ]] || { echo "another engine is running: $engines" >&2; exit 3; }
 python3 "$REPO/scripts/03_memory_guard.py" --required-gib 110 --timeout-seconds 600
 
 case $arm in
