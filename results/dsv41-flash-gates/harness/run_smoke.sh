@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Contained DeepSeek V4.1 Flash CUDA smoke runner (fidelity/correctness only).
 # usage: run_smoke.sh text|fidelity OUTDIR
+#        run_smoke.sh diag OUTDIR CACHE   (diagnostic only: -n 16, expert cache CACHE e.g. 4gb)
 # Preregistration: ../smoke-2026-09-25/PREREGISTRATION.md
 set -euo pipefail
 readonly REPO=/home/bmarti44/spark-deepseek-v4-flash
@@ -34,6 +35,12 @@ case $arm in
     timeout_s=5400
     cmd=("$SRC/gguf-tools/quality-testing/score_official" "$MODEL" "$FIX/manifest.tsv"
          "$out/cuda.tsv" 34816 --ssd-streaming --ssd-streaming-cache-experts 48gb) ;;
+  diag)
+    timeout_s=900
+    cache=${3:?cache size, e.g. 4gb}
+    [[ $cache =~ ^[0-9]{1,3}gb$ ]] || { echo "bad cache $cache" >&2; exit 2; }
+    cmd=("$SRC/ds4" --cuda -m "$MODEL" --ssd-streaming --ssd-streaming-cache-experts "$cache"
+         -c 8192 --nothink --temp 0 -n 16 -p "$PROMPT") ;;
   *) echo "unknown arm $arm" >&2; exit 2 ;;
 esac
 
