@@ -153,3 +153,30 @@ Open blocking findings went from 1 to 1. This is the first non-decrease after a 
   - disagreement between phases.
 - **RED evidence.** Under the candidate-6 bundler, candidate 6's own fixture (the forged shape) gives PASS. With candidate 7, `python3 -m unittest test_bundle_attempt test_score_fidelity` runs 50 tests OK on commit `35751ee9`.
 - **Dry run.** The genuine post-commit runner record passes `verify()`.
+
+## Candidate 8 (2026-09-26, owner-authorized after the round-6 pause)
+
+The gate paused after round 6 under the convergence rule (see `GATE-PAUSED.md`). The owner authorized "the candidate 8 fix, then one more review". Candidate 8 closes only the round-6 remainder of finding 3: a launch record replayed into the later phase files passed, and external fixtures were not re-hashed at bundling time.
+
+- **Phase binding.** Each record carries `phase` (the file it is written to) and `recorded_at`. `frozen_check.verify()` requires all of the following:
+  - the phase equals the file name;
+  - the file mtime agrees with `recorded_at` (−1 s / +5 s);
+  - the times fit the run:
+    - the launch check falls within 60 s before `started_at`;
+    - the post-run check falls within 600 s after `finished_at`;
+    - the post-score check falls strictly after the post-run check, and within 600 s of it.
+  - The launch check is exempt from the generic freshness rule, because the launch window bounds it instead.
+- **Re-hash at bundling.** Every tracked component and both external fixtures (the fixture manifest and the Metal reference) are re-hashed on disk and must equal the recorded map.
+- **Commits.** `a51c8fe2` is the implementation and tests. `636be6fd` holds the pre-submission audit fixes, made before any review. The new post-score replay test exposed a real gap: post-score time could equal post-run time, and it must now be strictly later. The same commit also fixes a test-helper bug.
+- **Tests.** There are 57 unit tests, all OK: 43 in the bundler suite and 14 in the scorer suite. The new ones cover:
+  - verbatim launch-record replay;
+  - a phase-renamed replay;
+  - a post-run record replayed as post-score;
+  - an mtime that disagrees with `recorded_at`;
+  - a stale launch record;
+  - a missing `recorded_at`;
+  - fixture drift at bundling time.
+- **RED evidence.** Sol's round-6 reproduction: the candidate-7 `verify()` returned `(True, [])` for `[r, r, r]`.
+- **Dry run.** The runner record from `636be6fd` verifies. The same record replayed as post-run is rejected, for both its phase and its timing.
+
+This is the final candidate the owner authorized for this gate. If the round-7 review leaves a HIGH or CRITICAL finding, the gate pauses again and goes back to the owner.
