@@ -10,11 +10,14 @@ readonly MODEL=/home/bmarti44/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.
 readonly FIX=$SRC/gguf-tools/quality-testing/deepseek-v4.1-flash-20260919-router
 readonly WRAPPER=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly LOCK=/run/lock/frontier-at-home/inference.lock
+readonly FROZEN=$REPO/results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c3.json
+readonly BUNDLER=$REPO/results/dsv41-flash-gates/harness/bundle_attempt.py
 readonly PROMPT='Explain in three sentences why the sky is blue.'
 readonly LONG_PROMPT='Write a detailed, multi-paragraph explanation of how a CPU pipeline works, covering fetch, decode, execute, memory access, write-back, hazards, and branch prediction.'
 
 arm=${1:?arm}; out=${2:?outdir}
 mkdir -p "$out"
+out=$(realpath -e "$out")
 # Match real engine executables (exe basename) or python vLLM servers; never
 # match shell command lines that merely mention an engine name.
 engines=$(for d in /proc/[0-9]*; do
@@ -27,11 +30,34 @@ done)
 [[ -z $engines ]] || { echo "another engine is running: $engines" >&2; exit 3; }
 python3 "$REPO/scripts/03_memory_guard.py" --required-gib 110 --timeout-seconds 600
 
+# Binary and model identity against the frozen candidate, before and after the
+# run (review finding H2). Binaries are read-only; the model is checked by
+# size/inode/mtime against its verified full-file sha256 record.
+identity_check() {  # $1 = binary path, $2 = phase
+  python3 - "$FROZEN" "$1" "$MODEL" "$2" <<'PY'
+import hashlib, json, os, sys
+frozen, binary, model, phase = sys.argv[1:]
+f = json.load(open(frozen))
+h = hashlib.sha256(open(binary, "rb").read()).hexdigest()
+want = f["artifact_sha256"].get(os.path.basename(binary))
+st = os.stat(model)
+mi = f["model_identity"]
+ok = (h == want and os.access(binary, os.W_OK) is False and
+      (st.st_size, st.st_ino, st.st_mtime_ns) == (mi["bytes"], mi["inode"], mi["mtime_ns"]) and
+      not os.access(model, os.W_OK))
+print(json.dumps({"phase": phase, "binary": binary, "binary_sha256": h, "expected_sha256": want,
+                  "model_bytes": st.st_size, "model_inode": st.st_ino, "model_mtime_ns": st.st_mtime_ns,
+                  "ok": ok}, sort_keys=True))
+sys.exit(0 if ok else 21)
+PY
+}
+
 case $arm in
   text)
     timeout_s=900
     cmd=("$SRC/ds4" --cuda -m "$MODEL" --ssd-streaming --ssd-streaming-cache-experts 42gb
-         -c 8192 --nothink --temp 0 -n 256 -p "$LONG_PROMPT") ;;
+         -c 8192 --nothink --temp 0 -n 256 -p "$LONG_PROMPT"
+         --dump-logprobs "$out/steps.json" --logprobs-top-k 5) ;;
   fidelity)
     timeout_s=5400
     cmd=("$SRC/gguf-tools/quality-testing/score_official" "$MODEL" "$FIX/manifest.tsv"
@@ -45,6 +71,8 @@ case $arm in
   *) echo "unknown arm $arm" >&2; exit 2 ;;
 esac
 
+pre=$(identity_check "${cmd[0]}" pre) || { echo "$pre" > "$out/identity-pre.json"; echo "identity check failed before launch" >&2; exit 21; }
+echo "$pre" > "$out/identity-pre.json"
 unit=glm52-dsv41-smoke-$arm-$(date -u +%Y%m%dT%H%M%S)
 printf '%s\n' "$unit" > "$out/unit.txt"
 printf '%q ' "${cmd[@]}" > "$out/command.txt"; echo >> "$out/command.txt"
@@ -52,6 +80,7 @@ date -u --iso-8601=ns > "$out/started_at.txt"
 set +e
 /usr/bin/flock -n -E 75 "$LOCK" \
   systemd-run --user --unit "$unit" --wait --collect --pipe --quiet \
+    --working-directory="$SRC" \
     -p MemorySwapMax=0 -p OOMPolicy=kill -p KillMode=control-group \
     -p MemoryHigh=72G -p MemoryMax=76G \
     -E GLM_SAFE_RUN_AS_CURRENT_USER=1 -E GLM_SAFE_REQUIRE_CGROUP=1 \
@@ -66,5 +95,21 @@ echo "$rc" > "$out/exit_code.txt"
 crash=$(ls -d /home/bmarti44/.local/state/glm52-crashlog/*-"$unit" 2>/dev/null | tail -1 || true)
 [[ -n $crash ]] && cp -a "$crash" "$out/containment"
 journalctl -k --since "$(date -d "$(sed 's/,/./' "$out/started_at.txt")" '+%Y-%m-%d %H:%M:%S')" --no-pager 2>/dev/null | grep -E 'NVRM|Xid|oom' > "$out/kernel-events.txt" || true
+post_rc=0
+post=$(identity_check "${cmd[0]}" post) || post_rc=$?
+echo "$post" > "$out/identity-post.json"
+python3 - "$out" "$post_rc" <<'PY'
+import json, os, sys
+d, post_rc = sys.argv[1], int(sys.argv[2])
+pre = json.load(open(os.path.join(d, "identity-pre.json")))
+post = json.load(open(os.path.join(d, "identity-post.json")))
+json.dump({"verified": pre["ok"] and post["ok"] and post_rc == 0, "pre": pre, "post": post},
+          open(os.path.join(d, "identity.json"), "w"), indent=1, sort_keys=True)
+PY
+if [[ $arm == fidelity && -f $out/cuda.tsv ]]; then
+  python3 "$REPO/results/dsv41-flash-gates/harness/score_fidelity.py" "$out/cuda.tsv" \
+    "$FIX/results/base-default.tsv" "$FIX/manifest.tsv" "$out/fidelity-summary.json" > /dev/null || true
+fi
+python3 "$BUNDLER" "$out" "$arm" || true
 echo "arm=$arm rc=$rc out=$out"
 exit "$rc"
