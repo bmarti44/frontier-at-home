@@ -415,6 +415,30 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             self.assertIn("dsv41flash", result.stderr)
             self.assertEqual(fixture.systemctl_calls(), [])
 
+    def test_legacy_verify_serving_stops_at_a_wrong_served_model(self):
+        # verify_serving runs as a condition (restore, rollback, "already
+        # active"), where set -e is off: a wrong /v1/models id must still end
+        # the check before any further probe.
+        fake_curl = (
+            "clean_curl() {\n"
+            '    printf "CURL %s\\n" "${*: -1}" >>"$SWITCH_FIXTURE_ROOT/curl.log"\n'
+            '    printf \'{"data":[{"id":"%s"}]}\' "$FAKE_MODEL_ID"\n'
+            "}\n"
+        )
+        with SwitchSafetyFixture() as fixture:
+            result = fixture.run_function(
+                fake_curl
+                + "FAKE_MODEL_ID=deepseek-v4-flash\n"
+                "if verify_serving glm52; then echo VERIFY_OK; else echo VERIFY_FAILED; fi\n",
+                timeout=30,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("VERIFY_FAILED", result.stdout)
+            calls = (fixture.root / "curl.log").read_text().splitlines()
+            self.assertEqual(len(calls), 1, calls)
+            self.assertIn("/v1/models", calls[0])
+
     def test_generic_readiness_requires_the_profile_served_model_id(self):
         # A DeepSeek V4 server answering on the port must never satisfy the
         # dsv41flash readiness or serving checks.
