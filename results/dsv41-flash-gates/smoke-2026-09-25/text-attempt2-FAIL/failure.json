@@ -1,0 +1,27 @@
+{
+ "schema_version": 1,
+ "status": "FAIL",
+ "kind": "fidelity_smoke_not_capability",
+ "arm": "text",
+ "attempt": 2,
+ "reasons": [
+  "kernel NVRM NV_ERR_NO_MEMORY (_memdescAllocInternal @ mem_desc.c:1359) at 2026-09-25T20:10:23-04:00 during model load; per repository precedent (results/glm52-goal/evidence/dsv4-decode-no-result-554caae-r6324686/failure.json) this invalidates the arm even though generation completed",
+  "preregistered '128 tokens produced' not met: greedy answer reached EOS after ~100 tokens (the criterion did not force generation past EOS)"
+ ],
+ "observations": {
+  "exit_code": 16,
+  "wrapper_killed": "no",
+  "output_text_coherent": true,
+  "engine_reported_prefill_tokens_per_s": 2.32,
+  "engine_reported_generation_tokens_per_s": 6.86,
+  "engine_self_report_note": "engine self-report; not acceptance evidence (AGENTS.md)",
+  "memory_plan": "KV 0.06 + buffers 3.23 + resident 9.37 + expert cache 40.88 + prefill reserve 7.12 = 60.66 GiB planned",
+  "mem_available_low_kib": 55596556,
+  "cgroup_peak_bytes": 1201344512,
+  "cgroup_accounting_note": "CUDA allocations on GB10 UMA are not charged to the memory cgroup (peak 1.2 GB while MemAvailable fell ~63 GiB); MemoryMax does not bound them, the MemAvailable kill floor does",
+  "ssd_read_bytes": 62609379328,
+  "wall_seconds": 28.3
+ },
+ "diagnosis_so_far": "not a host-registration fallback (SSD-streaming mode takes the fd path); model-free CUDA tests did not emit NVRM; candidates are the 40.88 GiB single cudaMalloc expert cache (ds4_cuda.cu:4210) or the 9.37 GiB resident span allocation",
+ "next": "bounded diagnostic: repeat load with a small expert cache to see whether the NVRM line tracks the large single allocation"
+}

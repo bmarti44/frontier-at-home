@@ -110,6 +110,10 @@ laguna_hashes_verified=false
 laguna_verified_identities=
 glm53_hashes_verified=false
 glm53_verified_identities=
+# Generic profile aliases (scripts/lib/switch_generic.py): the resolved plan
+# of each alias, keyed "<alias>:<field>", and its verified stat identities.
+declare -A generic_plan=()
+declare -A generic_identities=()
 
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
@@ -155,6 +159,59 @@ readonly PROFILE_LAGUNA=configs/profiles/laguna-s-2.1/cuda-spark-128g.json
 readonly PROFILE_GLM53_1M=configs/profiles/glm-5.3-flash/cuda-spark-128g-1m.json
 # Host file the GLM-5.3 digest inventory renders against (docs/PROFILE-SCHEMA.md).
 readonly GLM53_HOST_CONFIG=configs/hosts/spark-aba1.json
+# Host file every generic profile alias resolves against.
+readonly GENERIC_HOST_CONFIG=configs/hosts/spark-aba1.json
+
+# The six legacy aliases keep their dedicated code below. Every other alias
+# is a generic profile: one profile under configs/profiles/ carrying
+# switch_alias plus "switch": {"mode": "generic", ...} (docs/PROFILE-SCHEMA.md).
+is_legacy_alias() {
+    case "$1" in
+        dsv4|glm52|qwen38|qwen38-1m|laguna|glm53-1m) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+alias_shaped() { [[ $1 =~ ^[a-z0-9][a-z0-9.-]{0,31}$ ]]; }
+
+generic_python() {
+    local -a args=(--repo "$REPO" --state "$STATE" --port "$PORT"
+        --host "$REPO/$GENERIC_HOST_CONFIG")
+    if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
+        args+=(--test-cache-root "$CACHE_ROOT" --test-model-root "$STATE/models")
+    fi
+    clean_python -B "$REPO/scripts/lib/switch_generic.py" "${args[@]}" "$@"
+}
+
+# Resolve a generic alias once per shell into generic_plan[alias:field].
+# Returns non-zero for legacy, malformed, unknown, duplicate, or invalid
+# aliases; callers that hold a live-engine decision must treat that as fatal.
+generic_load() {
+    local alias=$1 buffer pair
+    [[ -n ${generic_plan[$alias:alias]:-} ]] && return 0
+    alias_shaped "$alias" && ! is_legacy_alias "$alias" || return 1
+    buffer=$(mktemp) || return 1
+    if ! generic_python plan "$alias" >"$buffer"; then
+        rm -f -- "$buffer"
+        return 1
+    fi
+    while IFS= read -r -d '' pair; do
+        generic_plan[$alias:${pair%%=*}]=${pair#*=}
+    done <"$buffer"
+    rm -f -- "$buffer"
+    [[ ${generic_plan[$alias:alias]:-} == "$alias" ]]
+}
+
+generic_status() { printf '%s' "${generic_plan[$1:status]:-}"; }
+
+# docs/PROFILE-SCHEMA.md: estimated and unsupported profiles are never
+# servable, so DeepSeek V4 stays the default until a profile is qualified.
+generic_require_qualified() {
+    local alias=$1 state
+    state=$(generic_status "$alias")
+    [[ $state == qualified ]] ||
+        die "$alias profile status is ${state:-unknown}, not qualified; refusing to switch (DeepSeek V4 stays the default until the profile passes its gates)"
+}
 
 profile_path_for() {
     case "$1" in
@@ -164,7 +221,10 @@ profile_path_for() {
         qwen38-1m) printf '%s\n' "$PROFILE_QWEN38_1M" ;;
         laguna) printf '%s\n' "$PROFILE_LAGUNA" ;;
         glm53-1m) printf '%s\n' "$PROFILE_GLM53_1M" ;;
-        *) die "no profile for alias $1" ;;
+        *)
+            generic_load "$1" || die "no profile for alias $1"
+            printf '%s\n' "${generic_plan[$1:relpath]}"
+            ;;
     esac
 }
 
@@ -321,7 +381,7 @@ print(json.dumps({"alias": alias, "mechanism": "setsid-memwatch",
                   "argv": rest[count:]}, indent=1))
 PY
             ;;
-        qwen38|qwen38-1m|laguna|glm53-1m)
+        *)
             local binary model mmproj draft unit log_name
             case "$alias" in
                 laguna)
@@ -332,9 +392,16 @@ PY
                     binary=$GLM53_BINARY model=$GLM53_MODEL
                     mmproj= draft=
                     ;;
-                *)
+                qwen38|qwen38-1m)
                     binary=$QWEN_BINARY model=$QWEN_MODEL
                     mmproj=$QWEN_MMPROJ draft=
+                    ;;
+                *)
+                    generic_load "$alias" || die "no profile for alias $alias"
+                    binary=${generic_plan[$alias:binary]}
+                    model=${generic_plan[$alias:model]}
+                    mmproj=${generic_plan[$alias:mmproj]}
+                    draft=${generic_plan[$alias:draft_model]}
                     ;;
             esac
             local -a argv props env_pairs subs
@@ -370,7 +437,6 @@ print(json.dumps({"alias": alias, "mechanism": "systemd-run",
                  indent=1))
 PY
             ;;
-        *) die "no profile for alias $alias" ;;
     esac
 }
 
@@ -389,16 +455,44 @@ dsv4_launcher() {
 
 sha256() { sha256sum -- "$1" | awk '{print $1}'; }
 
+# Print an alias-shaped, non-legacy active.json profile (a generic alias), or
+# nothing. $1=1 also requires schema_version 1 (the status reading).
+active_generic_candidate() {
+    clean_python - "$ACTIVE" "$1" <<'PY'
+import json, re, sys
+legacy = {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m"}
+try:
+    with open(sys.argv[1], encoding="utf-8") as stream:
+        value = json.load(stream)
+    profile = value.get("profile")
+    if (isinstance(profile, str) and profile not in legacy
+            and re.fullmatch(r"[a-z0-9][a-z0-9.-]{0,31}", profile)
+            and (sys.argv[2] != "1" or value.get("schema_version") == 1)):
+        print(profile)
+except (OSError, ValueError, TypeError, AttributeError):
+    pass
+PY
+}
+
 json_status() {
-    clean_python - "$ACTIVE" <<'PY'
+    local generic
+    generic=$(active_generic_candidate 1)
+    # An alias-shaped profile no generic profile resolves may still be a live
+    # engine: report no status rather than "inactive".
+    if [[ -n $generic ]]; then
+        generic_load "$generic" ||
+            die "active.json names $generic but no generic profile resolves it; status unknown"
+    fi
+    clean_python - "$ACTIVE" "$generic" <<'PY'
 import json, os, sys
 path = sys.argv[1]
+generic = {sys.argv[2]} if sys.argv[2] else set()
 profile = None
 state = "inactive"
 try:
     with open(path, encoding="utf-8") as stream:
         value = json.load(stream)
-    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m"}:
+    if value.get("schema_version") == 1 and value.get("profile") in {"dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m"} | generic:
         profile = value["profile"]
         state = "recorded"
 except (OSError, ValueError, TypeError):
@@ -409,7 +503,8 @@ PY
 }
 
 read_active_profile() {
-    clean_python - "$ACTIVE" <<'PY'
+    local profile generic
+    profile=$(clean_python - "$ACTIVE" <<'PY'
 import json, sys
 try:
     with open(sys.argv[1], encoding="utf-8") as stream:
@@ -419,6 +514,18 @@ try:
 except (OSError, ValueError, TypeError):
     print("")
 PY
+    ) || return
+    if [[ -z $profile ]]; then
+        # Fail closed: a generic alias that cannot be resolved must never read
+        # as "nothing active" (that would start a second model beside it).
+        generic=$(active_generic_candidate 0) || return
+        if [[ -n $generic ]]; then
+            generic_load "$generic" ||
+                die "active.json names $generic but no generic profile resolves it; refusing to assume nothing is running"
+            profile=$generic
+        fi
+    fi
+    printf '%s\n' "$profile"
 }
 
 glm_qualified() {
@@ -799,6 +906,25 @@ for path, fields in sorted(expected.items()):
 PY
 }
 
+# Generic aliases: the profile's resolved digest inventory (full sha256, or
+# the sampled first-bytes/size/device/inode identity for very large GGUFs) is
+# the approved artifact set. switch_generic.py refuses a profile that is not
+# qualified before it reads any file, and prints the verified stat identities.
+verify_generic_hashes() {
+    local alias=$1 identities
+    generic_load "$alias" || die "generic profile $alias could not be resolved"
+    identities=$(generic_python verify "$alias") ||
+        die "$alias artifact verification failed"
+    generic_identities[$alias]=$identities
+}
+
+revalidate_generic_identities() {
+    local alias=$1
+    [[ -n ${generic_identities[$alias]:-} ]] ||
+        die "$alias artifacts lack verified identities"
+    generic_python revalidate "$alias" "${generic_identities[$alias]}"
+}
+
 proc_identity() {
     local pid=$1 line
     [[ $pid =~ ^[0-9]+$ && $pid -gt 1 && -r /proc/$pid/stat ]] || return 1
@@ -1078,6 +1204,87 @@ PY
     rm -f -- "$GLM53_PROCESS" "$GLM53_WATCHDOG_TARGET" "$GLM53_WATCHDOG_READY"
 }
 
+# stop_glm53_verified, parameterized by the generic alias's plan: unit, and
+# the $STATE/<log_name>.{process.json,memwatch.*} identity/watchdog files.
+stop_generic_verified() {
+    local alias=$1 unit record target ready_file
+    local values pid expected_pgid expected_ticks expected_sha expected_unit
+    local memwatch_pid memwatch_ticks current current_pgid current_ticks
+    local exe unit_pid cmdline ready
+    generic_load "$alias" ||
+        die "cannot resolve generic profile $alias; refusing to assume it is stopped"
+    unit=${generic_plan[$alias:unit]}
+    record=$STATE/${generic_plan[$alias:log_name]}.process.json
+    target=$STATE/${generic_plan[$alias:log_name]}.memwatch.target
+    ready_file=$STATE/${generic_plan[$alias:log_name]}.memwatch.ready
+    if [[ ! -f $record ]]; then
+        if ! unit_pid=$(systemctl show "$unit" --property=MainPID --value \
+                2>/dev/null); then
+            die "cannot query $alias unit MainPID; refusing to assume it is stopped"
+        fi
+        if [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+            die "$alias unit is live without an identity record; refusing to continue"
+        fi
+        return 0
+    fi
+    values=$(clean_python - "$record" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"], value["exe_sha256"],
+      value["unit"], value["memwatch_pid"], value["memwatch_start_ticks"])
+PY
+    ) || die "invalid $alias process record"
+    read -r pid expected_pgid expected_ticks expected_sha expected_unit \
+        memwatch_pid memwatch_ticks <<<"$values"
+    [[ $expected_unit == "$unit" ]] ||
+        die "$alias process record names an unexpected unit"
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    if ! unit_pid=$(systemctl show "$unit" --property=MainPID --value \
+            2>/dev/null); then
+        die "cannot query $alias unit MainPID; refusing to stop it"
+    fi
+    if [[ -n $current ]]; then
+        read -r current_pgid current_ticks <<<"$current"
+        exe=$(readlink -f "/proc/$pid/exe") ||
+            die "cannot resolve recorded $alias executable"
+        [[ $unit_pid == "$pid" && $current_pgid == "$expected_pgid" &&
+                $current_ticks == "$expected_ticks" ]] ||
+            die "stale $alias PID identity; refusing to stop unit"
+        [[ $(sha256 "$exe") == "$expected_sha" ]] ||
+            die "$alias executable hash changed; refusing to stop unit"
+        systemctl stop "$unit"
+        for _ in $(seq 1 600); do
+            [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] && break
+            sleep 0.1
+        done
+        [[ $(proc_identity "$pid" 2>/dev/null || true) != "$current" ]] ||
+            die "$alias transient unit did not stop its recorded process"
+    elif [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+        die "$alias unit has an unrecorded live MainPID; refusing to stop it"
+    fi
+    if [[ $(proc_identity "$memwatch_pid" 2>/dev/null || true) == *" $memwatch_ticks" ]]; then
+        cmdline=$(tr '\0' ' ' <"/proc/$memwatch_pid/cmdline")
+        [[ $cmdline == *"$REPO/scripts/01_memwatch.sh"* &&
+                $cmdline == *"$target"* ]] ||
+            die "$alias memwatch identity changed; refusing to disarm"
+        printf 'DISARM %s %s %s\n' "$pid" "$expected_pgid" "$expected_ticks" \
+            >"$target.tmp"
+        mv -- "$target.tmp" "$target"
+        for _ in $(seq 1 50); do
+            [[ -d /proc/$memwatch_pid ]] || break
+            sleep 0.1
+        done
+        ready=$(cat "$ready_file" 2>/dev/null) ||
+            die "$alias memwatch disarm acknowledgement is missing"
+        [[ $ready == "DISARMED $pid $expected_pgid $expected_ticks" ]] ||
+            die "$alias memwatch disarm acknowledgement does not match engine identity"
+        [[ ! -d /proc/$memwatch_pid ]] ||
+            die "$alias memwatch did not accept authenticated disarm"
+    fi
+    rm -f -- "$record" "$target" "$ready_file"
+}
+
 stop_profile() {
     case "$1" in
         dsv4)
@@ -1099,7 +1306,10 @@ stop_profile() {
         laguna) stop_laguna_verified ;;
         glm53-1m) stop_glm53_verified ;;
         "") return 0 ;;
-        *) die "unknown previous profile $1" ;;
+        *)
+            generic_load "$1" || die "unknown previous profile $1"
+            stop_generic_verified "$1"
+            ;;
     esac
 }
 
@@ -1883,6 +2093,176 @@ start_qwen38-1m() {
         verify_qwen_1m_hashes
 }
 
+cleanup_generic_killed_unit() {
+    local unit=$1 load_state active_state
+    load_state=$(systemctl show "$unit" --property=LoadState --value \
+        2>/dev/null || true)
+    [[ -z $load_state || $load_state == not-found ]] && return 0
+    active_state=$(systemctl show "$unit" --property=ActiveState --value \
+        2>/dev/null || true)
+    if [[ $active_state == failed || $active_state == inactive ]]; then
+        systemctl reset-failed "$unit" 2>/dev/null || true
+        for _ in $(seq 1 50); do
+            load_state=$(systemctl show "$unit" --property=LoadState --value \
+                2>/dev/null || true)
+            [[ -z $load_state || $load_state == not-found ]] && return 0
+            sleep 0.1
+        done
+    fi
+    die "$unit transient unit already exists (LoadState=$load_state, ActiveState=$active_state)"
+}
+
+# Abort a generic start: stop the transient unit (when it was launched) and
+# the memwatch, remove the named partial files, then die with the message.
+generic_start_abort() {
+    local unit=$1 memwatch_pid=$2 message=$3
+    shift 3
+    [[ -z $unit ]] || systemctl stop "$unit" 2>/dev/null || true
+    kill -TERM "$memwatch_pid" 2>/dev/null || true
+    wait "$memwatch_pid" 2>/dev/null || true
+    (( $# == 0 )) || rm -f -- "$@" || true
+    die "$message"
+}
+
+# start_glm53_profile, parameterized by the generic alias's plan. The profile
+# supplies safety.minimum_start_gib (memory guard) and safety.kill_floor_gib
+# (memwatch floor); on GB10 the cgroup is blind to CUDA allocations, so the
+# external memwatch is the guard. launch_systemd_profile adds the cgroup, the
+# non-root User and the inference-lock flock.
+start_generic_profile() {
+    local alias=$1 unit binary required_gib floor_gib record target ready_file
+    local watch_log pid identity pgid ticks exe_sha approved_sha unit_pid current
+    local live_exe approved_exe
+    local memwatch_pid memwatch_identity memwatch_ticks ready
+    generic_load "$alias" || die "generic profile $alias could not be resolved"
+    generic_require_qualified "$alias"
+    unit=${generic_plan[$alias:unit]}
+    binary=${generic_plan[$alias:binary]}
+    required_gib=${generic_plan[$alias:required_gib]}
+    floor_gib=${generic_plan[$alias:floor_gib]}
+    record=$STATE/${generic_plan[$alias:log_name]}.process.json
+    target=$STATE/${generic_plan[$alias:log_name]}.memwatch.target
+    ready_file=$STATE/${generic_plan[$alias:log_name]}.memwatch.ready
+    watch_log=$STATE/${generic_plan[$alias:log_name]}.memwatch.log
+    [[ ! -e $record ]] ||
+        die "$alias process record already exists; refusing a second model"
+    { [[ -n ${generic_identities[$alias]:-} ]] || verify_generic_hashes "$alias"; } ||
+        die "$alias artifact verification failed"
+    "$REPO/scripts/03_memory_guard.py" --required-gib "$required_gib" \
+        --stable-samples 3 --interval-seconds 1 --timeout-seconds 180 ||
+        die "pre-load memory release gate failed"
+    cleanup_generic_killed_unit "$unit" ||
+        die "$alias killed-unit cleanup failed"
+    rm -f -- "$record.tmp" "$target" "$ready_file" ||
+        die "$alias stale startup-state cleanup failed"
+    "$REPO/scripts/01_memwatch.sh" \
+        --target-file "$target" \
+        --ready-file "$ready_file" \
+        --threshold-gib "$floor_gib" --interval-sec 1 --log "$watch_log" 9>&- &
+    memwatch_pid=$!
+    memwatch_ticks=
+    ready=
+    for _ in $(seq 1 50); do
+        memwatch_identity=$(proc_identity "$memwatch_pid" 2>/dev/null || true)
+        memwatch_ticks=${memwatch_identity#* }
+        ready=$(cat "$ready_file" 2>/dev/null || true)
+        [[ -n $memwatch_ticks && $ready == READY ]] && break
+        sleep 0.1
+    done
+    [[ -n $memwatch_ticks && $ready == READY ]] ||
+        generic_start_abort "" "$memwatch_pid" "$alias memory watchdog failed to initialize"
+    revalidate_generic_identities "$alias" ||
+        generic_start_abort "" "$memwatch_pid" "$alias artifact identity changed before execution"
+    launch_systemd_profile "$alias" "$binary" "${generic_plan[$alias:model]}" \
+            "${generic_plan[$alias:mmproj]}" "${generic_plan[$alias:draft_model]}" ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias transient unit failed to start"
+    pid=
+    identity=
+    for _ in $(seq 1 100); do
+        unit_pid=$(systemctl show "$unit" --property=MainPID --value \
+            2>/dev/null || true)
+        if [[ $unit_pid =~ ^[0-9]+$ && $unit_pid -gt 1 ]]; then
+            pid=$unit_pid
+            identity=$(proc_identity "$pid" 2>/dev/null || true)
+            [[ -n $identity ]] && break
+        fi
+        sleep 0.1
+    done
+    [[ -n $pid && -n $identity ]] ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias transient unit died before identity capture"
+    read -r pgid ticks <<<"$identity" ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias process identity could not be parsed"
+    [[ $pgid == "$pid" ]] ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias transient-unit server is not its process-group leader"
+    live_exe=$(readlink -f "/proc/$pid/exe") ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias transient unit executable could not be resolved"
+    approved_exe=$(readlink -f "$binary") ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias approved executable could not be resolved"
+    [[ $live_exe == "$approved_exe" ]] ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias transient unit executable identity is wrong"
+    exe_sha=$(sha256 "/proc/$pid/exe") ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias executable could not be hashed after launch"
+    approved_sha=$(generic_python approved-sha "$alias") ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias approved executable hash could not be read"
+    [[ $exe_sha == "$approved_sha" ]] ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias transient unit executed an unapproved binary"
+    clean_python - "$record.tmp" "$pid" "$pgid" "$ticks" \
+            "$exe_sha" "$unit" "$memwatch_pid" "$memwatch_ticks" <<'PY' ||
+import json, os, sys
+path, pid, pgid, ticks, digest, unit, watchdog_pid, watchdog_ticks = sys.argv[1:]
+with open(path, "x", encoding="utf-8") as stream:
+    json.dump({"schema_version":1, "pid":int(pid), "pgid":int(pgid),
+               "start_ticks":int(ticks), "exe_sha256":digest, "unit":unit,
+               "memwatch_pid":int(watchdog_pid),
+               "memwatch_start_ticks":int(watchdog_ticks)}, stream)
+    stream.flush(); os.fsync(stream.fileno())
+PY
+        generic_start_abort "$unit" "$memwatch_pid" \
+            "$alias process identity record could not be created" "$record.tmp"
+    current=$(proc_identity "$pid" 2>/dev/null || true)
+    [[ $current == "$identity" ]] ||
+        generic_start_abort "$unit" "$memwatch_pid" \
+            "$alias process identity changed before record publication" "$record.tmp"
+    mv -- "$record.tmp" "$record" ||
+        generic_start_abort "$unit" "$memwatch_pid" "$alias process identity record could not be published"
+    printf '%s %s %s provisional\n' "$pid" "$pgid" "$ticks" >"$target.tmp" ||
+        generic_start_abort "$unit" "$memwatch_pid" \
+            "$alias provisional watchdog target could not be written" "$record" "$target.tmp"
+    mv -- "$target.tmp" "$target" ||
+        generic_start_abort "$unit" "$memwatch_pid" \
+            "$alias provisional watchdog target could not be published" "$record" "$target.tmp"
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$ready_file" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks provisional" ]] ||
+        die "$alias memory watchdog did not arm provisional process"
+    printf '%s %s %s engine\n' "$pid" "$pgid" "$ticks" >"$target.tmp" ||
+        die "$alias final watchdog target could not be written"
+    mv -- "$target.tmp" "$target" ||
+        die "$alias final watchdog target could not be published"
+    ready=
+    for _ in $(seq 1 50); do
+        ready=$(cat "$ready_file" 2>/dev/null || true)
+        [[ $ready == "ARMED $pid $pgid $ticks engine" ]] && break
+        sleep 0.1
+    done
+    [[ $ready == "ARMED $pid $pgid $ticks engine" ]] ||
+        die "$alias memory watchdog did not arm final process"
+}
+
+# Legacy aliases keep their dedicated "start_<alias>" functions; every other
+# alias starts through its generic profile.
+start_profile() {
+    if is_legacy_alias "$1"; then
+        "start_$1"
+    else
+        start_generic_profile "$1"
+    fi
+}
+
 api_key() {
     local file=${DSV4_API_KEY_FILE:-/etc/deepseek-v4-flash/api-key}
     [[ -r $file ]] || return 1
@@ -2036,6 +2416,59 @@ PY
             $sockets == *"pid=$pid,"* ]]
 }
 
+# The recorded unit MainPID, process identity, executable and listener must
+# all be the generic alias's own process.
+verify_generic_process_ready() {
+    local alias=$1 unit record values pid expected_pgid expected_ticks
+    local expected_unit unit_pid identity pgid ticks live_exe expected_exe sockets
+    generic_load "$alias" || return 1
+    unit=${generic_plan[$alias:unit]}
+    record=$STATE/${generic_plan[$alias:log_name]}.process.json
+    [[ -r $record ]] || return 1
+    values=$(clean_python - "$record" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    value = json.load(stream)
+print(value["pid"], value["pgid"], value["start_ticks"], value["unit"])
+PY
+    ) || return 1
+    read -r pid expected_pgid expected_ticks expected_unit <<<"$values"
+    [[ $expected_unit == "$unit" ]] || return 1
+    unit_pid=$(systemctl show "$unit" --property=MainPID --value \
+        2>/dev/null || true)
+    [[ $unit_pid == "$pid" ]] || return 1
+    identity=$(proc_identity "$pid" 2>/dev/null || true)
+    [[ -n $identity ]] || return 1
+    read -r pgid ticks <<<"$identity"
+    [[ $pgid == "$expected_pgid" && $ticks == "$expected_ticks" ]] || return 1
+    live_exe=$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)
+    expected_exe=$(readlink -f "${generic_plan[$alias:binary]}" 2>/dev/null || true)
+    [[ -n $live_exe && $live_exe == "$expected_exe" ]] || return 1
+    sockets=$(ss -H -ltnp "sport = :$PORT" 2>/dev/null) || return 1
+    [[ -n $sockets && $sockets == *"127.0.0.1:$PORT"* &&
+            $sockets == *"pid=$pid,"* ]]
+}
+
+# Profile-declared local checks: optional health path, process/listener
+# binding, and the optional context topology check.
+generic_local_checks() {
+    local alias=$1 health context_path body
+    generic_load "$alias" || return 1
+    health=${generic_plan[$alias:health_path]}
+    if [[ -n $health ]]; then
+        clean_curl -fsS --max-time 3 "http://127.0.0.1:$PORT$health" \
+            >/dev/null || return 1
+    fi
+    verify_generic_process_ready "$alias" || return 1
+    context_path=${generic_plan[$alias:context_path]}
+    if [[ -n $context_path ]]; then
+        body=$(clean_curl -fsS --max-time 5 \
+            "http://127.0.0.1:$PORT$context_path") || return 1
+        generic_python check-context "${generic_plan[$alias:context_check]}" \
+            "$body" || return 1
+    fi
+}
+
 wait_model_ready() {
     local profile=$1 expected body deadline probe_count=0 available
     expected=deepseek-v4-flash
@@ -2044,6 +2477,13 @@ wait_model_ready() {
     [[ $profile == laguna ]] && expected=laguna-s-2.1
     [[ $profile == glm53-1m ]] && expected=glm-5.3-flash
     deadline=$((SECONDS + 1800))
+    if ! is_legacy_alias "$profile"; then
+        # Generic aliases never default to deepseek-v4-flash: the profile's
+        # served id and startup timeout are the readiness contract.
+        generic_load "$profile" || return 1
+        expected=${generic_plan[$profile:served_model_id]}
+        deadline=$((SECONDS + ${generic_plan[$profile:timeout]}))
+    fi
     while (( SECONDS < deadline )); do
         body=$(clean_curl -fsS --max-time 3 "http://127.0.0.1:$PORT/v1/models" \
             2>/dev/null || true)
@@ -2071,7 +2511,10 @@ PY
                                         "http://127.0.0.1:$PORT/health" >/dev/null &&
                                     verify_glm53_process_ready &&
                                     verify_glm53_context; }; then
-                                return 0
+                                if is_legacy_alias "$profile" ||
+                                        generic_local_checks "$profile"; then
+                                    return 0
+                                fi
                             fi
                         fi
                     fi
@@ -2097,9 +2540,13 @@ verify_serving() {
     [[ $profile == qwen38 || $profile == qwen38-1m ]] && expected=qwen3.8-27b
     [[ $profile == laguna ]] && expected=laguna-s-2.1
     [[ $profile == glm53-1m ]] && expected=glm-5.3-flash
+    if ! is_legacy_alias "$profile"; then
+        generic_load "$profile" || return 1
+        expected=${generic_plan[$profile:served_model_id]}
+    fi
     body=$(clean_curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
-    clean_python - "$expected" "$body" <<'PY'
+    clean_python - "$expected" "$body" <<'PY' || return 1
 import json, sys
 expected=sys.argv[1]
 value=json.loads(sys.argv[2])
@@ -2128,6 +2575,13 @@ PY
             "http://127.0.0.1:$PORT/health" >/dev/null || return 1
         verify_glm53_process_ready || return 1
         verify_glm53_context || return 1
+    fi
+    if ! is_legacy_alias "$profile"; then
+        # The shared identity check above is not enforced when this function
+        # runs as a condition (errexit is suspended there), so the generic
+        # path re-checks the served id with an explicit failure.
+        generic_python check-models "$expected" "$body" || return 1
+        generic_local_checks "$profile" || return 1
     fi
     unauth=$(clean_curl -sS -o /dev/null -w '%{http_code}' --max-time 5 \
         "http://127.0.0.1:$AUTH_PORT/health" || true)
@@ -2184,7 +2638,7 @@ rollback() {
     rollback_needed=false
     stop_profile "${1:-}" || true
     if [[ -n $previous_profile ]]; then
-        if "start_$previous_profile" && wait_model_ready "$previous_profile" &&
+        if start_profile "$previous_profile" && wait_model_ready "$previous_profile" &&
                 verify_serving "$previous_profile"; then
             commit_active "$previous_profile"
         else
@@ -2216,11 +2670,17 @@ restore_profile() {
         verify_glm53_profile_hashes || return 1
         revalidate_glm53_identities || return 1
     fi
+    if ! is_legacy_alias "$profile"; then
+        generic_load "$profile" || return 1
+        generic_require_qualified "$profile"
+        verify_generic_hashes "$profile" || return 1
+        revalidate_generic_identities "$profile" || return 1
+    fi
     verify_serving "$profile" && return 0
     if [[ $profile != dsv4 || -e /run/dsv4/llamacpp.state.json ]]; then
         stop_profile "$profile" || return 1
     fi
-    "start_$profile" || return 1
+    start_profile "$profile" || return 1
     wait_model_ready "$profile" || return 1
     verify_serving "$profile"
 }
@@ -2230,9 +2690,26 @@ restore_profile() {
 # functions so their complete systemd-run argv is covered by subprocess tests.
 if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     test_action() { printf '%s\n' "$*" >>"$STATE/actions.log"; }
+    # The generic alias whose loaded plan owns this unit (name or .service).
+    generic_test_alias_for_unit() {
+        local key name
+        for key in "${!generic_plan[@]}"; do
+            [[ $key == *:unit_name ]] || continue
+            name=${generic_plan[$key]}
+            if [[ $1 == *"--unit=$name "* || $1 == "$name.service" ]]; then
+                printf '%s' "${key%:unit_name}"
+                return 0
+            fi
+        done
+    }
     systemd-run() {
+        local generic_alias
         test_action "SYSTEMD_RUN $*"
-        if [[ $* == *laguna-engine* ]]; then
+        generic_alias=$(generic_test_alias_for_unit "$*")
+        if [[ -n $generic_alias ]]; then
+            [[ ! -e $STATE/fail-$generic_alias-start ]] || return 1
+            : >"$STATE/$generic_alias-running"
+        elif [[ $* == *laguna-engine* ]]; then
             [[ ! -e $STATE/fail-laguna-start ]] || return 1
             : >"$STATE/laguna-running"
         elif [[ $* == *glm53-engine* ]]; then
@@ -2244,7 +2721,21 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         fi
     }
     systemctl() {
-        local verb=${1:-} property=${2:-}
+        local verb=${1:-} property=${2:-} generic_alias
+        generic_alias=$(generic_test_alias_for_unit "$property")
+        if [[ -n $generic_alias && $verb == show ]]; then
+            if [[ $* == *--property=LoadState* ]]; then
+                [[ -e $STATE/$generic_alias-unit-killed ]] && printf 'loaded\n' || printf 'not-found\n'
+            elif [[ $* == *--property=ActiveState* ]]; then
+                [[ -e $STATE/$generic_alias-unit-killed ]] && printf 'failed\n' || printf 'inactive\n'
+            fi
+            return 0
+        fi
+        if [[ -n $generic_alias && $verb == reset-failed ]]; then
+            test_action "SYSTEMCTL $*"
+            rm -f -- "$STATE/$generic_alias-unit-killed"
+            return 0
+        fi
         if [[ $verb == show && $property == "$QWEN_UNIT" ]]; then
             if [[ $* == *--property=LoadState* ]]; then
                 [[ -e $STATE/qwen-unit-killed ]] && printf 'loaded\n' || printf 'not-found\n'
@@ -2356,12 +2847,58 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
         launch_glm53-1m || die "GLM-5.3 transient unit failed to start"
         test_action "START glm53-1m"
     }
+    # Generic aliases: <alias>-qualified-for-test stands in for a qualified
+    # profile status, <alias>-hashes-valid for a passing digest walk.
+    generic_status() {
+        if [[ -e $STATE/$1-qualified-for-test ]]; then
+            printf qualified
+        else
+            printf '%s' "${generic_plan[$1:status]:-}"
+        fi
+    }
+    verify_generic_hashes() {
+        local alias=$1
+        generic_load "$alias" || die "generic profile $alias could not be resolved"
+        if [[ ! -e $STATE/$alias-hashes-valid ]]; then
+            echo "$alias test artifact hashes are not approved" >&2
+            return 1
+        fi
+        generic_identities[$alias]=test
+        test_action "HASHES $alias"
+    }
+    revalidate_generic_identities() {
+        [[ ${generic_identities[$1]:-} == test ]]
+    }
+    stop_generic_verified() {
+        generic_load "$1" ||
+            die "cannot resolve generic profile $1; refusing to assume it is stopped"
+        test_action "STOP $1"
+        rm -f -- "$STATE/$1-running"
+    }
+    start_generic_profile() {
+        local alias=$1
+        generic_load "$alias" || die "generic profile $alias could not be resolved"
+        generic_require_qualified "$alias"
+        [[ -n ${generic_identities[$alias]:-} ]] || verify_generic_hashes "$alias"
+        cleanup_generic_killed_unit "${generic_plan[$alias:unit]}"
+        launch_systemd_profile "$alias" "${generic_plan[$alias:binary]}" \
+            "${generic_plan[$alias:model]}" "${generic_plan[$alias:mmproj]}" \
+            "${generic_plan[$alias:draft_model]}" ||
+            die "$alias transient unit failed to start"
+        test_action "START $alias"
+    }
     test_running_marker() {
         case "$1" in
             dsv4) printf dsv4 ;;
             laguna) printf laguna ;;
             glm53-1m) printf glm53 ;;
-            *) printf qwen ;;
+            *)
+                if is_legacy_alias "$1"; then
+                    printf qwen
+                else
+                    printf '%s' "$1"
+                fi
+                ;;
         esac
     }
     wait_model_ready() {
@@ -2399,7 +2936,8 @@ fi
 [[ $command == restore || $command == stop || $command == dsv4 || \
         $command == glm52 || $command == qwen38 || $command == qwen38-1m || \
         $command == laguna || $command == glm53-1m ]] ||
-    die "usage: $0 status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m|laguna|glm53-1m"
+    generic_load "$command" ||
+    die "usage: $0 status [--json]|stop|restore|dsv4|glm52|qwen38|qwen38-1m|laguna|glm53-1m|<generic profile alias>"
 if [[ $command == stop ]]; then
     # Gate-window helper: stop the active engine but leave active.json
     # untouched so `restore` brings the same profile back afterwards.
@@ -2449,6 +2987,10 @@ fi
 if [[ $command == glm53-1m ]]; then
     verify_glm53_profile_hashes
 fi
+if ! is_legacy_alias "$command"; then
+    generic_require_qualified "$command"
+    verify_generic_hashes "$command"
+fi
 mkdir -p -- "$STATE"
 acquire_switch_lock
 if [[ $command == qwen38 || $command == qwen38-1m ]]; then
@@ -2460,14 +3002,22 @@ fi
 if [[ $command == glm53-1m ]]; then
     revalidate_glm53_identities
 fi
+if ! is_legacy_alias "$command"; then
+    revalidate_generic_identities "$command"
+fi
 previous_profile=$(read_active_profile)
+# Cache a generic previous profile's plan in this shell for stop/rollback.
+if [[ -n $previous_profile ]] && ! is_legacy_alias "$previous_profile"; then
+    generic_load "$previous_profile" ||
+        die "cannot resolve active generic profile $previous_profile"
+fi
 if [[ $previous_profile == "$command" ]] && verify_serving "$command"; then
     exit 0
 fi
 rollback_needed=true
 trap 'rollback "$command"' EXIT
 stop_profile "$previous_profile"
-"start_$command"
+start_profile "$command"
 wait_model_ready "$command" || die "$command readiness timed out or model identity is wrong"
 verify_serving "$command"
 commit_active "$command"

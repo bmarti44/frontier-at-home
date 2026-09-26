@@ -100,9 +100,9 @@ reviewer ceremony for new-model work. Distilled from the GLM-5.2 effort.
    `docs/QUALIFY-OFFHOST.md`. Rendered profiles are byte-compared to the
    production fixtures by `scripts/tests/test_profile_render_conformance.py`.
 2. Serve on 127.0.0.1 only; poll `/v1/models` for readiness. Production
-   promotion additionally requires `scripts/52_engine_switch.sh` support for
-   the new engine (it currently recognizes only `dsv4`/`glm52`) and the
-   AGENTS.md switch/rollback/endpoint-preservation tests.
+   promotion additionally requires a switch alias for the new engine (a
+   generic `switch` block in its profile, docs/PROFILE-SCHEMA.md; no switch
+   code) and the AGENTS.md switch/rollback/endpoint-preservation tests.
 
 ## 5. The lean verification loop (per candidate/change)
 

@@ -1,0 +1,40 @@
+{
+ "arm": "text",
+ "checks": {
+  "exit_code_zero": true,
+  "frozen_inputs_verified_throughout": true,
+  "identity_verified_pre_and_post": true,
+  "mem_low_at_or_above_kill_floor": true,
+  "memory_samples_present": true,
+  "no_kernel_fault": true,
+  "required_artifacts_fresh": true,
+  "required_artifacts_present": true,
+  "steps_at_least_128": true,
+  "text_review_bound_to_output": true,
+  "text_review_coherent_on_topic": true,
+  "timestamps_full_utc": true,
+  "wrapper_not_killed": true
+ },
+ "derived_post_hoc": false,
+ "kind": "fidelity_smoke_not_capability",
+ "metrics": {
+  "emitted_steps": 256,
+  "frozen_check_failures": [],
+  "kernel_fault_lines": 0,
+  "late_artifacts": [],
+  "mem_avail_low_kib": 60957988,
+  "memory_sample_count": 169,
+  "missing_artifacts": [],
+  "stale_artifacts": [],
+  "text_review": {
+   "artifact_sha256": {
+    "output.txt": "431e352a7e4f6fa05aced0c04423604fc2e9e62258caac0cac6ef1f01a18c873"
+   },
+   "coherent_on_topic": true,
+   "note": "Accurate, well-structured multi-paragraph CPU-pipeline explanation (five-stage RISC pipeline, IF stage); truncated at the 256-token cap, no repetition or degeneration.",
+   "reviewer": "orchestrator (Claude Opus 5.5)"
+  }
+ },
+ "schema_version": 1,
+ "verdict": "PASS"
+}

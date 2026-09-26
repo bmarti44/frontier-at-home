@@ -206,8 +206,10 @@ Scaffold complete. Remaining integration checklist:
       ${backend}-<class|tier>.json profile per docs/PROFILE-SCHEMA.md, then
       validate with scripts/92_resolve_profile.py check.
   [ ] If the model becomes a production switch target, give its profile a
-      switch_alias and a conformance fixture (see
-      scripts/tests/test_profile_render_conformance.py).
+      switch_alias plus a generic "switch" block (docs/PROFILE-SCHEMA.md; no
+      switch code needed), a conformance fixture, and the alias-table entries
+      in scripts/tests/test_profile_render_conformance.py and
+      scripts/tests/test_engine_switch.py.
   [ ] Download politeness: push branches BEFORE starting weight downloads; fetch
       only the primary quant, and defer ladder quants until a gate needs them.
 EOF

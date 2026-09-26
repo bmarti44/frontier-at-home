@@ -91,9 +91,36 @@ out of current model-performance summaries. When no qualified fast-path value
 exists, publish a dash or "not yet measured" rather than a slower diagnostic
 number.
 
+### Keep process proportionate
+
+The goal is to make adding a model fast and safe, not to maximize ceremony.
+Match the process to what a result is used for:
+
+- **Acceptance gates** get the full candidate/review convergence loop below.
+  These are lossy fidelity gates, the direct largest-context gate, performance
+  numbers that will be published, and promotion to a serving alias.
+- **Smoke, correctness and diagnostic runs** get one focused review. This
+  includes fidelity smokes labeled as such. Fix verified high or critical
+  findings once, then run. Label the results diagnostic. They never become
+  headline numbers or acceptance evidence.
+
+Evidence checks exist to catch mistakes, such as:
+
+- missing or stale artifacts;
+- the wrong binary, model or fixture;
+- a changed scorer;
+- silently swallowed failures;
+- output nobody reviewed.
+
+They do not need to defend against a deliberate forger who has write access to
+the evidence directory or repository. Reviewers should record such findings as
+out of scope, not as blockers. Prefer the shared tooling to per-model harness
+code (see "Adding another model"). Every bespoke checker is more surface to
+review and maintain.
+
 Candidate iteration is governed by convergence, not a hard retry count. Continue
-publishing candidates for a gate autonomously only while all three conditions
-hold:
+publishing candidates for an acceptance gate autonomously only while all three
+conditions hold:
 
 1. The candidate changes only what is needed to close findings named in the
    latest review; do not add scope.
@@ -221,7 +248,16 @@ The operator interface must remain:
 scripts/52_engine_switch.sh status --json
 sudo scripts/52_engine_switch.sh glm52
 sudo scripts/52_engine_switch.sh dsv4
+sudo scripts/52_engine_switch.sh dsv41flash
 ```
+
+`dsv41flash` (DeepSeek V4.1 Flash on ds4) is the first generic alias: the
+switch drives it entirely from its profile's `switch` block
+(`docs/PROFILE-SCHEMA.md`, `scripts/lib/switch_generic.py`). A new model
+alias needs only a profile, `model.json`, a conformance fixture and the
+test-table entries, with no new switch code. The switch refuses any generic
+profile that is not `qualified`, so `dsv41flash` stays refused until its gates
+pass and the profile status flips.
 
 The switch must serialize on one lock, verify hashes, stop only the
 identity-verified process group, validate authentication/health/semantics and
@@ -325,3 +361,15 @@ For a new model family:
    an optimistic narrative for a terminal measurement.
 10. Prove speed and fidelity with `scripts/94_qualify_profile.py --profile <id>`
     (docs/QUALIFY-PROFILE.md); every README number comes from that bundle.
+
+Reuse the shared harness wherever it fits:
+
+- `scripts/90_scaffold_model.sh`
+- `scripts/92_resolve_profile.py`
+- `scripts/94_qualify_profile.py`
+- `results/glm52-gates/harness/glm_safe_run.sh`
+- `scripts/03_memory_guard.py`
+
+Do not write model-specific bundlers, evidence formats or frozen-input
+machinery. If the shared tooling lacks something, extend it once so the next
+model benefits too.
