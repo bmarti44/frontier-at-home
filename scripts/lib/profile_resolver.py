@@ -59,6 +59,8 @@ PROFILE_KEYS = {
     "memory_model", "offload", "context_cap", "port_role", "bench",
     "switch_alias", "verify_on_hardware", "serving", "qualification_targets",
     "qualification_options",
+    # Generic switch contract (scripts/lib/switch_generic.py validates it).
+    "switch",
 }
 LAUNCH_KEYS = {
     "mechanism", "user", "runuser", "delegate", "log_name", "env",

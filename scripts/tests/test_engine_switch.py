@@ -56,7 +56,9 @@ CONTROL_INSTALLER = ROOT / "scripts/53_install_switch_control.sh"
 # to the production paths captured in
 # scripts/tests/fixtures/profile-conformance/.
 FIXTURES = ROOT / "scripts/tests/fixtures/profile-conformance"
-SWITCH_ALIASES = ("dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m")
+SWITCH_ALIASES = (
+    "dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m", "dsv41flash",
+)
 PRODUCTION_REPO = "/home/bmarti44/spark-deepseek-v4-flash"
 GLM53_PROFILE = ROOT / "configs" / "profiles" / "glm-5.3-flash" / "cuda-spark-128g-1m.json"
 
@@ -86,6 +88,8 @@ def switch_production_map(test_root: str) -> dict[str, str]:
         f"{test_root}/glm53-model-weights":
             "/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp",
         f"{test_root}/cache": "/home/bmarti44/.cache",
+        # Generic profiles render {model_root} under the test root.
+        f"{test_root}/models": "/home/bmarti44/models",
         test_root: state,
         # In test mode the switch renders from the checkout that owns it
         # (a worktree or the production tree); fixtures pin the latter.
@@ -313,7 +317,9 @@ class EngineSwitchTests(unittest.TestCase):
     def test_rollback_waits_for_every_restored_profile_before_verification(self):
         source = SCRIPT.read_text()
         rollback = source[source.index("rollback() {") : source.index("command=${1")]
-        start = rollback.index('"start_$previous_profile"')
+        # start_profile dispatches legacy aliases to "start_$alias" and every
+        # other alias to the generic profile starter.
+        start = rollback.index('start_profile "$previous_profile"')
         wait = rollback.index('wait_model_ready "$previous_profile"')
         verify = rollback.index('verify_serving "$previous_profile"')
         self.assertLess(start, wait)
@@ -1192,6 +1198,316 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertEqual(
                 json.loads((root / "active.json").read_text())["profile"], "dsv4"
             )
+
+    # -- Generic profile aliases (scripts/lib/switch_generic.py) ---------------
+    # dsv41flash is the first alias with no dedicated switch code. Its profile
+    # is still `estimated`, so the switch refuses it; the test-only marker
+    # `<alias>-qualified-for-test` stands in for a qualified status flip.
+
+    def generic_root(self, root: Path, *, active: str | None = "dsv4",
+                     qualified: bool = True, hashes: bool = True) -> None:
+        if active is not None:
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": active})
+            )
+        if qualified:
+            (root / "dsv41flash-qualified-for-test").touch()
+        if hashes:
+            (root / "dsv41flash-hashes-valid").touch()
+
+    def test_dsv41flash_production_launcher_matches_the_profile(self):
+        snapshot = render_switch_snapshot("dsv41flash")
+        self.assertEqual(snapshot["mechanism"], "systemd-run")
+        self.assertEqual(
+            snapshot["binary"], "/home/bmarti44/.cache/ds4-v41-0aaea5a2/ds4-server"
+        )
+        argv = snapshot["argv"]
+        self.assertEqual(argv[argv.index("-m") + 1],
+                         "/home/bmarti44/models/deepseek-v4.1-flash/"
+                         "DeepSeek-V4.1-Flash-Q2.gguf")
+        self.assertEqual(argv[argv.index("-c") + 1], "1048576")
+        self.assertEqual(argv[argv.index("--port") + 1], "8013")
+        self.assertEqual(
+            argv[argv.index("--ssd-streaming-cache-experts") + 1], "42gb"
+        )
+        systemd = snapshot["systemd"]
+        self.assertEqual(systemd["unit"], "dsv41-engine")
+        self.assertEqual(systemd["properties"]["User"], "bmarti44")
+        self.assertEqual(systemd["properties"]["MemorySwapMax"], "0")
+        self.assertEqual(
+            systemd["server_log"],
+            "/home/dsv4/ds4-project/engine-switch/dsv41.server.log",
+        )
+        self.assertEqual(snapshot["env"]["HOME"], "/home/bmarti44")
+
+    def test_generic_starter_keeps_the_safety_contract(self):
+        source = SCRIPT.read_text()
+        starter = source[
+            source.index("start_generic_profile() {"):
+            source.index("start_profile() {")
+        ]
+        self.assertRegex(
+            starter,
+            r"(?s)03_memory_guard\.py.*?--timeout-seconds 180\s+\|\|\s+die",
+        )
+        self.assertIn('--required-gib "$required_gib"', starter)
+        self.assertIn('--threshold-gib "$floor_gib" --interval-sec 1', starter)
+        self.assertIn("generic_require_qualified", starter)
+        self.assertIn("revalidate_generic_identities", starter)
+        self.assertIn("launch_systemd_profile", starter)
+        self.assertIn("ARMED $pid $pgid $ticks provisional", starter)
+        self.assertIn("ARMED $pid $pgid $ticks engine", starter)
+        self.assertIn("process record already exists; refusing a second model",
+                      starter)
+        self.assertIn("transient unit executed an unapproved binary", starter)
+        readiness = source[
+            source.index("verify_generic_process_ready() {"):
+            source.index("generic_local_checks() {")
+        ]
+        for contract in (
+            'systemctl show "$unit" --property=MainPID',
+            'proc_identity "$pid"',
+            'readlink -f "/proc/$pid/exe"',
+            'ss -H -ltnp "sport = :$PORT"',
+            'sockets == *"pid=$pid,"*',
+        ):
+            self.assertIn(contract, readiness)
+        stop = source[
+            source.index("stop_generic_verified() {"):
+            source.index("stop_profile() {")
+        ]
+        self.assertIn("DISARMED $pid $expected_pgid $expected_ticks", stop)
+        self.assertIn("refusing to stop unit", stop)
+        self.assertIn("is live without an identity record", stop)
+
+    def test_dsv41flash_estimated_profile_is_refused_before_any_stop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root, qualified=False)
+            (root / "dsv4-running").touch()
+            result = self.run_switch(root, "dsv41flash")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("estimated", result.stderr)
+            self.assertTrue((root / "dsv4-running").exists())
+            self.assertFalse((root / "actions.log").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+
+    def test_dsv41flash_hash_failure_is_rejected_before_active_profile_is_stopped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root, hashes=False)
+            (root / "dsv4-running").touch()
+            result = self.run_switch(root, "dsv41flash")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("dsv41flash", result.stderr)
+            self.assertTrue((root / "dsv4-running").exists())
+            self.assertFalse((root / "actions.log").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+
+    def test_dsv41flash_successful_launch_uses_the_generic_unit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root)
+            (root / "dsv4-running").touch()
+            (root / "dsv41flash-unit-killed").touch()
+            result = self.run_switch(root, "dsv41flash")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "dsv41flash",
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("HASHES dsv41flash", actions)
+            self.assertIn("DSV4 stop", actions)
+            self.assertLess(actions.index("HASHES dsv41flash"),
+                            actions.index("DSV4 stop"))
+            self.assertIn("SYSTEMCTL reset-failed dsv41-engine.service", actions)
+            self.assertIn("SYSTEMD_RUN --unit=dsv41-engine", actions)
+            self.assertIn(
+                f"{root}/cache/ds4-v41-0aaea5a2/ds4-server --cuda -m "
+                f"{root}/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.gguf "
+                "-c 1048576 --host 127.0.0.1 --port 8013 --ssd-streaming "
+                "--ssd-streaming-cache-experts 42gb",
+                actions,
+            )
+            self.assertIn("--property User=bmarti44", actions)
+            self.assertIn("--property MemorySwapMax=0", actions)
+            self.assertIn("--setenv HOME=/home/bmarti44", actions)
+            self.assertIn("/run/lock/frontier-at-home/inference.lock", actions)
+            self.assertIn(
+                f"--property StandardOutput=append:{root}/dsv41.server.log", actions
+            )
+            self.assertIn("START dsv41flash", actions)
+            self.assertIn("WAIT dsv41flash", actions)
+            self.assertIn("VERIFY dsv41flash", actions)
+            self.assertFalse((root / "dsv41flash-unit-killed").exists())
+            self.assertFalse((root / "dsv4-running").exists())
+            self.assertTrue((root / "dsv41flash-running").exists())
+
+    def test_dsv41flash_startup_failure_rolls_back_to_dsv4(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root)
+            (root / "dsv4-running").touch()
+            (root / "fail-dsv41flash-start").touch()
+            result = self.run_switch(root, "dsv41flash")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("dsv41flash transient unit failed to start", result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertNotIn("START dsv41flash", actions)
+            self.assertIn("STOP dsv41flash", actions)
+            self.assertLess(actions.index("STOP dsv41flash"),
+                            actions.index("DSV4 start"))
+            self.assertIn("WAIT dsv4", actions)
+            self.assertIn("VERIFY dsv4", actions)
+            self.assertTrue((root / "dsv4-running").exists())
+            self.assertFalse((root / "dsv41flash-running").exists())
+
+    def test_dsv41flash_wrong_model_identity_rolls_back_to_dsv4(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root)
+            (root / "dsv4-running").touch()
+            (root / "fail-dsv41flash-verify").touch()
+            result = self.run_switch(root, "dsv41flash")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("START dsv41flash", actions)
+            self.assertLess(actions.index("VERIFY dsv41flash"),
+                            actions.index("STOP dsv41flash"))
+            self.assertLess(actions.index("STOP dsv41flash"),
+                            actions.index("DSV4 start"))
+            self.assertIn("VERIFY dsv4", actions)
+            self.assertTrue((root / "dsv4-running").exists())
+            self.assertFalse((root / "dsv41flash-running").exists())
+
+    def test_generic_readiness_uses_the_profile_served_model_id(self):
+        source = SCRIPT.read_text()
+        for name in ("wait_model_ready() {", "verify_serving() {"):
+            body = source[source.index(name):]
+            body = body[:body.index("\n}\n")]
+            self.assertIn('generic_plan[$profile:served_model_id]', body, name)
+            self.assertIn("generic_local_checks", body, name)
+
+    def test_status_and_stop_accept_dsv41flash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root, active="dsv41flash", qualified=False,
+                              hashes=False)
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            status = json.loads(result.stdout)
+            self.assertEqual(status["active_profile"], "dsv41flash")
+            self.assertEqual(status["state"], "recorded")
+            (root / "dsv41flash-running").touch()
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("STOPPED dsv41flash", result.stdout)
+            self.assertIn("STOP dsv41flash", (root / "actions.log").read_text())
+            self.assertFalse((root / "dsv41flash-running").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "dsv41flash",
+            )
+
+    def test_restore_dsv41flash_estimated_falls_back_to_dsv4(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root, active="dsv41flash", qualified=False)
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(
+                "RESTORE FAILED for recorded profile dsv41flash; falling back to dsv4",
+                result.stderr,
+            )
+            self.assertIn("RESTORE FALLBACK committed dsv4 in active.json",
+                          result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertNotIn("START dsv41flash", actions)
+            self.assertIn("DSV4 start", actions)
+
+    def test_restore_dsv41flash_start_failure_falls_back_to_dsv4(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root, active="dsv41flash")
+            (root / "fail-dsv41flash-start").touch()
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(
+                "RESTORE FAILED for recorded profile dsv41flash; falling back to dsv4",
+                result.stderr,
+            )
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"], "dsv4"
+            )
+
+    def test_restore_dsv41flash_restarts_the_recorded_generic_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.generic_root(root, active="dsv41flash")
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "dsv41flash",
+            )
+            actions = (root / "actions.log").read_text()
+            self.assertIn("HASHES dsv41flash", actions)
+            self.assertIn("START dsv41flash", actions)
+            self.assertNotIn("DSV4 start", actions)
+
+    def test_generic_discovery_error_fails_closed(self):
+        # An alias-shaped active profile that no profile resolves might still
+        # be a live engine; the switch must never treat it as "nothing active".
+        for verb in (("status", "--json"), ("stop",), ("restore",), ("dsv4",)):
+            with self.subTest(verb=verb), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                (root / "active.json").write_text(
+                    json.dumps({"schema_version": 1, "profile": "nosuchmodel"})
+                )
+                result = self.run_switch(root, *verb)
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn("nosuchmodel", result.stderr)
+                self.assertFalse((root / "actions.log").exists())
+                self.assertEqual(
+                    json.loads((root / "active.json").read_text())["profile"],
+                    "nosuchmodel",
+                )
+
+    def test_non_alias_active_value_keeps_the_legacy_inactive_reading(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "Not An Alias"})
+            )
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["active_profile"], None)
+
+    def test_unknown_alias_command_is_rejected_without_side_effects(self):
+        for command in ("nosuchmodel", "render-x", "Bad"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                (root / "active.json").write_text(
+                    json.dumps({"schema_version": 1, "profile": "dsv4"})
+                )
+                result = self.run_switch(root, command)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("usage:", result.stderr)
+                self.assertFalse((root / "actions.log").exists())
 
     def test_concurrent_status_calls_return_valid_json(self):
         with tempfile.TemporaryDirectory() as tmp:
