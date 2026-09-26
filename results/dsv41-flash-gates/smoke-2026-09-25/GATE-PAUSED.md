@@ -27,3 +27,18 @@ Sol's minimal fix:
 Inherited limitation, disclosed: a commit that moves HEAD during a run makes otherwise-valid phase records disagree on the commit, so the run FAILs. That errs toward failing.
 
 No new critical or high defect was found in candidate 7.
+
+## Update: candidate 8 and review round 7 (2026-09-26)
+
+The owner authorized "the candidate 8 fix, then one more review". Candidate 8 is commits `a51c8fe2` and `636be6fd`, plus the preregistration in `6933f704`. Review round 7 is `reviews/sol-round7.md`, and its verdict is **not fit**. The gate is paused again. It has run 8 candidates, which is the per-gate maximum, across 7 campaign review rounds.
+
+| Round | Candidate | Open HIGH/CRITICAL |
+| --- | --- | ---: |
+| 7 | 8 | 2 |
+
+The open findings:
+
+1. **HIGH, finding 3 still partially closed.** Verbatim replay now fails, and both fixtures are re-hashed at bundling. But a genuine launch record copied into all three phases passes `verify()` if its editable `phase`, `recorded_at` and file mtime are changed. Sol's fix is an independently timestamped, tamper-evident receipt for each phase, checked at bundling.
+2. **HIGH, new in candidate 8.** The fixed 60 s and 600 s windows could reject a genuine run whose identity check, `journalctl` step or scoring runs slowly. This errs toward a false FAIL, not a false PASS. Sol's fix is to check the order of the phases against recorded step boundaries, without unverified maximum durations.
+
+No acceptance arm has run. The next step is the owner's decision.
