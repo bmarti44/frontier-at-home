@@ -30,7 +30,10 @@ re-run of the frozen scorer on the bundled files that reproduces
 fidelity-summary.json exactly; the reference rows go into raw.jsonl. A text
 review approves only the output.txt whose sha256 it records. Frozen-input
 checks taken at launch, after the run and (fidelity) after scoring must all
-be present and ok. started_at/finished_at must be full UTC ISO timestamps;
+be present and ok. Candidate 6 (round 4, finding 3 remainder): every phase
+must report the same commit and the same actual component hashes, and those
+must match the frozen-inputs file and the scorer on disk at bundling time.
+started_at/finished_at must be full UTC ISO timestamps;
 engine-written artifacts must fall between them (1 s tolerance).
 
 Fixed checks (all arms): required artifacts present; exit_code == 0; wrapper reported killed=no; wrapper
@@ -51,7 +54,7 @@ from datetime import datetime, timezone
 KILL_FLOOR_KIB = 40 * 1024 * 1024
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCORER = os.path.join(HERE, "score_fidelity.py")
-FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c5.json")
+FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c6.json")
 REQUIRED = {
     "all": ["command.txt", "unit.txt", "started_at.txt", "finished_at.txt", "exit_code.txt",
             "identity.json", "frozen-check.json", "frozen-check-post-run.json",
@@ -79,6 +82,13 @@ def sha256_file(path):
         for block in iter(lambda: f.read(1 << 20), b""):
             h.update(block)
     return h.hexdigest()
+
+
+def sha256_or_none(path):
+    try:
+        return sha256_file(path)
+    except FileNotFoundError:
+        return None
 
 
 def read(path, default=None):
@@ -115,6 +125,21 @@ def rescore(d):
                         os.path.join(d, "fixture-manifest.tsv"), out],
                        capture_output=True, text=True)
         return load_json(out)
+
+
+def frozen_consistent(checks):
+    """All phases ok, one commit, one hash map, bound to the files on disk."""
+    vals = list(checks.values())
+    if not vals or not all(isinstance(v, dict) and v.get("ok") is True for v in vals):
+        return False
+    first = vals[0]
+    maps = first.get("component_sha256")
+    if not isinstance(maps, dict) or not first.get("commit"):
+        return False
+    if any(v.get("commit") != first["commit"] or v.get("component_sha256") != maps for v in vals):
+        return False
+    return (maps.get("score_fidelity.py") == sha256_or_none(SCORER) is not None and
+            maps.get(os.path.basename(FROZEN)) == sha256_or_none(FROZEN) is not None)
 
 
 def strip_paths(summary):
@@ -223,14 +248,17 @@ def main():
         "kill_floor_kib": KILL_FLOOR_KIB,
         "identity": identity,
         "frozen_checks": frozen_checks,
+        "frozen_commit": next(iter(frozen_checks.values()), {}).get("commit")
+        if frozen_checks and isinstance(next(iter(frozen_checks.values())), dict) else None,
+        "component_sha256": {"score_fidelity.py": sha256_or_none(SCORER),
+                             os.path.basename(FROZEN): sha256_or_none(FROZEN)},
         "artifact_sha256": files,
     }
     checks = {
         "required_artifacts_present": not missing,
         "timestamps_full_utc": start is not None and finish is not None and start <= finish,
         "required_artifacts_fresh": start is not None and finish is not None and not stale and not late,
-        "frozen_inputs_verified_throughout": all(
-            isinstance(v, dict) and v.get("ok") is True for v in frozen_checks.values()),
+        "frozen_inputs_verified_throughout": frozen_consistent(frozen_checks),
         "exit_code_zero": exit_code is not None and int(exit_code) == 0,
         "wrapper_not_killed": bool(killed) and killed.group(2) == "no",
         "no_kernel_fault": not kernel_events,

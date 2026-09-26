@@ -118,3 +118,15 @@ Frozen inputs: `frozen-inputs-c5.json`.
 4. **Timestamps (finding 4, MEDIUM).** `started_at` and `finished_at` must be full ISO timestamps with a UTC offset; anything else is FAIL. Required artifacts must be written after the start. Engine-written artifacts (containment logs, `steps.json`, `cuda.tsv`) must not be newer than `finished_at`. Both bounds have a 1 s tolerance.
 
 `harness/test_bundle_attempt.py` has 12 new mutation tests, 27 in total. All 12 fail against the candidate-4 bundler and pass on candidate 5. The derived post-hoc bundles were regenerated and remain FAIL.
+
+## Candidate 6 (2026-09-26, after GPT-6 sol high review round 4)
+
+Round 4 closed round-3 findings 1, 2 and 4, and found no new critical or high defect. Finding 3 stayed partially open: the frozen-inputs file itself was not bound, so a scorer and its expected hash could be changed together after launch. Open blocking findings fell from 3 to 1. This change closes only that remainder.
+
+- **Every frozen-input check phase requires:**
+  - the frozen-inputs file (`frozen-inputs-c6.json`) is byte-identical to its committed blob at `HEAD`;
+  - `git status --porcelain` is empty for every frozen repository path.
+- **Every phase records:** the `HEAD` commit, and the actual SHA-256 of every component (harness, wrapper, guard, scorer, fixture, reference and the frozen-inputs file).
+- **The bundler requires** one commit and one hash map across all phases. The recorded scorer and frozen-inputs hashes must equal the files on disk at bundling time. The bundler records the commit and those hashes in `manifest.json`.
+
+There are 4 new mutation tests, 31 in the bundler suite. All 4 fail against the candidate-5 bundler and pass on candidate 6.

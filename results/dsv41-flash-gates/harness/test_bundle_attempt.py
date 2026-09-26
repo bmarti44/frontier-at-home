@@ -10,6 +10,9 @@ Candidate 5 (review round 3) adds: text reviews bound to the output.txt hash,
 fidelity bundles re-scored from in-bundle copies at frozen hashes with scorer
 exit 0, frozen-input checks after the run and after scoring, and full-UTC
 start/finish bounds on artifact mtimes.
+
+Candidate 6 (review round 4): frozen checks must share one commit and one
+actual-hash map that matches the scorer and frozen-inputs file on disk.
 """
 import hashlib
 import json
@@ -24,10 +27,24 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLER = os.path.join(HERE, "bundle_attempt.py")
 SCORER = os.path.join(HERE, "score_fidelity.py")
+FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c6.json")
 SOURCE = os.path.join(HERE, "..", "smoke-2026-09-25", "diag-cache42gb")
 KEEP = ["command.txt", "unit.txt", "exit_code.txt", "containment"]
 FIX = ("/home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/"
        "deepseek-v4.1-flash-20260919-router")
+
+
+def sha(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def frozen_check(phase, **over):
+    rec = {"phase": phase, "ok": True, "commit": "1" * 40,
+           "component_sha256": {"score_fidelity.py": sha(SCORER),
+                                "frozen-inputs-c6.json": sha(FROZEN)}}
+    rec.update(over)
+    return rec
 
 
 def utc(ts):
@@ -61,7 +78,7 @@ class BundleMutations(unittest.TestCase):
         self.write("finished_at.txt", utc(now + 60) + "\n")
         self.write("identity.json", {"verified": True})
         for name in ("frozen-check.json", "frozen-check-post-run.json"):
-            self.write(name, {"ok": True})
+            self.write(name, frozen_check(name))
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -89,7 +106,7 @@ class BundleMutations(unittest.TestCase):
                             ("cuda.tsv", "metal-reference.tsv", "fixture-manifest.tsv", "fidelity-summary.json")],
                             capture_output=True).returncode
         self.write("fidelity-score-exit.txt", f"{rc}\n")
-        self.write("frozen-check-post-score.json", {"ok": True})
+        self.write("frozen-check-post-score.json", frozen_check("frozen-check-post-score.json"))
 
     def bundle(self, arm):
         proc = subprocess.run([sys.executable, BUNDLER, self.d, arm], capture_output=True, text=True)
@@ -170,6 +187,28 @@ class BundleMutations(unittest.TestCase):
 
     def test_post_run_frozen_mismatch_fails(self):
         self.write("frozen-check-post-run.json", {"ok": False})
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_bare_ok_frozen_check_fails(self):
+        self.write("frozen-check-post-run.json", {"ok": True})
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_frozen_commit_changed_between_phases_fails(self):
+        self.write("frozen-check-post-run.json", frozen_check("post", commit="2" * 40))
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_frozen_hashes_changed_between_phases_fails(self):
+        rec = frozen_check("post")
+        rec["component_sha256"]["run_smoke.sh"] = "0" * 64
+        self.write("frozen-check-post-run.json", rec)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_scorer_and_frozen_swapped_together_fails(self):
+        # Consistent phases whose recorded scorer/frozen hashes are not the
+        # files on disk at bundling time (round 4, finding 3 scenario).
+        forged = {"score_fidelity.py": "a" * 64, "frozen-inputs-c6.json": "b" * 64}
+        for name in ("frozen-check.json", "frozen-check-post-run.json"):
+            self.write(name, frozen_check(name, component_sha256=forged))
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def test_non_utc_start_fails(self):
