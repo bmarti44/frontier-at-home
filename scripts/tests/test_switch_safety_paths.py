@@ -301,6 +301,37 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             self.assertIn("--required-gib 110", guard_args)
             self.assertEqual(fixture.systemctl_calls(), [])
 
+    def test_generic_start_aborts_before_launch_when_memwatch_never_arms(self):
+        with SwitchSafetyFixture() as fixture:
+            fixture.set_systemctl_responses({
+                "argv_prefix": [
+                    "show", "dsv41-engine.service", "--property=LoadState",
+                    "--value",
+                ],
+                "stdout": "not-found\n",
+                "returncode": 0,
+            })
+            result = fixture.run_function(
+                self.generic_plan_lines(fixture)
+                + "generic_identities[dsv41flash]=verified\n"
+                "export SWITCH_GUARD_EXIT=0\n"
+                "start_generic_profile dsv41flash\n"
+                'printf "STARTER_PROCEEDED\\n"',
+                timeout=30,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(
+                "dsv41flash memory watchdog failed to initialize", result.stderr
+            )
+            self.assertNotIn("STARTER_PROCEEDED", result.stdout)
+            self.assertIn("--required-gib 110",
+                          (fixture.root / "guard.called").read_text())
+            calls = fixture.systemctl_calls()
+            self.assertEqual(len(calls), 1)
+            self.assertNotIn("stop", [call[0] for call in calls])
+            self.assertFalse((fixture.state / "dsv41.process.json").exists())
+
     def test_generic_start_refuses_an_estimated_profile_before_the_guard(self):
         with SwitchSafetyFixture() as fixture:
             result = fixture.run_function(

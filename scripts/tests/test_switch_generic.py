@@ -116,7 +116,8 @@ class SwitchBlock(unittest.TestCase):
         for broken in ({"served_model_id": "x"}, {"mode": "generic"},
                        {"mode": "legacy", "served_model_id": "x"},
                        {"mode": "generic", "served_model_id": ""},
-                       {"mode": "generic", "served_model_id": "a b"}):
+                       {"mode": "generic", "served_model_id": "a b"},
+                       {"mode": "generic", "served_model_id": "Upper-Case"}):
             with self.subTest(block=broken):
                 with self.assertRaises(generic.SwitchError):
                     generic.validate_switch_block(broken)
