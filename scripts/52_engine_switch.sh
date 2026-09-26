@@ -2546,7 +2546,7 @@ verify_serving() {
     fi
     body=$(clean_curl -fsS --max-time 5 "http://127.0.0.1:$PORT/v1/models") ||
         return 1
-    clean_python - "$expected" "$body" <<'PY'
+    clean_python - "$expected" "$body" <<'PY' || return 1
 import json, sys
 expected=sys.argv[1]
 value=json.loads(sys.argv[2])
