@@ -36,7 +36,7 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLER = os.path.join(HERE, "bundle_attempt.py")
 SCORER = os.path.join(HERE, "score_fidelity.py")
-FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c8.json")
+FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c8b.json")
 sys.path.insert(0, HERE)
 import frozen_check as fc  # noqa: E402
 GENUINE = fc.record(FROZEN, "genuine")

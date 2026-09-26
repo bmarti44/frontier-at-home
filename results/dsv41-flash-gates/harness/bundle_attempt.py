@@ -60,7 +60,7 @@ import frozen_check  # noqa: E402
 KILL_FLOOR_KIB = 40 * 1024 * 1024
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCORER = os.path.join(HERE, "score_fidelity.py")
-FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c8.json")
+FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c8b.json")
 REQUIRED = {
     "all": ["command.txt", "unit.txt", "started_at.txt", "finished_at.txt", "exit_code.txt",
             "identity.json", "frozen-check.json", "frozen-check-post-run.json",

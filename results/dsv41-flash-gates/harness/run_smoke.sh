@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Contained DeepSeek V4.1 Flash CUDA smoke runner (fidelity/correctness only).
-# usage: run_smoke.sh text|fidelity OUTDIR
+# usage: run_smoke.sh text|fidelity OUTDIR [CACHE]   (expert cache, default 42gb)
 #        run_smoke.sh diag OUTDIR CACHE   (diagnostic only: -n 16, expert cache CACHE e.g. 4gb)
 # Preregistration: ../smoke-2026-09-25/PREREGISTRATION.md
 set -euo pipefail
@@ -10,12 +10,16 @@ readonly MODEL=/home/bmarti44/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.
 readonly FIX=$SRC/gguf-tools/quality-testing/deepseek-v4.1-flash-20260919-router
 readonly WRAPPER=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly LOCK=/run/lock/frontier-at-home/inference.lock
-readonly FROZEN=$REPO/results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c8.json
+readonly FROZEN=$REPO/results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c8b.json
 readonly BUNDLER=$REPO/results/dsv41-flash-gates/harness/bundle_attempt.py
 readonly PROMPT='Explain in three sentences why the sky is blue.'
 readonly LONG_PROMPT='Write a detailed, multi-paragraph explanation of how a CPU pipeline works, covering fetch, decode, execute, memory access, write-back, hazards, and branch prediction.'
 
 arm=${1:?arm}; out=${2:?outdir}
+# Expert-cache size: the fidelity arm at 42gb logged an NVRM
+# NV_ERR_NO_MEMORY line (fidelity-c8-20260926T163851/NOTE.md).
+cache=${3:-42gb}
+[[ $cache =~ ^[0-9]{1,3}gb$ ]] || { echo "bad cache $cache" >&2; exit 2; }
 # A fresh, empty output directory per attempt (review round 2, finding 1).
 if [[ -e $out && -n $(ls -A "$out" 2>/dev/null) ]]; then
   echo "output directory is not empty: $out" >&2; exit 4
@@ -72,17 +76,16 @@ frozen_check frozen-check.json || { echo "frozen input mismatch" >&2; exit 22; }
 case $arm in
   text)
     timeout_s=900
-    cmd=("$SRC/ds4" --cuda -m "$MODEL" --ssd-streaming --ssd-streaming-cache-experts 42gb
+    cmd=("$SRC/ds4" --cuda -m "$MODEL" --ssd-streaming --ssd-streaming-cache-experts "$cache"
          -c 8192 --nothink --temp 0 -n 256 -p "$LONG_PROMPT"
          --dump-logprobs "$out/steps.json" --logprobs-top-k 5) ;;
   fidelity)
     timeout_s=5400
     cmd=("$SRC/gguf-tools/quality-testing/score_official" "$MODEL" "$FIX/manifest.tsv"
-         "$out/cuda.tsv" 34816 --ssd-streaming --ssd-streaming-cache-experts 42gb) ;;
+         "$out/cuda.tsv" 34816 --ssd-streaming --ssd-streaming-cache-experts "$cache") ;;
   diag)
     timeout_s=900
-    cache=${3:?cache size, e.g. 4gb}
-    [[ $cache =~ ^[0-9]{1,3}gb$ ]] || { echo "bad cache $cache" >&2; exit 2; }
+    [[ -n ${3:-} ]] || { echo "diag needs CACHE, e.g. 4gb" >&2; exit 2; }
     cmd=("$SRC/ds4" --cuda -m "$MODEL" --ssd-streaming --ssd-streaming-cache-experts "$cache"
          -c 8192 --nothink --temp 0 -n 16 -p "$PROMPT") ;;
   *) echo "unknown arm $arm" >&2; exit 2 ;;
