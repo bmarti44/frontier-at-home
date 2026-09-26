@@ -33,6 +33,9 @@ checks taken at launch, after the run and (fidelity) after scoring must all
 be present and ok. Candidate 6 (round 4, finding 3 remainder): every phase
 must report the same commit and the same actual component hashes, and those
 must match the frozen-inputs file and the scorer on disk at bundling time.
+Candidate 7 (round 5): frozen_check.verify re-derives everything it can: the
+commit must exist and its tracked blobs must hash to the recorded map, which
+must be complete and equal the frozen-inputs expectations.
 started_at/finished_at must be full UTC ISO timestamps;
 engine-written artifacts must fall between them (1 s tolerance).
 
@@ -51,10 +54,13 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import frozen_check  # noqa: E402
+
 KILL_FLOOR_KIB = 40 * 1024 * 1024
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCORER = os.path.join(HERE, "score_fidelity.py")
-FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c6.json")
+FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c7.json")
 REQUIRED = {
     "all": ["command.txt", "unit.txt", "started_at.txt", "finished_at.txt", "exit_code.txt",
             "identity.json", "frozen-check.json", "frozen-check-post-run.json",
@@ -128,18 +134,8 @@ def rescore(d):
 
 
 def frozen_consistent(checks):
-    """All phases ok, one commit, one hash map, bound to the files on disk."""
-    vals = list(checks.values())
-    if not vals or not all(isinstance(v, dict) and v.get("ok") is True for v in vals):
-        return False
-    first = vals[0]
-    maps = first.get("component_sha256")
-    if not isinstance(maps, dict) or not first.get("commit"):
-        return False
-    if any(v.get("commit") != first["commit"] or v.get("component_sha256") != maps for v in vals):
-        return False
-    return (maps.get("score_fidelity.py") == sha256_or_none(SCORER) is not None and
-            maps.get(os.path.basename(FROZEN)) == sha256_or_none(FROZEN) is not None)
+    """Independent re-verification of every phase record (frozen_check.verify)."""
+    return frozen_check.verify(list(checks.values()), FROZEN, os.path.abspath(__file__))
 
 
 def strip_paths(summary):
@@ -254,11 +250,12 @@ def main():
                              os.path.basename(FROZEN): sha256_or_none(FROZEN)},
         "artifact_sha256": files,
     }
+    frozen_ok, frozen_reasons = frozen_consistent(frozen_checks)
     checks = {
         "required_artifacts_present": not missing,
         "timestamps_full_utc": start is not None and finish is not None and start <= finish,
         "required_artifacts_fresh": start is not None and finish is not None and not stale and not late,
-        "frozen_inputs_verified_throughout": frozen_consistent(frozen_checks),
+        "frozen_inputs_verified_throughout": frozen_ok,
         "exit_code_zero": exit_code is not None and int(exit_code) == 0,
         "wrapper_not_killed": bool(killed) and killed.group(2) == "no",
         "no_kernel_fault": not kernel_events,
@@ -266,7 +263,7 @@ def main():
         "mem_low_at_or_above_kill_floor": bool(mem) and min(mem) >= KILL_FLOOR_KIB,
         "identity_verified_pre_and_post": bool(identity) and identity.get("verified") is True,
     }
-    metrics = {"missing_artifacts": missing, "stale_artifacts": stale, "late_artifacts": late, "mem_avail_low_kib": min(mem) if mem else None, "memory_sample_count": len(mem),
+    metrics = {"missing_artifacts": missing, "stale_artifacts": stale, "late_artifacts": late, "frozen_check_failures": frozen_reasons, "mem_avail_low_kib": min(mem) if mem else None, "memory_sample_count": len(mem),
                "kernel_fault_lines": len(kernel_events)}
     if arm == "text":
         checks["steps_at_least_128"] = steps is not None and len(steps) >= MIN_TEXT_STEPS

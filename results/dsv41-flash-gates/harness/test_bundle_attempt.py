@@ -13,6 +13,11 @@ start/finish bounds on artifact mtimes.
 
 Candidate 6 (review round 4): frozen checks must share one commit and one
 actual-hash map that matches the scorer and frozen-inputs file on disk.
+
+Candidate 7 (review round 5): records come from frozen_check.record() at the
+committed HEAD (so this suite must run on a clean, committed candidate;
+test_genuine_record_is_ok says so if not), and forged records - invented
+commit, abbreviated map, altered hashes, missing checks - must FAIL.
 """
 import hashlib
 import json
@@ -27,7 +32,10 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUNDLER = os.path.join(HERE, "bundle_attempt.py")
 SCORER = os.path.join(HERE, "score_fidelity.py")
-FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c6.json")
+FROZEN = os.path.join(HERE, "..", "smoke-2026-09-25", "frozen-inputs-c7.json")
+sys.path.insert(0, HERE)
+import frozen_check as fc  # noqa: E402
+GENUINE = fc.record(FROZEN, "genuine")
 SOURCE = os.path.join(HERE, "..", "smoke-2026-09-25", "diag-cache42gb")
 KEEP = ["command.txt", "unit.txt", "exit_code.txt", "containment"]
 FIX = ("/home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/"
@@ -40,9 +48,8 @@ def sha(path):
 
 
 def frozen_check(phase, **over):
-    rec = {"phase": phase, "ok": True, "commit": "1" * 40,
-           "component_sha256": {"score_fidelity.py": sha(SCORER),
-                                "frozen-inputs-c6.json": sha(FROZEN)}}
+    rec = json.loads(json.dumps(GENUINE))
+    rec["phase"] = phase
     rec.update(over)
     return rec
 
@@ -189,8 +196,41 @@ class BundleMutations(unittest.TestCase):
         self.write("frozen-check-post-run.json", {"ok": False})
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
+    def test_genuine_record_is_ok(self):
+        self.assertTrue(GENUINE["ok"], "run on a clean, committed candidate: %s" % GENUINE["checks"])
+        self.assertEqual(self.bundle("diag"), (0, "PASS"))
+
     def test_bare_ok_frozen_check_fails(self):
         self.write("frozen-check-post-run.json", {"ok": True})
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def write_all(self, **over):
+        for name in ("frozen-check.json", "frozen-check-post-run.json"):
+            self.write(name, frozen_check(name, **over))
+
+    def test_invented_commit_fails(self):
+        # Sol round 5: consistent phases, ok=true, commit 111...111.
+        self.write_all(commit="1" * 40)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_abbreviated_map_fails(self):
+        amap = {k: v for k, v in GENUINE["component_sha256"].items()
+                if k in ("score_fidelity.py", "frozen_inputs")}
+        self.write_all(component_sha256=amap)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_consistently_altered_hash_fails(self):
+        amap = dict(GENUINE["component_sha256"], **{"run_smoke.sh": "0" * 64})
+        self.write_all(component_sha256=amap)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_missing_check_key_fails(self):
+        checks = {k: v for k, v in GENUINE["checks"].items() if k != "frozen_paths_clean"}
+        self.write_all(checks=checks)
+        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
+
+    def test_real_older_commit_fails(self):
+        self.write_all(commit="025427486e2da118b2c980a0c2bf555fdacfd73a")
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def test_frozen_commit_changed_between_phases_fails(self):
@@ -201,14 +241,6 @@ class BundleMutations(unittest.TestCase):
         rec = frozen_check("post")
         rec["component_sha256"]["run_smoke.sh"] = "0" * 64
         self.write("frozen-check-post-run.json", rec)
-        self.assertEqual(self.bundle("diag"), (1, "FAIL"))
-
-    def test_scorer_and_frozen_swapped_together_fails(self):
-        # Consistent phases whose recorded scorer/frozen hashes are not the
-        # files on disk at bundling time (round 4, finding 3 scenario).
-        forged = {"score_fidelity.py": "a" * 64, "frozen-inputs-c6.json": "b" * 64}
-        for name in ("frozen-check.json", "frozen-check-post-run.json"):
-            self.write(name, frozen_check(name, component_sha256=forged))
         self.assertEqual(self.bundle("diag"), (1, "FAIL"))
 
     def test_non_utc_start_fails(self):
