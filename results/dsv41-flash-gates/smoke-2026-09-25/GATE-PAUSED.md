@@ -42,3 +42,15 @@ The open findings:
 2. **HIGH, new in candidate 8.** The fixed 60 s and 600 s windows could reject a genuine run whose identity check, `journalctl` step or scoring runs slowly. This errs toward a false FAIL, not a false PASS. Sol's fix is to check the order of the phases against recorded step boundaries, without unverified maximum durations.
 
 No acceptance arm has run. The next step is the owner's decision.
+
+## Resolution: owner decision (2026-09-26)
+
+The owner judged the review loop over-engineered and chose the following:
+
+- **Candidate 9 is discarded.** It was never committed. It would have added journald receipts.
+- **Forgery is out of scope.** Round 7 finding 1 was forgery of evidence by someone with write access, and it is recorded as out of scope. AGENTS.md now says so explicitly under "Keep process proportionate".
+- **Round 7 finding 2 is an accepted known limitation.** A slow step can exceed a fixed time window, which can produce only a visible false FAIL, never a false PASS.
+- **Candidate 8 runs as a labeled fidelity smoke.** It is diagnostic evidence, not an acceptance result.
+- **Later gates use the shared tooling** (`scripts/94_qualify_profile.py` and the profile system), not more per-model harness code.
+
+The gate is closed. No more review rounds will be spent on this harness.
