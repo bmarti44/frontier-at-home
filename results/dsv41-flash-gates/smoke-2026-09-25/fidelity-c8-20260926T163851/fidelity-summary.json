@@ -1,0 +1,32 @@
+{
+ "cases": 112,
+ "checks": {
+  "api_top1_count_equal": true,
+  "case_count_112": true,
+  "cuda_ids_match_fixture": true,
+  "ids_equal": true,
+  "metal_ids_match_fixture": true,
+  "nll_delta_ub_le_0.01": true,
+  "target_tokens_equal": true,
+  "top1_loss_ub_le_0.5pp": true
+ },
+ "cuda": {
+  "api_top1_agreement": 0.9058034412365121,
+  "token_weighted_nll": 0.39251799281872024
+ },
+ "cuda_tsv": "/home/bmarti44/spark-deepseek-v4-flash/results/dsv41-flash-gates/smoke-2026-09-25/fidelity-c8-20260926T163851/cuda.tsv",
+ "fixture_manifest": "/home/bmarti44/spark-deepseek-v4-flash/results/dsv41-flash-gates/smoke-2026-09-25/fidelity-c8-20260926T163851/fixture-manifest.tsv",
+ "fixture_sha256": "47fc28ffd4a0f688cfd18ae0377a1cc37fb823a69150ae2a2ac73a8a797b912e",
+ "kind": "fidelity_smoke_not_capability",
+ "metal": {
+  "api_top1_agreement": 0.9034703995333917,
+  "token_weighted_nll": 0.3968404546430738
+ },
+ "metal_reference_tsv": "/home/bmarti44/spark-deepseek-v4-flash/results/dsv41-flash-gates/smoke-2026-09-25/fidelity-c8-20260926T163851/metal-reference.tsv",
+ "nll_delta": -0.004322461824353585,
+ "nll_delta_upper95": -0.000381453168244672,
+ "reference_note": "Metal reference GGUF byte identity with the pinned CUDA Q2 is not established; a delta measures combined artifact+backend fidelity",
+ "top1_loss_pp": -0.2333041703120431,
+ "top1_loss_upper95_pp": 0.07403020432336094,
+ "verdict": "PASS"
+}
