@@ -1225,7 +1225,8 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(argv[argv.index("-m") + 1],
                          "/home/bmarti44/models/deepseek-v4.1-flash/"
                          "DeepSeek-V4.1-Flash-Q2.gguf")
-        self.assertEqual(argv[argv.index("-c") + 1], "1048576")
+        self.assertEqual(argv[argv.index("-c") + 1], "262144")
+        self.assertEqual(argv[argv.index("--batched-session") + 1], "4")
         self.assertEqual(argv[argv.index("--port") + 1], "8013")
         self.assertEqual(
             argv[argv.index("--ssd-streaming-cache-experts") + 1], "42gb"
@@ -1330,7 +1331,7 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertIn(
                 f"{root}/cache/ds4-v41-0aaea5a2/ds4-server --cuda -m "
                 f"{root}/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.gguf "
-                "-c 1048576 --host 127.0.0.1 --port 8013 --ssd-streaming "
+                "-c 262144 --batched-session 4 --host 127.0.0.1 --port 8013 --ssd-streaming "
                 "--ssd-streaming-cache-experts 42gb",
                 actions,
             )

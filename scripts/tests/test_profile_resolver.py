@@ -148,3 +148,51 @@ class HostSelection(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Ds4ServingTopology(unittest.TestCase):
+    """ds4 profiles declare slots x per-session ctx without vLLM flags."""
+
+    def profile(self) -> dict:
+        return resolver.load_profile("deepseek-v4.1-flash", "cuda-spark-128g-1m.json")
+
+    def test_committed_ds4_topology_is_valid(self) -> None:
+        resolver.validate_serving_topology(self.profile())
+
+    def mutated(self, **changes) -> dict:
+        profile = copy.deepcopy(self.profile())
+        args = profile["launch"]["args"]
+        for flag, value in changes.items():
+            flag = {"ctx": "-c", "sessions": "--batched-session"}[flag]
+            if value is None:
+                index = args.index(flag)
+                del args[index:index + 2]
+            else:
+                args[args.index(flag) + 1] = value
+        return profile
+
+    def test_ctx_disagreeing_with_request_cap_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(self.mutated(ctx="1048576"))
+
+    def test_missing_batched_session_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(self.mutated(sessions=None))
+
+    def test_wrong_session_count_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(self.mutated(sessions="2"))
+
+    def test_aggregate_mismatch_is_rejected(self) -> None:
+        profile = self.profile()
+        profile["serving"]["parallel_slots"] = 2
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(profile)
+
+    def test_vllm_profiles_keep_the_glm53_contract(self) -> None:
+        profile = resolver.load_profile("glm-5.3-flash", "cuda-spark-128g-1m.json")
+        resolver.validate_serving_topology(profile)
+        broken = copy.deepcopy(profile)
+        broken["serving"].pop("max_images")
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(broken)

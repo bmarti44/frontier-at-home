@@ -5,7 +5,7 @@
  "backend": "cuda",
  "hardware_class": "spark",
  "ram_tier_gib": 128,
- "purpose": "DeepSeek V4.1 Flash on upstream antirez ds4 (Q2 GGUF, SSD-streamed experts and Engram), one 1,048,576-token context. Switch alias dsv41flash through the generic profile path. Never the default until its gates pass.",
+ "purpose": "DeepSeek V4.1 Flash on upstream antirez ds4 (Q2 GGUF, SSD-streamed experts and Engram), 1,048,576 aggregate context as 4 batched sessions x 262,144 (owner default 2026-09-26). Switch alias dsv41flash through the generic profile path. Never the default until its gates pass.",
  "status": {
   "state": "estimated",
   "basis": "Not yet servable: the switch refuses estimated profiles, so DeepSeek V4 stays the default. Measured so far (diagnostic only): the ds4 CLI text smoke at ctx 8192 with a 42 GB expert cache (results/dsv41-flash-gates/smoke-2026-09-25/). A 48 GB cache reproducibly logs NVRM NV_ERR_NO_MEMORY, so 42 GB is the measured-clean cap. The ds4-server launch, the direct-1M gate and the qualification kit have not run."
@@ -29,7 +29,8 @@
   "args": [
    "--cuda",
    "-m", "{model}",
-   "-c", "1048576",
+   "-c", "262144",
+   "--batched-session", "4",
    "--host", "127.0.0.1",
    "--port", "{port}",
    "--ssd-streaming",
@@ -58,9 +59,10 @@
   "overhead_gib": 45.22,
   "extra_gib": 0,
   "floor_gib": 10,
-  "basis": "ds4 planned-memory line at ctx 8192 with --ssd-streaming-cache-experts 42gb: KV 0.06 GiB + buffers 3.23 GiB + resident model 9.37 GiB + expert cache 34.87 GiB + prefill expert reserve 7.12 GiB = 54.65 GiB planned. overhead_gib = buffers + expert cache + prefill reserve. kv_bytes_per_token is the ~890 B/token compressed global KV; the 0.06 GiB at 8K also holds fixed local-window state. The 1M figures (KV and any context-scaled buffers) are estimates until the direct-1M gate measures them. Routed experts and the 188.8 GiB Engram tables stream from disk and are not resident."
+  "basis": "ds4 planned-memory line at ctx 8192 with --ssd-streaming-cache-experts 42gb: KV 0.06 GiB + buffers 3.23 GiB + resident model 9.37 GiB + expert cache 34.87 GiB + prefill expert reserve 7.12 GiB = 54.65 GiB planned. overhead_gib = buffers + expert cache + prefill reserve. kv_bytes_per_token is the ~890 B/token compressed global KV; the 0.06 GiB at 8K also holds fixed local-window state. With 4 batched sessions x 262,144 (shared prefill workspace), KV and any context-scaled buffers are estimates until the direct-1M gate measures them. Routed experts and the 188.8 GiB Engram tables stream from disk and are not resident."
  },
  "context_cap": 1048576,
+ "serving": {"parallel_slots": 4, "request_context_cap": 262144},
  "port_role": "production",
  "bench": {"stack_label": "ds4-v41-q2"},
  "switch_alias": "dsv41flash",
