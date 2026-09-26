@@ -130,3 +130,26 @@ Round 4 closed round-3 findings 1, 2 and 4, and found no new critical or high de
 - **The bundler requires** one commit and one hash map across all phases. The recorded scorer and frozen-inputs hashes must equal the files on disk at bundling time. The bundler records the commit and those hashes in `manifest.json`.
 
 There are 4 new mutation tests, 31 in the bundler suite. All 4 fail against the candidate-5 bundler and pass on candidate 6.
+
+## Candidate 7 (2026-09-26, after GPT-6 sol high review round 5)
+
+Round 5 found one HIGH finding, again the finding-3 remainder. It was not a new class. The bundler checked only that the phase records agreed with each other, so it accepted forged records: an invented commit `111…111` and a hash map holding only the scorer and frozen-file entries. The candidate-6 test fixture itself used that shape.
+
+Open blocking findings went from 1 to 1. This is the first non-decrease after a decrease (3 to 1 in round 4). Under AGENTS.md the gate continues. Candidate 7 of at most 8 closes only this remainder.
+
+- **A shared module.** `harness/frozen_check.py` now holds both `record()` (used by the runner at each phase) and `verify()` (used by the bundler).
+- **What `verify()` requires:**
+  - the complete check-key set, with every check true;
+  - one commit, one frozen-inputs path and one complete 11-entry hash map across all phases;
+  - the map equals the frozen-inputs expectations on disk;
+  - the commit exists in git, and every tracked component and the frozen-inputs file at that commit hash to the recorded values;
+  - the bundler, `frozen_check.py` and the scorer on disk match the map.
+- **The tests use genuine records** from `record()` at the committed HEAD. Forged variants must FAIL:
+  - an invented commit (sol's scenario);
+  - an abbreviated map;
+  - a consistently altered hash;
+  - a missing check key;
+  - a real but older commit;
+  - disagreement between phases.
+- **RED evidence.** Under the candidate-6 bundler, candidate 6's own fixture (the forged shape) gives PASS. With candidate 7, `python3 -m unittest test_bundle_attempt test_score_fidelity` runs 50 tests OK on commit `35751ee9`.
+- **Dry run.** The genuine post-commit runner record passes `verify()`.
