@@ -82,3 +82,20 @@ Frozen inputs: `frozen-inputs-c3.json` (`artifact_sha256` executables, model ide
 - **Fidelity-arm working directory.** The fixture manifest uses paths relative to the ds4 checkout, so the unit now runs with `--working-directory=$SRC` and an absolute output directory.
 - **M9.** A fidelity delta measures combined artifact and backend fidelity, because the Metal reference GGUF's byte identity is not established. This is labeled in `summary.json`.
 - **L10.** The `glm52-` unit prefix stays for smoke only. The production profile needs its own validated unit name.
+
+## Candidate 4 (2026-09-26, after GPT-6 sol high review round 2)
+
+Round 2 left 3 HIGH findings, down from 6. It also left H3 partially closed, H5 partially closed and L10 open (disclosed). These changes close only those items. No acceptance arm ran under candidate 3.
+
+Frozen inputs: `frozen-inputs-c4.json`. It adds `test_bundle_attempt.py`.
+
+1. **Bundler false-PASS paths.**
+   - Fixed required artifacts per arm. Missing means FAIL, never an empty default.
+   - Every required artifact must be written at or after `started_at`.
+   - The runner refuses a non-empty output directory (exit 4).
+   - Fidelity `raw.jsonl` holds every paired case row from `cuda.tsv`.
+2. **Text evidence.** The bundler rebuilds `output.txt` from the engine-emitted token bytes. The text arm is `PENDING_REVIEW` (bundler exit 2) until `text-review.json` records `coherent_on_topic`, written after reading `output.txt`. A false value is a FAIL.
+3. **Swallowed failures.** The runner exits with the bundled verdict: 0 PASS, 1 FAIL, 2 PENDING_REVIEW, 3 bundler error. The engine status stays in `exit_code.txt`. The scorer's exit status and log are kept (`fidelity-score-exit.txt`, `fidelity-score.log`).
+4. **H3 remainder.** Before launch, the runner verifies the frozen hashes of the harness scripts, the fixed scorer script, the fixture manifest and the Metal reference TSV (`frozen-check.json`; mismatch is exit 22).
+
+`harness/test_bundle_attempt.py` holds 15 mutation tests covering these paths. All pass. The post-hoc bundles of earlier attempts were regenerated with this bundler and remain FAIL.

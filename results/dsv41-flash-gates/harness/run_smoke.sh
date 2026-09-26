@@ -10,12 +10,16 @@ readonly MODEL=/home/bmarti44/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.
 readonly FIX=$SRC/gguf-tools/quality-testing/deepseek-v4.1-flash-20260919-router
 readonly WRAPPER=$REPO/results/glm52-gates/harness/glm_safe_run.sh
 readonly LOCK=/run/lock/frontier-at-home/inference.lock
-readonly FROZEN=$REPO/results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c3.json
+readonly FROZEN=$REPO/results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c4.json
 readonly BUNDLER=$REPO/results/dsv41-flash-gates/harness/bundle_attempt.py
 readonly PROMPT='Explain in three sentences why the sky is blue.'
 readonly LONG_PROMPT='Write a detailed, multi-paragraph explanation of how a CPU pipeline works, covering fetch, decode, execute, memory access, write-back, hazards, and branch prediction.'
 
 arm=${1:?arm}; out=${2:?outdir}
+# A fresh, empty output directory per attempt (review round 2, finding 1).
+if [[ -e $out && -n $(ls -A "$out" 2>/dev/null) ]]; then
+  echo "output directory is not empty: $out" >&2; exit 4
+fi
 mkdir -p "$out"
 out=$(realpath -e "$out")
 # Match real engine executables (exe basename) or python vLLM servers; never
@@ -51,6 +55,29 @@ print(json.dumps({"phase": phase, "binary": binary, "binary_sha256": h, "expecte
 sys.exit(0 if ok else 21)
 PY
 }
+
+# Every frozen harness, scorer, fixture and reference hash must match before
+# use (review round 2, H3 remainder).
+python3 - "$FROZEN" "$REPO" "$FIX" <<'PY' > "$out/frozen-check.json" || { echo "frozen input mismatch" >&2; exit 22; }
+import hashlib, json, os, sys
+frozen, repo, fix = sys.argv[1:]
+f = json.load(open(frozen))
+h = lambda p: hashlib.sha256(open(p, "rb").read()).hexdigest()
+paths = {
+    "run_smoke.sh": os.path.join(repo, "results/dsv41-flash-gates/harness/run_smoke.sh"),
+    "bundle_attempt.py": os.path.join(repo, "results/dsv41-flash-gates/harness/bundle_attempt.py"),
+    "test_score_fidelity.py": os.path.join(repo, "results/dsv41-flash-gates/harness/test_score_fidelity.py"),
+    "test_bundle_attempt.py": os.path.join(repo, "results/dsv41-flash-gates/harness/test_bundle_attempt.py"),
+    "glm_safe_run.sh": os.path.join(repo, "results/glm52-gates/harness/glm_safe_run.sh"),
+    "03_memory_guard.py": os.path.join(repo, "scripts/03_memory_guard.py"),
+}
+res = {name: h(p) == f["component_sha256"][name] for name, p in paths.items()}
+res["fixed_scorer"] = h(os.path.join(repo, "results/dsv41-flash-gates/harness/score_fidelity.py")) == f["fixed_scorer_sha256"]
+res["fixture"] = h(os.path.join(fix, "manifest.tsv")) == f["fixture_sha256"]
+res["reference"] = h(os.path.join(fix, "results/base-default.tsv")) == f["raw_artifact_sha256"]
+print(json.dumps({"ok": all(res.values()), "checks": res}, sort_keys=True))
+sys.exit(0 if all(res.values()) else 22)
+PY
 
 case $arm in
   text)
@@ -107,9 +134,16 @@ json.dump({"verified": pre["ok"] and post["ok"] and post_rc == 0, "pre": pre, "p
           open(os.path.join(d, "identity.json"), "w"), indent=1, sort_keys=True)
 PY
 if [[ $arm == fidelity && -f $out/cuda.tsv ]]; then
+  score_rc=0
   python3 "$REPO/results/dsv41-flash-gates/harness/score_fidelity.py" "$out/cuda.tsv" \
-    "$FIX/results/base-default.tsv" "$FIX/manifest.tsv" "$out/fidelity-summary.json" > /dev/null || true
+    "$FIX/results/base-default.tsv" "$FIX/manifest.tsv" "$out/fidelity-summary.json" \
+    > "$out/fidelity-score.log" 2>&1 || score_rc=$?
+  echo "$score_rc" > "$out/fidelity-score-exit.txt"
 fi
-python3 "$BUNDLER" "$out" "$arm" || true
-echo "arm=$arm rc=$rc out=$out"
-exit "$rc"
+# The runner's exit status is the bundled verdict (0 PASS, 1 FAIL,
+# 2 PENDING_REVIEW); the engine's own status stays in exit_code.txt.
+verdict_rc=0
+python3 "$BUNDLER" "$out" "$arm" || verdict_rc=$?
+case $verdict_rc in 0|1|2) ;; *) echo "bundler failed rc=$verdict_rc" >&2; verdict_rc=3 ;; esac
+echo "arm=$arm engine_rc=$rc verdict_rc=$verdict_rc out=$out"
+exit "$verdict_rc"
