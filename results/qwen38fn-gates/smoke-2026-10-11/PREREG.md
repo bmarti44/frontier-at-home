@@ -55,3 +55,53 @@ failed attempt.
 If streaming is block-granular with MTP on, record it, and propose a block-aware
 shared speed bench to the owner as a new file. `30_bench_speed.py` stays
 byte-frozen.
+
+## Amendment 1 (2026-10-10, before the first load)
+
+A focused review found that the formula above could not be evaluated as
+written on this runtime. These changes are committed before any weights are
+loaded. The NO_GO thresholds are unchanged.
+
+- **Reasoning field.** vLLM 0.31 streams `reasoning`, and the benches read
+  `reasoning_content`. Both profiles now list
+  `vllm_reasoning_compat.ReasoningContentMiddleware` ahead of the terminal SSE
+  split. That middleware is a response-only key rename and has its own unit
+  tests.
+- **Block-aware decode (clause 4).** With MTP, one SSE event carries up to
+  `1 + num_speculative_tokens = 4` tokens.
+  - The bench's own `decode_tok_s` is computed as (events − 1)/elapsed, and its
+    early-stop check counts events rather than tokens. Under MTP both are
+    recorded but **non-gating**, and so is `suite_valid`.
+  - Clause 4 instead uses, per speed rep:
+    `decode = (client_completion_tokens − 4) / ((token_timestamps_ns[-1] − token_timestamps_ns[0]) / 1e9)`.
+    It takes the median over eligible reps at ctx 0. Subtracting 4 makes this a
+    lower bound on the first event's tokens.
+- **Eligible rep:** every one of these holds:
+  - the rep is valid, or every recorded reason is the bench's event-count
+    `early stop`;
+  - `client_completion_tokens >= 200`;
+  - `timing_source == sse_content_events`;
+  - there are at least 2 strictly ordered timestamps.
+- **Prefill @28,672:** the median of `prompt_tokens / ttft_s` over eligible
+  reps. This is a lower bound, because TTFT includes the first decode step.
+- **No eligible rep** at ctx 0 or 28,672 means `NO_RESULT`.
+- **Swap (clause 2):** measured as `max(SwapTotal − SwapFree)` over the 1 Hz
+  external samples, minus the first sample. That first sample is taken before
+  the load.
+- **Kill lines (clause 1):**
+  - kernel log: `out of memory|oom-kill|oom_reaper|NVRM|Xid`, case-insensitive;
+  - server logs: `CUDA out of memory|OutOfMemoryError|NVRM|Xid`;
+  - memwatch log: `BREACH|EMERGENCY_STOP`.
+- **Failed attempts:** a `FAILED_ATTEMPT` in the driver log (surviving
+  descendants) or any missing evidence file makes the run `NO_RESULT` unless a
+  NO_GO clause fires.
+- **Scorer:** `verdict.py` in this directory implements exactly this formula
+  and writes `summary.json`.
+- **Runtime hardening, also from the review:**
+  - `FLASHINFER_DISABLE_JIT=1` over the installed AOT cache, so no nvcc runs at
+    load;
+  - `--gpu-memory-utilization 0.85`, because vLLM's startup check compares it
+    against UMA free memory;
+  - a 2 h `RuntimeMaxSec` on each scope;
+  - a committed host file that differs from `configs/hosts/spark-aba1.json`
+    only in `paths.repo`, which points at this worktree.
