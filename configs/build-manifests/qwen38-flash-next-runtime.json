@@ -45,11 +45,34 @@
     "xgrammar": "0.2.8"
   },
   "install_command": "uv pip install --python runtime/bin/python3 <vllm wheel> --extra-index-url https://download.pytorch.org/whl/cu130 --index-strategy unsafe-best-match",
-  "freeze_sha256": "e6be5b9eb9339079d9c7eed0cbc65faf47fc698e3c90bfbe17de697052861672",
+  "freeze_sha256": "9845655c9ff357f86f92dc7fc29f1a4ccb7b6f28a51ceb610c8f02893adbae75",
   "vllm_tree": {
     "sha256": "83b7a48db760efa51854524b60964ddf8813b64f022f5bcd1f3a70797dcc05a7",
     "files": 5352,
     "method": "sha256 over sorted 'relpath\\0sha256(file)\\n' of site-packages/vllm, excluding __pycache__/*.pyc, after patching"
   },
-  "gpu_selftest": "bf16 1024x1024 matmul on NVIDIA GB10 cc (12,1) ok; CU_DEVICE_ATTRIBUTE_PAGEABLE_MEMORY_ACCESS_USES_HOST_PAGE_TABLES = 1 (2026-10-10)"
+  "gpu_selftest": "bf16 1024x1024 matmul on NVIDIA GB10 cc (12,1) ok; CU_DEVICE_ATTRIBUTE_PAGEABLE_MEMORY_ACCESS_USES_HOST_PAGE_TABLES = 1 (2026-10-10)",
+  "flashinfer_jit_cache": {
+    "why": "AOT kernels so startup never JIT-compiles; profiles set FLASHINFER_DISABLE_JIT=1, so a missing module fails the load instead of running nvcc beside the model",
+    "install_command": "uv pip install --python runtime/bin/python3 --no-deps <the three wheels below>",
+    "wheels": [
+      {
+        "name": "flashinfer_jit_cache-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "note": "selector shim (4,535 bytes)",
+        "sha256": "dcad7b6519e85b9332d1a18c84046797ce26206d4f15b9e484e2abc66f50d6fb"
+      },
+      {
+        "name": "flashinfer_jit_cache_sm120f-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "url": "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.0.post1/flashinfer_jit_cache_sm120f-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "sha256": "bfa5e2025a7a09755bdaa102b3ddc03809081a5c0bf06bb5e910407a43bb3acb"
+      },
+      {
+        "name": "flashinfer_jit_cache_sm121a-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "url": "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.0.post1/flashinfer_jit_cache_sm121a-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "sha256": "1bf568b1c7452a697ad313a82aed8102b15204d9843ad2247d9778ca84513f75"
+      }
+    ],
+    "check": "gen_cutlass_fused_moe_sm120_module() reports is_aot True with the .so in the sm121a provider (2026-10-10)"
+  },
+  "freeze_note": "freeze.txt after the jit-cache install; the pre-install freeze is kept as freeze-001.txt"
 }

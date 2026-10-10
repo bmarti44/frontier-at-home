@@ -33,7 +33,11 @@
       "HF_HUB_OFFLINE": "1",
       "TRANSFORMERS_OFFLINE": "1",
       "VLLM_NO_USAGE_STATS": "1",
-      "DO_NOT_TRACK": "1"
+      "DO_NOT_TRACK": "1",
+      "MAX_JOBS": "2",
+      "NVCC_THREADS": "1",
+      "FLASHINFER_NVCC_THREADS": "1",
+      "FLASHINFER_DISABLE_JIT": "1"
     },
     "diagnostics_unset": [
       "VLLM_LOGGING_LEVEL",
@@ -61,6 +65,8 @@
       "2",
       "--kv-cache-dtype",
       "fp8",
+      "--gpu-memory-utilization",
+      "0.85",
       "--kv-cache-memory-bytes",
       "4200000000",
       "--enable-prefix-caching",
@@ -82,6 +88,8 @@
       "{\"reasoning_effort\":\"low\"}",
       "--worker-cls",
       "glm53_worker.ReleaseLoadCacheWorker",
+      "--middleware",
+      "vllm_reasoning_compat.ReasoningContentMiddleware",
       "--middleware",
       "glm53_runtime_policy.SplitTerminalSseMiddleware",
       "--no-enable-flashinfer-autotune",
