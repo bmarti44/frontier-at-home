@@ -1,0 +1,80 @@
+{
+ "schema_version": 1,
+ "model": "qwen3.8-flash-next",
+ "identity_manifest": "weights/qwen3.8-flash-next/manifest.json",
+ "artifacts": {
+  "nvfp4-fc694b54": {
+   "kind": "safetensors-dir",
+   "path": "{model_root}/qwen3.8-flash-next-nvfp4",
+   "weights_gib": 76.0,
+   "note": "nvidia/Qwen3.8-Flash-Next-NVFP4 @ fc694b54fb0174e0913e6adf86691ef85a4ead47 (123.6 GiB on disk: NVFP4 routed experts, BF16 attention/shared, FP8 PLE n-gram table + MTP in model-fp8-mtp-ple.safetensors). weights_gib is the resident estimate with the 47.7 GiB PLE table read in place from NVMe (--engram-config checkpoint_mapped); replace with the measured value. Chat template, tokenizer and generation config are byte-identical to Qwen3.8-27B.",
+   "shards": [
+    {
+     "path": "{model}/model.safetensors.index.json",
+     "sha256": "660414e8300728ba80062e6a3c81cb76a65e2ab136ac9e9ceb450ba0c51c3c0d"
+    },
+    {
+     "path": "{model}/config.json",
+     "sha256": "deef67a61f3311faf051b23dc4192f442c7fee4f9cd2f38cbcbe4da55c763a80"
+    },
+    {
+     "path": "{model}/hf_quant_config.json",
+     "sha256": "331ad11d57c8bc374554579977198084e0d4d0933d5b3558f125f6f670aba0e8"
+    },
+    {
+     "path": "{model}/tokenizer.json",
+     "sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3"
+    },
+    {
+     "path": "{model}/chat_template.jinja",
+     "sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041"
+    }
+   ]
+  }
+ },
+ "engines": {
+  "vllm-qwen38fn-r001": {
+   "binary_path": "{cache_root}/qwen38-flash-next/native-runtime-001/runtime/bin/python3",
+   "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+   "build_manifest": "configs/build-manifests/qwen38-flash-next-runtime.json",
+   "note": "Relocatable uv CPython 3.12.13 (same interpreter bytes as the GLM-5.3 runtime) with upstream vLLM 0.31.1rc1.dev152+g72d59adc2 (prebuilt aarch64 wheel) + vLLM PR #58439 @ fa537316 (checkpoint-mapped PLE). Package versions and tree digests in the build manifest."
+  }
+ },
+ "backend_support": {
+  "cuda": {
+   "supported": true,
+   "hardware_class": [
+    "spark"
+   ],
+   "note": "Upstream vLLM 72d59adc2 + PR #58439 checkpoint-mapped PLE; requires pageable-memory access through host page tables (GB10 UMA)."
+  },
+  "apple-silicon": {
+   "supported": false,
+   "reason": "NVFP4 modelopt kernels and the checkpoint-mapped PLE path are CUDA-only and validated only on GB10"
+  },
+  "rocm": {
+   "supported": false,
+   "reason": "NVFP4 modelopt kernels and the checkpoint-mapped PLE path are CUDA-only and validated only on GB10"
+  },
+  "cpu": {
+   "supported": false,
+   "reason": "NVFP4 modelopt kernels and the checkpoint-mapped PLE path are CUDA-only and validated only on GB10"
+  },
+  "vulkan": {
+   "supported": false,
+   "reason": "NVFP4 modelopt kernels and the checkpoint-mapped PLE path are CUDA-only and validated only on GB10"
+  },
+  "intel-xe": {
+   "supported": false,
+   "reason": "NVFP4 modelopt kernels and the checkpoint-mapped PLE path are CUDA-only and validated only on GB10"
+  },
+  "qualcomm": {
+   "supported": false,
+   "reason": "NVFP4 modelopt kernels and the checkpoint-mapped PLE path are CUDA-only and validated only on GB10"
+  },
+  "tenstorrent": {
+   "supported": false,
+   "reason": "NVFP4 modelopt kernels and the checkpoint-mapped PLE path are CUDA-only and validated only on GB10"
+  }
+ }
+}

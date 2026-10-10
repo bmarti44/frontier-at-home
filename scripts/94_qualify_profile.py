@@ -64,6 +64,8 @@ MODEL_ENCODERS = {
     "laguna-s-2.1": "laguna",
     "qwen3.8-27b": "qwen38",
     "glm-5.3-flash": "glm53",
+    # Chat template and tokenizer are byte-identical to Qwen3.8-27B.
+    "qwen3.8-flash-next": "qwen38",
 }
 
 SPEED_CONTEXT_LEVELS = "0,28672"

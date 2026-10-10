@@ -128,10 +128,14 @@ def verify_inventory(root: Path, manifest: dict) -> dict[str, tuple[int, int, in
 def validate_serving(profile: dict) -> None:
     """The profile cap is aggregate; vLLM's max-model-len is per request."""
     serving = profile.get("serving")
-    fields = {"parallel_slots", "request_context_cap", "max_images", "max_videos", "video_frames"}
-    if not isinstance(serving, dict) or set(serving) != fields:
+    required = {"parallel_slots", "request_context_cap"}
+    # Media limits are optional so a text-only vLLM profile (media disabled
+    # with --limit-mm-per-prompt) carries just its topology.
+    media = {"max_images", "max_videos", "video_frames"}
+    if (not isinstance(serving, dict) or not required <= set(serving)
+            or set(serving) - required - media):
         raise ValueError("invalid serving topology schema")
-    if any(type(serving[k]) is not int or serving[k] <= 0 for k in fields):
+    if any(type(serving[k]) is not int or serving[k] <= 0 for k in serving):
         raise ValueError("serving topology values must be positive integers")
     if serving["parallel_slots"] * serving["request_context_cap"] != profile["context_cap"]:
         raise ValueError("aggregate context topology mismatch")

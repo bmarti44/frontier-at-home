@@ -98,6 +98,13 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertRegex(engine["binary_sha256"], r"^[0-9a-f]{64}$")
         self.assertTrue((ROOT / engine["build_manifest"]).is_file())
 
+    def test_text_only_serving_still_rejects_bad_media_fields(self):
+        for key, value in (("max_images", 0), ("audio_clips", 1)):
+            p = self.profile()
+            p["serving"][key] = value
+            with self.subTest(key=key), self.assertRaises(profile_resolver.ProfileError):
+                self.render(p)
+
     def test_model_pins_the_nvfp4_checkpoint_revision(self):
         model = profile_resolver.load_model(SLUG)
         artifact = model["artifacts"][self.profile()["artifact_roles"]["model"]]

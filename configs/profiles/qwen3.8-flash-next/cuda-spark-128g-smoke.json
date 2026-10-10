@@ -1,0 +1,128 @@
+{
+  "schema_version": 4,
+  "profile_id": "qwen3.8-flash-next/cuda-spark-128g-smoke",
+  "model": "qwen3.8-flash-next",
+  "backend": "cuda",
+  "hardware_class": "spark",
+  "ram_tier_gib": 128,
+  "purpose": "DIAGNOSTIC smoke only (never a headline or acceptance number): the production serving path at reduced KV (2 x 131,072 slots) so a first load leaves headroom for the co-tenant workload. Same engine, artifacts and flags as cuda-spark-128g-1m except --max-model-len, --max-num-seqs and --kv-cache-memory-bytes.",
+  "status": {
+    "state": "estimated",
+    "basis": "Phase-1 falsifier profile; see cuda-spark-128g-1m.json for the production target."
+  },
+  "engine": "vllm-qwen38fn-r001",
+  "artifact_roles": {
+    "model": "nvfp4-fc694b54"
+  },
+  "launch": {
+    "mechanism": "systemd-run",
+    "user": "bmarti44",
+    "log_name": "qwen38fn-smoke",
+    "env": {
+      "HOME": "{cache_root}/qwen38-flash-next/home",
+      "LANG": "C.UTF-8",
+      "PATH": "{cache_root}/qwen38-flash-next/native-runtime-001/runtime/bin:{cache_root}/glm53-flash/tools/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+      "PYTHONPATH": "{repo}/scripts/lib",
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "CUDA_HOME": "/usr/local/cuda-13.0",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+      "NVIDIA_TF32_OVERRIDE": "0",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1",
+      "VLLM_NO_USAGE_STATS": "1",
+      "DO_NOT_TRACK": "1"
+    },
+    "diagnostics_unset": [
+      "VLLM_LOGGING_LEVEL",
+      "VLLM_TRACE_FUNCTION",
+      "CUDA_LAUNCH_BLOCKING"
+    ],
+    "args": [
+      "-B",
+      "-m",
+      "vllm.entrypoints.openai.api_server",
+      "--model",
+      "{model}",
+      "--served-model-name",
+      "qwen3.8-flash-next",
+      "default",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "{port}",
+      "--quantization",
+      "modelopt",
+      "--max-model-len",
+      "131072",
+      "--max-num-seqs",
+      "2",
+      "--kv-cache-dtype",
+      "fp8",
+      "--kv-cache-memory-bytes",
+      "4200000000",
+      "--enable-prefix-caching",
+      "--enable-chunked-prefill",
+      "--max-num-batched-tokens",
+      "4096",
+      "--enable-auto-tool-choice",
+      "--tool-call-parser",
+      "qwen3_coder",
+      "--reasoning-parser",
+      "qwen3",
+      "--speculative-config",
+      "{\"method\":\"mtp\",\"num_speculative_tokens\":3}",
+      "--engram-config",
+      "{\"checkpoint_mapped\":true}",
+      "--limit-mm-per-prompt",
+      "{\"image\":0,\"video\":0}",
+      "--default-chat-template-kwargs",
+      "{\"reasoning_effort\":\"low\"}",
+      "--worker-cls",
+      "glm53_worker.ReleaseLoadCacheWorker",
+      "--middleware",
+      "glm53_runtime_policy.SplitTerminalSseMiddleware",
+      "--no-enable-flashinfer-autotune",
+      "--logprobs-mode",
+      "raw_logprobs",
+      "--shutdown-timeout",
+      "10",
+      "--compilation-config",
+      "{\"mode\":0,\"cudagraph_mode\":\"FULL_DECODE_ONLY\"}"
+    ]
+  },
+  "containment": {
+    "unit": "qwen38fn-smoke",
+    "memory_high": "92G",
+    "memory_max": "96G",
+    "memory_swap_max": "0",
+    "oom_policy": "kill",
+    "kill_mode": "control-group"
+  },
+  "safety": {
+    "kill_floor_gib": 15,
+    "minimum_start_gib": 110,
+    "sample_hz": 1,
+    "startup_timeout_seconds": 1800,
+    "note": "Diagnostic smoke floor 15 GiB (co-tenant reserve agreed with arlab); the 10 GiB AGENTS floor still bounds everything."
+  },
+  "memory_model": {
+    "kv_bytes_per_token": 0,
+    "resident_weights_gib": 76,
+    "overhead_gib": 10,
+    "extra_gib": 4,
+    "floor_gib": 15,
+    "basis": "ESTIMATE: 4.2 GB fp8 KV arena (~262,144 tokens). KV bytes per token (fp8 KV + fp8 indexer, 12 QSA layers) from community single-Spark logs: 7.44 GiB holds 507,810 tokens = ~15.7 KB/token; replace with the engine-reported pool after the first load."
+  },
+  "serving": {
+    "parallel_slots": 2,
+    "request_context_cap": 131072
+  },
+  "context_cap": 262144,
+  "port_role": "production",
+  "bench": {
+    "stack_label": "qwen3.8-flash-next-cuda-spark-128g-smoke"
+  }
+}

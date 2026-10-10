@@ -1,0 +1,144 @@
+{
+  "schema_version": 4,
+  "profile_id": "qwen3.8-flash-next/cuda-spark-128g-1m",
+  "model": "qwen3.8-flash-next",
+  "backend": "cuda",
+  "hardware_class": "spark",
+  "ram_tier_gib": 128,
+  "purpose": "Qwen3.8-Flash-Next for agentic coding: four native 262,144-token slots (1,048,576 total), NVFP4 experts, PLE table read in place from NVMe, MTP k=3, fp8 KV, prefix cache, decode CUDA graphs. Not the default until the owner decides.",
+  "status": {
+    "state": "estimated",
+    "basis": "Community single-Spark vLLM reports (tonyd2wild, madeye; Sep 2026): ~76 GiB resident weights with the PLE table on NVMe, 36.8-45.8 tok/s single-stream decode with MTP3, ~1,600-1,824 tok/s prefill, KV pool ~0.5-1.0M fp8 tokens. Not yet measured on this host."
+  },
+  "engine": "vllm-qwen38fn-r001",
+  "artifact_roles": {
+    "model": "nvfp4-fc694b54"
+  },
+  "launch": {
+    "mechanism": "systemd-run",
+    "user": "bmarti44",
+    "log_name": "qwen38fn",
+    "env": {
+      "HOME": "{cache_root}/qwen38-flash-next/home",
+      "LANG": "C.UTF-8",
+      "PATH": "{cache_root}/qwen38-flash-next/native-runtime-001/runtime/bin:{cache_root}/glm53-flash/tools/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+      "PYTHONPATH": "{repo}/scripts/lib",
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "CUDA_HOME": "/usr/local/cuda-13.0",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+      "NVIDIA_TF32_OVERRIDE": "0",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1",
+      "VLLM_NO_USAGE_STATS": "1",
+      "DO_NOT_TRACK": "1"
+    },
+    "diagnostics_unset": [
+      "VLLM_LOGGING_LEVEL",
+      "VLLM_TRACE_FUNCTION",
+      "CUDA_LAUNCH_BLOCKING"
+    ],
+    "args": [
+      "-B",
+      "-m",
+      "vllm.entrypoints.openai.api_server",
+      "--model",
+      "{model}",
+      "--served-model-name",
+      "qwen3.8-flash-next",
+      "default",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "{port}",
+      "--quantization",
+      "modelopt",
+      "--max-model-len",
+      "262144",
+      "--max-num-seqs",
+      "4",
+      "--kv-cache-dtype",
+      "fp8",
+      "--kv-cache-memory-bytes",
+      "16500000000",
+      "--enable-prefix-caching",
+      "--enable-chunked-prefill",
+      "--max-num-batched-tokens",
+      "4096",
+      "--enable-auto-tool-choice",
+      "--tool-call-parser",
+      "qwen3_coder",
+      "--reasoning-parser",
+      "qwen3",
+      "--speculative-config",
+      "{\"method\":\"mtp\",\"num_speculative_tokens\":3}",
+      "--engram-config",
+      "{\"checkpoint_mapped\":true}",
+      "--limit-mm-per-prompt",
+      "{\"image\":0,\"video\":0}",
+      "--default-chat-template-kwargs",
+      "{\"reasoning_effort\":\"low\"}",
+      "--worker-cls",
+      "glm53_worker.ReleaseLoadCacheWorker",
+      "--middleware",
+      "glm53_runtime_policy.SplitTerminalSseMiddleware",
+      "--no-enable-flashinfer-autotune",
+      "--logprobs-mode",
+      "raw_logprobs",
+      "--shutdown-timeout",
+      "10",
+      "--compilation-config",
+      "{\"mode\":0,\"cudagraph_mode\":\"FULL_DECODE_ONLY\"}"
+    ]
+  },
+  "containment": {
+    "unit": "qwen38fn-engine",
+    "memory_high": "92G",
+    "memory_max": "96G",
+    "memory_swap_max": "0",
+    "oom_policy": "kill",
+    "kill_mode": "control-group"
+  },
+  "safety": {
+    "kill_floor_gib": 10,
+    "minimum_start_gib": 110,
+    "sample_hz": 1,
+    "startup_timeout_seconds": 1800,
+    "note": "10 GiB whole-host floor per the AGENTS.md 1M gate. cgroup MemoryCurrent is blind to CUDA unified memory on GB10; the external memwatch is the real guard. The PLE table's page cache is clean and file-backed (reclaimable)."
+  },
+  "memory_model": {
+    "kv_bytes_per_token": 0,
+    "resident_weights_gib": 76,
+    "overhead_gib": 10,
+    "extra_gib": 16,
+    "floor_gib": 10,
+    "basis": "ESTIMATE until the first load: 76 GiB resident weights (PLE on NVMe), fixed 16.5 GB fp8 KV arena (--kv-cache-memory-bytes; ~1,048,576 tokens at ~15.7 KB/token), overhead for CUDA context, activations (4,096-token prefill chunks), MTP and CUDA graphs. KV bytes per token (fp8 KV + fp8 indexer, 12 QSA layers) from community single-Spark logs: 7.44 GiB holds 507,810 tokens = ~15.7 KB/token; replace with the engine-reported pool after the first load."
+  },
+  "serving": {
+    "parallel_slots": 4,
+    "request_context_cap": 262144
+  },
+  "context_cap": 1048576,
+  "port_role": "production",
+  "bench": {
+    "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m"
+  },
+  "qualification_targets": {
+    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
+    "decode_tok_s_min": {
+      "0": 17.46,
+      "28672": 26.71
+    },
+    "prefill_tok_s_min": {
+      "28672": 698.7
+    },
+    "ttft_s_max": {
+      "0": 0.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "delta_nll_max": 0.01
+  }
+}
