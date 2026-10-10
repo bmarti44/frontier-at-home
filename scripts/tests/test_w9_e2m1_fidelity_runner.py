@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNNER = ROOT / "scripts/104_run_w9_e2m1_fidelity.py"
 LAUNCHER = ROOT / "results/glm52-gates/harness/glm_cgroup_run_w9_e2m1_v1.sh"
 BASE_LAUNCHER = ROOT / "results/glm52-gates/harness/glm_cgroup_run.sh"
+W9_FROZEN_FROM = "7d9ee48e"
 
 
 def load_runner():
@@ -29,7 +31,15 @@ class W9E2M1FidelityRunnerTests(unittest.TestCase):
         self.runner = load_runner()
 
     def test_launcher_is_frozen_base_plus_only_the_e2m1_flag(self):
-        base = BASE_LAUNCHER.read_text().splitlines()
+        # v1 was frozen from the base launcher at 7d9ee48e and frozen W9
+        # evidence binds it. The base has since changed for the lossless
+        # plateau campaign (c890fc21, 7508a213, 12de0150), so compare against
+        # the base as it was when v1 was frozen.
+        base = subprocess.run(
+            ["/usr/bin/git", "-C", str(ROOT), "show",
+             f"{W9_FROZEN_FROM}:{BASE_LAUNCHER.relative_to(ROOT)}"],
+            capture_output=True, text=True, check=True,
+        ).stdout.splitlines()
         candidate = LAUNCHER.read_text().splitlines()
         self.assertEqual(
             [line for line in candidate if "E2M1_FAKE" not in line], base

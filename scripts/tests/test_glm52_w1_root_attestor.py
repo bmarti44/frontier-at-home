@@ -61,10 +61,15 @@ class RootAttestorContractTests(unittest.TestCase):
 
     def test_root_clone_scopes_safe_directory_to_exact_source_gitdir(self):
         source = INSTALLER.read_text(encoding="utf-8")
-        upload_pack = (
-            "/usr/bin/git -c safe.directory="
-            "/home/bmarti44/spark-deepseek-v4-flash/.git upload-pack"
-        )
+        # The installer scopes safe.directory to $REPO/.git, the production
+        # checkout's gitdir. Exercise the same exact scoping against this
+        # checkout's own gitdir, which differs in a linked worktree
+        # (.git/worktrees/<name>).
+        git_dir = subprocess.run(
+            ["/usr/bin/git", "-C", str(ROOT), "rev-parse", "--absolute-git-dir"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        upload_pack = f"/usr/bin/git -c safe.directory={git_dir} upload-pack"
         self.assertIn('readonly SOURCE_UPLOAD_PACK="/usr/bin/git -c safe.directory=$REPO/.git upload-pack"', source)
         self.assertIn('--upload-pack="$SOURCE_UPLOAD_PACK"', source)
         self.assertNotIn("git config --global", source)
