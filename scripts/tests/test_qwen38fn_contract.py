@@ -61,10 +61,14 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         for flag, value in (("--kv-cache-dtype", "fp8"),
                             ("--tool-call-parser", "qwen3_coder"),
                             ("--reasoning-parser", "qwen3"),
-                            ("--quantization", "modelopt"),
-                            ("--middleware", "glm53_runtime_policy.SplitTerminalSseMiddleware")):
+                            ("--quantization", "modelopt")):
             with self.subTest(flag=flag):
                 self.assertEqual(arg(argv, flag), value)
+        # vLLM adds middleware in order and the last is outermost: rename vLLM's
+        # ``reasoning`` first so the llama.cpp-shaped split sees reasoning_content.
+        middleware = [argv[i + 1] for i, a in enumerate(argv) if a == "--middleware"]
+        self.assertEqual(middleware, ["vllm_reasoning_compat.ReasoningContentMiddleware",
+                                      "glm53_runtime_policy.SplitTerminalSseMiddleware"])
         self.assertIn("--enable-auto-tool-choice", argv)
         self.assertIn("--enable-prefix-caching", argv)
         index = argv.index("--served-model-name")
@@ -75,6 +79,22 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         argv = self.profile()["launch"]["args"]
         self.assertEqual(arg(argv, "--engram-config"), '{"checkpoint_mapped":true}')
         self.assertIn('"method":"mtp"', arg(argv, "--speculative-config"))
+
+    def test_startup_cannot_compile_kernels_and_tolerates_uma_free_memory(self):
+        for name in ("qwen3.8-flash-next/cuda-spark-128g-1m", "qwen3.8-flash-next/cuda-spark-128g-smoke"):
+            slug, profile = name.split("/")
+            p = profile_resolver.load_profile(slug, profile + ".json")
+            env, argv = p["launch"]["env"], p["launch"]["args"]
+            with self.subTest(profile=profile):
+                # The flashinfer AOT cache ships every kernel; a JIT compile at
+                # load would run unbounded nvcc beside the loaded model.
+                self.assertEqual(env["FLASHINFER_DISABLE_JIT"], "1")
+                self.assertEqual(env["MAX_JOBS"], "2")
+                self.assertEqual(env["NVCC_THREADS"], "1")
+                self.assertEqual(env["FLASHINFER_NVCC_THREADS"], "1")
+                # vLLM requires utilization x total <= free at startup; on UMA
+                # free is MemAvailable, below 0.92 x 121.7 GiB with a co-tenant.
+                self.assertEqual(arg(argv, "--gpu-memory-utilization"), "0.85")
 
     def test_text_only_until_media_is_qualified(self):
         argv = self.profile()["launch"]["args"]
