@@ -56,6 +56,15 @@ cleanup() {
     kill "$SAMPLER" "$JOURNAL" 2>/dev/null || true
     tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" >"$OBS/server.log" 2>/dev/null || true
     tail -c +$((MEMWATCH_OFF + 1)) -- "$MEMWATCH_LOG" >"$OBS/memwatch.log" 2>/dev/null || true
+    local i
+    for ((i = 0; i < 30; i++)); do
+        systemctl --user is-active -q "$UNIT.scope" || break
+        sleep 1
+    done
+    if systemctl --user is-active -q "$UNIT.scope"; then
+        log "FAILED_ATTEMPT $START: scope still active at exit; stopping it"
+        systemctl --user stop "$UNIT.scope" || true
+    fi
     nvidia-smi >"$OBS/nvidia-smi-end.txt" 2>&1 || true
     log "driver exit"
 }
@@ -73,7 +82,7 @@ check_no_survivors() {
 }
 
 log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
-log "head $(git -C "$WT" rev-parse HEAD) dirty=$(git -C "$WT" status --porcelain | wc -l)"
+log "head $(git -C "$WT" rev-parse HEAD) dirty=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)"
 python3 "$WT/scripts/03_memory_guard.py" --required-gib 110 --stable-samples 3 --timeout-seconds 600 \
     | tee -a "$OBS/driver.log"
 
@@ -86,7 +95,14 @@ log "$START: ready after $((SECONDS - t0)) s"
 awk '/MemAvailable/{printf "%s idle_mem_available_kib=%s\n", "'"$(stamp)"'", $2}' /proc/meminfo | tee -a "$OBS/driver.log"
 block=$(tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" | grep -oP 'Setting attention block size to \K[0-9]+' | tail -1 || true)
 log "$START: attention block size ${block:-unknown} tokens"
-[[ $block == "$BLOCK_TOKENS" ]] || log "FAILED_ATTEMPT $START: block size ${block:-unknown} != $BLOCK_TOKENS preregistered"
+kv=$(tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" \
+    | grep -oP 'GPU KV cache size: \K[0-9,]+(?= tokens, Maximum concurrency for 262,144 tokens per request)' \
+    | tail -1 | tr -d , || true)
+log "$START: KV capacity ${kv:-unknown} tokens at 262,144 per request"
+if [[ $block != "$BLOCK_TOKENS" || -z $kv || $kv -lt 1048576 ]]; then
+    log "FAILED_ATTEMPT $START: block ${block:-unknown} (want $BLOCK_TOKENS), KV ${kv:-unknown} (want >= 1048576)"
+    exit 1
+fi
 
 python3 "$SMOKE/probe.py" --base-url "http://127.0.0.1:$PORT" --out "$EV/probe-$START.json" | tee -a "$OBS/driver.log"
 if [[ $START == start1 ]]; then
@@ -94,7 +110,7 @@ if [[ $START == start1 ]]; then
         || log "kit exit nonzero"
 else
     python3 "$WT/scripts/dev/regression-suite.py" agent-gate --base "http://127.0.0.1:$PORT" \
-        --engine vllm --model default --prefix-block-tokens "$BLOCK_TOKENS" --json "$EV/agent-gate.json" \
+        --engine vllm --model default --prefix-block-tokens "$BLOCK_TOKENS" --spec-block-drop --json "$EV/agent-gate.json" \
         2>&1 | tee -a "$OBS/driver.log" || log "agent-gate exit nonzero"
     "${KIT[@]}" --cells accuracy --accuracy-split dev 2>&1 | tee -a "$OBS/driver.log" \
         || log "kit exit nonzero"

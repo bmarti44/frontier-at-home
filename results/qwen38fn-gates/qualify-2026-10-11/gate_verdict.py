@@ -14,6 +14,10 @@ from pathlib import Path
 
 SWAP_MAX_GIB, FLOOR_GIB, TOOLCALL_MIN = 0.25, 10.0, 19
 MIN_CONTEXT_TOKENS, CONTEXT_CAP = 1_000_000, 1_048_576
+KV_CAPACITY = re.compile(r"GPU KV cache size: ([0-9,]+) tokens, Maximum concurrency for 262,144 tokens per request")
+HEAD = re.compile(r"^\S+ head ([0-9a-f]{40}) dirty=(\d+)$")
+# A log that exists but never saw the run proves nothing.
+MARKERS = {"server.log": "session start", "memwatch.log": "ARMED"}
 STARTS = ("start1", "start2")
 AGENT_GATE_TESTS = {"prefix-cache", "turn-continuation", "slot-thrash", "prefill-throughput"}
 
@@ -35,9 +39,21 @@ def load(path, missing):
 def main(ev):
     missing, fail, checks = [], [], {}
 
-    hits, failed_attempts, low = [], [], None
+    hits, failed_attempts, low, heads = [], [], None, []
     for start in STARTS:
         obs = ev / "observe" / start
+        server = obs / "server.log"
+        if server.is_file():
+            capacity = [int(m.replace(",", "")) for m in KV_CAPACITY.findall(server.read_text(errors="replace"))]
+            checks[f"kv_capacity_tokens_{start}"] = capacity[-1] if capacity else None
+            if not capacity:
+                missing.append(f"observe/{start}/server.log: no KV capacity line at 262,144")
+            elif capacity[-1] < CONTEXT_CAP:
+                fail.append(f"clause 4: KV capacity {capacity[-1]} < {CONTEXT_CAP} in {start}")
+        for name, marker in MARKERS.items():
+            f = obs / name
+            if f.is_file() and marker not in f.read_text(errors="replace"):
+                missing.append(f"observe/{start}/{name}: no '{marker}' line")
         for name, rx in KILL.items():
             files = [obs / "server.log"] if name == "server" else [obs / name]
             for f in files:
@@ -64,9 +80,15 @@ def main(ev):
                 fail.append(f"clause 2: swap growth in {start}")
         driver = obs / "driver.log"
         if driver.is_file():
-            failed_attempts += [l for l in driver.read_text().splitlines() if "FAILED_ATTEMPT" in l]
+            lines = driver.read_text().splitlines()
+            failed_attempts += [l for l in lines if "FAILED_ATTEMPT" in l]
+            heads += [m.groups() for m in map(HEAD.match, lines) if m]
         else:
             missing.append(f"observe/{start}/driver.log")
+    # Both starts must run one committed candidate with no tracked edits.
+    checks["heads"] = heads
+    if len(heads) != len(STARTS) or len({h for h, _ in heads}) != 1 or any(d != "0" for _, d in heads):
+        missing.append(f"code identity: heads {heads}")
     checks["kill_lines"] = hits
     checks["failed_attempt_lines"] = failed_attempts
     checks["mem_available_low_gib"] = low

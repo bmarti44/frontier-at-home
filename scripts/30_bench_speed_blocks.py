@@ -11,7 +11,9 @@ two substitutions, for servers whose SSE events each carry up to
   coalesced events, so event timestamps no longer time tokens;
 * decode_tok_s = (client_completion_tokens - K) / (t_last_event - t_first_event).
   The first event's tokens arrived before t_first and number at most K, so
-  subtracting K gives a lower bound.
+  subtracting K gives a lower bound. That assumes vLLM did not merge deltas
+  for a lagging client into the first event; each extra token there would
+  add about 1/elapsed tok/s (~0.1 at 384 tokens).
 
 The frozen event-based value stays in each rep as event_decode_tok_s and never
 enters a median. Every other argument is passed to the frozen bench.

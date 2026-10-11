@@ -29,10 +29,19 @@ def build(ev: Path, mut: str) -> None:
             lines = lines[:100]
         (obs / "meminfo.log").write_text("".join(lines))
         (obs / "kernel.log").write_text("x NVRM: Xid 13\n" if mut == "xid" and start == "start1" else "")
-        (obs / "memwatch.log").write_text("ts=1 BREACH\n" if mut == "breach" else "ts=1 ARMED\n")
+        memwatch = "ts=1 ARMED\nts=2 BREACH\n" if mut == "breach" else "ts=1 ARMED\n"
+        (obs / "memwatch.log").write_text("ts=1 START\n" if mut == "unarmed" else memwatch)
+        tokens = "1,040,000" if mut == "kvcap" and start == "start2" else "1,050,123"
+        server = "" if mut == "emptyserver" and start == "start1" else (
+            f"===== p session start t =====\nINFO GPU KV cache size: {tokens} tokens, "
+            "Maximum concurrency for 262,144 tokens per request: 4.01x\n"
+            + ("torch.OutOfMemoryError\n" if mut == "oom" else "INFO ready\n"))
         if not (mut == "noserverlog" and start == "start2"):
-            (obs / "server.log").write_text("torch.OutOfMemoryError\n" if mut == "oom" else "INFO ready\n")
-        (obs / "driver.log").write_text("FAILED_ATTEMPT survivors\n" if mut == "attempt" else "ok\n")
+            (obs / "server.log").write_text(server)
+        head = "b" * 40 if mut == "headdiff" and start == "start2" else "a" * 40
+        dirty = 1 if mut == "dirty" and start == "start1" else 0
+        (obs / "driver.log").write_text(f"2026-10-11T00:00:00Z head {head} dirty={dirty}\n"
+                                        + ("FAILED_ATTEMPT survivors\n" if mut == "attempt" else "ok\n"))
     (ev / "manifest.json").write_text(json.dumps(
         {"profile": {"context_cap": 1_000_000 if mut == "cap" else 1_048_576}}))
     (ev / "context").mkdir()
@@ -61,7 +70,8 @@ EXPECT = {
     "lowmem": "FAIL", "context": "FAIL", "tokens": "FAIL", "identity": "FAIL", "tool": "FAIL",
     "agent": "FAIL", "soak": "FAIL", "cap": "NO_RESULT", "short": "NO_RESULT",
     "noserverlog": "NO_RESULT", "noprobe": "NO_RESULT", "agentmissing": "NO_RESULT",
-    "attempt": "NO_RESULT",
+    "attempt": "NO_RESULT", "kvcap": "FAIL", "headdiff": "NO_RESULT", "dirty": "NO_RESULT",
+    "emptyserver": "NO_RESULT", "unarmed": "NO_RESULT",
 }
 
 
