@@ -101,8 +101,9 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   `<state_root>/<log_name>.{process.json,memwatch.*}`.
 
 - `serving` — optional explicit topology for a multi-sequence engine (vLLM):
-  `parallel_slots`, `request_context_cap`, `max_images`, `max_videos`, and
-  `video_frames` are positive integers. The first two multiply to
+  `parallel_slots` and `request_context_cap` are required; `max_images`,
+  `max_videos`, and `video_frames` are optional (omitted for a text-only
+  profile); every present field is a positive integer. The first two multiply to
   `context_cap` (aggregate tokens) and must match `--max-num-seqs` and
   `--max-model-len`. Snapshots with this field also carry `safety`.
 
@@ -122,6 +123,9 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   (`chat`, the README default, or `thinking`) selects the template mode of
   the MMMU cell; a `note` explains why. The kit records the mode in the
   cell's argv, and `--vision-thinking-mode` overrides it.
+  `speed_max_tokens_per_event` (1 + the speculative draft length, for
+  servers that stream several tokens per SSE event, such as vLLM MTP) makes
+  the speed cell run `scripts/30_bench_speed_blocks.py`.
 
 ## `model.json`: optional `reference_logits`
 

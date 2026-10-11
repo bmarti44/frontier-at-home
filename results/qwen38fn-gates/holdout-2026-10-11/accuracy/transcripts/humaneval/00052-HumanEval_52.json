@@ -1,0 +1,94 @@
+{
+  "index": 52,
+  "task_id": "HumanEval/52",
+  "rendered_prompt_sha256": "b8e47fee4b6fffb27f872307ef74803b1e427e22802413851b9f0c61bb05306e",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    for e in l:\n        if e >= t:\n            return False\n    return True\n\n\nMETADATA = {\n    'author': 'jt',\n    'dataset': 'test'\n}\n\n\ndef check(candidate):\n    assert candidate([1, 2, 4, 10], 100)\n    assert candidate([1, 20, 4, 10], 5) == False\n    assert candidate([100, 220, 4, 100], 1000)\n    assert candidate([100, 220, 4, 100], 5) == False\n    assert candidate([], 10)\n\n\n",
+  "finish_reason": "stop",
+  "expected": "    for e in l:\n        if e >= t:\n            return False\n    return True\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.016835281989188
+  },
+  "response": {
+    "id": "cmpl-ac7305c0f2f7ba7f",
+    "object": "text_completion",
+    "created": 1791718910,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    for e in l:\n        if e >= t:\n            return False\n    return True\n\n\nMETADATA = {\n    'author': 'jt',\n    'dataset': 'test'\n}\n\n\ndef check(candidate):\n    assert candidate([1, 2, 4, 10], 100)\n    assert candidate([1, 20, 4, 10], 5) == False\n    assert candidate([100, 220, 4, 100], 1000)\n    assert candidate([100, 220, 4, 100], 5) == False\n    assert candidate([], 10)\n\n\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 84,
+      "total_tokens": 244,
+      "completion_tokens": 160,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00052:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

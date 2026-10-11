@@ -1,0 +1,59 @@
+{
+  "index": 608,
+  "task_id": 608,
+  "rendered_prompt_sha256": "e0580940d4071368e137d4d9d31ff31f30bb643d9502898a55aa8171b9508d7d",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nJoe has $50.\nThere's a 30% off sale.\nShirt: $25\nShorts: $35\n\nTotal original price: $25 + $35 = $60\n\nWith 30% off: $60 × 0.70 = $42\n\nMoney left: $50 - $42 = $8\n</think>\n\n**Step 1:** Find the total original price of the outfit.\n$25 (shirt) + $35 (shorts) = $60\n\n**Step 2:** Apply the 30% discount.\n$60 × 0.70 = $42\n\n**Step 3:** Subtract from Joe's budget.\n$50 - $42 = $8\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.983744617005868
+  },
+  "response": {
+    "id": "cmpl-b272ecac25045d5b",
+    "object": "text_completion",
+    "created": 1791693569,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nJoe has $50.\nThere's a 30% off sale.\nShirt: $25\nShorts: $35\n\nTotal original price: $25 + $35 = $60\n\nWith 30% off: $60 × 0.70 = $42\n\nMoney left: $50 - $42 = $8\n</think>\n\n**Step 1:** Find the total original price of the outfit.\n$25 (shirt) + $35 (shorts) = $60\n\n**Step 2:** Apply the 30% discount.\n$60 × 0.70 = $42\n\n**Step 3:** Subtract from Joe's budget.\n$50 - $42 = $8\n\nAnswer: 8",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 139,
+      "total_tokens": 323,
+      "completion_tokens": 184,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

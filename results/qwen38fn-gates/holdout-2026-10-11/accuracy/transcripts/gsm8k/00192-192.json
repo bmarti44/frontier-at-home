@@ -1,0 +1,59 @@
+{
+  "index": 192,
+  "task_id": 192,
+  "rendered_prompt_sha256": "ff2821e99d7bdbfe23bb4408dca3ffc82f70baf1fca5aabfd0a2b3a222b1f4e3",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nTom starts with 50 trees.\nEach year he plants 10 trees and chops down 2 trees, so net gain per year = 10 - 2 = 8 trees per year.\n\nAfter 10 years:\n- Trees planted: 10 × 10 = 100\n- Trees chopped: 2 × 10 = 20\n- Net change: 100 - 20 = 80\n\nTotal trees after 10 years: 50 + 80 = 130\n\nThen 30% of the trees die:\n- Trees that die: 130 × 0.30 = 39\n- Trees remaining: 130 - 39 = 91\n</think>\n\nLet me work through this step by step.\n\n**Starting trees:** 50\n\n**Net change per year:** 10 planted - 2 chopped = 8 trees per year\n\n**After 10 years:**\n- Net gain: 8 × 10 = 80 trees\n- Total: 50 + 80 = 130 trees\n\n**After 30% die:**\n- Trees lost: 130 × 0.30 = 39\n- Trees remaining: 130 - 39 = 91\n\nAnswer: 91",
+  "finish_reason": "stop",
+  "expected": "91",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.564532611009781
+  },
+  "response": {
+    "id": "cmpl-a014f930480a68f1",
+    "object": "text_completion",
+    "created": 1791708228,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nTom starts with 50 trees.\nEach year he plants 10 trees and chops down 2 trees, so net gain per year = 10 - 2 = 8 trees per year.\n\nAfter 10 years:\n- Trees planted: 10 × 10 = 100\n- Trees chopped: 2 × 10 = 20\n- Net change: 100 - 20 = 80\n\nTotal trees after 10 years: 50 + 80 = 130\n\nThen 30% of the trees die:\n- Trees that die: 130 × 0.30 = 39\n- Trees remaining: 130 - 39 = 91\n</think>\n\nLet me work through this step by step.\n\n**Starting trees:** 50\n\n**Net change per year:** 10 planted - 2 chopped = 8 trees per year\n\n**After 10 years:**\n- Net gain: 8 × 10 = 80 trees\n- Total: 50 + 80 = 130 trees\n\n**After 30% die:**\n- Trees lost: 130 × 0.30 = 39\n- Trees remaining: 130 - 39 = 91\n\nAnswer: 91",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 121,
+      "total_tokens": 433,
+      "completion_tokens": 312,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

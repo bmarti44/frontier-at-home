@@ -1,0 +1,58 @@
+{
+  "index": 255,
+  "task_id": 327,
+  "rendered_prompt_sha256": "8556e51511133c260757969af9964d13556ef07652f541b58ee2d861b1588760",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "The net price is calculated by applying the discount to the list price.\n\nList price = $900\nDiscount = 25%\n\nNet price = List price × (1 - discount rate)\nNet price = $900 × (1 - 0.25)\nNet price = $900 × 0.75\nNet price = $675\n\nThis corresponds to option I.\n</think>\n\nTo find the net price, I apply the 25% discount to the list price of $900.\n\nNet price = $900 × (1 - 0.25) = $900 × 0.75 = $675\n\nAnswer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.68128084300406
+  },
+  "response": {
+    "id": "cmpl-9c5ccdf6c20b73a1",
+    "object": "text_completion",
+    "created": 1791694514,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The net price is calculated by applying the discount to the list price.\n\nList price = $900\nDiscount = 25%\n\nNet price = List price × (1 - discount rate)\nNet price = $900 × (1 - 0.25)\nNet price = $900 × 0.75\nNet price = $675\n\nThis corresponds to option I.\n</think>\n\nTo find the net price, I apply the 25% discount to the list price of $900.\n\nNet price = $900 × (1 - 0.25) = $900 × 0.75 = $675\n\nAnswer: I",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 170,
+      "total_tokens": 325,
+      "completion_tokens": 155,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

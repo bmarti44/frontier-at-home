@@ -1,0 +1,59 @@
+{
+  "index": 112,
+  "task_id": 112,
+  "rendered_prompt_sha256": "a7764a75093b3fb48356cf0421beb58816135b592d64b22382299246f8ecb619",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- There are 4 teachers who take turns using the classroom.\n- Each teacher has 2 lessons per day.\n- The whiteboard is cleaned 3 times per lesson.\n\nSo total lessons per day = 4 teachers × 2 lessons each = 8 lessons per day.\n\nTotal cleanings per day = 8 lessons × 3 cleanings per lesson = 24.\n</think>\n\nLet me break this down:\n\n- **4 teachers** share the classroom\n- Each teacher has **2 lessons per day**\n- Total lessons per day = 4 × 2 = **8 lessons**\n- The whiteboard is cleaned **3 times per lesson**\n- Total cleanings per day = 8 × 3 = **24**\n\nAnswer: 24",
+  "finish_reason": "stop",
+  "expected": "24",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.119403296004748
+  },
+  "response": {
+    "id": "cmpl-a92bacbb810342d6",
+    "object": "text_completion",
+    "created": 1791708618,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- There are 4 teachers who take turns using the classroom.\n- Each teacher has 2 lessons per day.\n- The whiteboard is cleaned 3 times per lesson.\n\nSo total lessons per day = 4 teachers × 2 lessons each = 8 lessons per day.\n\nTotal cleanings per day = 8 lessons × 3 cleanings per lesson = 24.\n</think>\n\nLet me break this down:\n\n- **4 teachers** share the classroom\n- Each teacher has **2 lessons per day**\n- Total lessons per day = 4 × 2 = **8 lessons**\n- The whiteboard is cleaned **3 times per lesson**\n- Total cleanings per day = 8 × 3 = **24**\n\nAnswer: 24",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 128,
+      "total_tokens": 303,
+      "completion_tokens": 175,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

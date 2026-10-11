@@ -1,0 +1,60 @@
+{
+  "index": 678,
+  "task_id": 678,
+  "rendered_prompt_sha256": "a51b4aebbd6eeb09a829d03eac154d9ef16b8bcc7a8718aa72debc2decd3dec7",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Lorie earns $10 per hour\n- Karen earns twice what Lorie earns, so Karen earns $20 per hour\n- Karen works 3 hours per day for 2 days\n- Total hours = 3 × 2 = 6 hours\n- Karen's earnings = $20 × 6 = $120\n</think>\n\nKaren earns twice what Lorie earns: $10 × 2 = $20 per hour.\n\nShe works 3 hours per day for 2 days: 3 × 2 = 6 hours total.\n\nKaren's earnings: $20 × 6 = $120.\n\nAnswer: 120",
+  "finish_reason": "stop",
+  "expected": "120",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.380666683995514
+  },
+  "response": {
+    "id": "cmpl-84888e7ac217a8c4",
+    "object": "text_completion",
+    "created": 1791708240,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Lorie earns $10 per hour\n- Karen earns twice what Lorie earns, so Karen earns $20 per hour\n- Karen works 3 hours per day for 2 days\n- Total hours = 3 × 2 = 6 hours\n- Karen's earnings = $20 × 6 = $120\n</think>\n\nKaren earns twice what Lorie earns: $10 × 2 = $20 per hour.\n\nShe works 3 hours per day for 2 days: 3 × 2 = 6 hours total.\n\nKaren's earnings: $20 × 6 = $120.\n\nAnswer: 120",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 100,
+      "total_tokens": 254,
+      "completion_tokens": 154,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>system\nReasoning effort is set to low. Keep your thinking brief and focused, moving directly to the conclusion without unnecessary elaboration.<|im_end|>\n<|im_start|>user\nLorie earns $10 per hour. Karen earns twice what Lorie earns. How much does Karen earn in two days if she works 3 hours per day?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|>\n<|im_start|>assistant\n<think>\n"
+}

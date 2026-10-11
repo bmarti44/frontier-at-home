@@ -1,0 +1,59 @@
+{
+  "index": 1191,
+  "task_id": 1191,
+  "rendered_prompt_sha256": "aa6d23ef87330920c609921c5ae9faba6500f27dc7dd87a80138df4bb63691ac",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me solve this step by step.\n\n- Color cost: $40\n- Haircut cost: $30 per inch\n- Hair started at 10 inches and ended at 8 inches\n- Inches cut: 10 - 8 = 2 inches\n- Haircut cost: 2 × $30 = $60\n- Total cost: $40 + $60 = $100\n</think>\n\nThe color costs $40.\n\nThe haircut: her hair went from 10 inches to 8 inches, so 2 inches were cut. At $30 per inch, that's 2 × $30 = $60.\n\nTotal: $40 + $60 = $100\n\nAnswer: 100",
+  "finish_reason": "stop",
+  "expected": "100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.67417937299615
+  },
+  "response": {
+    "id": "cmpl-b7724d282b784fb1",
+    "object": "text_completion",
+    "created": 1791693757,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me solve this step by step.\n\n- Color cost: $40\n- Haircut cost: $30 per inch\n- Hair started at 10 inches and ended at 8 inches\n- Inches cut: 10 - 8 = 2 inches\n- Haircut cost: 2 × $30 = $60\n- Total cost: $40 + $60 = $100\n</think>\n\nThe color costs $40.\n\nThe haircut: her hair went from 10 inches to 8 inches, so 2 inches were cut. At $30 per inch, that's 2 × $30 = $60.\n\nTotal: $40 + $60 = $100\n\nAnswer: 100",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 116,
+      "total_tokens": 283,
+      "completion_tokens": 167,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

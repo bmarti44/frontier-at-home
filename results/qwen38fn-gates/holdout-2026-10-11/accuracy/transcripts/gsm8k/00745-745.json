@@ -1,0 +1,59 @@
+{
+  "index": 745,
+  "task_id": 745,
+  "rendered_prompt_sha256": "9d279920358792fd8eccaf0869616eb23dba2a6e6b0dc297b9df18c9608f1ca9",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nMark buys 3 packs for $1800 each.\nTotal cost = 3 × $1800 = $5400\n\nHe gets:\n- 1 card worth $4000\n- 1 card worth $1000\n- 30 cards worth an average of $50 each = 30 × $50 = $1500\n\nTotal value of cards = $4000 + $1000 + $1500 = $6500\n\nProfit = Total value - Total cost = $6500 - $5400 = $1100\n</think>\n\n**Cost:**\n3 packs × $1800 = $5400\n\n**Revenue:**\n- 1 card worth $4000\n- 1 card worth $1000\n- 30 cards × $50 = $1500\n- Total = $6500\n\n**Profit:**\n$6500 - $5400 = $1100\n\nAnswer: 1100",
+  "finish_reason": "stop",
+  "expected": "1100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.641825109007186
+  },
+  "response": {
+    "id": "cmpl-a89c900d94c85da6",
+    "object": "text_completion",
+    "created": 1791708499,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nMark buys 3 packs for $1800 each.\nTotal cost = 3 × $1800 = $5400\n\nHe gets:\n- 1 card worth $4000\n- 1 card worth $1000\n- 30 cards worth an average of $50 each = 30 × $50 = $1500\n\nTotal value of cards = $4000 + $1000 + $1500 = $6500\n\nProfit = Total value - Total cost = $6500 - $5400 = $1100\n</think>\n\n**Cost:**\n3 packs × $1800 = $5400\n\n**Revenue:**\n- 1 card worth $4000\n- 1 card worth $1000\n- 30 cards × $50 = $1500\n- Total = $6500\n\n**Profit:**\n$6500 - $5400 = $1100\n\nAnswer: 1100",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 145,
+      "total_tokens": 398,
+      "completion_tokens": 253,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

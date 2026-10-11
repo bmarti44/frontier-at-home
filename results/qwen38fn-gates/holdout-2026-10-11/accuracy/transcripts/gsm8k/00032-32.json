@@ -1,0 +1,59 @@
+{
+  "index": 32,
+  "task_id": 32,
+  "rendered_prompt_sha256": "b1ad273787c5be07633eced1c215e7c7a4d35f8334ed23ad053bf8fa09903c08",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- John has 10 dogs\n- Each dog takes 0.5 hours per day\n- I need to find hours per week\n\nDaily time: 10 dogs × 0.5 hours = 5 hours per day\nWeekly time: 5 hours/day × 7 days = 35 hours per week\n</think>\n\n10 dogs × 0.5 hours per dog per day = 5 hours per day\n5 hours per day × 7 days per week = 35 hours per week\n\nAnswer: 35",
+  "finish_reason": "stop",
+  "expected": "35",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.677182865998475
+  },
+  "response": {
+    "id": "cmpl-b4e22ab54d6d607a",
+    "object": "text_completion",
+    "created": 1791708656,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- John has 10 dogs\n- Each dog takes 0.5 hours per day\n- I need to find hours per week\n\nDaily time: 10 dogs × 0.5 hours = 5 hours per day\nWeekly time: 5 hours/day × 7 days = 35 hours per week\n</think>\n\n10 dogs × 0.5 hours per dog per day = 5 hours per day\n5 hours per day × 7 days per week = 35 hours per week\n\nAnswer: 35",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 107,
+      "total_tokens": 231,
+      "completion_tokens": 124,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

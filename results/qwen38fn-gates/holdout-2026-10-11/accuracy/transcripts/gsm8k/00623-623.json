@@ -1,0 +1,59 @@
+{
+  "index": 623,
+  "task_id": 623,
+  "rendered_prompt_sha256": "987871ab65b1ba60f5cdc1669c2d4721a0c77375154f914159ccbc26215e05ef",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nCharmaine will be 16 years old in 12 years.\nSo her current age = 16 - 12 = 4 years old.\n\nHow old will she be 4 years from now?\n4 + 4 = 8 years old.\n</think>\n\nCharmaine will be 16 in 12 years, so her current age is 16 - 12 = 4 years old.\n\nIn 4 years from now, she will be 4 + 4 = 8 years old.\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.8170171110105002
+  },
+  "response": {
+    "id": "cmpl-be57aeff2f1519ee",
+    "object": "text_completion",
+    "created": 1791708236,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nCharmaine will be 16 years old in 12 years.\nSo her current age = 16 - 12 = 4 years old.\n\nHow old will she be 4 years from now?\n4 + 4 = 8 years old.\n</think>\n\nCharmaine will be 16 in 12 years, so her current age is 16 - 12 = 4 years old.\n\nIn 4 years from now, she will be 4 + 4 = 8 years old.\n\nAnswer: 8",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 93,
+      "total_tokens": 224,
+      "completion_tokens": 131,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

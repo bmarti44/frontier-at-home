@@ -1,0 +1,94 @@
+{
+  "index": 20,
+  "task_id": "HumanEval/20",
+  "rendered_prompt_sha256": "881d52f394307cce02e432bc6342c93bfe0f6652b203f0bf1a0fc365ed87c594",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    min_diff = float('inf')\n    closest_pair = (0, 0)\n    for i in range(len(numbers)):\n        for j in range(i + 1, len(numbers)):\n            diff = abs(numbers[i] - numbers[j])\n            if diff < min_diff:\n                min_diff = diff\n                closest_pair = (numbers[i], numbers[j])\n    return closest_pair if closest_pair[0] < closest_pair[1] else (closest_pair[1], closest_pair[0])\n\nMETADATA = {\n    'author': 'jt',\n    'dataset': 'test'\n}\n\n\ndef check(candidate):\n    assert candidate([1.0, 2.0, 3.0, 4.0, 5.0, 2.2]) == (2.0, 2.2)\n    assert candidate([1.0, 2.0, 3.0, 4.0, 5.0, 2.0]) == (2.0, 2.0)\n    assert candidate([1.0, 5.0, 3.0, 2.0, 4.0]) == (2.0, 3.0)\n    assert candidate([-5.0, 10.0, 150.0, 1.0, 0.1, -5.0]) == (-5.0, -5.0)\n    assert candidate([1.0, 5.0, 3.0, 2.0, 4.0, 5.0]) == (4.0, 5.0)\n\ncheck(find_closest_elements)",
+  "finish_reason": "stop",
+  "expected": "    closest_pair = None\n    distance = None\n\n    for idx, elem in enumerate(numbers):\n        for idx2, elem2 in enumerate(numbers):\n            if idx != idx2:\n                if distance is None:\n                    distance = abs(elem - elem2)\n                    closest_pair = tuple(sorted([elem, elem2]))\n                else:\n                    new_distance = abs(elem - elem2)\n                    if new_distance < distance:\n                        distance = new_distance\n                        closest_pair = tuple(sorted([elem, elem2]))\n\n    return closest_pair\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.34554836100142
+  },
+  "response": {
+    "id": "cmpl-b3ada991039a1687",
+    "object": "text_completion",
+    "created": 1791717002,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    min_diff = float('inf')\n    closest_pair = (0, 0)\n    for i in range(len(numbers)):\n        for j in range(i + 1, len(numbers)):\n            diff = abs(numbers[i] - numbers[j])\n            if diff < min_diff:\n                min_diff = diff\n                closest_pair = (numbers[i], numbers[j])\n    return closest_pair if closest_pair[0] < closest_pair[1] else (closest_pair[1], closest_pair[0])\n\nMETADATA = {\n    'author': 'jt',\n    'dataset': 'test'\n}\n\n\ndef check(candidate):\n    assert candidate([1.0, 2.0, 3.0, 4.0, 5.0, 2.2]) == (2.0, 2.2)\n    assert candidate([1.0, 2.0, 3.0, 4.0, 5.0, 2.0]) == (2.0, 2.0)\n    assert candidate([1.0, 5.0, 3.0, 2.0, 4.0]) == (2.0, 3.0)\n    assert candidate([-5.0, 10.0, 150.0, 1.0, 0.1, -5.0]) == (-5.0, -5.0)\n    assert candidate([1.0, 5.0, 3.0, 2.0, 4.0, 5.0]) == (4.0, 5.0)\n\ncheck(find_closest_elements)",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 167,
+      "total_tokens": 535,
+      "completion_tokens": 368,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00020:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

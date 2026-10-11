@@ -60,24 +60,80 @@ Usage:
                                           #   + prefill-throughput; the
                                           #   mandatory pre-promotion gate
                                           #   for any serving-knob change
+  regression-suite.py agent-gate --base http://127.0.0.1:8017 \
+      --engine vllm --model default --prefix-block-tokens 3200 --spec-block-drop
+
+vLLM (--engine vllm) returns no llama.cpp `timings`: reuse comes from
+usage.prompt_tokens_details.cached_tokens, which the server must report
+(--enable-prompt-tokens-details), and prefill time is the client-measured
+TTFT of a streamed request. --prefix-block-tokens N makes the reuse floors
+block-granular, because vLLM caches whole N-token blocks only; with
+--spec-block-drop (MTP/EAGLE servers drop one more trailing block on every
+hit) the floors allow two blocks.
 """
 import argparse, json, sys, time, urllib.request, urllib.error, uuid
 
 FIXTURE = "/home/bmarti44/spark-deepseek-v4-flash/fixtures/ctx-32k.txt"
 RESULTS = []
+# Set once from the command line; the defaults are the llama.cpp semantics.
+MODEL = "d"
+ENGINE = "llama.cpp"
+PREFIX_BLOCK_TOKENS = None
+# Tokens a healthy block-granular cache may leave unreused: one block, or
+# two when the server also drops a trailing block on hits (vLLM MTP/EAGLE).
+REUSE_SLACK = None
 
 def load_prefix(frac=0.46):
     text = open(FIXTURE).read()
     return text[: int(len(text) * frac)]
 
 def chat(base, messages, max_tokens=64, timeout=1800):
-    body = {"model": "d", "messages": messages, "max_tokens": max_tokens,
+    body = {"model": MODEL, "messages": messages, "max_tokens": max_tokens,
             "temperature": 0, "stream": False}
     req = urllib.request.Request(base + "/v1/chat/completions",
                                  data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.load(r)
+
+def timings(response):
+    """llama.cpp `timings`, or the same counts from a vLLM usage object."""
+    if "timings" in response:
+        return response["timings"]
+    usage = response.get("usage") or {}
+    details = usage.get("prompt_tokens_details") or {}
+    cached = details.get("cached_tokens")
+    if not isinstance(cached, int) or not isinstance(usage.get("prompt_tokens"), int):
+        raise RuntimeError("response has no timings and no usage.prompt_tokens_details."
+                           "cached_tokens; start vLLM with --enable-prompt-tokens-details")
+    return {"prompt_n": usage["prompt_tokens"] - cached, "cache_n": cached}
+
+def chat_stream_ttft(base, messages, max_tokens=16, timeout=1800):
+    """vLLM reports no prompt time, so time the first streamed token here.
+    TTFT also holds the first decode step, so tok/s is a lower bound."""
+    body = {"model": MODEL, "messages": messages, "max_tokens": max_tokens,
+            "temperature": 0, "stream": True, "stream_options": {"include_usage": True}}
+    req = urllib.request.Request(base + "/v1/chat/completions",
+                                 data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    started = time.perf_counter()
+    first = usage = None
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        for raw in r:
+            line = raw.decode().strip()
+            if not line.startswith("data:") or line[5:].strip() == "[DONE]":
+                continue
+            event = json.loads(line[5:])
+            usage = event.get("usage") or usage
+            for choice in event.get("choices") or []:
+                delta = choice.get("delta") or {}
+                if first is None and any(delta.get(k) for k in ("content", "reasoning_content", "reasoning")):
+                    first = time.perf_counter()
+    if first is None:
+        raise RuntimeError("stream produced no tokens")
+    t = timings({"usage": usage})
+    t["prompt_ms"] = (first - started) * 1000
+    return t
 
 def record(name, ok, detail):
     RESULTS.append({"test": name, "pass": bool(ok), "detail": detail})
@@ -94,22 +150,32 @@ def t_prefix_cache(base):
     P = load_prefix()
     msgs = [{"role": "system", "content": "Reference document follows.\n" + P},
             {"role": "user", "content": "Summarize the first paragraph in one sentence."}]
-    r1 = chat(base, msgs)["timings"]
-    r2 = chat(base, msgs)["timings"]
+    r1 = timings(chat(base, msgs))
+    r2 = timings(chat(base, msgs))
     msgs2 = [msgs[0], {"role": "user", "content": "What is the last topic discussed? One sentence."}]
-    r3 = chat(base, msgs2)["timings"]
+    r3 = timings(chat(base, msgs2))
     total = r1["prompt_n"] + r1["cache_n"]
-    ok1 = r2["cache_n"] >= 0.99 * total
+    if PREFIX_BLOCK_TOKENS is None:
+        repeat_rule = ">=99%"
+        ok1 = r2["cache_n"] >= 0.99 * total
+    else:
+        # Block-granular caches hit whole blocks only, and the last prompt
+        # token always runs, so a repeat reuses all but under one block
+        # (under two when the server drops a trailing block for MTP).
+        repeat_rule = f">=total-{REUSE_SLACK}"
+        ok1 = r2["cache_n"] >= total - REUSE_SLACK
     # Shared-prefix divergence: DSV4's cache cannot trim the tail, so the
     # server rolls back to the nearest context checkpoint, which can trail
     # the divergence point by up to the checkpoint spacing (default 8192)
     # plus the generated tail. The invariant is checkpoint-bounded reuse,
     # not raw-LCP reuse.
     CHECKPOINT_SPACING = 8192
-    floor = total - CHECKPOINT_SPACING - 1024
+    # A block-granular cache likewise rolls back to the last whole block
+    # before the divergence point; the coarser of the two bounds applies.
+    floor = total - max(CHECKPOINT_SPACING, REUSE_SLACK or 0) - 1024
     ok2 = r3["cache_n"] >= floor
     return record("prefix-cache", ok1 and ok2,
-                  f"repeat cache_n={r2['cache_n']}/{total} (>=99%: {ok1}); "
+                  f"repeat cache_n={r2['cache_n']}/{total} ({repeat_rule}: {ok1}); "
                   f"shared-prefix cache_n={r3['cache_n']} (checkpoint-bounded floor {floor}: {ok2})")
 
 def t_slot_thrash(base):
@@ -122,10 +188,12 @@ def t_slot_thrash(base):
     chat(base, [{"role": "user", "content": "Generate a short, descriptive title (3-7 words) for a conversation that starts with a summary request. Reply with only the title."}], 24)
     conv += [{"role": "assistant", "content": reply},
              {"role": "user", "content": "Now give one example record number."}]
-    t2 = chat(base, conv, 64)["timings"]
-    ok = t2["prompt_n"] < 1500
+    t2 = timings(chat(base, conv, 64))
+    # A block-granular cache re-runs up to one block before the new turn.
+    limit = 1500 + (REUSE_SLACK or 0)
+    ok = t2["prompt_n"] < limit
     return record("slot-thrash", ok,
-                  f"turn-2 after utility call: prompt_n={t2['prompt_n']} cache_n={t2['cache_n']} (< 1500 required; single-slot server re-prefills ~20000)")
+                  f"turn-2 after utility call: prompt_n={t2['prompt_n']} cache_n={t2['cache_n']} (< {limit} required; single-slot server re-prefills ~20000)")
 
 def t_reap_mmid(base):
     P = load_prefix()
@@ -178,7 +246,7 @@ def t_slot_restore(base):
     slots("save", "regress-bugA.bin")
     chat(base, [{"role": "user", "content": "Different short prompt entirely."}], 8)
     slots("restore", "regress-bugA.bin")
-    t = chat(base, msgs, 8)["timings"]
+    t = timings(chat(base, msgs, 8))
     still_broken = t["cache_n"] < 100
     return record("slot-restore(expected-fail guard)", still_broken,
                   f"restore-then-repeat cache_n={t['cache_n']}; guard asserts bug STILL PRESENT — "
@@ -190,7 +258,10 @@ def t_prefill_throughput(base):
     P = f"Session {uuid.uuid4()}. Reference document follows.\n" + load_prefix()
     msgs = [{"role": "system", "content": P},
             {"role": "user", "content": "Summarize the first paragraph in one sentence."}]
-    t = chat(base, msgs, 16)["timings"]
+    if ENGINE == "vllm":
+        t = chat_stream_ttft(base, msgs, 16)
+    else:
+        t = timings(chat(base, msgs, 16))
     novel = t["cache_n"] < 100
     tok_s = t.get("prompt_per_second") or (t["prompt_n"] / (t["prompt_ms"] / 1000))
     prompt_s = t["prompt_ms"] / 1000
@@ -200,6 +271,7 @@ def t_prefill_throughput(base):
                   f"novel prompt cache_n={t['cache_n']} (<100: {novel}); "
                   f"prefill={tok_s:.0f} tok/s (>=350: {ok1}); "
                   f"prompt processing={prompt_s:.1f}s (<=75: {ok2}); "
+                  + ("prompt time is client-measured TTFT; " if ENGINE == "vllm" else "") +
                   "tuned ub/b=2048 profile measures ~434 tok/s — a failure "
                   "here usually means the fast buffers were reverted "
                   "(see docs/speed-tuning-2026-07-23.md)")
@@ -215,11 +287,12 @@ def t_turn_continuation(base):
     reply = first["choices"][0]["message"].get("content") or "Summary."
     conv += [{"role": "assistant", "content": reply},
              {"role": "user", "content": "Now give one example record number."}]
-    t2 = chat(base, conv, 64)["timings"]
-    ok = t2["prompt_n"] < 1500
+    t2 = timings(chat(base, conv, 64))
+    limit = 1500 + (REUSE_SLACK or 0)
+    ok = t2["prompt_n"] < limit
     return record("turn-continuation", ok,
                   f"appended turn 2: prompt_n={t2['prompt_n']} cache_n={t2['cache_n']} "
-                  "(< 1500 required; a full re-prefill means in-slot reuse broke)")
+                  f"(< {limit} required; a full re-prefill means in-slot reuse broke)")
 
 TESTS = {"prefix-cache": t_prefix_cache, "slot-thrash": t_slot_thrash,
          "reap-mmid": t_reap_mmid, "ds4-mem-init": t_ds4_mem_init,
@@ -227,7 +300,8 @@ TESTS = {"prefix-cache": t_prefix_cache, "slot-thrash": t_slot_thrash,
          "prefill-throughput": t_prefill_throughput,
          "turn-continuation": t_turn_continuation}
 
-def main():
+def main(argv=None):
+    global MODEL, ENGINE, PREFIX_BLOCK_TOKENS, REUSE_SLACK
     ap = argparse.ArgumentParser()
     ap.add_argument("tests", nargs="+")
     # No default: port 8011's engine changes with operational posture (see
@@ -236,7 +310,24 @@ def main():
     ap.add_argument("--base", required=True,
                     help="engine base URL, e.g. http://127.0.0.1:8011 — required; verify which engine is serving first")
     ap.add_argument("--json")
-    args = ap.parse_args()
+    ap.add_argument("--engine", choices=("llama.cpp", "vllm"), default="llama.cpp",
+                    help="vllm: reuse from usage.prompt_tokens_details, prefill from client TTFT")
+    ap.add_argument("--model", default="d",
+                    help="request model name; vLLM rejects names it does not serve")
+    ap.add_argument("--prefix-block-tokens", type=int,
+                    help="prefix-cache block size in tokens; makes reuse floors block-granular")
+    ap.add_argument("--spec-block-drop", action="store_true",
+                    help="server drops one trailing block on prefix hits (vLLM MTP/EAGLE): allow two blocks of slack")
+    args = ap.parse_args(argv)
+    if args.engine == "vllm" and args.prefix_block_tokens is None:
+        ap.error("--engine vllm requires --prefix-block-tokens (vLLM caches whole blocks)")
+    if args.prefix_block_tokens is not None and args.prefix_block_tokens <= 0:
+        ap.error("--prefix-block-tokens must be positive")
+    if args.spec_block_drop and args.prefix_block_tokens is None:
+        ap.error("--spec-block-drop requires --prefix-block-tokens")
+    MODEL, ENGINE, PREFIX_BLOCK_TOKENS = args.model, args.engine, args.prefix_block_tokens
+    if PREFIX_BLOCK_TOKENS is not None:
+        REUSE_SLACK = PREFIX_BLOCK_TOKENS * (2 if args.spec_block_drop else 1)
     aliases = {
         "all-llamacpp": ["prefix-cache", "slot-thrash"],
         "agent-gate": ["prefix-cache", "turn-continuation", "slot-thrash",
@@ -253,9 +344,13 @@ def main():
             record(n, False, f"harness error: {type(e).__name__}: {e}")
             ok = False
     if args.json:
+        report = {"when": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                  "base": args.base, "results": RESULTS}
+        if ENGINE == "vllm":
+            report.update(engine=ENGINE, model=MODEL, prefix_block_tokens=PREFIX_BLOCK_TOKENS,
+                          spec_block_drop=args.spec_block_drop)
         with open(args.json, "w") as f:
-            json.dump({"when": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                       "base": args.base, "results": RESULTS}, f, indent=1)
+            json.dump(report, f, indent=1)
     return 0 if ok else 1
 
 if __name__ == "__main__":

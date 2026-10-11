@@ -1,0 +1,94 @@
+{
+  "index": 73,
+  "task_id": "HumanEval/73",
+  "rendered_prompt_sha256": "a91bec8bc0f85124b068553a370cb6c2b8564b2e298289f578e913cb77f619bf",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    n = len(arr)\n    count = 0\n    for i in range(n // 2):\n        if arr[i] != arr[n - 1 - i]:\n            count += 1\n    return count\n",
+  "finish_reason": "stop",
+  "expected": "    ans = 0\n    for i in range(len(arr) // 2):\n        if arr[i] != arr[len(arr) - i - 1]:\n            ans += 1\n    return ans\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6790670830087038
+  },
+  "response": {
+    "id": "cmpl-9da5c70af233bcd0",
+    "object": "text_completion",
+    "created": 1791719313,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    n = len(arr)\n    count = 0\n    for i in range(n // 2):\n        if arr[i] != arr[n - 1 - i]:\n            count += 1\n    return count\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 157,
+      "total_tokens": 207,
+      "completion_tokens": 50,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00073:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

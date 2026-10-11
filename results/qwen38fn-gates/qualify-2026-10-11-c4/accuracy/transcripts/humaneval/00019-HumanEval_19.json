@@ -1,0 +1,94 @@
+{
+  "index": 19,
+  "task_id": "HumanEval/19",
+  "rendered_prompt_sha256": "61b0d963a0d3797bc5ef83253bf35a531d7e31eedbd18181ff117b0e07e5c940",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    words = numbers.split()\n    words.sort()\n    return ' '.join(words)\n\n = sort_numbers('three one five')",
+  "finish_reason": "stop",
+  "expected": "    value_map = {\n        'zero': 0,\n        'one': 1,\n        'two': 2,\n        'three': 3,\n        'four': 4,\n        'five': 5,\n        'six': 6,\n        'seven': 7,\n        'eight': 8,\n        'nine': 9\n    }\n    return ' '.join(sorted([x for x in numbers.split(' ') if x], key=lambda x: value_map[x]))\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.671550497005228
+  },
+  "response": {
+    "id": "cmpl-bfb7288066f3d884",
+    "object": "text_completion",
+    "created": 1791701330,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    words = numbers.split()\n    words.sort()\n    return ' '.join(words)\n\n = sort_numbers('three one five')",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 105,
+      "total_tokens": 135,
+      "completion_tokens": 30,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0w4tqxz7/case-00019:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 33, in <module>\n    check(sort_numbers)\n  File \"/case/main.py\", line 28, in check\n    assert candidate('three five nine') == 'three five nine'\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

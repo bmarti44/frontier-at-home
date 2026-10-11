@@ -1,0 +1,59 @@
+{
+  "index": 2,
+  "task_id": 2,
+  "rendered_prompt_sha256": "10e6ba3edae2ca641b4f6a1ab429b5721fd50feb947486d18470377462318d4b",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n1. Josh buys a house for $80,000\n2. He puts in $50,000 in repairs\n3. The repairs increased the value of the house by 150%\n\nThe key question is: what does \"increased the value of the house by 150%\" mean?\n\nThe original value of the house is $80,000 (what he paid for it).\n\nIf the value increased by 150%, that means the new value is:\n$80,000 + 150% of $80,000 = $80,000 + $120,000 = $200,000\n\nTotal cost: $80,000 + $50,000 = $130,000\n\nProfit = New value - Total cost = $200,000 - $130,000 = $70,000\n</think>\n\n## Solving the House Flip Problem\n\n**Step 1: Determine the new value of the house.**\n\nThe original value of the house is $80,000. The repairs increased the value by 150%.\n\nNew value = $80,000 + (150% × $80,000) = $80,000 + $120,000 = **$200,000**\n\n**Step 2: Calculate total cost.**\n\nTotal cost = $80,000 (purchase) + $50,000 (repairs) = **$130,000**\n\n**Step 3: Calculate profit.**\n\nProfit = $200,000 - $130,000 = **$70,000**\n\nAnswer: 70000",
+  "finish_reason": "stop",
+  "expected": "70000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.695263984998746
+  },
+  "response": {
+    "id": "cmpl-ac3b9a0f92d9798c",
+    "object": "text_completion",
+    "created": 1791694124,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n1. Josh buys a house for $80,000\n2. He puts in $50,000 in repairs\n3. The repairs increased the value of the house by 150%\n\nThe key question is: what does \"increased the value of the house by 150%\" mean?\n\nThe original value of the house is $80,000 (what he paid for it).\n\nIf the value increased by 150%, that means the new value is:\n$80,000 + 150% of $80,000 = $80,000 + $120,000 = $200,000\n\nTotal cost: $80,000 + $50,000 = $130,000\n\nProfit = New value - Total cost = $200,000 - $130,000 = $70,000\n</think>\n\n## Solving the House Flip Problem\n\n**Step 1: Determine the new value of the house.**\n\nThe original value of the house is $80,000. The repairs increased the value by 150%.\n\nNew value = $80,000 + (150% × $80,000) = $80,000 + $120,000 = **$200,000**\n\n**Step 2: Calculate total cost.**\n\nTotal cost = $80,000 (purchase) + $50,000 (repairs) = **$130,000**\n\n**Step 3: Calculate profit.**\n\nProfit = $200,000 - $130,000 = **$70,000**\n\nAnswer: 70000",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 123,
+      "total_tokens": 554,
+      "completion_tokens": 431,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

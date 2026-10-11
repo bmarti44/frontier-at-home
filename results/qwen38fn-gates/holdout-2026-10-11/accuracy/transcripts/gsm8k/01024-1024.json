@@ -1,0 +1,59 @@
+{
+  "index": 1024,
+  "task_id": 1024,
+  "rendered_prompt_sha256": "bde434ef9d067adaff5541bcb283df4e73799abf4579097968fa93cf7f6f8599",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me solve this step by step.\n\n1. Suzanne sold 80 cookies for $1 each: 80 × $1 = $80\n2. She sold 60 cupcakes for $4 each: 60 × $4 = $240\n3. Total earnings: $80 + $240 = $320\n4. She gave her two sisters $10 each: 2 × $10 = $20\n5. Money left: $320 - $20 = $300\n</think>\n\n**Step 1:** Calculate earnings from cookies: 80 × $1 = $80\n\n**Step 2:** Calculate earnings from cupcakes: 60 × $4 = $240\n\n**Step 3:** Total earnings: $80 + $240 = $320\n\n**Step 4:** Money given to sisters: 2 × $10 = $20\n\n**Step 5:** Money left: $320 - $20 = $300\n\nAnswer: 300",
+  "finish_reason": "stop",
+  "expected": "300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.227849860995775
+  },
+  "response": {
+    "id": "cmpl-8a0f34f75368b373",
+    "object": "text_completion",
+    "created": 1791708325,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me solve this step by step.\n\n1. Suzanne sold 80 cookies for $1 each: 80 × $1 = $80\n2. She sold 60 cupcakes for $4 each: 60 × $4 = $240\n3. Total earnings: $80 + $240 = $320\n4. She gave her two sisters $10 each: 2 × $10 = $20\n5. Money left: $320 - $20 = $300\n</think>\n\n**Step 1:** Calculate earnings from cookies: 80 × $1 = $80\n\n**Step 2:** Calculate earnings from cupcakes: 60 × $4 = $240\n\n**Step 3:** Total earnings: $80 + $240 = $320\n\n**Step 4:** Money given to sisters: 2 × $10 = $20\n\n**Step 5:** Money left: $320 - $20 = $300\n\nAnswer: 300",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 112,
+      "total_tokens": 348,
+      "completion_tokens": 236,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

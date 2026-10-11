@@ -1,0 +1,59 @@
+{
+  "index": 400,
+  "task_id": 400,
+  "rendered_prompt_sha256": "caff6f13bb0afd49af5717cd0a2074aa01aafd4b689c312201641cf80d5f9a37",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- 1 glass of milk = 8 ounces\n- John drinks 2 glasses = 2 × 8 = 16 ounces\n- Milk has 3 calories per ounce\n- Total calories = 16 × 3 = 48 calories\n</think>\n\nLet me solve this step by step:\n\n1. One glass of milk = 8 ounces\n2. John drinks 2 glasses = 2 × 8 = 16 ounces\n3. Calories per ounce = 3\n4. Total calories = 16 × 3 = 48\n\nAnswer: 48",
+  "finish_reason": "stop",
+  "expected": "48",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.720408339999267
+  },
+  "response": {
+    "id": "cmpl-993bf70b0715ad1b",
+    "object": "text_completion",
+    "created": 1791693575,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- 1 glass of milk = 8 ounces\n- John drinks 2 glasses = 2 × 8 = 16 ounces\n- Milk has 3 calories per ounce\n- Total calories = 16 × 3 = 48 calories\n</think>\n\nLet me solve this step by step:\n\n1. One glass of milk = 8 ounces\n2. John drinks 2 glasses = 2 × 8 = 16 ounces\n3. Calories per ounce = 3\n4. Total calories = 16 × 3 = 48\n\nAnswer: 48",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 102,
+      "total_tokens": 238,
+      "completion_tokens": 136,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

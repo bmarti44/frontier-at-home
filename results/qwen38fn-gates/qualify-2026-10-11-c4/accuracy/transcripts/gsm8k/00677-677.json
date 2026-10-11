@@ -1,0 +1,59 @@
+{
+  "index": 677,
+  "task_id": 677,
+  "rendered_prompt_sha256": "4c6563317dd22daf58e54c475fa3944ca17de499c60897c486bb063fa3a98d3c",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Carol has 20 signatures and Jennifer has 44 signatures. Together they have 20 + 44 = 64 signatures. They want to reach 100 signatures between them. So they need 100 - 64 = 36 more signatures.\n</think>\n\nCarol has 20 signatures and Jennifer has 44 signatures, so together they have 20 + 44 = 64 signatures.\n\nThey want to reach 100 signatures between them, so they need 100 - 64 = 36 more signatures.\n\nAnswer: 36",
+  "finish_reason": "stop",
+  "expected": "36",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.896714315000281
+  },
+  "response": {
+    "id": "cmpl-aed7f44e2c69b902",
+    "object": "text_completion",
+    "created": 1791693819,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Carol has 20 signatures and Jennifer has 44 signatures. Together they have 20 + 44 = 64 signatures. They want to reach 100 signatures between them. So they need 100 - 64 = 36 more signatures.\n</think>\n\nCarol has 20 signatures and Jennifer has 44 signatures, so together they have 20 + 44 = 64 signatures.\n\nThey want to reach 100 signatures between them, so they need 100 - 64 = 36 more signatures.\n\nAnswer: 36",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 182,
+      "total_tokens": 314,
+      "completion_tokens": 132,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,59 @@
+{
+  "index": 709,
+  "task_id": 709,
+  "rendered_prompt_sha256": "5db5f8599e659ed5c8728c7e7f9128f4b043ec8217655e4b73a055662f5c73b8",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nChocolate ice cream: 100 quarts in 2 hours\n- Rate: 100/2 = 50 quarts per hour\n- In 48 hours: 50 × 48 = 2400 quarts\n\nVanilla ice cream: 50 quarts in 4 hours\n- Rate: 50/4 = 12.5 quarts per hour\n- In 48 hours: 12.5 × 48 = 600 quarts\n\nTotal: 2400 + 600 = 3000 quarts\n</think>\n\n**Chocolate ice cream:**\n- Rate: 100 quarts ÷ 2 hours = 50 quarts/hour\n- In 48 hours: 50 × 48 = 2,400 quarts\n\n**Vanilla ice cream:**\n- Rate: 50 quarts ÷ 4 hours = 12.5 quarts/hour\n- In 48 hours: 12.5 × 48 = 600 quarts\n\n**Total:** 2,400 + 600 = 3,000 quarts\n\nAnswer: 3000",
+  "finish_reason": "stop",
+  "expected": "3000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.902058403997216
+  },
+  "response": {
+    "id": "cmpl-adc01ec40ee410b2",
+    "object": "text_completion",
+    "created": 1791693992,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nChocolate ice cream: 100 quarts in 2 hours\n- Rate: 100/2 = 50 quarts per hour\n- In 48 hours: 50 × 48 = 2400 quarts\n\nVanilla ice cream: 50 quarts in 4 hours\n- Rate: 50/4 = 12.5 quarts per hour\n- In 48 hours: 12.5 × 48 = 600 quarts\n\nTotal: 2400 + 600 = 3000 quarts\n</think>\n\n**Chocolate ice cream:**\n- Rate: 100 quarts ÷ 2 hours = 50 quarts/hour\n- In 48 hours: 50 × 48 = 2,400 quarts\n\n**Vanilla ice cream:**\n- Rate: 50 quarts ÷ 4 hours = 12.5 quarts/hour\n- In 48 hours: 12.5 × 48 = 600 quarts\n\n**Total:** 2,400 + 600 = 3,000 quarts\n\nAnswer: 3000",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 120,
+      "total_tokens": 407,
+      "completion_tokens": 287,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

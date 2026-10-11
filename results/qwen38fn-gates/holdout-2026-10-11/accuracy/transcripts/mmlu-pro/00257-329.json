@@ -1,0 +1,58 @@
+{
+  "index": 257,
+  "task_id": 329,
+  "rendered_prompt_sha256": "05ab54891f17072d4991c2555410be1c52c8674839006e2ff34469626a218974",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "This is a problem about pro-rata sharing of insurance losses between two companies.\n\nWhen two insurance companies share a loss, they typically pay in proportion to their policy amounts.\n\nTotal policy amount = $50,000 + $30,000 = $80,000\n\nAcme Insurance's share = $50,000 / $80,000 = 5/8\nSafe Way Insurance's share = $30,000 / $80,000 = 3/8\n\nAcme Insurance pays: $45,000 × (5/8) = $45,000 × 0.625 = $28,125\nSafe Way Insurance pays: $45,000 × (3/8) = $45,000 × 0.375 = $16,875\n\nThis matches option D.\n</think>\n\nTo solve this, I need to determine how the $45,000 loss is shared between the two insurance companies based on their policy amounts.\n\n**Total coverage:** $50,000 + $30,000 = $80,000\n\n**Acme Insurance's share:** $50,000 / $80,000 = 5/8\n- Payment: $45,000 × 5/8 = **$28,125**\n\n**Safe Way Insurance's share:** $30,000 / $80,000 = 3/8\n- Payment: $45,000 × 3/8 = **$16,875**\n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.764969590993132
+  },
+  "response": {
+    "id": "cmpl-a36b0548939541b7",
+    "object": "text_completion",
+    "created": 1791709362,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "This is a problem about pro-rata sharing of insurance losses between two companies.\n\nWhen two insurance companies share a loss, they typically pay in proportion to their policy amounts.\n\nTotal policy amount = $50,000 + $30,000 = $80,000\n\nAcme Insurance's share = $50,000 / $80,000 = 5/8\nSafe Way Insurance's share = $30,000 / $80,000 = 3/8\n\nAcme Insurance pays: $45,000 × (5/8) = $45,000 × 0.625 = $28,125\nSafe Way Insurance pays: $45,000 × (3/8) = $45,000 × 0.375 = $16,875\n\nThis matches option D.\n</think>\n\nTo solve this, I need to determine how the $45,000 loss is shared between the two insurance companies based on their policy amounts.\n\n**Total coverage:** $50,000 + $30,000 = $80,000\n\n**Acme Insurance's share:** $50,000 / $80,000 = 5/8\n- Payment: $45,000 × 5/8 = **$28,125**\n\n**Safe Way Insurance's share:** $30,000 / $80,000 = 3/8\n- Payment: $45,000 × 3/8 = **$16,875**\n\nAnswer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 388,
+      "total_tokens": 770,
+      "completion_tokens": 382,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

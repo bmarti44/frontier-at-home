@@ -1,0 +1,59 @@
+{
+  "index": 1143,
+  "task_id": 1143,
+  "rendered_prompt_sha256": "d7af75cbf323b902febb6d338f0a0f39fbac9c1548eb2e34bd5df50ab2bd6331",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Tim grows 5 trees\n- Each year he collects 6 lemons from each tree\n- A decade = 10 years\n\nLemons per year = 5 trees × 6 lemons = 30 lemons per year\nLemons in a decade = 30 × 10 = 300 lemons\n</think>\n\nTim has 5 trees, each producing 6 lemons per year.\n\n- Lemons per year: 5 × 6 = 30\n- A decade = 10 years\n- Total lemons: 30 × 10 = 300\n\nAnswer: 300",
+  "finish_reason": "stop",
+  "expected": "300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.514260723997722
+  },
+  "response": {
+    "id": "cmpl-85ba648002ada955",
+    "object": "text_completion",
+    "created": 1791708223,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Tim grows 5 trees\n- Each year he collects 6 lemons from each tree\n- A decade = 10 years\n\nLemons per year = 5 trees × 6 lemons = 30 lemons per year\nLemons in a decade = 30 × 10 = 300 lemons\n</think>\n\nTim has 5 trees, each producing 6 lemons per year.\n\n- Lemons per year: 5 × 6 = 30\n- A decade = 10 years\n- Total lemons: 30 × 10 = 300\n\nAnswer: 300",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 97,
+      "total_tokens": 247,
+      "completion_tokens": 150,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

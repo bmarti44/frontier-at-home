@@ -1,0 +1,108 @@
+{
+ "formula": "PREREG.md amendment 1",
+ "checks": {
+  "clause1_kill_lines": [],
+  "clause2_swap_growth_gib": 1.6741104125976562,
+  "mem_available_low_gib": 18.1295166015625,
+  "meminfo_samples": 952,
+  "clause3_toolcall": {
+   "passed": 20,
+   "total": 20
+  },
+  "bench_suite_valid_nongating": false,
+  "speed": {
+   "0": {
+    "eligible_reps": 2,
+    "reps": 2,
+    "detail": [
+     {
+      "decode": 22.339300833083293,
+      "prefill": 331.8493716419922,
+      "tokens": 383,
+      "events": 172
+     },
+     {
+      "decode": 27.73319306607246,
+      "prefill": 369.25379000971117,
+      "tokens": 383,
+      "events": 143
+     }
+    ],
+    "median_decode_block_aware": 25.036246949577876,
+    "median_prefill_lower_bound": 350.5515808258517,
+    "bench_median_decode_nongating": null
+   },
+   "28672": {
+    "eligible_reps": 2,
+    "reps": 2,
+    "detail": [
+     {
+      "decode": 34.076818867825416,
+      "prefill": 2649.410203278063,
+      "tokens": 383,
+      "events": 122
+     },
+     {
+      "decode": 34.138435737054735,
+      "prefill": 2593.711067514704,
+      "tokens": 384,
+      "events": 129
+     }
+    ],
+    "median_decode_block_aware": 34.10762730244008,
+    "median_prefill_lower_bound": 2621.5606353963835,
+    "bench_median_decode_nongating": null
+   }
+  },
+  "probe_start1": {
+   "greedy": [
+    {
+     "prompt": "Write a Python function that merges two sorted lists in O(n). Code only.",
+     "sha256": "10bbe8c7892379ecee8eac77336872287224cba7fd332d7b711c9bd18ddb76b7",
+     "completion_tokens": 143,
+     "text": "The user wants a Python function that merges two sorted lists in O(n) time. This is the classic merge step from merge sort. I'll write a clean, efficient implementation using two pointers.\n\u0000\n\n```python\ndef merge_sorted(a, b):\n    result = []\n    i, j = 0, 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            result.append(a[i])\n            i += 1\n        else:\n            result.append(b[j])\n            j += 1\n    result.extend(a[i:])\n    result.extend(b[j:])\n    return result\n```"
+    },
+    {
+     "prompt": "Explain in three sentences what a race condition is.",
+     "sha256": "e54ccf0ee194d006826e8ce011223ed3d10cf0b7985111087486420ba70568ea",
+     "completion_tokens": 142,
+     "text": "The user wants a concise, three-sentence explanation of a race condition. I need to cover: what it is (concurrent access to shared state), why it's problematic (non-deterministic/incorrect results), and ideally a hint at why it matters or how it manifests. Let me keep it clear and precise.\n\u0000\n\nA race condition occurs when two or more threads or processes concurrently access shared data and the final outcome depends on the unpredictable timing of their execution. Because the order of operations is non-deterministic, the program can produce incorrect or inconsistent results that are difficult to reproduce and debug. Race conditions are a common source of concurrency bugs in multithreaded and distributed systems."
+    },
+    {
+     "prompt": "Return a JSON object with keys name, version, deps for a tiny npm package.",
+     "sha256": "221c11ec3fb745084949e1ac98e9f3e5bb8576965a9ce708d19702d1152c12a8",
+     "completion_tokens": 80,
+     "text": "The user wants me to return a JSON object that represents a minimal npm package.json file. It should have three keys: name, version, and deps. I'll create a simple, valid example.\n\u0000\n\n```json\n{\n  \"name\": \"tiny-pkg\",\n  \"version\": \"1.0.0\",\n  \"deps\": {}\n}\n```"
+    }
+   ],
+   "granularity": [
+    {
+     "prompt": "Write a Python function that merges two sorted lists in O(n). Code only.",
+     "text_chunks": 39,
+     "completion_tokens": 143,
+     "tokens_per_chunk": 3.6666666666666665
+    },
+    {
+     "prompt": "Explain in three sentences what a race condition is.",
+     "text_chunks": 54,
+     "completion_tokens": 142,
+     "tokens_per_chunk": 2.6296296296296298
+    },
+    {
+     "prompt": "Return a JSON object with keys name, version, deps for a tiny npm package.",
+     "text_chunks": 24,
+     "completion_tokens": 80,
+     "tokens_per_chunk": 3.3333333333333335
+    }
+   ]
+  },
+  "failed_attempt_lines": []
+ },
+ "missing": [
+  "probe-start2.json"
+ ],
+ "no_go": [
+  "clause 2: swap growth"
+ ],
+ "verdict": "NO_GO"
+}

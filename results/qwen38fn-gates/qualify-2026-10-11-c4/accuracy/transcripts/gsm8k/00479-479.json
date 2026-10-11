@@ -1,0 +1,59 @@
+{
+  "index": 479,
+  "task_id": 479,
+  "rendered_prompt_sha256": "7d77f7a6ee400a70da55d0db88fd27aac91d1bfd79d0dfbabeb6a11c99ae336f",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me break down this problem:\n\n1. Plane tickets: $5000 each, and there are 2 people (Tom and his wife), so 2 × $5000 = $10,000\n2. Hotel: Normal price is $1500 per day, but it's 20% more expensive because it's a busy weekend.\n   - 20% of $1500 = $300\n   - Busy weekend price = $1500 + $300 = $1800 per day\n   - For 3 days: 3 × $1800 = $5,400\n3. Total cost: $10,000 + $5,400 = $15,400\n</think>\n\nLet me work through this step by step:\n\n**Plane tickets:**\n- $5000 each × 2 people = $10,000\n\n**Hotel:**\n- Normal price: $1500 per day\n- 20% more expensive: $1500 × 1.20 = $1800 per day\n- For 3 days: $1800 × 3 = $5,400\n\n**Total cost:**\n$10,000 + $5,400 = $15,400\n\nAnswer: 15400",
+  "finish_reason": "stop",
+  "expected": "15400",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.492547330999514
+  },
+  "response": {
+    "id": "cmpl-825c68b57521072c",
+    "object": "text_completion",
+    "created": 1791693660,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me break down this problem:\n\n1. Plane tickets: $5000 each, and there are 2 people (Tom and his wife), so 2 × $5000 = $10,000\n2. Hotel: Normal price is $1500 per day, but it's 20% more expensive because it's a busy weekend.\n   - 20% of $1500 = $300\n   - Busy weekend price = $1500 + $300 = $1800 per day\n   - For 3 days: 3 × $1800 = $5,400\n3. Total cost: $10,000 + $5,400 = $15,400\n</think>\n\nLet me work through this step by step:\n\n**Plane tickets:**\n- $5000 each × 2 people = $10,000\n\n**Hotel:**\n- Normal price: $1500 per day\n- 20% more expensive: $1500 × 1.20 = $1800 per day\n- For 3 days: $1800 × 3 = $5,400\n\n**Total cost:**\n$10,000 + $5,400 = $15,400\n\nAnswer: 15400",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 136,
+      "total_tokens": 452,
+      "completion_tokens": 316,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

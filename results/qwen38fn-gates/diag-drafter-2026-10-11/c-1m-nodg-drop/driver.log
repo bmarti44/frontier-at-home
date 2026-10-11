@@ -1,0 +1,15 @@
+2026-10-11T03:00:06Z DIAGNOSTIC c-1m-nodg-drop profile qwen3.8-flash-next/cuda-spark-128g-1m hook sitecustomize_b.py stop_gib 11 dropcache 1
+2026-10-11T03:00:06Z head a0646da86714b59710e2f5f466284e9b6a8b8a21 dirty=0
+2026-10-11T03:00:06Z sha256 configs/profiles/qwen3.8-flash-next/cuda-spark-128g-1m.json:18b1adc4406b5031190b00c18b9854468a930fc9ffdc46e383454222e52d7a04 /home/bmarti44/qwen38fn/results/qwen38fn-gates/diag-drafter-2026-10-11/sitecustomize_b.py:4a96d4626a8199664b42a5bd60e07332d7d9e4f2bf1354ce849874dbff590000 /home/bmarti44/qwen38fn/results/qwen38fn-gates/diag-drafter-2026-10-11/watch.py:e0d2a0a4dd013158eb0c66ac7c5be46d19f4b521a40cb4776be6b40042d4a135 /home/bmarti44/qwen38fn/results/qwen38fn-gates/diag-drafter-2026-10-11/dropcache.py:9449ed6c790bc409aad8c80e76c82f8f1bc50b8bd37280ce5c4032f43739a659 results/qwen38fn-gates/diag-drafter-2026-10-11/run-diag.sh:d7d9b6414efe7854406695243f2ca986f76b50e972c811ed77a490652d79e3a5 
+{"pass":true,"required_gib":112.0,"mem_available_gib":115.18,"stable_samples_observed":3}
+2026-10-11T03:00:08Z launching in scope qwen38fn-diag-c-1m-nodg-drop-3143529
+{"pass":true,"required_gib":86.0,"mem_available_gib":115.205,"stable_samples_observed":3}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","pid":3143713,"port":8017}
+2026-10-11T03:10:47Z server ready; sampling idle memory for 60 s
+(EngineCore pid=3144168) INFO 10-10 23:09:59 [model_runner.py:413] Model loading took 75.65 GiB memory and 571.309418 seconds
+(EngineCore pid=3144168) INFO 10-10 23:10:08 [gpu_worker.py:634] Initial free memory 112.55 GiB, reserved 17.9 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control of KV cache memory size. If OOM'ed, check the difference of initial free memory between the current run and the previous run where kv_cache_memory_bytes is suggested and update it correspondingly.
+(EngineCore pid=3144168) INFO 10-10 23:10:08 [kv_cache_utils.py:2570] GPU KV cache size: 1,079,117 tokens, Maximum concurrency for 262,144 tokens per request: 4.12x
+idle_mem_available_kib=14593548
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","stopped":true}
+2026-10-11T03:11:50Z postrun MemAvailable:=120995420 SwapFree:=16221760 
+2026-10-11T03:11:50Z driver exit

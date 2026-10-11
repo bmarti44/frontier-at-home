@@ -1,0 +1,59 @@
+{
+  "index": 1214,
+  "task_id": 1214,
+  "rendered_prompt_sha256": "1e7a4ba71b29b0fde068e2e22b90f78eba162053552d50f9c268e6b300b485cb",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Jordan has 2 children who wear diapers\n- Each child requires 5 diaper changes per day\n- Total diaper changes per day = 2 × 5 = 10\n- Jordan's wife changes half of the diapers\n- So Jordan changes the other half = 10 / 2 = 5\n</think>\n\nJordan has 2 children, each needing 5 diaper changes per day, for a total of 10 diaper changes per day. His wife changes half, so Jordan changes the other half.\n\n10 ÷ 2 = 5\n\nAnswer: 5",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.250028274997021
+  },
+  "response": {
+    "id": "cmpl-8eccd49d3bea9ca2",
+    "object": "text_completion",
+    "created": 1791693525,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Jordan has 2 children who wear diapers\n- Each child requires 5 diaper changes per day\n- Total diaper changes per day = 2 × 5 = 10\n- Jordan's wife changes half of the diapers\n- So Jordan changes the other half = 10 / 2 = 5\n</think>\n\nJordan has 2 children, each needing 5 diaper changes per day, for a total of 10 diaper changes per day. His wife changes half, so Jordan changes the other half.\n\n10 ÷ 2 = 5\n\nAnswer: 5",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 106,
+      "total_tokens": 239,
+      "completion_tokens": 133,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

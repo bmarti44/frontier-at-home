@@ -182,6 +182,56 @@ class ProductionPlan(unittest.TestCase):
             json.loads((ROOT / "configs/build-manifests/ds4-v41.json")
                        .read_text())["binaries"]["ds4-server"]["sha256"])
 
+    def test_qwen38fn_plan_carries_the_qualified_profile_contract(self) -> None:
+        plan = production_plan("qwen38fn")
+        self.assertEqual(plan["alias"], "qwen38fn")
+        self.assertEqual(plan["status"], "qualified")
+        self.assertEqual(
+            plan["relpath"],
+            "configs/profiles/qwen3.8-flash-next/cuda-spark-128g-1m.json")
+        runtime = "/home/bmarti44/.cache/qwen38-flash-next/native-runtime-001/runtime"
+        self.assertEqual(plan["binary"], f"{runtime}/bin/python3.12")
+        model = "/home/bmarti44/models/qwen3.8-flash-next-nvfp4"
+        self.assertEqual(plan["model"], model)
+        self.assertEqual((plan["mmproj"], plan["draft_model"]), ("", ""))
+        self.assertEqual(plan["unit"], "qwen38fn-engine.service")
+        self.assertEqual(plan["unit_name"], "qwen38fn-engine")
+        self.assertEqual(plan["user"], "bmarti44")
+        self.assertEqual(plan["log_name"], "qwen38fn")
+        self.assertEqual(plan["required_gib"], "113")
+        self.assertEqual(plan["floor_gib"], "10")
+        self.assertEqual(plan["timeout"], "1800")
+        self.assertEqual(plan["served_model_id"], "qwen3.8-flash-next")
+        self.assertEqual(plan["health_path"], "/health")
+        self.assertEqual(json.loads(plan["context_check"]), {
+            "kind": "model_card", "max_model_len": 262144,
+            "served_model_id": "qwen3.8-flash-next"})
+        self.assertEqual(plan["context_path"], "/v1/models")
+        model_pin = json.loads(
+            (ROOT / "configs/profiles/qwen3.8-flash-next/model.json").read_text())
+        self.assertEqual(
+            plan["binary_sha256"],
+            model_pin["engines"]["vllm-qwen38fn-r001"]["binary_sha256"])
+        self.assertEqual(
+            [check["path"] for check in plan["digest_checks"]],
+            [f"{runtime}/bin/python3.12"] + [
+                f"{model}/{name}" for name in (
+                    "model.safetensors.index.json", "config.json",
+                    "hf_quant_config.json", "tokenizer.json",
+                    "chat_template.jinja")])
+
+    @unittest.skipUnless(
+        os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0",
+        "host-bound: hashes the local runtime interpreter and model metadata")
+    def test_qwen38fn_artifacts_verify_on_this_host(self) -> None:
+        plan = production_plan("qwen38fn")
+        if not os.path.isfile(plan["binary"]):
+            self.skipTest("runtime not present on this host")
+        identities = generic.verify_artifacts(plan)
+        self.assertEqual(sorted(identities),
+                         sorted(check["path"] for check in plan["digest_checks"]))
+        generic.revalidate(plan, identities)
+
     def test_plan_rejects_a_host_that_disagrees_with_the_switch(self) -> None:
         with self.assertRaisesRegex(generic.SwitchError, "state"):
             generic.build_plan(

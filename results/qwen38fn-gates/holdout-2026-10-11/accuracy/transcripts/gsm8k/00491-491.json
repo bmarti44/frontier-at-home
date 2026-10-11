@@ -1,0 +1,59 @@
+{
+  "index": 491,
+  "task_id": 491,
+  "rendered_prompt_sha256": "7e0ce5a1eb4c3f627a6c217ed83407423779b8ce6412434f2288cac5c0d40b9e",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this problem step by step.\n\n- Each tray can hold 24 eggs\n- Jaime has 64 eggs and 2 trays\n- Total capacity of 2 trays = 2 × 24 = 48 eggs\n- Eggs that won't fit = 64 - 48 = 16 eggs\n</think>\n\nEach tray holds 24 eggs, so 2 trays can hold 2 × 24 = 48 eggs.\n\nJaime has 64 eggs, so the number of eggs that won't fit is 64 - 48 = 16.\n\nAnswer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.8076655810000375
+  },
+  "response": {
+    "id": "cmpl-96d3548a667946d4",
+    "object": "text_completion",
+    "created": 1791708349,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this problem step by step.\n\n- Each tray can hold 24 eggs\n- Jaime has 64 eggs and 2 trays\n- Total capacity of 2 trays = 2 × 24 = 48 eggs\n- Eggs that won't fit = 64 - 48 = 16 eggs\n</think>\n\nEach tray holds 24 eggs, so 2 trays can hold 2 × 24 = 48 eggs.\n\nJaime has 64 eggs, so the number of eggs that won't fit is 64 - 48 = 16.\n\nAnswer: 16",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 109,
+      "total_tokens": 248,
+      "completion_tokens": 139,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

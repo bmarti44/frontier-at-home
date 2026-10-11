@@ -1,0 +1,59 @@
+{
+  "index": 1194,
+  "task_id": 1194,
+  "rendered_prompt_sha256": "d71a0948115aa11910ff0a1e14ec3272480d5d10c343ba25380c64687a053a7f",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Each whale has 40 gallons of blood.\n- A shark has three times as much blood as a whale.\n- So a shark has 3 × 40 = 120 gallons of blood.\n- Ten sharks would have 10 × 120 = 1200 gallons of blood.\n</think>\n\nEach whale has 40 gallons of blood.\n\nA shark has 3 times as much blood as a whale:\n3 × 40 = 120 gallons per shark\n\nTen sharks:\n10 × 120 = 1200 gallons\n\nAnswer: 1200",
+  "finish_reason": "stop",
+  "expected": "1200",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.154346162002184
+  },
+  "response": {
+    "id": "cmpl-8bd4b16cf209d0e5",
+    "object": "text_completion",
+    "created": 1791708441,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Each whale has 40 gallons of blood.\n- A shark has three times as much blood as a whale.\n- So a shark has 3 × 40 = 120 gallons of blood.\n- Ten sharks would have 10 × 120 = 1200 gallons of blood.\n</think>\n\nEach whale has 40 gallons of blood.\n\nA shark has 3 times as much blood as a whale:\n3 × 40 = 120 gallons per shark\n\nTen sharks:\n10 × 120 = 1200 gallons\n\nAnswer: 1200",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 120,
+      "total_tokens": 269,
+      "completion_tokens": 149,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

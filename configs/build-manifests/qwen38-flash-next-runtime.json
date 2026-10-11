@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "scope": "Native vLLM runtime for qwen3.8-flash-next; no qualification claim",
+  "runtime_root": "{cache_root}/qwen38-flash-next/native-runtime-001/runtime",
+  "interpreter": {
+    "source": "uv-managed CPython 3.12.13 (cpython-3.12.13-linux-aarch64-gnu), copied as a relocatable tree",
+    "path": "runtime/bin/python3.12",
+    "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+  },
+  "vllm": {
+    "repository": "https://github.com/vllm-project/vllm",
+    "commit": "72d59adc2c76de8f77aad640c7a04d663a970735",
+    "version": "0.31.1rc1.dev152+g72d59adc2",
+    "wheel": {
+      "url": "https://wheels.vllm.ai/72d59adc2c76de8f77aad640c7a04d663a970735/vllm-0.31.1rc1.dev152%2Bg72d59adc2-cp38-abi3-manylinux_2_28_aarch64.whl",
+      "sha256": "193958524f386e52fd4ca605e320db4f0add5716c0671c07c876a179f4d3b88e"
+    },
+    "cuda_compile": "none (prebuilt aarch64 cu13 wheel)"
+  },
+  "patches": [
+    {
+      "name": "vllm PR #58439 [Qwen4Exp] Checkpoint-mapped PLE storage for unified-memory GPUs (DGX Spark)",
+      "pr_head": "fa53731693ac9ddcb911aa9c45d325a2a1341135",
+      "pr_base": "72d59adc2c76de8f77aad640c7a04d663a970735",
+      "enabled_by": "--engram-config '{\"checkpoint_mapped\":true}' (startup-time option; default off upstream)",
+      "full_diff": {
+        "path": "{cache_root}/qwen38-flash-next/native-runtime-001/patches/vllm-pr58439-fa537316.diff",
+        "sha256": "339553be088cd3f66b3b68e076f5b5c5c25d5c56ba7837fa466a35b01264753d"
+      },
+      "applied_diff": {
+        "path": "{cache_root}/qwen38-flash-next/native-runtime-001/patches/vllm-pr58439-fa537316.runtime.diff",
+        "scope": "vllm/ paths only (tests/docs/CI excluded)",
+        "sha256": "c83a758390febfdb0a6495cce3bcf21ae01ae680ebdf44e52fc6f62e7c461506"
+      }
+    }
+  ],
+  "packages": {
+    "flashinfer-python": "0.7.0.post1",
+    "nvidia-cutlass-dsl": "4.8.0",
+    "safetensors": "0.8.0",
+    "tokenizers": "0.23.3",
+    "torch": "2.13.0+cu130",
+    "transformers": "5.19.0",
+    "triton": "3.7.1",
+    "xgrammar": "0.2.8"
+  },
+  "install_command": "uv pip install --python runtime/bin/python3 <vllm wheel> --extra-index-url https://download.pytorch.org/whl/cu130 --index-strategy unsafe-best-match",
+  "freeze_sha256": "9845655c9ff357f86f92dc7fc29f1a4ccb7b6f28a51ceb610c8f02893adbae75",
+  "vllm_tree": {
+    "sha256": "83b7a48db760efa51854524b60964ddf8813b64f022f5bcd1f3a70797dcc05a7",
+    "files": 5352,
+    "method": "sha256 over sorted 'relpath\\0sha256(file)\\n' of site-packages/vllm, excluding __pycache__/*.pyc, after patching"
+  },
+  "gpu_selftest": "bf16 1024x1024 matmul on NVIDIA GB10 cc (12,1) ok; CU_DEVICE_ATTRIBUTE_PAGEABLE_MEMORY_ACCESS_USES_HOST_PAGE_TABLES = 1 (2026-10-10)",
+  "flashinfer_jit_cache": {
+    "why": "AOT kernels so startup never JIT-compiles; profiles set FLASHINFER_DISABLE_JIT=1, so a missing module fails the load instead of running nvcc beside the model",
+    "install_command": "uv pip install --python runtime/bin/python3 --no-deps <the three wheels below>",
+    "wheels": [
+      {
+        "name": "flashinfer_jit_cache-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "note": "selector shim (4,535 bytes)",
+        "sha256": "dcad7b6519e85b9332d1a18c84046797ce26206d4f15b9e484e2abc66f50d6fb"
+      },
+      {
+        "name": "flashinfer_jit_cache_sm120f-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "url": "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.0.post1/flashinfer_jit_cache_sm120f-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "sha256": "bfa5e2025a7a09755bdaa102b3ddc03809081a5c0bf06bb5e910407a43bb3acb"
+      },
+      {
+        "name": "flashinfer_jit_cache_sm121a-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "url": "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.0.post1/flashinfer_jit_cache_sm121a-0.7.0.post1+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "sha256": "1bf568b1c7452a697ad313a82aed8102b15204d9843ad2247d9778ca84513f75"
+      }
+    ],
+    "check": "gen_cutlass_fused_moe_sm120_module() reports is_aot True with the .so in the sm121a provider (2026-10-10)"
+  },
+  "freeze_note": "freeze.txt after the jit-cache install; the pre-install freeze is kept as freeze-001.txt"
+}

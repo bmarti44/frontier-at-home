@@ -1,0 +1,59 @@
+{
+  "index": 90,
+  "task_id": 90,
+  "rendered_prompt_sha256": "bafb3c3027b1d20f4707003ac42bd5f30b8e83d0e944a09982f398c1b4dc88f1",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Adult dinosaur eats 10 lbs of potato salad\n- Child dinosaur eats half as much as an adult = 10/2 = 5 lbs\n- 20 adults: 20 × 10 = 200 lbs\n- 5 children: 5 × 5 = 25 lbs\n- Total: 200 + 25 = 225 lbs\n</think>\n\nLet me solve this step by step.\n\n**Adults:** 20 adults × 10 lbs each = 200 lbs\n\n**Children:** Each child eats half as much as an adult, so 10 ÷ 2 = 5 lbs each.\n5 children × 5 lbs each = 25 lbs\n\n**Total:** 200 + 25 = 225 lbs\n\nAnswer: 225",
+  "finish_reason": "stop",
+  "expected": "225",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.298192745998676
+  },
+  "response": {
+    "id": "cmpl-a439a96bc5e4ed6b",
+    "object": "text_completion",
+    "created": 1791693938,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Adult dinosaur eats 10 lbs of potato salad\n- Child dinosaur eats half as much as an adult = 10/2 = 5 lbs\n- 20 adults: 20 × 10 = 200 lbs\n- 5 children: 5 × 5 = 25 lbs\n- Total: 200 + 25 = 225 lbs\n</think>\n\nLet me solve this step by step.\n\n**Adults:** 20 adults × 10 lbs each = 200 lbs\n\n**Children:** Each child eats half as much as an adult, so 10 ÷ 2 = 5 lbs each.\n5 children × 5 lbs each = 25 lbs\n\n**Total:** 200 + 25 = 225 lbs\n\nAnswer: 225",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 152,
+      "total_tokens": 347,
+      "completion_tokens": 195,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,59 @@
+{
+  "index": 792,
+  "task_id": 792,
+  "rendered_prompt_sha256": "f3ab6cc8121783cf7972e84247a341bfd96c68e598ede0df10aab3e5ac846d45",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me solve this step by step.\n\n- Damien finds 10 bottle caps per day\n- Each bottle cap is worth $0.25\n- The month has 30 days\n\nTotal bottle caps in 30 days = 10 × 30 = 300 bottle caps\nTotal money = 300 × $0.25 = $75\n</think>\n\nTo find how much money Damien makes in a 30-day month:\n\n1. **Bottle caps found per month:** 10 caps/day × 30 days = 300 bottle caps\n2. **Total money:** 300 caps × $0.25/cap = $75\n\nAnswer: 75",
+  "finish_reason": "stop",
+  "expected": "75",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.844515266006056
+  },
+  "response": {
+    "id": "cmpl-ac0f14e3979b7b62",
+    "object": "text_completion",
+    "created": 1791694170,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me solve this step by step.\n\n- Damien finds 10 bottle caps per day\n- Each bottle cap is worth $0.25\n- The month has 30 days\n\nTotal bottle caps in 30 days = 10 × 30 = 300 bottle caps\nTotal money = 300 × $0.25 = $75\n</think>\n\nTo find how much money Damien makes in a 30-day month:\n\n1. **Bottle caps found per month:** 10 caps/day × 30 days = 300 bottle caps\n2. **Total money:** 300 caps × $0.25/cap = $75\n\nAnswer: 75",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 122,
+      "total_tokens": 281,
+      "completion_tokens": 159,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

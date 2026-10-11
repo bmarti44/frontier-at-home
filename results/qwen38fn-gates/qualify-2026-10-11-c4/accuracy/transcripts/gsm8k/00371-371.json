@@ -1,0 +1,59 @@
+{
+  "index": 371,
+  "task_id": 371,
+  "rendered_prompt_sha256": "7ea6f25c85e02d4328ce172c96209334f5bd18b21576165a80b19f9fdb48b39a",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nFriday: 14 pairs sold\nSaturday: double that number = 14 × 2 = 28 pairs sold\nSunday: one-half the amount they did the day before (Saturday) = 28 ÷ 2 = 14 pairs sold\n\nThen 6 people returned their pairs.\n\nTotal sold = 14 + 28 + 14 = 56 pairs\nAfter returns: 56 - 6 = 50 pairs\n\nThe question asks \"how many tennis shoes were sold by the end of the sale?\" - this means net sales after returns.\n\nSo the answer is 50.\n</think>\n\nLet me work through this step by step:\n\n**Friday:** 14 pairs sold\n\n**Saturday:** Double Friday's amount = 14 × 2 = 28 pairs sold\n\n**Sunday:** One-half of Saturday's amount = 28 ÷ 2 = 14 pairs sold\n\n**Total sold before returns:** 14 + 28 + 14 = 56 pairs\n\n**After returns:** 56 - 6 = 50 pairs\n\nAnswer: 50",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.7234417740037316
+  },
+  "response": {
+    "id": "cmpl-a9cf85a12029dd47",
+    "object": "text_completion",
+    "created": 1791694028,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nFriday: 14 pairs sold\nSaturday: double that number = 14 × 2 = 28 pairs sold\nSunday: one-half the amount they did the day before (Saturday) = 28 ÷ 2 = 14 pairs sold\n\nThen 6 people returned their pairs.\n\nTotal sold = 14 + 28 + 14 = 56 pairs\nAfter returns: 56 - 6 = 50 pairs\n\nThe question asks \"how many tennis shoes were sold by the end of the sale?\" - this means net sales after returns.\n\nSo the answer is 50.\n</think>\n\nLet me work through this step by step:\n\n**Friday:** 14 pairs sold\n\n**Saturday:** Double Friday's amount = 14 × 2 = 28 pairs sold\n\n**Sunday:** One-half of Saturday's amount = 28 ÷ 2 = 14 pairs sold\n\n**Total sold before returns:** 14 + 28 + 14 = 56 pairs\n\n**After returns:** 56 - 6 = 50 pairs\n\nAnswer: 50",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 151,
+      "total_tokens": 407,
+      "completion_tokens": 256,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

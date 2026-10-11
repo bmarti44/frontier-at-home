@@ -1,0 +1,59 @@
+{
+  "index": 999,
+  "task_id": 999,
+  "rendered_prompt_sha256": "8d76dc9d34b20325182b7f1d06fe515a10000e498fc64850233ef4c1ea7659a8",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this problem.\n\nWe have 2 adults and 4 kids dividing a watermelon.\nEach adult gets a slice that is twice as big as each kid's slice.\n\nLet each kid's slice = x\nThen each adult's slice = 2x\n\nTotal = 2(2x) + 4(x) = 4x + 4x = 8x\n\nSo the whole watermelon = 8x\n\nEach adult gets 2x out of 8x = 2/8 = 1/4 = 25%\n\nEach kid gets x out of 8x = 1/8 = 12.5%\n\nCheck: 2(25%) + 4(12.5%) = 50% + 50% = 100% ✓\n</think>\n\nLet me set up the problem with variables.\n\nLet each kid's slice = x, so each adult's slice = 2x.\n\n**Total watermelon:**\n2(2x) + 4(x) = 4x + 4x = 8x\n\n**Each adult's share:**\n2x / 8x = 1/4 = 25%\n\n**Verification:** 2 adults × 25% + 4 kids × 12.5% = 50% + 50% = 100% ✓\n\nAnswer: 25",
+  "finish_reason": "stop",
+  "expected": "25",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.425209135995829
+  },
+  "response": {
+    "id": "cmpl-8e749f104ab20d41",
+    "object": "text_completion",
+    "created": 1791708419,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this problem.\n\nWe have 2 adults and 4 kids dividing a watermelon.\nEach adult gets a slice that is twice as big as each kid's slice.\n\nLet each kid's slice = x\nThen each adult's slice = 2x\n\nTotal = 2(2x) + 4(x) = 4x + 4x = 8x\n\nSo the whole watermelon = 8x\n\nEach adult gets 2x out of 8x = 2/8 = 1/4 = 25%\n\nEach kid gets x out of 8x = 1/8 = 12.5%\n\nCheck: 2(25%) + 4(12.5%) = 50% + 50% = 100% ✓\n</think>\n\nLet me set up the problem with variables.\n\nLet each kid's slice = x, so each adult's slice = 2x.\n\n**Total watermelon:**\n2(2x) + 4(x) = 4x + 4x = 8x\n\n**Each adult's share:**\n2x / 8x = 1/4 = 25%\n\n**Verification:** 2 adults × 25% + 4 kids × 12.5% = 50% + 50% = 100% ✓\n\nAnswer: 25",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 114,
+      "total_tokens": 422,
+      "completion_tokens": 308,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -277,9 +277,33 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
         }
         plan.update(overrides)
         return "".join(
-            f"generic_plan[dsv41flash:{key}]='{value}'\n"
+            f"generic_plan[{plan['alias']}:{key}]='{value}'\n"
             for key, value in plan.items()
         )
+
+    @classmethod
+    def qwen38fn_plan_lines(cls, fixture, **overrides) -> str:
+        # The committed qwen38fn plan (test_switch_generic pins these values):
+        # a vLLM /health route and the served id's model card at 262,144.
+        plan = {
+            "alias": "qwen38fn",
+            "relpath": "configs/profiles/qwen3.8-flash-next/cuda-spark-128g-1m.json",
+            "binary": str(fixture.artifacts / "bin" / "python3.12"),
+            "model": str(fixture.artifacts / "models" / "qwen3.8-flash-next-nvfp4"),
+            "unit": "qwen38fn-engine.service",
+            "unit_name": "qwen38fn-engine",
+            "log_name": "qwen38fn",
+            "required_gib": "113",
+            "served_model_id": "qwen3.8-flash-next",
+            "health_path": "/health",
+            "context_check": json.dumps(
+                {"kind": "model_card", "max_model_len": 262144,
+                 "served_model_id": "qwen3.8-flash-next"},
+                separators=(",", ":"), sort_keys=True),
+            "context_path": "/v1/models",
+        }
+        plan.update(overrides)
+        return cls.generic_plan_lines(fixture, **plan)
 
     def test_generic_guard_failure_under_if_caller_cannot_proceed(self):
         with SwitchSafetyFixture() as fixture:
@@ -473,6 +497,65 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             self.assertNotIn("/v1/chat/completions", calls)
             self.assertNotIn("/slots", calls)
             self.assertNotIn("/health", calls)
+
+    def test_qwen38fn_low_memory_guard_blocks_the_launch(self):
+        with SwitchSafetyFixture() as fixture:
+            result = fixture.run_function(
+                self.qwen38fn_plan_lines(fixture)
+                + "generic_identities[qwen38fn]=verified\n"
+                "if start_generic_profile qwen38fn; then\n"
+                '    printf "STARTER_PROCEEDED\\n"\n'
+                "    exit 90\n"
+                "fi\n"
+                'printf "CALLER_CONTINUED\\n"'
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("pre-load memory release gate failed", result.stderr)
+            self.assertNotIn("STARTER_PROCEEDED", result.stdout)
+            self.assertNotIn("CALLER_CONTINUED", result.stdout)
+            self.assertIn("--required-gib 113",
+                          (fixture.root / "guard.called").read_text())
+            self.assertEqual(fixture.systemctl_calls(), [])
+            self.assertFalse((fixture.state / "qwen38fn.process.json").exists())
+
+    def test_qwen38fn_readiness_requires_health_and_the_262144_model_card(self):
+        # vLLM answers /v1/models before it is healthy; a wrong
+        # --max-model-len must never pass the readiness check either.
+        fake_curl = (
+            "clean_curl() {\n"
+            '    printf "CURL %s\\n" "${*: -1}" >>"$SWITCH_FIXTURE_ROOT/curl.log"\n'
+            '    if [[ ${*: -1} == */health ]]; then return "$FAKE_HEALTH"; fi\n'
+            '    printf \'{"data":[{"id":"qwen3.8-flash-next","max_model_len":%s},\' "$FAKE_MAX_LEN"\n'
+            '    printf \'{"id":"default","max_model_len":%s}]}\' "$FAKE_MAX_LEN"\n'
+            "}\n"
+            "verify_generic_process_ready() { return 0; }\n"
+        )
+        with SwitchSafetyFixture() as fixture:
+            library = fixture.repo / "scripts" / "lib"
+            library.mkdir(parents=True)
+            for name in ("switch_generic.py", "profile_resolver.py"):
+                shutil.copy(ROOT / "scripts/lib" / name, library)
+            result = fixture.run_function(
+                self.qwen38fn_plan_lines(fixture, timeout="1")
+                + fake_curl
+                + "FAKE_HEALTH=0 FAKE_MAX_LEN=131072\n"
+                "if wait_model_ready qwen38fn; then echo SHORT_OK; else echo SHORT_FAILED; fi\n"
+                "FAKE_HEALTH=22 FAKE_MAX_LEN=262144\n"
+                "if wait_model_ready qwen38fn; then echo SICK_OK; else echo SICK_FAILED; fi\n"
+                "FAKE_HEALTH=0 FAKE_MAX_LEN=262144\n"
+                "if wait_model_ready qwen38fn; then echo READY_OK; else echo READY_FAILED; fi\n",
+                timeout=30,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("SHORT_FAILED", result.stdout)
+            self.assertIn("SICK_FAILED", result.stdout)
+            self.assertIn("READY_OK", result.stdout)
+            calls = (fixture.root / "curl.log").read_text()
+            self.assertIn("/health", calls)
+            self.assertIn("/v1/models", calls)
+            self.assertNotIn("/slots", calls)
 
     def test_laguna_hash_verification_rejects_tampered_second_shard(self):
         with SwitchSafetyFixture() as fixture:

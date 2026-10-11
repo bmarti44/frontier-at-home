@@ -1,0 +1,94 @@
+{
+  "index": 128,
+  "task_id": "HumanEval/128",
+  "rendered_prompt_sha256": "b909f8648bf510db69a2cc51213caacee9ed30f34d591f2f5efd3eea8636aca7",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    if not arr:\n        return None\n    prod = 1\n    for i in arr:\n        if i == 0:\n            return 0\n        elif i < 0:\n            prod *= -1\n    return prod * sum([abs(i) for i in arr])\n\n\n",
+  "finish_reason": "stop",
+  "expected": "    if not arr: return None\n    prod = 0 if 0 in arr else (-1) ** len(list(filter(lambda x: x < 0, arr)))\n    return prod * sum([abs(i) for i in arr])\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.1125759030110203
+  },
+  "response": {
+    "id": "cmpl-a809ec4bd5fe01fe",
+    "object": "text_completion",
+    "created": 1791719927,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    if not arr:\n        return None\n    prod = 1\n    for i in arr:\n        if i == 0:\n            return 0\n        elif i < 0:\n            prod *= -1\n    return prod * sum([abs(i) for i in arr])\n\n\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 123,
+      "total_tokens": 189,
+      "completion_tokens": 66,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00128:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

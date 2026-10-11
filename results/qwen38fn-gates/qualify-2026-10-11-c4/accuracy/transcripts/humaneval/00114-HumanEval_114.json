@@ -1,0 +1,94 @@
+{
+  "index": 114,
+  "task_id": "HumanEval/114",
+  "rendered_prompt_sha256": "4bdb0afd53bc0e28529bafba0538d6b3a566ad5f476fb7f1016cfabe823f1c3f",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    min_sum = nums[0]\n    current_sum = 0\n    for num in nums:\n        current_sum += num\n        if current_sum < min_sum:\n            min_sum = current_sum\n        if current_sum > 0:\n            current_sum = 0\n    return min_sum\n",
+  "finish_reason": "stop",
+  "expected": "    max_sum = 0\n    s = 0\n    for num in nums:\n        s += -num\n        if (s < 0):\n            s = 0\n        max_sum = max(s, max_sum)\n    if max_sum == 0:\n        max_sum = max(-i for i in nums)\n    min_sum = -max_sum\n    return min_sum\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.429423545996542
+  },
+  "response": {
+    "id": "cmpl-995ea26b2c5c1f52",
+    "object": "text_completion",
+    "created": 1791703453,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    min_sum = nums[0]\n    current_sum = 0\n    for num in nums:\n        current_sum += num\n        if current_sum < min_sum:\n            min_sum = current_sum\n        if current_sum > 0:\n            current_sum = 0\n    return min_sum\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 87,
+      "total_tokens": 154,
+      "completion_tokens": 67,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0w4tqxz7/case-00114:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

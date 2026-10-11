@@ -1,0 +1,30 @@
+2026-10-11T08:01:38Z DIAGNOSTIC vision run2-nocache-fill profile qwen3.8-flash-next/cuda-spark-128g-1m mmmu_cases 100 fill 1
+2026-10-11T08:01:38Z head 48e1ec440969bfa4e8c8067228a01176cbb9a9e6 dirty=0
+2026-10-11T08:01:38Z preload MemAvailable:=120738796 SwapFree:=16264712 
+{"pass":true,"required_gib":114.0,"mem_available_gib":115.141,"stable_samples_observed":3}
+2026-10-11T08:01:40Z launching in scope qwen38fn-diag-vision-3373448
+{"pass":true,"required_gib":87.0,"mem_available_gib":115.102,"stable_samples_observed":3}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","pid":3373582,"port":8017}
+2026-10-11T08:12:29Z ready after 649 s; sampling idle memory for 60 s
+2026-10-11T08:13:29Z idle_mem_available_kib=12650116
+(EngineCore pid=3373936) INFO 10-11 04:02:00 [cuda.py:585] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=3373936) INFO 10-11 04:02:00 [mm_encoder_attention.py:372] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=3373936) INFO 10-11 04:02:00 [nvfp4.py:314] Using 'FLASHINFER_CUTLASS' NvFp4 MoE backend out of potential backends: ['FLASHINFER_TRTLLM', 'FLASHINFER_CUTEDSL', 'FLASHINFER_CUTEDSL_BATCHED', 'FLASHINFER_CUTLASS', 'VLLM_CUTLASS', 'MARLIN', 'HUMMING', 'EMULATION'].
+(EngineCore pid=3373936) INFO 10-11 04:10:30 [fp8.py:525] Using TRITON Fp8 MoE backend out of potential backends: ['AITER', 'FLASHINFER_TRTLLM', 'FLASHINFER_CUTLASS', 'TRITON', 'MARLIN', 'HUMMING', 'BATCHED_TRITON', 'XPU', 'CPU_W8A8', 'CPU', 'HPC'].
+(EngineCore pid=3373936) WARNING 10-11 04:11:43 [speculator.py:240] Draft model Qwen4ExpMTP does not support external multimodal embeddings. Embeddings from the target model will not be passed to the drafter; using text-only draft inputs instead.
+(EngineCore pid=3373936) INFO 10-11 04:11:43 [model_runner.py:413] Model loading took 76.49 GiB memory and 584.573521 seconds
+(EngineCore pid=3373936) INFO 10-11 04:11:48 [encoder_runner.py:131] Encoder cache will be initialized with a budget of 16384 tokens, and profiled with 1 image items of the maximum feature size.
+(EngineCore pid=3373936) INFO 10-11 04:12:05 [kv_cache_utils.py:2570] GPU KV cache size: 1,079,117 tokens, Maximum concurrency for 262,144 tokens per request: 4.12x
+(EngineCore pid=3373936) INFO 10-11 04:12:05 [speculator.py:118] Fused multi-step draft decode is not supported by attention backend(s) QWEN4_EXP_EXP_QSA_STATE; falling back to rebuilding attention metadata between draft steps.
+2026-10-11T08:13:29Z attention block size 3200; KV capacity 1079117 tokens at 262,144
+{"greedy": ["10bbe8c78923", "e54ccf0ee194", "221c11ec3fb7"], "tokens_per_chunk": [3.6666666666666665, 2.6296296296296298, 3.3333333333333335]}
+probe vs candidate 5 start 1: identical [True, True, True]
+[99/100] id=validation_Sociology_10 correct=True parsed=C
+[100/100] id=validation_Sociology_11 correct=True parsed=B
+{"ok": true, "summary": "/home/bmarti44/qwen38fn/results/qwen38fn-gates/diag-vision-2026-10-11/run2-nocache-fill/vision/summary.json", "transcripts": "/home/bmarti44/qwen38fn/results/qwen38fn-gates/diag-vision-2026-10-11/run2-nocache-fill/vision/transcripts.jsonl"}
+2026-10-11T08:15:25Z after vision mem_available_kib=11472788
+2026-10-11T08:15:59Z STOP MemAvailable below 10.5 GiB: SIGKILL scope
+{"verdict": "FAIL", "total_tokens": 0, "needles_correct": 0, "needles_total": 4, "min_mem_available_gib": 10.56644058227539, "max_ttft_s": null}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","stopped":true}
+2026-10-11T08:16:01Z postrun MemAvailable:=120790844 SwapFree:=16265440 
+2026-10-11T08:16:01Z driver exit

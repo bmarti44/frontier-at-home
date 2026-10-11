@@ -1,0 +1,94 @@
+{
+  "index": 113,
+  "task_id": "HumanEval/113",
+  "rendered_prompt_sha256": "2e684f86c7166a064ce81c06ad2a26b4d974f41c507e6e65e4dccd32f2345bcd",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    result = []\n    for s in lst:\n        odd_count = sum(1 for c in s if int(c) % 2 != 0)\n        result.append(f\"the number of odd elements {odd_count}n the str{odd_count}ng {odd_count} of the {odd_count}nput.\")\n    return result\n",
+  "finish_reason": "stop",
+  "expected": "    res = []\n    for arr in lst:\n        n = sum(int(d)%2==1 for d in arr)\n        res.append(\"the number of odd elements \" + str(n) + \"n the str\"+ str(n) +\"ng \"+ str(n) +\" of the \"+ str(n) +\"nput.\")\n    return res\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.4474387949885568
+  },
+  "response": {
+    "id": "cmpl-b0b4c195f37b642c",
+    "object": "text_completion",
+    "created": 1791703451,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    result = []\n    for s in lst:\n        odd_count = sum(1 for c in s if int(c) % 2 != 0)\n        result.append(f\"the number of odd elements {odd_count}n the str{odd_count}ng {odd_count} of the {odd_count}nput.\")\n    return result\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 186,
+      "total_tokens": 262,
+      "completion_tokens": 76,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0w4tqxz7/case-00113:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "index": 910,
+  "task_id": 910,
+  "rendered_prompt_sha256": "8084642c4a1da5374ee8a66a7c57eb7a969bf33d865b5fbdb3faa4a69fbe5033",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nFarmer Brown's farm = 200 acres\nFarmer Smith's farm = 100 acres more than twice Farmer Brown's farm = 2 × 200 + 100 = 500 acres\n\nTogether = 200 + 500 = 700 acres\n</think>\n\nFarmer Brown's farm = 200 acres\nFarmer Smith's farm = 2 × 200 + 100 = 500 acres\nTogether = 200 + 500 = 700 acres\n\nAnswer: 700",
+  "finish_reason": "stop",
+  "expected": "700",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.9296993809984997
+  },
+  "response": {
+    "id": "cmpl-bc476978bff8387f",
+    "object": "text_completion",
+    "created": 1791708465,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nFarmer Brown's farm = 200 acres\nFarmer Smith's farm = 100 acres more than twice Farmer Brown's farm = 2 × 200 + 100 = 500 acres\n\nTogether = 200 + 500 = 700 acres\n</think>\n\nFarmer Brown's farm = 200 acres\nFarmer Smith's farm = 2 × 200 + 100 = 500 acres\nTogether = 200 + 500 = 700 acres\n\nAnswer: 700",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 105,
+      "total_tokens": 247,
+      "completion_tokens": 142,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

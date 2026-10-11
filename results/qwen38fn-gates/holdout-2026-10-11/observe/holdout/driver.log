@@ -1,0 +1,21 @@
+humaneval runtime {'image': 'python:3.12-slim', 'repo_digest': 'python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de', 'pin_path': 'configs/pins/humaneval-runtime.json', 'pin_sha256': '548912ac64a29b3dcaa30bf45616954d329c19862c781fe901b8bc18d7fe54f5'}
+2026-10-11T08:29:39Z preload MemAvailable:=120676552 SwapFree:=16265692 
+2026-10-11T08:29:39Z head b196d4e4f3d4c938c6a516d433bf6cad6734c813 dirty=0
+{"pass":true,"required_gib":114.0,"mem_available_gib":115.089,"stable_samples_observed":3}
+2026-10-11T08:29:41Z holdout: launching in scope qwen38fn-p2-holdout-3402023 (RuntimeMaxSec=28800)
+{"pass":true,"required_gib":86.0,"mem_available_gib":115.068,"stable_samples_observed":3}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","pid":3402161,"port":8017}
+2026-10-11T08:40:19Z holdout: ready after 638 s
+2026-10-11T08:40:19Z idle_mem_available_kib=14482792
+2026-10-11T08:40:19Z holdout: attention block size 3200 tokens
+2026-10-11T08:40:19Z holdout: KV capacity 1079117 tokens at 262,144 per request
+{"greedy": ["10bbe8c78923", "e54ccf0ee194", "221c11ec3fb7"], "tokens_per_chunk": [3.6666666666666665, 2.6296296296296298, 3.3333333333333335]}
+2026-10-11T08:40:42Z holdout: probe identical to candidate 5; drawing the holdout
+[accuracy] starting
+[accuracy] OK
+MEASURED: /home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/SUMMARY.md
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","stopped":true}
+2026-10-11T12:06:48Z holdout: scope empty after stop
+2026-10-11T12:06:48Z postrun MemAvailable:=121173928 SwapFree:=16268552 
+ERROR: qwen3.8-flash-next/cuda-spark-128g-1m is not running (state file absent)
+2026-10-11T12:06:48Z driver exit

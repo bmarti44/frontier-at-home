@@ -1,0 +1,59 @@
+{
+  "index": 1115,
+  "task_id": 1115,
+  "rendered_prompt_sha256": "656ca443f1cafd35bd8505fae82dbdcc647d6984c0173a361b78622476524c17",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Anna's total budget: $16\n- Already spent: $4\n- She bought 2 books today, both costing the same amount\n- She has $2 left\n\nSo the money spent on the 2 books = Total budget - Already spent - Left over\n= $16 - $4 - $2 = $10\n\nEach book cost = $10 / 2 = $5\n</think>\n\nAnna started with $16, had already spent $4, and has $2 left.\n\nMoney spent on the 2 books = $16 - $4 - $2 = $10\n\nEach book cost = $10 ÷ 2 = $5\n\nAnswer: 5",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.159241787994688
+  },
+  "response": {
+    "id": "cmpl-b139442d7f27b462",
+    "object": "text_completion",
+    "created": 1791694044,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Anna's total budget: $16\n- Already spent: $4\n- She bought 2 books today, both costing the same amount\n- She has $2 left\n\nSo the money spent on the 2 books = Total budget - Already spent - Left over\n= $16 - $4 - $2 = $10\n\nEach book cost = $10 / 2 = $5\n</think>\n\nAnna started with $16, had already spent $4, and has $2 left.\n\nMoney spent on the 2 books = $16 - $4 - $2 = $10\n\nEach book cost = $10 ÷ 2 = $5\n\nAnswer: 5",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 132,
+      "total_tokens": 292,
+      "completion_tokens": 160,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

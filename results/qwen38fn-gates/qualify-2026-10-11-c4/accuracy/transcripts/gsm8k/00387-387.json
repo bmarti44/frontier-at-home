@@ -1,0 +1,59 @@
+{
+  "index": 387,
+  "task_id": 387,
+  "rendered_prompt_sha256": "d4b667cfb92bd3717909d88f6e31cf3c4acac1ebf939b8db70a6b10ec0f2356c",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me calculate the total cost of 6 erasers and 8 pencils.\n\nErasers: 6 × $2 = $12\nPencils: 8 × $3 = $24\nTotal: $12 + $24 = $36\n</think>\n\n6 erasers at $2 each = $12\n8 pencils at $3 each = $24\nTotal = $12 + $24 = $36\n\nAnswer: 36",
+  "finish_reason": "stop",
+  "expected": "36",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8400234629953047
+  },
+  "response": {
+    "id": "cmpl-831c13dc5e058eb7",
+    "object": "text_completion",
+    "created": 1791694079,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me calculate the total cost of 6 erasers and 8 pencils.\n\nErasers: 6 × $2 = $12\nPencils: 8 × $3 = $24\nTotal: $12 + $24 = $36\n</think>\n\n6 erasers at $2 each = $12\n8 pencils at $3 each = $24\nTotal = $12 + $24 = $36\n\nAnswer: 36",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 92,
+      "total_tokens": 196,
+      "completion_tokens": 104,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

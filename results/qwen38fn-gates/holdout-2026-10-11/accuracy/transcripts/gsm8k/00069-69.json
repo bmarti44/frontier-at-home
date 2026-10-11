@@ -1,0 +1,60 @@
+{
+  "index": 69,
+  "task_id": 69,
+  "rendered_prompt_sha256": "af68430e59fee63f2ebae3ff4d36b4412d3970594c7ef9d70971adb84c28b800",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Bailey receives $5 per week for 8 weeks, so she receives 5 × 8 = $40 in total from her allowance.\n\nAt the end of 8 weeks, she has $100 total.\n\nSo she started with $100 - $40 = $60.\n</think>\n\nBailey receives $5 × 8 = $40 from her allowance over 8 weeks.\n\nShe ends with $100, so she started with $100 - $40 = $60.\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.8254479720053496
+  },
+  "response": {
+    "id": "cmpl-be7108bd8162f257",
+    "object": "text_completion",
+    "created": 1791708175,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Bailey receives $5 per week for 8 weeks, so she receives 5 × 8 = $40 in total from her allowance.\n\nAt the end of 8 weeks, she has $100 total.\n\nSo she started with $100 - $40 = $60.\n</think>\n\nBailey receives $5 × 8 = $40 from her allowance over 8 weeks.\n\nShe ends with $100, so she started with $100 - $40 = $60.\n\nAnswer: 60",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 118,
+      "total_tokens": 239,
+      "completion_tokens": 121,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>system\nReasoning effort is set to low. Keep your thinking brief and focused, moving directly to the conclusion without unnecessary elaboration.<|im_end|>\n<|im_start|>user\nBailey starts with a certain amount of money. Then she receives a weekly allowance of $5 for 8 weeks. At the end of the 8 weeks, if she has a total of $100, how much money did Bailey start with?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|>\n<|im_start|>assistant\n<think>\n"
+}

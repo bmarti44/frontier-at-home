@@ -1,0 +1,59 @@
+{
+  "index": 705,
+  "task_id": 705,
+  "rendered_prompt_sha256": "ac443e2332e11b4f193a50bb1cee3bbe7194a3e62ce52db8b9267b7ae6831611",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nThe cat runs at 15 feet/second.\nThe cat is 5 times faster than the turtle.\nSo the turtle's speed = 15 / 5 = 3 feet/second.\nIn 40 seconds, the turtle crawls: 3 × 40 = 120 feet.\n</think>\n\nThe cat runs at 15 feet/second and is 5 times faster than the turtle.\n\nTurtle's speed = 15 ÷ 5 = 3 feet/second\n\nDistance turtle crawls in 40 seconds = 3 × 40 = 120 feet\n\nAnswer: 120",
+  "finish_reason": "stop",
+  "expected": "120",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.387814678004361
+  },
+  "response": {
+    "id": "cmpl-b55f5d44dcaba21b",
+    "object": "text_completion",
+    "created": 1791708096,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nThe cat runs at 15 feet/second.\nThe cat is 5 times faster than the turtle.\nSo the turtle's speed = 15 / 5 = 3 feet/second.\nIn 40 seconds, the turtle crawls: 3 × 40 = 120 feet.\n</think>\n\nThe cat runs at 15 feet/second and is 5 times faster than the turtle.\n\nTurtle's speed = 15 ÷ 5 = 3 feet/second\n\nDistance turtle crawls in 40 seconds = 3 × 40 = 120 feet\n\nAnswer: 120",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 104,
+      "total_tokens": 255,
+      "completion_tokens": 151,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

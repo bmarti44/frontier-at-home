@@ -106,6 +106,29 @@ class HoldoutRowsetTests(unittest.TestCase):
         self.assertIn('if args.profile_id is not None:', source)
         self.assertIn('digest_payload["profile_id"] = args.profile_id', source)
 
+    def test_server_is_reached_before_the_holdout_is_marked_started(self):
+        # The "started" ledger entry spends the rows. If the server is already
+        # gone (OOM kill, Xid, memwatch stop during an earlier suite), the draw
+        # must fail before that entry is written, not after.
+        import ast
+        tree = ast.parse(SCRIPT.read_text())
+        calls = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                func = node.func
+                name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+                if name in ("get_model", "append_holdout_ledger"):
+                    calls.setdefault(name, []).append(node.lineno)
+        started = [
+            n.lineno for n in ast.walk(tree)
+            if isinstance(n, ast.Call) and getattr(n.func, "id", None) == "append_holdout_ledger"
+            and any(isinstance(k, ast.Constant) and k.value == "started"
+                    for a in n.args if isinstance(a, ast.Dict) for k in a.values)
+        ]
+        self.assertEqual(len(calls["get_model"]), 1)
+        self.assertEqual(len(started), 1)
+        self.assertLess(calls["get_model"][0], started[0])
+
     def test_ledger_entry_carries_the_rowset_digest(self):
         # The ledger row is what an auditor reads; the digest has to be in it.
         module = self.module

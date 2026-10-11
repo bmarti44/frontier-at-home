@@ -1,0 +1,59 @@
+{
+  "index": 405,
+  "task_id": 405,
+  "rendered_prompt_sha256": "67f58dcf3c4ee8ae24e0438769ad3d8523be98a35d5874fbb5e193c5274c2dfc",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nEach sandwich serves 4 people.\nThere are 20 people total.\nSo Tyson needs 20 / 4 = 5 sandwiches.\n\nEach sandwich requires 1 pound of meat and 1 pound of cheese.\nSo he needs 5 pounds of meat and 5 pounds of cheese.\n\nMeat costs $7.00 per pound: 5 × $7.00 = $35.00\nCheese costs $3.00 per pound: 5 × $3.00 = $15.00\n\nTotal cost = $35.00 + $15.00 = $50.00\n</think>\n\nEach sandwich serves 4 people, so for 20 people Tyson needs:\n20 ÷ 4 = 5 sandwiches\n\nEach sandwich requires 1 pound of meat and 1 pound of cheese, so he needs:\n- 5 pounds of meat\n- 5 pounds of cheese\n\nCost of meat: 5 × $7.00 = $35.00\nCost of cheese: 5 × $3.00 = $15.00\n\nTotal cost: $35.00 + $15.00 = $50.00\n\nAnswer: 50",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.029854841995984
+  },
+  "response": {
+    "id": "cmpl-a70d4522112fbd4f",
+    "object": "text_completion",
+    "created": 1791708042,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nEach sandwich serves 4 people.\nThere are 20 people total.\nSo Tyson needs 20 / 4 = 5 sandwiches.\n\nEach sandwich requires 1 pound of meat and 1 pound of cheese.\nSo he needs 5 pounds of meat and 5 pounds of cheese.\n\nMeat costs $7.00 per pound: 5 × $7.00 = $35.00\nCheese costs $3.00 per pound: 5 × $3.00 = $15.00\n\nTotal cost = $35.00 + $15.00 = $50.00\n</think>\n\nEach sandwich serves 4 people, so for 20 people Tyson needs:\n20 ÷ 4 = 5 sandwiches\n\nEach sandwich requires 1 pound of meat and 1 pound of cheese, so he needs:\n- 5 pounds of meat\n- 5 pounds of cheese\n\nCost of meat: 5 × $7.00 = $35.00\nCost of cheese: 5 × $3.00 = $15.00\n\nTotal cost: $35.00 + $15.00 = $50.00\n\nAnswer: 50",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 159,
+      "total_tokens": 445,
+      "completion_tokens": 286,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

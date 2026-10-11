@@ -1,0 +1,59 @@
+{
+  "index": 756,
+  "task_id": 756,
+  "rendered_prompt_sha256": "50373086de4c75b942f93824f31de0e0ead2494b88fc8502bf54c180d3676013",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this problem.\n\nLet's say the number of votes against = x\nThen the number of votes in favor = 2x\n\nTotal votes = x + 2x = 3x = 33\n\nSo x = 11\n\nVotes in favor = 2x = 22\n</think>\n\nLet me denote the number of votes against as x. Then the number of votes in favor is 2x.\n\nTotal votes: x + 2x = 33\n3x = 33\nx = 11\n\nVotes in favor = 2 × 11 = 22\n\nAnswer: 22",
+  "finish_reason": "stop",
+  "expected": "22",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.089986503000546
+  },
+  "response": {
+    "id": "cmpl-88bd7f11b5691e12",
+    "object": "text_completion",
+    "created": 1791693968,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this problem.\n\nLet's say the number of votes against = x\nThen the number of votes in favor = 2x\n\nTotal votes = x + 2x = 3x = 33\n\nSo x = 11\n\nVotes in favor = 2x = 22\n</think>\n\nLet me denote the number of votes against as x. Then the number of votes in favor is 2x.\n\nTotal votes: x + 2x = 33\n3x = 33\nx = 11\n\nVotes in favor = 2 × 11 = 22\n\nAnswer: 22",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 120,
+      "total_tokens": 260,
+      "completion_tokens": 140,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

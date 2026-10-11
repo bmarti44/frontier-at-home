@@ -1,0 +1,59 @@
+{
+  "index": 347,
+  "task_id": 347,
+  "rendered_prompt_sha256": "57b2adbd3fb5cb180f345453389a83e5b9e08f47fb19194d138da7d0b216554d",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me solve this step by step.\n\n- 2 shirts at $30 each\n- 40% discount\n\nFirst, find the total cost before discount: 2 × $30 = $60\n\nThen apply the 40% discount: $60 × 0.40 = $24 discount\n\nAmount paid: $60 - $24 = $36\n\nAlternatively: $60 × 0.60 = $36\n</think>\n\nEach shirt costs $30, so 2 shirts cost $60 before the discount.\n\nA 40% discount means he pays 60% of the original price:\n\n$60 × 0.60 = $36\n\nAnswer: 36",
+  "finish_reason": "stop",
+  "expected": "36",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.773499414004618
+  },
+  "response": {
+    "id": "cmpl-a83ca38af9c2cbde",
+    "object": "text_completion",
+    "created": 1791694095,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me solve this step by step.\n\n- 2 shirts at $30 each\n- 40% discount\n\nFirst, find the total cost before discount: 2 × $30 = $60\n\nThen apply the 40% discount: $60 × 0.40 = $24 discount\n\nAmount paid: $60 - $24 = $36\n\nAlternatively: $60 × 0.60 = $36\n</think>\n\nEach shirt costs $30, so 2 shirts cost $60 before the discount.\n\nA 40% discount means he pays 60% of the original price:\n\n$60 × 0.60 = $36\n\nAnswer: 36",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 106,
+      "total_tokens": 268,
+      "completion_tokens": 162,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

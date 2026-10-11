@@ -1,0 +1,58 @@
+{
+  "index": 214,
+  "task_id": 286,
+  "rendered_prompt_sha256": "54089377d572526e11f7138c5e994cbaf4bae7c8ca286c6dc5e3c56c2cad3fb7",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "The problem asks about the declining-balance method with the maximum percentage allowable.\n\nFor the declining-balance method, the maximum rate allowed is typically 200% of the straight-line rate (this is the double-declining-balance method, which is the maximum allowed under declining-balance for tax purposes in many contexts).\n\nThe straight-line rate for 6 years = 1/6 = 16.67%\n\nThe maximum declining-balance rate = 2 × (1/6) = 2/6 = 1/3 = 33.33%\n\nLet me calculate:\n\nYear 1: $15,000 × (1/3) = $5,000\nBook value after Year 1: $15,000 - $5,000 = $10,000\n\nYear 2: $10,000 × (1/3) = $3,333.33\nBook value after Year 2: $10,000 - $3,333.33 = $6,666.67\n\nYear 3: $6,666.67 × (1/3) = $2,222.22\nBook value after Year 3: $6,666.67 - $2,222.22 = $4,444.44\n\nThis matches option B: Year 1: $5,000, Year 2: $3,333, Year 3: $2,222\n</think>\n\nLooking at this problem, I need to find the maximum declining-balance rate and apply it.\n\n**Step 1: Determine the maximum declining-balance rate.**\n\nThe maximum rate under the declining-balance method is 200% of the straight-line rate (double-declining-balance).\n\n- Straight-line rate = 1/6 = 16.67%\n- Maximum declining-balance rate = 2 × (1/6) = 1/3 ≈ 33.33%\n\n**Step 2: Calculate depreciation for each year.**\n\n- **Year 1:** $15,000 × (1/3) = **$5,000** → Book value = $10,000\n- **Year 2:** $10,000 × (1/3) = **$3,333** → Book value = $6,667\n- **Year 3:** $6,667 × (1/3) = **$2,222** → Book value = $4,444\n\nThis matches option B.\n\nAnswer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 15.479441984993173
+  },
+  "response": {
+    "id": "cmpl-8cf3979711df6903",
+    "object": "text_completion",
+    "created": 1791709347,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The problem asks about the declining-balance method with the maximum percentage allowable.\n\nFor the declining-balance method, the maximum rate allowed is typically 200% of the straight-line rate (this is the double-declining-balance method, which is the maximum allowed under declining-balance for tax purposes in many contexts).\n\nThe straight-line rate for 6 years = 1/6 = 16.67%\n\nThe maximum declining-balance rate = 2 × (1/6) = 2/6 = 1/3 = 33.33%\n\nLet me calculate:\n\nYear 1: $15,000 × (1/3) = $5,000\nBook value after Year 1: $15,000 - $5,000 = $10,000\n\nYear 2: $10,000 × (1/3) = $3,333.33\nBook value after Year 2: $10,000 - $3,333.33 = $6,666.67\n\nYear 3: $6,666.67 × (1/3) = $2,222.22\nBook value after Year 3: $6,666.67 - $2,222.22 = $4,444.44\n\nThis matches option B: Year 1: $5,000, Year 2: $3,333, Year 3: $2,222\n</think>\n\nLooking at this problem, I need to find the maximum declining-balance rate and apply it.\n\n**Step 1: Determine the maximum declining-balance rate.**\n\nThe maximum rate under the declining-balance method is 200% of the straight-line rate (double-declining-balance).\n\n- Straight-line rate = 1/6 = 16.67%\n- Maximum declining-balance rate = 2 × (1/6) = 1/3 ≈ 33.33%\n\n**Step 2: Calculate depreciation for each year.**\n\n- **Year 1:** $15,000 × (1/3) = **$5,000** → Book value = $10,000\n- **Year 2:** $10,000 × (1/3) = **$3,333** → Book value = $6,667\n- **Year 3:** $6,667 × (1/3) = **$2,222** → Book value = $4,444\n\nThis matches option B.\n\nAnswer: B",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 480,
+      "total_tokens": 1083,
+      "completion_tokens": 603,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# Holdout driver (README.md in this directory). Usage: run-holdout.sh
+# One fresh start of the candidate-5-qualified 1m profile on :8017 inside a
+# user scope (MemorySwapMax=0, OOMPolicy=kill, RuntimeMaxSec), with
+# candidate 5's external 1 Hz sampler and kernel log. It runs the restart
+# probe, then the kit's accuracy cell on the holdout split, spend-once.
+set -Eeuo pipefail
+START=holdout
+CAP=28800
+WT=/home/bmarti44/qwen38fn
+EV=$WT/results/qwen38fn-gates/holdout-2026-10-11
+C5=$WT/results/qwen38fn-gates/qualify-2026-10-11-c4
+SMOKE=$WT/results/qwen38fn-gates/smoke-2026-10-11
+PROFILE=qwen3.8-flash-next/cuda-spark-128g-1m
+PORT=8017
+BLOCK_TOKENS=3200
+# Differs from configs/hosts/spark-aba1.json only in paths.repo, so the
+# server's PYTHONPATH reaches this worktree's scripts/lib.
+HOST=$EV/host-worktree.json
+SERVE=(bash "$WT/scripts/93_profile_serve.sh" --profile "$PROFILE" --host "$HOST" --port "$PORT")
+KIT=(python3 "$WT/scripts/94_qualify_profile.py" --profile "$PROFILE" --host "$HOST" --port "$PORT"
+     --no-launch --out "$EV")
+SLUG=qwen3.8-flash-next-cuda-spark-128g-1m
+SERVER_LOG=$HOME/.frontier-at-home/logs/$SLUG.server.log
+MEMWATCH_LOG=$HOME/.frontier-at-home/logs/$SLUG.memwatch.log
+UNIT=qwen38fn-p2-$START-$$
+OBS=$EV/observe/$START
+[[ ! -e $OBS ]] || { echo "$OBS exists; the holdout is spend-once" >&2; exit 2; }
+mkdir -p "$OBS"
+cd "$WT"
+
+stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+log() { printf '%s %s\n' "$(stamp)" "$*" | tee -a "$OBS/driver.log"; }
+size_of() { stat -c %s -- "$1" 2>/dev/null || echo 0; }
+SERVER_OFF=$(size_of "$SERVER_LOG")
+MEMWATCH_OFF=$(size_of "$MEMWATCH_LOG")
+
+( cg=
+  while :; do
+    if [[ -z $cg ]]; then
+        cg=$(systemctl --user show -p ControlGroup --value "$UNIT.scope" 2>/dev/null || true)
+    fi
+    printf '%s ' "$(stamp)"
+    awk '/^(MemAvailable|MemFree|SwapTotal|SwapFree|Cached|AnonPages|Mapped|Dirty):/{printf "%s=%s ", $1, $2}' /proc/meminfo
+    [[ -n $cg && -r /sys/fs/cgroup$cg/memory.current ]] && printf 'cgroup_memory_current=%s ' "$(<"/sys/fs/cgroup$cg/memory.current")"
+    printf '\n'
+    sleep 1
+  done >>"$OBS/meminfo.log" ) &
+SAMPLER=$!
+journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 &
+JOURNAL=$!
+cleanup() {
+    "${SERVE[@]}" stop >>"$OBS/driver.log" 2>&1 || true
+    kill "$SAMPLER" "$JOURNAL" 2>/dev/null || true
+    tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" >"$OBS/server.log" 2>/dev/null || true
+    tail -c +$((MEMWATCH_OFF + 1)) -- "$MEMWATCH_LOG" >"$OBS/memwatch.log" 2>/dev/null || true
+    local i
+    for ((i = 0; i < 30; i++)); do
+        systemctl --user is-active -q "$UNIT.scope" || break
+        sleep 1
+    done
+    if systemctl --user is-active -q "$UNIT.scope"; then
+        log "FAILED_ATTEMPT $START: scope still active at exit; stopping it"
+        systemctl --user stop "$UNIT.scope" || true
+    fi
+    nvidia-smi >"$OBS/nvidia-smi-end.txt" 2>&1 || true
+    log "driver exit"
+}
+trap cleanup EXIT
+
+check_no_survivors() {
+    local i
+    for ((i = 0; i < 60; i++)); do
+        systemctl --user is-active -q "$UNIT.scope" || { log "$START: scope empty after stop"; return 0; }
+        sleep 1
+    done
+    log "FAILED_ATTEMPT $START: surviving descendants in $UNIT.scope; stopping scope"
+    systemctl --user stop "$UNIT.scope" || true
+    return 1
+}
+
+# README: the ledger namespace is "" (31_bench_accuracy.py reads DSV4_LEDGER_NAMESPACE).
+unset DSV4_LEDGER_NAMESPACE
+# HumanEval's sandbox fails closed at its suite start, after the holdout is
+# drawn; check it with the bench's own resolver before any load.
+python3 - "$WT/scripts/31_bench_accuracy.py" <<'PY' | tee -a "$OBS/driver.log"
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("bench", sys.argv[1])
+bench = importlib.util.module_from_spec(spec)
+sys.modules["bench"] = bench
+spec.loader.exec_module(bench)
+print("humaneval runtime", bench.resolve_humaneval_runtime_digest())
+PY
+log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
+log "head $(git -C "$WT" rev-parse HEAD) dirty=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)"
+python3 "$WT/scripts/03_memory_guard.py" --required-gib 114 --stable-samples 3 --timeout-seconds 600 \
+    | tee -a "$OBS/driver.log"
+
+log "$START: launching in scope $UNIT (RuntimeMaxSec=$CAP)"
+t0=$SECONDS
+systemd-run --user --scope -q --unit="$UNIT" \
+    -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec="$CAP" \
+    -- "${SERVE[@]}" start | tee -a "$OBS/driver.log"
+log "$START: ready after $((SECONDS - t0)) s"
+awk '/MemAvailable/{printf "%s idle_mem_available_kib=%s\n", "'"$(stamp)"'", $2}' /proc/meminfo | tee -a "$OBS/driver.log"
+block=$(tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" | grep -oP 'Setting attention block size to \K[0-9]+' | tail -1 || true)
+log "$START: attention block size ${block:-unknown} tokens"
+kv=$(tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" \
+    | grep -oP 'GPU KV cache size: \K[0-9,]+(?= tokens, Maximum concurrency for 262,144 tokens per request)' \
+    | tail -1 | tr -d , || true)
+log "$START: KV capacity ${kv:-unknown} tokens at 262,144 per request"
+if [[ $block != "$BLOCK_TOKENS" || -z $kv || $kv -lt 1048576 ]]; then
+    log "FAILED_ATTEMPT $START: block ${block:-unknown} (want $BLOCK_TOKENS), KV ${kv:-unknown} (want >= 1048576)"
+    exit 1
+fi
+
+python3 "$SMOKE/probe.py" --base-url "http://127.0.0.1:$PORT" --out "$EV/probe-$START.json" | tee -a "$OBS/driver.log"
+# The holdout is drawn only on the configuration candidate 5 qualified: the
+# three greedy hashes must equal candidate 5's (restart identity).
+if python3 - "$EV/probe-$START.json" "$C5/probe-start1.json" <<'PY'
+import json, sys
+a, b = ([g["sha256"] for g in json.load(open(p))["greedy"]] for p in sys.argv[1:3])
+sys.exit(0 if len(a) == 3 and a == b else 1)
+PY
+then
+    log "$START: probe identical to candidate 5; drawing the holdout"
+    "${KIT[@]}" --cells accuracy --accuracy-split holdout --reasoning-effort low 2>&1 | tee -a "$OBS/driver.log" \
+        || log "kit exit nonzero"
+else
+    log "FAILED_ATTEMPT $START: probe differs from candidate 5; holdout not drawn"
+fi
+"${SERVE[@]}" stop | tee -a "$OBS/driver.log"
+check_no_survivors
+log "postrun $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
