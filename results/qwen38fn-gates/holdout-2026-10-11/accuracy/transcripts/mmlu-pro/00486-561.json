@@ -1,0 +1,58 @@
+{
+  "index": 486,
+  "task_id": 561,
+  "rendered_prompt_sha256": "17d514d0bd43b80e6cb763bc301c4c16648d3ac096196a7b9c3501404e24841d",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Bob has debts totaling $25,000 and has $15,000 available to pay creditors.\n\nThe ratio of available funds to total debts = $15,000 / $25,000 = 0.60 = 60 cents on the dollar.\n\nFor a creditor with a claim of $4,500:\n$4,500 × 0.60 = $2,700\n\nSo the answer is 60 cents on the dollar, $2,700, which is option H.\n</think>\n\nTo find how many cents on the dollar Bob pays each creditor:\n\n**Ratio** = Available funds / Total debts = $15,000 / $25,000 = 0.60 = **60 cents on the dollar**\n\nFor a creditor with a $4,500 claim:\n\n$4,500 × 0.60 = **$2,700**\n\nAnswer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.632277853001142
+  },
+  "response": {
+    "id": "cmpl-a40f496339614f60",
+    "object": "text_completion",
+    "created": 1791709433,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Bob has debts totaling $25,000 and has $15,000 available to pay creditors.\n\nThe ratio of available funds to total debts = $15,000 / $25,000 = 0.60 = 60 cents on the dollar.\n\nFor a creditor with a claim of $4,500:\n$4,500 × 0.60 = $2,700\n\nSo the answer is 60 cents on the dollar, $2,700, which is option H.\n</think>\n\nTo find how many cents on the dollar Bob pays each creditor:\n\n**Ratio** = Available funds / Total debts = $15,000 / $25,000 = 0.60 = **60 cents on the dollar**\n\nFor a creditor with a $4,500 claim:\n\n$4,500 × 0.60 = **$2,700**\n\nAnswer: H",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 301,
+      "total_tokens": 524,
+      "completion_tokens": 223,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

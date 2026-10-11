@@ -1,0 +1,59 @@
+{
+  "index": 738,
+  "task_id": 738,
+  "rendered_prompt_sha256": "ee12d13ca4127dc078a120d1c9cfb1bb8c42437694cfc3b893b4d7862e5b6f33",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Clara has 20 books\n- Clara has two times as many books as Steven, so Steven has 20/2 = 10 books\n- Alice has 6 more books than Steven, so Alice has 10 + 6 = 16 books\n- Clara has 20 - 16 = 4 more books than Alice\n</think>\n\nLet me solve this step by step.\n\n- Clara has 20 books.\n- Clara has two times as many books as Steven, so Steven has 20 ÷ 2 = 10 books.\n- Alice has 6 more books than Steven, so Alice has 10 + 6 = 16 books.\n- Clara has 20 - 16 = 4 more books than Alice.\n\nAnswer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.967290309999953
+  },
+  "response": {
+    "id": "cmpl-93677143bb86ddcc",
+    "object": "text_completion",
+    "created": 1791708542,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Clara has 20 books\n- Clara has two times as many books as Steven, so Steven has 20/2 = 10 books\n- Alice has 6 more books than Steven, so Alice has 10 + 6 = 16 books\n- Clara has 20 - 16 = 4 more books than Alice\n</think>\n\nLet me solve this step by step.\n\n- Clara has 20 books.\n- Clara has two times as many books as Steven, so Steven has 20 ÷ 2 = 10 books.\n- Alice has 6 more books than Steven, so Alice has 10 + 6 = 16 books.\n- Clara has 20 - 16 = 4 more books than Alice.\n\nAnswer: 4",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 103,
+      "total_tokens": 287,
+      "completion_tokens": 184,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

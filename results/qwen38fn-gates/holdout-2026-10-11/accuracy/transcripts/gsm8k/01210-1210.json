@@ -1,0 +1,59 @@
+{
+  "index": 1210,
+  "task_id": 1210,
+  "rendered_prompt_sha256": "22ea8e18033c46eb6a827acd5f610ca81ddd8d336a337ae19267184af8ba16c1",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me solve this step by step.\n\n1. Jolene fills up 10 packs of balloons\n2. Each pack has 30 balloons\n3. Total balloons = 10 × 30 = 300\n4. By the end of the afternoon, 12 balloons are left\n5. Balloons thrown = 300 - 12 = 288\n</think>\n\nTo find how many balloons they threw, I need to:\n\n1. Find the total number of balloons: 10 packs × 30 balloons per pack = 300 balloons\n2. Subtract the balloons left: 300 - 12 = 288\n\nAnswer: 288",
+  "finish_reason": "stop",
+  "expected": "288",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.467907589991228
+  },
+  "response": {
+    "id": "cmpl-93bf630decededcf",
+    "object": "text_completion",
+    "created": 1791708494,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me solve this step by step.\n\n1. Jolene fills up 10 packs of balloons\n2. Each pack has 30 balloons\n3. Total balloons = 10 × 30 = 300\n4. By the end of the afternoon, 12 balloons are left\n5. Balloons thrown = 300 - 12 = 288\n</think>\n\nTo find how many balloons they threw, I need to:\n\n1. Find the total number of balloons: 10 packs × 30 balloons per pack = 300 balloons\n2. Subtract the balloons left: 300 - 12 = 288\n\nAnswer: 288",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 126,
+      "total_tokens": 284,
+      "completion_tokens": 158,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

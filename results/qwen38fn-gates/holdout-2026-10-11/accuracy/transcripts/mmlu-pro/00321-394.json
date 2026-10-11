@@ -1,0 +1,58 @@
+{
+  "index": 321,
+  "task_id": 394,
+  "rendered_prompt_sha256": "be8b7e0b91363266ecb0401077e21215d677d8e1c46f7048dc3b65a38713ca8a",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "We need to find the principal P such that I = Prt, where:\n- I = $11.25\n- r = 3% = 0.03 per year\n- t = 3 months = 3/12 = 0.25 years\n\nSo: 11.25 = P × 0.03 × 0.25\n11.25 = P × 0.0075\nP = 11.25 / 0.0075\nP = 1500\n\nLet me verify: 1500 × 0.03 × 0.25 = 1500 × 0.0075 = 11.25 ✓\n\nThe answer is D. $1500.\n</think>\n\n**Solution:**\n\nUsing the formula **I = Prt**:\n\n- I = $11.25\n- r = 3% = 0.03\n- t = 3 months = 3/12 = 0.25 years\n\nSolving for P:\n\n$$P = \\frac{I}{rt} = \\frac{11.25}{0.03 \\times 0.25} = \\frac{11.25}{0.0075} = 1500$$\n\n**Verification:** $1500 × 0.03 × 0.25 = $11.25 ✓\n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.85397238600126
+  },
+  "response": {
+    "id": "cmpl-94e42112574a0f3e",
+    "object": "text_completion",
+    "created": 1791709400,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need to find the principal P such that I = Prt, where:\n- I = $11.25\n- r = 3% = 0.03 per year\n- t = 3 months = 3/12 = 0.25 years\n\nSo: 11.25 = P × 0.03 × 0.25\n11.25 = P × 0.0075\nP = 11.25 / 0.0075\nP = 1500\n\nLet me verify: 1500 × 0.03 × 0.25 = 1500 × 0.0075 = 11.25 ✓\n\nThe answer is D. $1500.\n</think>\n\n**Solution:**\n\nUsing the formula **I = Prt**:\n\n- I = $11.25\n- r = 3% = 0.03\n- t = 3 months = 3/12 = 0.25 years\n\nSolving for P:\n\n$$P = \\frac{I}{rt} = \\frac{11.25}{0.03 \\times 0.25} = \\frac{11.25}{0.0075} = 1500$$\n\n**Verification:** $1500 × 0.03 × 0.25 = $11.25 ✓\n\nAnswer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 196,
+      "total_tokens": 533,
+      "completion_tokens": 337,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

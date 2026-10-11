@@ -1,0 +1,59 @@
+{
+  "index": 1281,
+  "task_id": 1281,
+  "rendered_prompt_sha256": "1b63a0ba5bb08789910c91cb7b8da7573e9e3b61da88072a8a7b182525a3f89c",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Dexter has 5 pigs\n- Each pig eats 4 pounds of feed, twice a day\n- So each pig eats 4 × 2 = 8 pounds per day\n- All 5 pigs eat 5 × 8 = 40 pounds per day\n- In a week (7 days), they eat 40 × 7 = 280 pounds\n- He ordered 300 pounds\n- Left: 300 - 280 = 20 pounds\n</think>\n\nLet me solve this step by step:\n\n1. Each pig eats 4 pounds × 2 times = 8 pounds per day\n2. All 5 pigs eat 5 × 8 = 40 pounds per day\n3. In one week (7 days): 40 × 7 = 280 pounds consumed\n4. Feed left: 300 - 280 = 20 pounds\n\nAnswer: 20",
+  "finish_reason": "stop",
+  "expected": "20",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.2048689919902245
+  },
+  "response": {
+    "id": "cmpl-846683ba10449719",
+    "object": "text_completion",
+    "created": 1791708506,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Dexter has 5 pigs\n- Each pig eats 4 pounds of feed, twice a day\n- So each pig eats 4 × 2 = 8 pounds per day\n- All 5 pigs eat 5 × 8 = 40 pounds per day\n- In a week (7 days), they eat 40 × 7 = 280 pounds\n- He ordered 300 pounds\n- Left: 300 - 280 = 20 pounds\n</think>\n\nLet me solve this step by step:\n\n1. Each pig eats 4 pounds × 2 times = 8 pounds per day\n2. All 5 pigs eat 5 × 8 = 40 pounds per day\n3. In one week (7 days): 40 × 7 = 280 pounds consumed\n4. Feed left: 300 - 280 = 20 pounds\n\nAnswer: 20",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 107,
+      "total_tokens": 323,
+      "completion_tokens": 216,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

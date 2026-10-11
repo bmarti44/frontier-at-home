@@ -1,0 +1,59 @@
+{
+  "index": 874,
+  "task_id": 874,
+  "rendered_prompt_sha256": "19f0a7043ad90c20c8d54a378ac54f4dcf5e6498fde35d5908eb2dad1f5da34b",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Ella earns $33 for 3 hours of dog walking. I need to find her rate per hour, then multiply by 12 hours.\n\nRate per hour: $33 ÷ 3 = $11 per hour\n\nFor 12 hours: $11 × 12 = $132\n</think>\n\nElla earns $33 for 3 hours, so her rate is $33 ÷ 3 = $11 per hour.\n\nFor 12 hours: $11 × 12 = $132\n\nAnswer: 132",
+  "finish_reason": "stop",
+  "expected": "132",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.6083739360037725
+  },
+  "response": {
+    "id": "cmpl-bb6ac4d560020d91",
+    "object": "text_completion",
+    "created": 1791708533,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Ella earns $33 for 3 hours of dog walking. I need to find her rate per hour, then multiply by 12 hours.\n\nRate per hour: $33 ÷ 3 = $11 per hour\n\nFor 12 hours: $11 × 12 = $132\n</think>\n\nElla earns $33 for 3 hours, so her rate is $33 ÷ 3 = $11 per hour.\n\nFor 12 hours: $11 × 12 = $132\n\nAnswer: 132",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 102,
+      "total_tokens": 229,
+      "completion_tokens": 127,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

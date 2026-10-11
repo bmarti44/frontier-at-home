@@ -1,0 +1,59 @@
+{
+  "index": 1234,
+  "task_id": 1234,
+  "rendered_prompt_sha256": "da361ca1cafa60e7a49b672285d1b8b94b54048ce5145b4c83f9012107d0d588",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me solve this step by step.\n\nRegina wrote 9 novels last year.\nThis (9) is 3 quarters of the number of novels she has written this year.\n\nSo: 9 = (3/4) × (number of novels this year)\n\nNumber of novels this year = 9 ÷ (3/4) = 9 × (4/3) = 36/3 = 12\n</think>\n\nIf 9 novels is 3/4 of the number written this year, then:\n\n9 = (3/4) × x\n\nx = 9 × (4/3) = 12\n\nAnswer: 12",
+  "finish_reason": "stop",
+  "expected": "12",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.167697821001639
+  },
+  "response": {
+    "id": "cmpl-97e2ccc39361ea08",
+    "object": "text_completion",
+    "created": 1791708170,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me solve this step by step.\n\nRegina wrote 9 novels last year.\nThis (9) is 3 quarters of the number of novels she has written this year.\n\nSo: 9 = (3/4) × (number of novels this year)\n\nNumber of novels this year = 9 ÷ (3/4) = 9 × (4/3) = 36/3 = 12\n</think>\n\nIf 9 novels is 3/4 of the number written this year, then:\n\n9 = (3/4) × x\n\nx = 9 × (4/3) = 12\n\nAnswer: 12",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 101,
+      "total_tokens": 246,
+      "completion_tokens": 145,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

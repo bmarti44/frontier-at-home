@@ -1,0 +1,94 @@
+{
+  "index": 105,
+  "task_id": "HumanEval/105",
+  "rendered_prompt_sha256": "7610e97e9e03b58b9d2f83c6ffb2e08c7a8827a982645a091f53b347cdfa7a5b",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    \n    names = {1: \"One\", 2: \"Two\", 3: \"Three\", 4: \"Four\", 5: \"Five\", 6: \"Six\", 7: \"Seven\", 8: \"Eight\", 9: \"Nine\"}\n    arr = sorted(arr)\n    arr = [i for i in arr if i in names]\n    arr = arr[::-1]\n    return [names[i] for i in arr]\n",
+  "finish_reason": "stop",
+  "expected": "    dic = {\n        1: \"One\",\n        2: \"Two\",\n        3: \"Three\",\n        4: \"Four\",\n        5: \"Five\",\n        6: \"Six\",\n        7: \"Seven\",\n        8: \"Eight\",\n        9: \"Nine\",\n    }\n    sorted_arr = sorted(arr, reverse=True)\n    new_arr = []\n    for var in sorted_arr:\n        try:\n            new_arr.append(dic[var])\n        except:\n            pass\n    return new_arr\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.065488688996993
+  },
+  "response": {
+    "id": "cmpl-b554cd47a9538c99",
+    "object": "text_completion",
+    "created": 1791719384,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    \n    names = {1: \"One\", 2: \"Two\", 3: \"Three\", 4: \"Four\", 5: \"Five\", 6: \"Six\", 7: \"Seven\", 8: \"Eight\", 9: \"Nine\"}\n    arr = sorted(arr)\n    arr = [i for i in arr if i in names]\n    arr = arr[::-1]\n    return [names[i] for i in arr]\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 289,
+      "total_tokens": 391,
+      "completion_tokens": 102,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00105:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

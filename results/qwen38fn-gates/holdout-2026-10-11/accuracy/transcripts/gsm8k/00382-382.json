@@ -1,0 +1,59 @@
+{
+  "index": 382,
+  "task_id": 382,
+  "rendered_prompt_sha256": "ecd9e8e113d6c1a6ddbc3f848cae35ef9ee20bc1af95c79a178a44e07d0aa213",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nAxel has:\n- 50 silver pesos\n- 80 gold pesos\n\nAnna has:\n- Twice as many silver pesos as Axel: 2 × 50 = 100 silver pesos\n- 40 more gold pesos than Axel: 80 + 40 = 120 gold pesos\n\nTotal pesos together:\n- Silver: 50 + 100 = 150\n- Gold: 80 + 120 = 200\n- Total: 150 + 200 = 350\n</think>\n\nAxel has 50 silver pesos and 80 gold pesos.\n\nAnna has:\n- Silver: 2 × 50 = 100 silver pesos\n- Gold: 80 + 40 = 120 gold pesos\n\nTotal together:\n- Silver: 50 + 100 = 150\n- Gold: 80 + 120 = 200\n- Combined: 150 + 200 = 350\n\nAnswer: 350",
+  "finish_reason": "stop",
+  "expected": "350",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.39770858999691
+  },
+  "response": {
+    "id": "cmpl-bf818b83721993f2",
+    "object": "text_completion",
+    "created": 1791708244,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nAxel has:\n- 50 silver pesos\n- 80 gold pesos\n\nAnna has:\n- Twice as many silver pesos as Axel: 2 × 50 = 100 silver pesos\n- 40 more gold pesos than Axel: 80 + 40 = 120 gold pesos\n\nTotal pesos together:\n- Silver: 50 + 100 = 150\n- Gold: 80 + 120 = 200\n- Total: 150 + 200 = 350\n</think>\n\nAxel has 50 silver pesos and 80 gold pesos.\n\nAnna has:\n- Silver: 2 × 50 = 100 silver pesos\n- Gold: 80 + 40 = 120 gold pesos\n\nTotal together:\n- Silver: 50 + 100 = 150\n- Gold: 80 + 120 = 200\n- Combined: 150 + 200 = 350\n\nAnswer: 350",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 115,
+      "total_tokens": 373,
+      "completion_tokens": 258,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

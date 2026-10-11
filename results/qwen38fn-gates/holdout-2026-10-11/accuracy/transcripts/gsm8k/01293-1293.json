@@ -1,0 +1,59 @@
+{
+  "index": 1293,
+  "task_id": 1293,
+  "rendered_prompt_sha256": "25686526234abcd340fb4142f04010045884a07fb4c76ecb1f052373ca31c295",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me solve this step by step.\n\n- The company produces 5000 bars per day\n- Each bar sells for $2\n- Two weeks = 14 days\n\nTotal bars in two weeks = 5000 × 14 = 70,000 bars\nTotal money = 70,000 × $2 = $140,000\n</think>\n\n**Step-by-step solution:**\n\n1. **Bars produced per day:** 5,000\n2. **Number of days in two weeks:** 14\n3. **Total bars produced in two weeks:** 5,000 × 14 = 70,000\n4. **Price per bar:** $2\n5. **Total revenue:** 70,000 × $2 = $140,000\n\nAnswer: 140000",
+  "finish_reason": "stop",
+  "expected": "140000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.750689469001372
+  },
+  "response": {
+    "id": "cmpl-b682bf2d095c89b3",
+    "object": "text_completion",
+    "created": 1791708190,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me solve this step by step.\n\n- The company produces 5000 bars per day\n- Each bar sells for $2\n- Two weeks = 14 days\n\nTotal bars in two weeks = 5000 × 14 = 70,000 bars\nTotal money = 70,000 × $2 = $140,000\n</think>\n\n**Step-by-step solution:**\n\n1. **Bars produced per day:** 5,000\n2. **Number of days in two weeks:** 14\n3. **Total bars produced in two weeks:** 5,000 × 14 = 70,000\n4. **Price per bar:** $2\n5. **Total revenue:** 70,000 × $2 = $140,000\n\nAnswer: 140000",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 116,
+      "total_tokens": 316,
+      "completion_tokens": 200,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

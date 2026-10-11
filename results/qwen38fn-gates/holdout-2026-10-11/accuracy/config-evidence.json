@@ -1,0 +1,88 @@
+{
+  "kind": "qualify-profile-config-evidence",
+  "profile_id": "qwen3.8-flash-next/cuda-spark-128g-1m",
+  "server_binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+  "files": [
+    {
+      "path": "/home/bmarti44/.cache/qwen38-flash-next/native-runtime-001/runtime/bin/python3.12",
+      "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+    },
+    {
+      "path": "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/model.safetensors.index.json",
+      "sha256": "660414e8300728ba80062e6a3c81cb76a65e2ab136ac9e9ceb450ba0c51c3c0d"
+    },
+    {
+      "path": "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/config.json",
+      "sha256": "deef67a61f3311faf051b23dc4192f442c7fee4f9cd2f38cbcbe4da55c763a80"
+    },
+    {
+      "path": "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/hf_quant_config.json",
+      "sha256": "331ad11d57c8bc374554579977198084e0d4d0933d5b3558f125f6f670aba0e8"
+    },
+    {
+      "path": "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json",
+      "sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3"
+    },
+    {
+      "path": "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/chat_template.jinja",
+      "sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041"
+    }
+  ],
+  "argv": [
+    "-B",
+    "-m",
+    "vllm.entrypoints.openai.api_server",
+    "--model",
+    "/home/bmarti44/models/qwen3.8-flash-next-nvfp4",
+    "--served-model-name",
+    "qwen3.8-flash-next",
+    "default",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8013",
+    "--quantization",
+    "modelopt",
+    "--max-model-len",
+    "262144",
+    "--max-num-seqs",
+    "4",
+    "--kv-cache-dtype",
+    "fp8",
+    "--gpu-memory-utilization",
+    "0.85",
+    "--kv-cache-memory-bytes",
+    "19220000000",
+    "--enable-prefix-caching",
+    "--enable-chunked-prefill",
+    "--max-num-batched-tokens",
+    "4096",
+    "--enable-auto-tool-choice",
+    "--enable-prompt-tokens-details",
+    "--tool-call-parser",
+    "qwen3_coder",
+    "--reasoning-parser",
+    "qwen3",
+    "--speculative-config",
+    "{\"method\":\"mtp\",\"num_speculative_tokens\":3}",
+    "--engram-config",
+    "{\"checkpoint_mapped\":true}",
+    "--limit-mm-per-prompt",
+    "{\"image\":0,\"video\":0}",
+    "--default-chat-template-kwargs",
+    "{\"reasoning_effort\":\"low\"}",
+    "--worker-cls",
+    "qwen38fn_worker.CheckpointCacheReleaseWorker",
+    "--middleware",
+    "vllm_reasoning_compat.ReasoningContentMiddleware",
+    "--middleware",
+    "glm53_runtime_policy.SplitTerminalSseMiddleware",
+    "--no-enable-flashinfer-autotune",
+    "--logprobs-mode",
+    "raw_logprobs",
+    "--shutdown-timeout",
+    "10",
+    "--compilation-config",
+    "{\"mode\":0,\"cudagraph_mode\":\"FULL_DECODE_ONLY\"}"
+  ]
+}

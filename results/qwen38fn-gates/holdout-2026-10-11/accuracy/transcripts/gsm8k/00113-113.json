@@ -1,0 +1,59 @@
+{
+  "index": 113,
+  "task_id": 113,
+  "rendered_prompt_sha256": "7b7c17614459f80b9272fcb83e2ae647068aa79569e5aa1e07aa47209b35b769",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Ryan plants 2 flowers a day for 15 days.\nTotal planted = 2 × 15 = 30\n5 did not grow, so 30 - 5 = 25 flowers grew.\n</think>\n\nRyan plants 2 flowers per day × 15 days = 30 flowers planted.\n\n30 - 5 (that didn't grow) = 25 flowers.\n\nAnswer: 25",
+  "finish_reason": "stop",
+  "expected": "25",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.916812901996309
+  },
+  "response": {
+    "id": "cmpl-b3a373be2512c6a1",
+    "object": "text_completion",
+    "created": 1791708408,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Ryan plants 2 flowers a day for 15 days.\nTotal planted = 2 × 15 = 30\n5 did not grow, so 30 - 5 = 25 flowers grew.\n</think>\n\nRyan plants 2 flowers per day × 15 days = 30 flowers planted.\n\n30 - 5 (that didn't grow) = 25 flowers.\n\nAnswer: 25",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 96,
+      "total_tokens": 190,
+      "completion_tokens": 94,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

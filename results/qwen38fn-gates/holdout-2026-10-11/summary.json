@@ -1,0 +1,209 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "qwen3.8-flash-next/cuda-spark-128g-1m",
+  "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m",
+  "served_model": "qwen3.8-flash-next",
+  "out": "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11",
+  "start_unix": 1791708042.2741835,
+  "end_unix": 1791720404.6372445,
+  "start_iso": "2026-10-11T08:40:42.373745+00:00",
+  "end_iso": "2026-10-11T12:06:44.637248+00:00",
+  "targets": {
+    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
+    "decode_tok_s_min": {
+      "0": 17.46,
+      "28672": 26.71
+    },
+    "prefill_tok_s_min": {
+      "28672": 698.7
+    },
+    "ttft_s_max": {
+      "0": 0.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "delta_nll_max": 0.01
+  },
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "accuracy": {
+      "status": "OK",
+      "evidence": "accuracy/acc-<suite>.json",
+      "start_unix": 1791708042.4205146,
+      "argv": {
+        "gsm8k": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/acc-gsm8k.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "gsm8k",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/transcripts/gsm8k",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/config-evidence.json"
+        ],
+        "mmlu-pro": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/acc-mmlu-pro.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "mmlu-pro",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/transcripts/mmlu-pro",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/config-evidence.json"
+        ],
+        "humaneval": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/acc-humaneval.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "humaneval",
+          "--split",
+          "all",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/transcripts/humaneval",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low",
+          "--config-evidence",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/holdout-2026-10-11/accuracy/config-evidence.json"
+        ]
+      },
+      "skip_reason": null,
+      "exit_code": {
+        "gsm8k": 0,
+        "mmlu-pro": 0,
+        "humaneval": 0
+      },
+      "wall_s": 12362.215574218993,
+      "suites_kept_from_previous_run": [],
+      "suites_not_run_after_failure": [],
+      "result": {
+        "suites": {
+          "gsm8k": {
+            "accuracy": 0.98,
+            "n": 100,
+            "correct": 98,
+            "invalid_count": 0,
+            "split": "holdout",
+            "wilson95": [
+              0.929988209271456,
+              0.9944980324498376
+            ]
+          },
+          "mmlu-pro": {
+            "accuracy": 0.8825910931174089,
+            "n": 247,
+            "correct": 218,
+            "invalid_count": 3,
+            "split": "holdout",
+            "wilson95": [
+              0.8364671339182708,
+              0.9169968304860365
+            ]
+          },
+          "humaneval": {
+            "accuracy": 0.8414634146341463,
+            "n": 164,
+            "correct": 138,
+            "invalid_count": 0,
+            "split": "all",
+            "wilson95": [
+              0.7778420785428521,
+              0.8894543140585143
+            ]
+          }
+        }
+      },
+      "end_unix": 1791720404.6369703
+    }
+  },
+  "rows": [
+    {
+      "cell": "accuracy",
+      "metric": "gsm8k",
+      "measured": 0.98,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "humaneval",
+      "measured": 0.8414634146341463,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "mmlu-pro",
+      "measured": 0.8825910931174089,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "MEASURED",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}

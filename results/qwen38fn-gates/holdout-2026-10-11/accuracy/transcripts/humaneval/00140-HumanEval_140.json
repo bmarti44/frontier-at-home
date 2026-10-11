@@ -1,0 +1,94 @@
+{
+  "index": 140,
+  "task_id": "HumanEval/140",
+  "rendered_prompt_sha256": "f757e5d21a3d47b21dcd96c7c9f869adfbfe70276370fddb0f4ded8fb1c311f9",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    result = \"\"\n    space_count = 0\n    for char in text:\n        if char == \" \":\n            space_count += 1\n        else:\n            if space_count > 2:\n                result += \"-\"\n            elif space_count > 0:\n                result += \"_\" * space_count\n            space_count = 0\n            result += char\n    if space_count > 2:\n        result += \"-\"\n    elif space_count > 0:\n        result += \"_\" * space_count\n    return result\n",
+  "finish_reason": "stop",
+  "expected": "    new_text = \"\"\n    i = 0\n    start, end = 0, 0\n    while i < len(text):\n        if text[i] == \" \":\n            end += 1\n        else:\n            if end - start > 2:\n                new_text += \"-\"+text[i]\n            elif end - start > 0:\n                new_text += \"_\"*(end - start)+text[i]\n            else:\n                new_text += text[i]\n            start, end = i+1, i+1\n        i+=1\n    if end - start > 2:\n        new_text += \"-\"\n    elif end - start > 0:\n        new_text += \"_\"\n    return new_text\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.1681029359897366
+  },
+  "response": {
+    "id": "cmpl-819ec7cc43f76b22",
+    "object": "text_completion",
+    "created": 1791719970,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    result = \"\"\n    space_count = 0\n    for char in text:\n        if char == \" \":\n            space_count += 1\n        else:\n            if space_count > 2:\n                result += \"-\"\n            elif space_count > 0:\n                result += \"_\" * space_count\n            space_count = 0\n            result += char\n    if space_count > 2:\n        result += \"-\"\n    elif space_count > 0:\n        result += \"_\" * space_count\n    return result\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 108,
+      "total_tokens": 224,
+      "completion_tokens": 116,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00140:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

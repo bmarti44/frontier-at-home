@@ -1,0 +1,94 @@
+{
+  "index": 127,
+  "task_id": "HumanEval/127",
+  "rendered_prompt_sha256": "aaebd5df799992f92d5d1e023101fa08b8a199d71be54536511e5ed071d5db1c",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    def is_prime(num):\n        if num < 2:\n            return False\n        for i in range(2, int(num ** 0.5) + 1):\n            if num % i == 0:\n                return False\n        return True\n\n    # Find the intersection of the two intervals\n    start = max(interval1[0], interval2[0])\n    end = min(interval1[1], interval2[1])\n\n    # If there is no intersection, return \"NO\"\n    if start > end:\n        return \"NO\"\n\n    # Calculate the length of the intersection\n    length = end - start + 1\n\n    # Check if the length is a prime number\n    if is_prime(length):\n        return \"YES\"\n    else:\n        return \"NO\"\n",
+  "finish_reason": "stop",
+  "expected": "    def is_prime(num):\n        if num == 1 or num == 0:\n            return False\n        if num == 2:\n            return True\n        for i in range(2, num):\n            if num%i == 0:\n                return False\n        return True\n\n    l = max(interval1[0], interval2[0])\n    r = min(interval1[1], interval2[1])\n    length = r - l\n    if length > 0 and is_prime(length):\n        return \"YES\"\n    return \"NO\"\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.75786838500062
+  },
+  "response": {
+    "id": "cmpl-afbc25d9c300a0b2",
+    "object": "text_completion",
+    "created": 1791719922,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    def is_prime(num):\n        if num < 2:\n            return False\n        for i in range(2, int(num ** 0.5) + 1):\n            if num % i == 0:\n                return False\n        return True\n\n    # Find the intersection of the two intervals\n    start = max(interval1[0], interval2[0])\n    end = min(interval1[1], interval2[1])\n\n    # If there is no intersection, return \"NO\"\n    if start > end:\n        return \"NO\"\n\n    # Calculate the length of the intersection\n    length = end - start + 1\n\n    # Check if the length is a prime number\n    if is_prime(length):\n        return \"YES\"\n    else:\n        return \"NO\"\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 265,
+      "total_tokens": 443,
+      "completion_tokens": 178,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00127:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 64, in <module>\n    check(intersection)\n  File \"/case/main.py\", line 52, in check\n    assert candidate((-1, 1), (0, 4)) == \"NO\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "index": 22,
+  "task_id": "HumanEval/22",
+  "rendered_prompt_sha256": "b7bde40423debe285816bdcee858624a7ded823a414e8cf0e71d1185fc6cdb32",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    return [x for x in values if isinstance(x, int)]\n\nassert filter_integers(['a', 3.14, 5]) == [5]\nassert filter_integers([1, 2, 3, 'abc', {}, []]) == [1, 2, 3]",
+  "finish_reason": "stop",
+  "expected": "    return [x for x in values if isinstance(x, int)]\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.186708584005828
+  },
+  "response": {
+    "id": "cmpl-b0067a0e48c06d68",
+    "object": "text_completion",
+    "created": 1791717384,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    return [x for x in values if isinstance(x, int)]\n\nassert filter_integers(['a', 3.14, 5]) == [5]\nassert filter_integers([1, 2, 3, 'abc', {}, []]) == [1, 2, 3]",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 92,
+      "total_tokens": 158,
+      "completion_tokens": 66,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00022:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "from typing import List, Any\n\n\ndef filter_integers(values: List[Any]) -> List[int]:\n    \"\"\" Filter given list of any python values only for integers\n    >>> filter_integers(['a', 3.14, 5])\n    [5]\n    >>> filter_integers([1, 2, 3, 'abc', {}, []])\n    [1, 2, 3]\n    \"\"\"\n"
+}

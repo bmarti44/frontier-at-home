@@ -1,0 +1,94 @@
+{
+  "index": 149,
+  "task_id": "HumanEval/149",
+  "rendered_prompt_sha256": "387c54540db444ab39a66ed7c465db9a9145f9437273960b116cd1c7c974727a",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    filtered = [s for s in lst if len(s) % 2 == 0]\n    return sorted(filtered, key=lambda x: (len(x), x))\n\n",
+  "finish_reason": "stop",
+  "expected": "    lst.sort()\n    new_lst = []\n    for i in lst:\n        if len(i)%2 == 0:\n            new_lst.append(i)\n    return sorted(new_lst, key=len)\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5190594369923929
+  },
+  "response": {
+    "id": "cmpl-88fc361b43766214",
+    "object": "text_completion",
+    "created": 1791720000,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    filtered = [s for s in lst if len(s) % 2 == 0]\n    return sorted(filtered, key=lambda x: (len(x), x))\n\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 196,
+      "total_tokens": 234,
+      "completion_tokens": 38,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00149:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

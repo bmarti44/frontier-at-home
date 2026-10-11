@@ -1,0 +1,95 @@
+{
+  "index": 70,
+  "task_id": "HumanEval/70",
+  "rendered_prompt_sha256": "431d1a56bd425ed0718c9996fd486badefa4547c69e80bc5e81526cec2abae70",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    result = []\n    while lst:\n        result.append(min(lst))\n        lst.remove(min(lst))\n        if not lst:\n            break\n        result.append(max(lst))\n        lst.remove(max(lst))\n    return result\n",
+  "finish_reason": "stop",
+  "expected": "    res, switch = [], True\n    while lst:\n        res.append(min(lst) if switch else max(lst))\n        lst.remove(res[-1])\n        switch = not switch\n    return res\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6683954500040272
+  },
+  "response": {
+    "id": "cmpl-aae696c0548e76d2",
+    "object": "text_completion",
+    "created": 1791719306,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    result = []\n    while lst:\n        result.append(min(lst))\n        lst.remove(min(lst))\n        if not lst:\n            break\n        result.append(max(lst))\n        lst.remove(max(lst))\n    return result\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 129,
+      "total_tokens": 181,
+      "completion_tokens": 52,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00070:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "\ndef strange_sort_list(lst):\n    '''\n    Given list of integers, return list in strange order.\n    Strange sorting, is when you start with the minimum value,\n    then maximum of the remaining integers, then minimum and so on.\n\n    Examples:\n    strange_sort_list([1, 2, 3, 4]) == [1, 4, 2, 3]\n    strange_sort_list([5, 5, 5, 5]) == [5, 5, 5, 5]\n    strange_sort_list([]) == []\n    '''\n"
+}

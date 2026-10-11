@@ -1,0 +1,94 @@
+{
+  "index": 109,
+  "task_id": "HumanEval/109",
+  "rendered_prompt_sha256": "e68cbac960bfb695527850d504ec27806e0f41a7711920d0a9e3152369179146",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    if not arr:\n        return True\n    \n    # Find the number of times the array is \"broken\" (i.e., arr[i] > arr[i+1])\n    breaks = 0\n    n = len(arr)\n    for i in range(n):\n        if arr[i] > arr[(i + 1) % n]:\n            breaks += 1\n            if breaks > 1:\n                return False\n    \n    return True\n",
+  "finish_reason": "stop",
+  "expected": "    if len(arr)==0:\n      return True\n    sorted_array=sorted(arr)\n    my_arr=[]\n    \n    min_value=min(arr)\n    min_index=arr.index(min_value)\n    my_arr=arr[min_index:]+arr[0:min_index]\n    for i in range(len(arr)):\n      if my_arr[i]!=sorted_array[i]:\n        return False\n    return True\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.958957017995999
+  },
+  "response": {
+    "id": "cmpl-bb322aace1d22d07",
+    "object": "text_completion",
+    "created": 1791719395,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    if not arr:\n        return True\n    \n    # Find the number of times the array is \"broken\" (i.e., arr[i] > arr[i+1])\n    breaks = 0\n    n = len(arr)\n    for i in range(n):\n        if arr[i] > arr[(i + 1) % n]:\n            breaks += 1\n            if breaks > 1:\n                return False\n    \n    return True\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 304,
+      "total_tokens": 402,
+      "completion_tokens": 98,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00109:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

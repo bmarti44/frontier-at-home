@@ -1,0 +1,94 @@
+{
+  "index": 32,
+  "task_id": "HumanEval/32",
+  "rendered_prompt_sha256": "17c137edab480f3be30b47bb48eea2748f23b120a73b2bb80c7901112e1b223f",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    # Check if the number of coefficients is even\n    if len(xs) % 2 != 0:\n        raise ValueError(\"The number of coefficients must be even.\")\n    \n    # Ensure the largest non-zero coefficient is positive\n    if xs[-1] < 0:\n        xs = [-x for x in xs]\n    \n    # Use the bisection method to find a root\n    low, high = -1, 1\n    while poly(xs, low) * poly(xs, high) > 0:\n        low *= 2\n        high *= 2\n    \n    for _ in range(100):  # Iterate a fixed number of times for precision\n        mid = (low + high) / 2\n        if poly(xs, mid) == 0:\n            return mid\n        if poly(xs, low) * poly(xs, mid) < 0:\n            high = mid\n        else:\n            low = mid\n    \n    return (low + high) / 2\n\n# Example usage\nif __name__ == \"__main__\":\n    print(round(find_zero([1, 2]), 2))  # Output: -0.5\n    print(round(find_zero([-6, 11, -6, 1]), 2))  # Output: 1.0",
+  "finish_reason": "stop",
+  "expected": "    begin, end = -1., 1.\n    while poly(xs, begin) * poly(xs, end) > 0:\n        begin *= 2.0\n        end *= 2.0\n    while end - begin > 1e-10:\n        center = (begin + end) / 2.0\n        if poly(xs, center) * poly(xs, begin) > 0:\n            begin = center\n        else:\n            end = center\n    return begin\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.11251256801188
+  },
+  "response": {
+    "id": "cmpl-a543bc4daee65cfe",
+    "object": "text_completion",
+    "created": 1791718489,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    # Check if the number of coefficients is even\n    if len(xs) % 2 != 0:\n        raise ValueError(\"The number of coefficients must be even.\")\n    \n    # Ensure the largest non-zero coefficient is positive\n    if xs[-1] < 0:\n        xs = [-x for x in xs]\n    \n    # Use the bisection method to find a root\n    low, high = -1, 1\n    while poly(xs, low) * poly(xs, high) > 0:\n        low *= 2\n        high *= 2\n    \n    for _ in range(100):  # Iterate a fixed number of times for precision\n        mid = (low + high) / 2\n        if poly(xs, mid) == 0:\n            return mid\n        if poly(xs, low) * poly(xs, mid) < 0:\n            high = mid\n        else:\n            low = mid\n    \n    return (low + high) / 2\n\n# Example usage\nif __name__ == \"__main__\":\n    print(round(find_zero([1, 2]), 2))  # Output: -0.5\n    print(round(find_zero([-6, 11, -6, 1]), 2))  # Output: 1.0",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 265,
+      "total_tokens": 550,
+      "completion_tokens": 285,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00032:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 74, in <module>\n    check(find_zero)\n  File \"/case/main.py\", line 70, in check\n    assert math.fabs(poly(coeffs, solution)) < 1e-4\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

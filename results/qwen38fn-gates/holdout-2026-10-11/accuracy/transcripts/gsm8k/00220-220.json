@@ -1,0 +1,59 @@
+{
+  "index": 220,
+  "task_id": 220,
+  "rendered_prompt_sha256": "50554a75ee944021a81f075d201de6e9d3d4e7b00bde968b7e4ab80329ed8954",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me calculate the total time Carmen spent.\n\nCrossword puzzles: 3 puzzles × 10 minutes = 30 minutes\nSudoku puzzles: 8 puzzles × 5 minutes = 40 minutes\n\nTotal time = 30 + 40 = 70 minutes\n</think>\n\nCrossword puzzles: 3 × 10 = 30 minutes\nSudoku puzzles: 8 × 5 = 40 minutes\nTotal: 30 + 40 = 70 minutes\n\nAnswer: 70",
+  "finish_reason": "stop",
+  "expected": "70",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.3357211190013913
+  },
+  "response": {
+    "id": "cmpl-b51e51fee40aa3f5",
+    "object": "text_completion",
+    "created": 1791708109,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me calculate the total time Carmen spent.\n\nCrossword puzzles: 3 puzzles × 10 minutes = 30 minutes\nSudoku puzzles: 8 puzzles × 5 minutes = 40 minutes\n\nTotal time = 30 + 40 = 70 minutes\n</think>\n\nCrossword puzzles: 3 × 10 = 30 minutes\nSudoku puzzles: 8 × 5 = 40 minutes\nTotal: 30 + 40 = 70 minutes\n\nAnswer: 70",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 115,
+      "total_tokens": 230,
+      "completion_tokens": 115,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

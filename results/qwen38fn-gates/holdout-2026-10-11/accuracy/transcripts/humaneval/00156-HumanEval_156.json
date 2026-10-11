@@ -1,0 +1,94 @@
+{
+  "index": 156,
+  "task_id": "HumanEval/156",
+  "rendered_prompt_sha256": "8959ac1c6c2fd7f47f748d3f39d4698b9ef610a28fbd428fad7dc4e856e9d737",
+  "rendering": "raw",
+  "encoder": "qwen38",
+  "completion": "    val = [\n        1000, 900, 500, 400,\n        100, 90, 50, 40,\n        10, 9, 5, 4,\n        1\n        ]\n    syms = [\n        \"m\", \"cm\", \"d\", \"cd\",\n        \"c\", \"xc\", \"l\", \"xl\",\n        \"x\", \"ix\", \"v\", \"iv\",\n        \"i\"\n        ]\n    roman_num = \"\"\n    i = 0\n    while number > 0:\n        for _ in range(number // val[i]):\n            roman_num += syms[i]\n            number -= val[i]\n        i += 1\n    return roman_num\n",
+  "finish_reason": "stop",
+  "expected": "    num = [1, 4, 5, 9, 10, 40, 50, 90,  \n           100, 400, 500, 900, 1000] \n    sym = [\"I\", \"IV\", \"V\", \"IX\", \"X\", \"XL\",  \n           \"L\", \"XC\", \"C\", \"CD\", \"D\", \"CM\", \"M\"] \n    i = 12\n    res = ''\n    while number: \n        div = number // num[i] \n        number %= num[i] \n        while div: \n            res += sym[i] \n            div -= 1\n        i -= 1\n    return res.lower()\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.226189413006068
+  },
+  "response": {
+    "id": "cmpl-96773337c293d31b",
+    "object": "text_completion",
+    "created": 1791720010,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "    val = [\n        1000, 900, 500, 400,\n        100, 90, 50, 40,\n        10, 9, 5, 4,\n        1\n        ]\n    syms = [\n        \"m\", \"cm\", \"d\", \"cd\",\n        \"c\", \"xc\", \"l\", \"xl\",\n        \"x\", \"ix\", \"v\", \"iv\",\n        \"i\"\n        ]\n    roman_num = \"\"\n    i = 0\n    while number > 0:\n        for _ in range(number // val[i]):\n            roman_num += syms[i]\n            number -= val[i]\n        i += 1\n    return roman_num\n",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": 248044,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 112,
+      "total_tokens": 296,
+      "completion_tokens": 184,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-63c3yfor/case-00156:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}
