@@ -98,7 +98,11 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         # block sizes are 3200 or 8 only, and 62 < 2 x cdiv(131,072, 3200), so
         # exactly one group grows by cdiv(L, 3200) (41 blocks); the other 21 are
         # GDN state (4 groups x (2 + 3 draft) blocks) and the QSA ring (1).
-        # A 262,144-token slot therefore reserves 82 + 21 = 103 blocks.
+        # A 262,144-token slot therefore reserves 82 + 21 = 103 blocks. The
+        # pool also gives up one null block (BlockPool), and a prefilling
+        # request held 36 blocks against its 32-block reservation (39.6% =
+        # 36/91), so allow 4 transient blocks for each of two requests that
+        # chunked prefill can split its 4096-token budget across.
         text = (ROOT / "results/qwen38fn-gates/smoke-2026-10-11/observe/server-start1.log").read_text()
         self.assertIn("GPU KV cache size: 194,493 tokens, Maximum concurrency for "
                       "131,072 tokens per request", text)
@@ -109,7 +113,7 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             self.assertIn(usage, {round(100 * b / 91, 1) for b in range(92)})
         self.assertEqual(int(92 / 62 * 131_072), 194_493)
         block_bytes = -(-4_200_000_000 // 92)
-        required = 4 * (82 + 21) * block_bytes
+        required = (4 * (82 + 21) + 1 + 2 * 4) * block_bytes
         p = self.profile()
         arena = int(arg(p["launch"]["args"], "--kv-cache-memory-bytes"))
         self.assertGreaterEqual(arena, required)
