@@ -65,3 +65,20 @@ kit). That is a miss.
 Promotion stays the owner's decision. The owner's condition was "more
 accurate and faster", and they asked for vision to be qualified first, which
 it could not be at 1M.
+
+## If the server dies mid-suite (fixed before the draw)
+
+`31_bench_accuracy.py` scores the remaining items of a suite as invalid when
+the server goes away, and still writes `completed`. Such a run is labeled
+`FAILED_ATTEMPT` and the comparison rule is not applied. Evidence of a server
+death is any of:
+- a memwatch breach or kill line;
+- the scope dying;
+- a run of transport errors in a suite's transcripts.
+
+The shared tooling (`464effe2`) keeps any later holdout suite from being
+spent: the bench reaches `/v1/models` before the ledger's `started` entry, and
+the kit stops holdout draws after a failed suite. So at most one suite's rows
+can be lost. If the HumanEval preflight fails before any load, `observe/holdout`
+is kept under a new name and the run retried. Nothing has been drawn at that
+point.
