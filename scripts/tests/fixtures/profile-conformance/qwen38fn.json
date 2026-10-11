@@ -1,7 +1,7 @@
 {
  "profile_id": "qwen3.8-flash-next/cuda-spark-128g-1m",
  "mechanism": "systemd-run",
- "status": "estimated",
+ "status": "qualified",
  "port": 8013,
  "context_cap": 1048576,
  "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m",
@@ -63,7 +63,7 @@
   "weights_gib": 77.0,
   "ctx": 1048576,
   "kv_bytes_per_token": 0,
-  "overhead_gib": 11.3,
+  "overhead_gib": 10.7,
   "extra_gib": 18.0,
   "floor_gib": 8
  },
@@ -74,10 +74,10 @@
  },
  "safety": {
   "kill_floor_gib": 8,
-  "minimum_start_gib": 115,
+  "minimum_start_gib": 114,
   "sample_hz": 1,
   "startup_timeout_seconds": 1800,
-  "note": "8 GiB whole-host floor: owner decision 2026-10-11 to keep 1M with images on (DeepSeek's 1M-fast profile set the 8 GiB precedent); AGENTS.md's 1M gate asks 10. minimum_start_gib is the switch's only admission: candidate 5 used up to 102.97 GiB text-only and images add 3.1-3.3 GiB (results/qwen38fn-gates/diag-vision-2026-10-11), so 115 = the quiet host's 115.2-115.6 GiB, and candidate 7 must measure peak + 8 <= 115. cgroup MemoryCurrent is blind to CUDA unified memory on GB10; the external memwatch is the real guard. The PLE table's page cache is clean and file-backed (reclaimable)."
+  "note": "8 GiB whole-host floor: owner decision 2026-10-11 to keep 1M with images on (DeepSeek's 1M-fast profile set the 8 GiB precedent); AGENTS.md's 1M gate asks 10. minimum_start_gib is the switch's only admission: candidate 9 (images on) peaked at 105.67 GiB used (results/qwen38fn-gates/qualify-2026-10-11-c9), so 114 = ceil(peak + 8), within the quiet host's 115.2-115.6 GiB. cgroup MemoryCurrent is blind to CUDA unified memory on GB10; the external memwatch is the real guard. The PLE table's page cache is clean and file-backed (reclaimable). MemAvailable admission cannot see another engine's cached model files; HostCacheReleaseWorker drops the model root's page cache before the weights load and again before the KV arena, and refuses the arena unless MemFree covers it plus 2 GiB (candidate 7 met the arena at MemFree 10.2 GiB without it; candidate 9 at 22.75 GiB with it)."
  },
  "binary": "/home/bmarti44/.cache/qwen38-flash-next/native-runtime-001/runtime/bin/python3.12",
  "argv": [
