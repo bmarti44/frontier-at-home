@@ -235,6 +235,19 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         spec.loader.exec_module(module)
         self.assertEqual(module.MODEL_ENCODERS[SLUG], "qwen38")
 
+    @unittest.skipUnless(HOST_BOUND, "host-bound: hashes the local runtime interpreter")
+    def test_engine_binary_is_the_pinned_regular_file(self):
+        # The generic switch opens binary_path with O_NOFOLLOW and revalidates
+        # it with lstat + S_ISREG, so the pin must name the interpreter itself,
+        # not the runtime's python3 -> python3.12 symlink.
+        engine = profile_resolver.load_model(SLUG)["engines"][self.profile()["engine"]]
+        path = Path(engine["binary_path"].replace("{cache_root}", str(Path.home() / ".cache")))
+        if not path.parent.is_dir():
+            self.skipTest("runtime not present on this host")
+        self.assertFalse(path.is_symlink(), path)
+        self.assertTrue(path.is_file(), path)
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), engine["binary_sha256"])
+
     @unittest.skipUnless(HOST_BOUND, "host-bound: reads local weights")
     def test_local_template_matches_the_qwen38_encoder_source(self):
         if not (FLASH_CHAT_TEMPLATE.is_file() and QWEN38_TOKENIZER_CONFIG.is_file()):
