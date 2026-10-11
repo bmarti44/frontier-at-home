@@ -185,7 +185,7 @@ class ProductionPlan(unittest.TestCase):
     def test_qwen38fn_plan_carries_the_profile_contract(self) -> None:
         plan = production_plan("qwen38fn")
         self.assertEqual(plan["alias"], "qwen38fn")
-        # Candidate 7 (images on) is pending; test_qwen38fn_contract pins it.
+        # Candidate 8 (images on) is pending; test_qwen38fn_contract pins it.
         self.assertEqual(plan["status"], "estimated")
         self.assertEqual(
             plan["relpath"],

@@ -4,8 +4,10 @@ The profile serves NVIDIA's NVFP4 checkpoint on upstream vLLM with the PLE
 n-gram table read in place from NVMe (vLLM PR #58439 checkpoint_mapped), MTP
 speculative decoding, and four native 262,144-token slots. Candidate 5
 qualified it text-only as the optional ``qwen38fn`` switch alias. Candidate 7
-turns image input on under the owner's 8 GiB floor (2026-10-11), so the
-profile is ``estimated`` until that run passes.
+turned image input on under the owner's 8 GiB floor (2026-10-11) and failed
+on NVRM lines at the KV arena: another engine's model files were still in
+page cache. Candidate 8 adds the host page-cache release, so the profile is
+``estimated`` until that run passes.
 """
 from __future__ import annotations
 
@@ -45,13 +47,13 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             p, profile_resolver.load_model(SLUG),
             profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json"))
 
-    def test_profile_is_a_switch_alias_pending_candidate_7(self):
+    def test_profile_is_a_switch_alias_pending_candidate_8(self):
         # Candidate 5's PASS covers the text-only launch; images on is a new
-        # configuration, so the status waits for candidate 7's own gate.
+        # configuration, so the status waits for candidate 8's own gate.
         p = self.profile()
         status = p["status"]
         self.assertEqual(status["state"], "estimated")
-        self.assertIn("results/qwen38fn-gates/qualify-2026-10-11-c7/", status["basis"])
+        self.assertIn("results/qwen38fn-gates/qualify-2026-10-11-c8/", status["basis"])
         self.assertEqual(p["switch_alias"], "qwen38fn")
         self.assertEqual(p["switch"], {
             "mode": "generic",
@@ -185,10 +187,10 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         p = self.profile()
         env, argv = p["launch"]["env"], p["launch"]["args"]
         self.assertEqual(env["VLLM_MOE_USE_DEEP_GEMM"], "0")
-        self.assertEqual(arg(argv, "--worker-cls"), "qwen38fn_worker.CheckpointCacheReleaseWorker")
+        self.assertEqual(arg(argv, "--worker-cls"), "qwen38fn_worker.HostCacheReleaseWorker")
         tree = ast.parse((ROOT / "scripts/lib/qwen38fn_worker.py").read_text())
-        cls = next(n for n in tree.body
-                   if isinstance(n, ast.ClassDef) and n.name == "CheckpointCacheReleaseWorker")
+        classes = {n.name: n for n in tree.body if isinstance(n, ast.ClassDef)}
+        cls = classes["CheckpointCacheReleaseWorker"]
         self.assertEqual([ast.unparse(b) for b in cls.bases], ["ReleaseLoadCacheWorker"])
         methods = {n.name: ast.unparse(n) for n in cls.body if isinstance(n, ast.FunctionDef)}
         # Evict from before the weights load until warmup ends; nothing runs while serving.
@@ -196,6 +198,18 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertIn(".start()", methods["load_model"])
         self.assertIn(".stop()", methods["compile_or_warm_up_model"])
         self.assertIn("finally:", methods["compile_or_warm_up_model"])
+        # Candidate 7 met the KV arena with another engine's GGUF in page cache
+        # (results/qwen38fn-gates/qualify-2026-10-11-c7). Candidate 8 releases
+        # the model root before the weights load and again before the arena,
+        # then refuses an arena that MemFree cannot cover. Both are startup-only.
+        cls = classes["HostCacheReleaseWorker"]
+        self.assertEqual([ast.unparse(b) for b in cls.bases], ["CheckpointCacheReleaseWorker"])
+        methods = {n.name: ast.unparse(n) for n in cls.body if isinstance(n, ast.FunctionDef)}
+        self.assertEqual(set(methods), {"load_model", "initialize_from_config"})
+        self.assertIn("release_tree(", methods["load_model"])
+        self.assertIn("release_tree(", methods["initialize_from_config"])
+        self.assertIn("mem_free_gib()", methods["initialize_from_config"])
+        self.assertIn("raise RuntimeError", methods["initialize_from_config"])
 
     def test_images_on_and_video_off_like_the_default(self):
         # Images at 1M were NO_GO above the 10 GiB floor
@@ -220,9 +234,10 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
 
     def test_launch_is_candidate_5_plus_image_input(self):
         # qualify-2026-10-11-c4 (gate PASS) recorded the rendered argv and env.
-        # Candidate 7 changes only the image limit and turns the processor
-        # cache off. The interpreter pin moved from the python3 symlink to the
-        # file it names; the bytes are the same.
+        # Candidates 7 and 8 change only the image limit, the processor cache
+        # (off), and the worker class (candidate 8's host page-cache release).
+        # The interpreter pin moved from the python3 symlink to the file it
+        # names; the bytes are the same.
         ev = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4"
         recorded = json.loads((ev / "manifest.json").read_text())["profile"]
         out = profile_resolver.resolve(self.profile(), profile_resolver.load_model(SLUG),
@@ -232,6 +247,9 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(expected[index], '{"image":0,"video":0}')
         expected[index] = '{"image":4,"video":0}'
         expected[index + 1:index + 1] = ["--mm-processor-cache-gb", "0"]
+        worker = expected.index("--worker-cls") + 1
+        self.assertEqual(expected[worker], "qwen38fn_worker.CheckpointCacheReleaseWorker")
+        expected[worker] = "qwen38fn_worker.HostCacheReleaseWorker"
         self.assertEqual(out["argv"], expected)
         self.assertEqual(out["env"], recorded["env"])
         self.assertEqual(out["binary"], recorded["binary"] + ".12")
