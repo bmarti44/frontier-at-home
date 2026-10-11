@@ -24,6 +24,7 @@ DEFAULT_VISION_CORRECT, VISION_N, WORSE_Z = 64, 100, -1.645
 MIN_CONTEXT_TOKENS, CONTEXT_CAP = 1_000_000, 1_048_576
 KV_CAPACITY = re.compile(r"GPU KV cache size: ([0-9,]+) tokens, Maximum concurrency for 262,144 tokens per request")
 HEAD = re.compile(r"^\S+ head ([0-9a-f]{40}) dirty=(\d+)$")
+LAUNCH = re.compile(r"^(\S+) start1: launching in scope ")
 # A log that exists but never saw the run proves nothing.
 MARKERS = {"server.log": "session start", "memwatch.log": "ARMED"}
 START = "start1"
@@ -39,7 +40,7 @@ FROZEN = (
     "scripts/03_memory_guard.py", "scripts/30_bench_speed.py", "scripts/30_bench_speed_blocks.py",
     "scripts/35_soak.py", "scripts/38_bench_vision.py", "scripts/39_bench_toolcall.py",
     "scripts/50_probe_context.py", "scripts/92_resolve_profile.py", "scripts/93_profile_serve.sh",
-    "scripts/94_qualify_profile.py", "fixtures", "evalsets/mmmu-val-100",
+    "scripts/94_qualify_profile.py", "fixtures", "evalsets/mmmu-val-100", "evalsets/toolcall",
     "results/qwen38fn-gates/smoke-2026-10-11/probe.py", "results/qwen38fn-gates/smoke-2026-10-11/verdict.py",
     "results/qwen38fn-gates/qualify-2026-10-11-c4/probe-start1.json",
     f"{CANDIDATE}/PREREG.md", f"{CANDIDATE}/run-phase2.sh", f"{CANDIDATE}/gate_verdict.py",
@@ -98,31 +99,41 @@ def main(ev):
     if hits:
         fail.append("clause 1: kill/OOM/NVRM/Xid line")
 
+    driver = obs / "driver.log"
+    driver_lines = driver.read_text().splitlines() if driver.is_file() else []
+    launches = [m.group(1) for m in map(LAUNCH.match, driver_lines) if m]
+    checks["launch_stamps"] = launches
     rows = []
     meminfo = obs / "meminfo.log"
     for line in meminfo.read_text().splitlines() if meminfo.is_file() else []:
         kv = dict(re.findall(r"(\w+):=(\d+)", line))
         if {"MemAvailable", "SwapTotal", "SwapFree"} <= kv.keys():
-            rows.append(kv)
+            rows.append((line.split(" ", 1)[0], kv))
     if len(rows) < 600:
         missing.append("observe/start1/meminfo.log (fewer than 600 samples)")
     else:
-        used = [(int(r["SwapTotal"]) - int(r["SwapFree"])) / 2**20 for r in rows]
-        available = [int(r["MemAvailable"]) / 2**20 for r in rows]
+        used = [(int(r["SwapTotal"]) - int(r["SwapFree"])) / 2**20 for _, r in rows]
+        available = [int(r["MemAvailable"]) / 2**20 for _, r in rows]
         checks["swap_growth_gib"] = max(used) - used[0]
         checks["mem_available_low_gib"] = low = min(available)
-        checks["preload_mem_available_gib"] = available[0]
-        checks["peak_used_gib"] = peak = available[0] - low
         if checks["swap_growth_gib"] > SWAP_MAX_GIB:
             fail.append("clause 2: swap growth")
         if low < FLOOR_GIB:
             fail.append("clause 3: external low point below 8 GiB")
-        if peak + FLOOR_GIB > ADMISSION_GIB:
-            fail.append("clause 10: peak use + 8 GiB exceeds the 115 GiB switch admission")
+        # Peak use counts from the highest reading at or before the launch
+        # line: the sampler starts before the start guard waits, so its first
+        # row can sit below the memory the engine actually started with.
+        before = [a for (t, _), a in zip(rows, available) if len(launches) == 1 and t <= launches[0]]
+        if not before:
+            missing.append(f"clause 10: no meminfo sample at or before one launch line (launches {launches})")
+        else:
+            checks["launch_mem_available_gib"] = max(before)
+            checks["peak_used_gib"] = peak = max(before) - low
+            if peak + FLOOR_GIB > ADMISSION_GIB:
+                fail.append("clause 10: peak use + 8 GiB exceeds the 115 GiB switch admission")
 
-    driver = obs / "driver.log"
     if driver.is_file():
-        lines = driver.read_text().splitlines()
+        lines = driver_lines
         checks["failed_attempt_lines"] = [l for l in lines if "FAILED_ATTEMPT" in l]
         heads = [m.groups() for m in map(HEAD.match, lines) if m]
         checks["heads"] = heads

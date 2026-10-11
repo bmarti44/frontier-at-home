@@ -27,8 +27,14 @@ DeepSeek's 1M-fast profile set the precedent for an 8 GiB floor. AGENTS.md's
 ## What changed in the profile (test-first, `a8e9dd9e`)
 
 - `--limit-mm-per-prompt {"image":4,"video":0}` replaces `{"image":0,"video":0}`.
-  Video stays off, as on the default, and `serving.max_images` is 4. Every
-  other argv and env value is candidate 5's (`test_launch_is_candidate_5_plus_image_input`).
+  Video stays off, as on the default, and `serving.max_images` is 4.
+- `--mm-processor-cache-gb 0` (revision 2). This is the diagnostic's run-2
+  configuration, where the 3.1–3.3 GiB image cost was measured over 100
+  images. vLLM's default cache is 4 GiB, held in both the API server and the
+  engine core, which is up to 8 GiB the memory model does not count. It only
+  skips re-processing a repeated image (`test_processor_cache_is_off_as_in_the_measured_run`).
+- Every other argv and env value is candidate 5's
+  (`test_launch_is_candidate_5_plus_image_input`).
 - **Floors:** `safety.kill_floor_gib` and `memory_model.floor_gib` go to 8.
   The memwatch arms at 8, and the kit's context cell takes the same floor.
 - **Admission:** `safety.minimum_start_gib` goes to 115. This is the switch's
@@ -117,26 +123,50 @@ this file.
    this candidate knowing that, and decoding is greedy, so the score is
    reported with its delta whatever it is.
 10. **Switch admission holds:** peak use plus the 8 GiB floor fits inside the
-    115 GiB `minimum_start_gib`. Peak use is the first sample's
-    `MemAvailable` minus the low point. Otherwise a boot restore could start
-    an engine that its own floor would kill.
+    115 GiB `minimum_start_gib`. Otherwise a boot restore could start an
+    engine that its own floor would kill.
+    - Peak use is the highest `MemAvailable` sample stamped at or before the
+      driver's one `start1: launching in scope` line, minus the low point.
+    - The sampler starts before the start guard waits, so its first row alone
+      could understate the memory the engine started with.
+    - No launch line, more than one, or no sample at or before it gives
+      `NO_RESULT`.
 
-`gate_mutations.py` runs 33 synthetic cases, and all must match before
+`gate_mutations.py` runs 36 synthetic cases, and all must match before
 scoring:
 - PASS: clean, an evidence-only later commit, and MMMU at 53 and at 63;
-- FAIL: one case per failing clause;
-- NO_RESULT: each missing or malformed input, including a frozen file changed
-  after the freeze.
+- FAIL: one case per failing clause, plus a pre-launch sample above the first
+  row (`admissionlate`);
+- NO_RESULT: each missing or malformed input, including a missing launch
+  line and a frozen file (the profile, or the toolcall cases) changed after
+  the freeze.
 
 ## If it passes
 
 1. One reviewed commit flips the status to `qualified`, with this directory as
    evidence. The README's Flash-Next rows take this bundle's speed and vision
    numbers; the text accuracy rows stay from the holdout.
+   - The same commit sets admission from this run, not from the quiet-host
+     reading. `memory_model.overhead_gib` becomes the measured peak (clause
+     10) minus `resident_weights_gib` and `extra_gib`, rounded up to 0.1 GiB.
+     `safety.minimum_start_gib` becomes `ceil(peak + 8)`, which clause 10
+     holds at 115 or less.
+   - A contract test derives both values from `observe/start1/meminfo.log`.
 2. The switch makes `qwen38fn` the default:
    `sudo -n scripts/52_engine_switch.sh qwen38fn`, left running, in a window
    agreed with the co-tenant. README and AGENTS.md name it as the default.
-   The switch's boot-restore fallback stays `dsv4`.
+   - The switch's boot-restore fallback stays `dsv4`.
+   - Known risk: boot restore waits 180 s for three stable samples at
+     `minimum_start_gib`. Quiet-host readings of 115.2–115.6 GiB leave little
+     slack, so a co-tenant holding memory at boot can make restore fall back
+     to `dsv4` (a text-only model).
+   - The operator recovers with `sudo scripts/52_engine_switch.sh qwen38fn`
+     once the host is quiet. The status-flip commit adds that to the README's
+     default note.
+
+This branch is not merged before a `PASS`. It sets the profile to
+`estimated`, which would make the switch refuse the `qwen38fn` alias that is
+qualified on main.
 
 If the verdict is `FAIL` or `NO_RESULT`, nothing changes: `qwen38-1m` stays
 the default, the text-only `qwen38fn` on main stays as it is, and the result
@@ -153,9 +183,9 @@ goes to the owner.
 
 ## Freeze and randomness
 
-The commit that adds this file freezes the profile, the kit, the wrapper, the
-agent-gate adapter, the vision bench and its eval set, this driver and this
-scorer. Once the start has run, a change to any of these is a new candidate in
+The last commit that touches this file freezes the profile, the kit, the
+wrapper, the agent-gate adapter, the vision bench and its eval set, the
+tool-call cases, this driver and this scorer. Once the start has run, a change to any of these is a new candidate in
 a new directory.
 
 There is one arm and no fixture choice. The kit's fixtures are fixed by its
@@ -167,3 +197,19 @@ scripts:
 
 So no public randomness is drawn. This follows candidate 5 and the GLM-5.3
 bundle.
+
+## Review history
+
+- **Round 1 on `07d67a74` (revision 1):** one HIGH, two MEDIUM, two LOW, no
+  critical.
+  - HIGH: the processor cache was on by default and unbudgeted. Fixed with
+    `--mm-processor-cache-gb 0`.
+  - MEDIUM: clause 10 took its baseline from the sampler's first row. Fixed:
+    the baseline is now the highest sample at or before launch.
+  - MEDIUM: 115 GiB admission leaves 0.2–0.6 GiB of slack. Fixed: admission
+    is now derived from this run on a PASS, and the boot-restore risk is
+    recorded above.
+  - LOW: the tool-call cases were not frozen. Fixed: `evalsets/toolcall` is
+    now in `FROZEN`.
+  - LOW: do not merge before a PASS. Recorded above.
+- **Revision 2:** RED in `bd182401`; this file's commit is the new freeze.
