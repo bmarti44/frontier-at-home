@@ -7,11 +7,18 @@
 # path?), and the first 10 MMMU-val-100 cases in chat mode as the kit runs
 # them. Same containment as run-phase2.sh, plus an external stop at 10.5 GiB
 # ahead of the profile's 10 GiB memwatch.
-# Usage: run-diag.sh
+# Run 2 adds a per-process RSS sampler, all 100 MMMU cases, then the kit's
+# exact 4-slot direct-1M fill (50_probe_context.py), to measure whether
+# images and the 1M fill fit above the floor. A stop at 10.5 GiB means the
+# margin is too thin for candidate 6.
+# Usage: run-diag.sh [label=run] [mmmu cases=10] [fill 0|1=0]
 set -Eeuo pipefail
+LABEL=${1:-run}
+CASES=${2:-10}
+FILL=${3:-0}
 WT=/home/bmarti44/qwen38fn
 DIAG=$WT/results/qwen38fn-gates/diag-vision-2026-10-11
-OBS=$DIAG/run
+OBS=$DIAG/$LABEL
 C5=$WT/results/qwen38fn-gates/qualify-2026-10-11-c4
 SMOKE=$WT/results/qwen38fn-gates/smoke-2026-10-11
 PROFILE=qwen3.8-flash-next/cuda-spark-128g-1m
@@ -40,6 +47,17 @@ MEMWATCH_OFF=$(size_of "$MEMWATCH_LOG")
     sleep 1
   done >>"$OBS/meminfo.log" ) &
 SAMPLER=$!
+( while sleep 5; do
+    cg=$(systemctl --user show -p ControlGroup --value "$UNIT.scope" 2>/dev/null || true)
+    [[ -n $cg && -r /sys/fs/cgroup$cg/cgroup.procs ]] || continue
+    printf '%s' "$(stamp)"
+    while read -r pid; do
+        awk -v p="$pid" '/^Name:/{n=$2} /^RssAnon:/{a=$2} /^RssFile:/{f=$2} /^RssShmem:/{s=$2}
+            END{if (a + f + s > 102400) printf " %s:%s:anon=%s:file=%s:shmem=%s", p, n, a, f, s}' "/proc/$pid/status" 2>/dev/null
+    done <"/sys/fs/cgroup$cg/cgroup.procs"
+    printf '\n'
+  done >>"$OBS/procs.log" ) &
+PROCS=$!
 journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 &
 JOURNAL=$!
 # Armed only once the scope exists, so a dip during the guard wait cannot
@@ -56,7 +74,7 @@ STOPPER=$!
 cleanup() {
     kill "$STOPPER" 2>/dev/null || true
     "${SERVE[@]}" stop >>"$OBS/driver.log" 2>&1 || true
-    kill "$SAMPLER" "$JOURNAL" 2>/dev/null || true
+    kill "$SAMPLER" "$PROCS" "$JOURNAL" 2>/dev/null || true
     tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" >"$OBS/server.log" 2>/dev/null || true
     tail -c +$((MEMWATCH_OFF + 1)) -- "$MEMWATCH_LOG" >"$OBS/memwatch.log" 2>/dev/null || true
     local i
@@ -73,7 +91,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-log "DIAGNOSTIC vision profile $PROFILE"
+log "DIAGNOSTIC vision $LABEL profile $PROFILE mmmu_cases $CASES fill $FILL"
 log "head $(git rev-parse HEAD) dirty=$(git status --porcelain --untracked-files=no | wc -l)"
 log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
 python3 "$WT/scripts/03_memory_guard.py" --required-gib 114 --stable-samples 3 --timeout-seconds 600 \
@@ -81,7 +99,7 @@ python3 "$WT/scripts/03_memory_guard.py" --required-gib 114 --stable-samples 3 -
 log "launching in scope $UNIT"
 t0=$SECONDS
 systemd-run --user --scope -q --unit="$UNIT" \
-    -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec=2700 \
+    -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec=3600 \
     -- "${SERVE[@]}" start 2>&1 | tee -a "$OBS/driver.log"
 log "ready after $((SECONDS - t0)) s; sampling idle memory for 60 s"
 sleep 60
@@ -105,5 +123,18 @@ a, b = ([g["sha256"] for g in json.load(open(p))["greedy"]] for p in sys.argv[1:
 print("probe vs candidate 5 start 1:", "identical" if a == b else "DIFFERENT", [x == y for x, y in zip(a, b)])
 PY
 python3 "$WT/scripts/38_bench_vision.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/vision" \
-    --thinking-mode chat --limit 10 --model-id qwen3.8-flash-next 2>&1 | tail -3 | tee -a "$OBS/driver.log"
+    --thinking-mode chat --limit "$CASES" --model-id qwen3.8-flash-next 2>&1 | tail -3 | tee -a "$OBS/driver.log"
 log "after vision mem_available_kib=$(avail_kib)"
+if [[ $FILL == 1 ]]; then
+    # The kit's context cell argv (qualify-2026-10-11-c4/context/log.txt line 1), output here;
+    # the tokenizer digest comes from the pinned model.json.
+    toksha=$(python3 -c 'import json, sys; m = json.load(open(sys.argv[1]))
+print(next(s["sha256"] for a in m["artifacts"].values() for s in a.get("shards", []) if s["path"].endswith("/tokenizer.json")))' \
+        "$WT/configs/profiles/qwen3.8-flash-next/model.json")
+    python3 "$WT/scripts/50_probe_context.py" --base-url "http://127.0.0.1:$PORT" --model qwen3.8-flash-next \
+        --out "$OBS/context" --stack-label qwen3.8-flash-next-cuda-spark-128g-1m --slots 4 --tokens-per-slot 250128 \
+        --tokenizer-path "$HOME/models/qwen3.8-flash-next-nvfp4/tokenizer.json" \
+        --tokenizer-sha256 "$toksha" \
+        --phase both --profile-id "$PROFILE" --mem-floor-gib 10 2>&1 | tail -5 | tee -a "$OBS/driver.log"
+    log "after fill mem_available_kib=$(avail_kib)"
+fi
