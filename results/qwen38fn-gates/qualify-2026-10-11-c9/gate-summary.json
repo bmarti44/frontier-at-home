@@ -1,0 +1,74 @@
+{
+ "formula": "PREREG.md",
+ "checks": {
+  "kv_capacity_tokens": 1079117,
+  "host_cache_release": [
+   {
+    "root": "/home/bmarti44/models",
+    "files": 496,
+    "mem_free_gib": 22.75,
+    "arena_gib": 17.9,
+    "margin_gib": 2.0
+   }
+  ],
+  "kill_lines": [],
+  "launch_stamps": [
+   "2026-10-11T19:28:37Z"
+  ],
+  "precondition_resident_gib": {
+   "/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf": 16.55,
+   "/home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf": 0.86
+  },
+  "swap_growth_gib": 0.0,
+  "mem_available_low_gib": 9.62509536743164,
+  "launch_mem_available_gib": 115.29914474487305,
+  "peak_used_gib": 105.6740493774414,
+  "failed_attempt_lines": [],
+  "heads": [
+   [
+    "c73c16b050bdca0df54422cf61ee83adaa78c7bf",
+    "0"
+   ]
+  ],
+  "freeze": "c73c16b050bdca0df54422cf61ee83adaa78c7bf",
+  "frozen_diff_rc": 0,
+  "context": {
+   "verdict": "PASS",
+   "total_tokens": 1000672,
+   "min_mem_available_gib": 9.625171661376953,
+   "context_cap": 1048576
+  },
+  "text_identity_vs_candidate_5": [
+   true,
+   true,
+   true
+  ],
+  "toolcall": {
+   "passed": 20,
+   "total": 20
+  },
+  "agent_gate": {
+   "prefix-cache": true,
+   "turn-continuation": true,
+   "slot-thrash": true,
+   "prefill-throughput": true
+  },
+  "soak_pass": true,
+  "soak_floor": {
+   "mem_floor_gib": 5.0,
+   "mem_floor_source": "default",
+   "mem_available_min_gib": 9.90584945678711
+  },
+  "vision": {
+   "n": 100,
+   "correct": 63,
+   "invalid_count": 3,
+   "error_count": 0,
+   "default_correct": 64,
+   "z_vs_default": -0.14687629449648382
+  }
+ },
+ "fail": [],
+ "missing": [],
+ "verdict": "PASS"
+}
