@@ -247,6 +247,12 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             self.render(p)
         p["serving"].update(max_videos=1, video_frames=32)
         self.assertEqual(self.render(p)["serving"]["max_videos"], 1)
+        # The dict form's count also defaults to 999 (vLLM BaseDummyOptions).
+        p = self.profile()
+        args = p["launch"]["args"]
+        args[args.index("--limit-mm-per-prompt") + 1] = '{"image":0,"video":{"num_frames":16}}'
+        with self.assertRaises(profile_resolver.ProfileError):
+            self.render(p)
 
     def test_switch_admission_covers_the_measured_peak(self):
         # The generic switch admits on safety.minimum_start_gib alone. Candidate
