@@ -8,7 +8,9 @@ exactly the same ones.
 """
 import importlib.util
 import json
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -16,6 +18,21 @@ SWAP_MAX_GIB, FLOOR_GIB, TOOLCALL_MIN = 0.25, 10.0, 19
 MIN_CONTEXT_TOKENS, CONTEXT_CAP = 1_000_000, 1_048_576
 KV_CAPACITY = re.compile(r"GPU KV cache size: ([0-9,]+) tokens, Maximum concurrency for 262,144 tokens per request")
 HEAD = re.compile(r"^\S+ head ([0-9a-f]{40}) dirty=(\d+)$")
+# The starts may run at different commits (evidence committed in between)
+# only if nothing that shapes the measurement differs between them.
+REPO = Path(os.environ.get("GATE_REPO") or Path(__file__).resolve().parents[3])
+FROZEN = (
+    "configs/profiles/qwen3.8-flash-next", "configs/build-manifests/qwen38-flash-next-runtime.json",
+    "scripts/lib", "scripts/dev/regression-suite.py", "scripts/01_memwatch.sh", "scripts/02_membudget.py",
+    "scripts/03_memory_guard.py", "scripts/30_bench_speed.py", "scripts/30_bench_speed_blocks.py",
+    "scripts/31_bench_accuracy.py", "scripts/35_soak.py", "scripts/39_bench_toolcall.py",
+    "scripts/50_probe_context.py", "scripts/92_resolve_profile.py", "scripts/93_profile_serve.sh",
+    "scripts/94_qualify_profile.py", "fixtures", "vendor/official-encoding/encoding",
+    "results/qwen38fn-gates/smoke-2026-10-11/probe.py", "results/qwen38fn-gates/smoke-2026-10-11/verdict.py",
+    "results/qwen38fn-gates/qualify-2026-10-11/PREREG.md", "results/qwen38fn-gates/qualify-2026-10-11/run-phase2.sh",
+    "results/qwen38fn-gates/qualify-2026-10-11/gate_verdict.py",
+    "results/qwen38fn-gates/qualify-2026-10-11/host-worktree.json",
+)
 # A log that exists but never saw the run proves nothing.
 MARKERS = {"server.log": "session start", "memwatch.log": "ARMED"}
 STARTS = ("start1", "start2")
@@ -87,7 +104,13 @@ def main(ev):
             missing.append(f"observe/{start}/driver.log")
     # Both starts must run one committed candidate with no tracked edits.
     checks["heads"] = heads
-    if len(heads) != len(STARTS) or len({h for h, _ in heads}) != 1 or any(d != "0" for _, d in heads):
+    identical = len(heads) == len(STARTS) and all(d == "0" for _, d in heads)
+    if identical and heads[0][0] != heads[1][0]:
+        diff = subprocess.run(["git", "-C", str(REPO), "diff", "--quiet", heads[0][0], heads[1][0],
+                               "--", *FROZEN], capture_output=True)
+        checks["frozen_diff_rc"] = diff.returncode
+        identical = diff.returncode == 0
+    if not identical:
         missing.append(f"code identity: heads {heads}")
     checks["kill_lines"] = hits
     checks["failed_attempt_lines"] = failed_attempts

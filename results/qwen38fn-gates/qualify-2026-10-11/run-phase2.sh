@@ -83,7 +83,7 @@ check_no_survivors() {
 
 log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
 log "head $(git -C "$WT" rev-parse HEAD) dirty=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)"
-python3 "$WT/scripts/03_memory_guard.py" --required-gib 110 --stable-samples 3 --timeout-seconds 600 \
+python3 "$WT/scripts/03_memory_guard.py" --required-gib 112 --stable-samples 3 --timeout-seconds 600 \
     | tee -a "$OBS/driver.log"
 
 log "$START: launching in scope $UNIT (RuntimeMaxSec=$CAP)"

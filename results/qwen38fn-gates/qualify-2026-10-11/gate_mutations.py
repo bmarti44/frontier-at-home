@@ -5,6 +5,7 @@ every broken or failing variant must not.
 Usage: gate_mutations.py  -> prints one line per case, exit 0 iff all match.
 """
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -14,7 +15,26 @@ SCORER = Path(__file__).resolve().parent / "gate_verdict.py"
 GIB_KIB = 2**20
 
 
+def git_heads(repo: Path, mut: str) -> tuple[str, str]:
+    """Two real commits: evidence-only change, or a change to a frozen file."""
+    def git(*args):
+        return subprocess.run(["git", "-C", str(repo), "-c", "user.name=m", "-c", "user.email=m@m", *args],
+                              capture_output=True, text=True, check=True).stdout.strip()
+    frozen = repo / "results/qwen38fn-gates/qualify-2026-10-11/gate_verdict.py"
+    frozen.parent.mkdir(parents=True)
+    frozen.write_text("v1\n")
+    (repo / "evidence.txt").write_text("start1\n")
+    git("init", "-q")
+    git("add", "-A")
+    git("commit", "-qm", "c1")
+    first = git("rev-parse", "HEAD")
+    (frozen if mut == "headfrozen" else repo / "evidence.txt").write_text("changed\n")
+    git("commit", "-qam", "c2")
+    return first, git("rev-parse", "HEAD")
+
+
 def build(ev: Path, mut: str) -> None:
+    heads = git_heads(ev / "repo", mut) if mut in ("headevidence", "headfrozen") else None
     for start in ("start1", "start2"):
         obs = ev / "observe" / start
         obs.mkdir(parents=True)
@@ -39,6 +59,8 @@ def build(ev: Path, mut: str) -> None:
         if not (mut == "noserverlog" and start == "start2"):
             (obs / "server.log").write_text(server)
         head = "b" * 40 if mut == "headdiff" and start == "start2" else "a" * 40
+        if heads:
+            head = heads[0] if start == "start1" else heads[1]
         dirty = 1 if mut == "dirty" and start == "start1" else 0
         (obs / "driver.log").write_text(f"2026-10-11T00:00:00Z head {head} dirty={dirty}\n"
                                         + ("FAILED_ATTEMPT survivors\n" if mut == "attempt" else "ok\n"))
@@ -71,7 +93,7 @@ EXPECT = {
     "agent": "FAIL", "soak": "FAIL", "cap": "NO_RESULT", "short": "NO_RESULT",
     "noserverlog": "NO_RESULT", "noprobe": "NO_RESULT", "agentmissing": "NO_RESULT",
     "attempt": "NO_RESULT", "kvcap": "FAIL", "headdiff": "NO_RESULT", "dirty": "NO_RESULT",
-    "emptyserver": "NO_RESULT", "unarmed": "NO_RESULT",
+    "emptyserver": "NO_RESULT", "unarmed": "NO_RESULT", "headevidence": "PASS", "headfrozen": "NO_RESULT",
 }
 
 
@@ -81,7 +103,8 @@ def main() -> int:
         with tempfile.TemporaryDirectory() as tmp:
             ev = Path(tmp)
             build(ev, mut)
-            proc = subprocess.run([sys.executable, str(SCORER), str(ev)], capture_output=True, text=True)
+            env = dict(os.environ, GATE_REPO=str(ev / "repo"))
+            proc = subprocess.run([sys.executable, str(SCORER), str(ev)], capture_output=True, text=True, env=env)
             got = json.loads((ev / "gate-summary.json").read_text())["verdict"]
             rc_ok = (proc.returncode == 0) == (got == "PASS")
             match = got == expected and rc_ok

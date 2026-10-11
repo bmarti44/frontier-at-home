@@ -10,7 +10,7 @@ this same directory.
 ## What runs
 
 Both starts are fresh servers. Each start runs only after
-`03_memory_guard.py --required-gib 110` passes, inside a user scope with
+`03_memory_guard.py --required-gib 112` passes, inside a user scope with
 `MemoryHigh=92G`, `MemoryMax=96G`, `MemorySwapMax=0`, `OOMPolicy=kill` and a
 `RuntimeMaxSec` cap. `93_profile_serve.sh` serves the profile on `:8017` and
 arms its memwatch at the profile's 10 GiB floor. An external sampler logs
@@ -55,7 +55,10 @@ malformed evidence, or a `FAILED_ATTEMPT` line in a driver log, gives
 `NO_RESULT` unless a clause has already failed. So do these:
 - a log that is missing the line proving it saw the run (the server log's
   `session start`, memwatch's `ARMED`);
-- driver `head` lines that differ between starts or show tracked edits.
+- driver `head` lines that show tracked edits, or that differ between starts
+  in any frozen file (`gate_verdict.py` `FROZEN`: profile, runtime manifest,
+  composed scripts, encoder, fixtures, this driver and scorer). Committing
+  start 1's evidence before start 2 is fine.
 
 1. **No kill lines** in either start. The patterns are the smoke's:
    - kernel log: `out of memory|oom-kill|oom_reaper|NVRM|Xid`, case-insensitive;
@@ -99,9 +102,11 @@ Promotion stays the owner's decision (Phase 3).
   - one group grows by `cdiv(L, 3200)`, which is 41 blocks at that length;
   - 21 are fixed: GDN state (4 groups × 5) plus the QSA ring (1).
 - **Arena.** A 262,144-token slot reserves 103 blocks, so four slots need 412
-  blocks, at most 18,808,695,688 bytes. The arena is 18.85 GB.
+  blocks. Add the BlockPool null block and 2 × 4 transient prefill blocks (the
+  smoke held 36 blocks for a 32-block reservation): 421 blocks, at most
+  19,219,565,254 bytes. The arena is 19.22 GB (candidate 3).
 - **Footprint.** The engine's non-KV footprint is about 84.2 GiB. Projected
-  idle on a quiet 114 GiB host is about 12.2 GiB.
+  idle on a quiet 114 GiB host is about 11.9 GiB.
 - **Correction.** The smoke's RESULT.md said "13–15 GiB on a quiet host" for
   a 22.7 GB arena. That subtracted from MemTotal rather than MemAvailable, so
   it was wrong. That file is frozen evidence and is left unchanged.
@@ -120,6 +125,22 @@ Promotion stays the owner's decision (Phase 3).
   findings with the 18.85 GB arena, the measured memory model,
   `--spec-block-drop`, fail-closed driver checks, and the scorer's identity
   and marker checks. `gate_mutations.py` passes 23/23.
+
+- **Candidate 3:** the commit that adds this line. Review round 2 found no
+  critical or high issues. It closes the three lows, each with a focused
+  regression test:
+  - the arena gets null-block and transient-prefill headroom;
+  - code identity compares frozen files rather than commit hashes;
+  - the memory guard is 112 GiB, matching admission.
+
+  `gate_mutations.py` passes 25/25.
+
+## Running start 2
+
+Check clause 2 in `observe/start1/meminfo.log` before booking start 2's long
+window. If start 1 has already failed any clause, the verdict is `FAIL`
+whatever start 2 shows, and start 2 may be skipped. Its cells are then
+reported as not run.
 
 ## Freeze and randomness
 
