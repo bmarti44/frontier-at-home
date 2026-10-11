@@ -246,18 +246,29 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertTrue((ROOT / engine["build_manifest"]).is_file())
 
     def test_serving_rejects_bad_media_fields(self):
-        # Media fields follow --limit-mm-per-prompt: a text-only launch must not
-        # declare an image or video maximum it cannot serve.
-        for key, value in (("max_images", 0), ("audio_clips", 1), ("max_images", 4), ("max_videos", 1)):
+        # Media fields follow --limit-mm-per-prompt: an enabled modality declares
+        # a positive maximum, and a disabled one declares none.
+        for key, value in (("max_images", 0), ("audio_clips", 1), ("max_images", None), ("max_videos", 1)):
             p = self.profile()
-            p["serving"][key] = value
-            with self.subTest(key=key), self.assertRaises(profile_resolver.ProfileError):
+            if value is None:
+                del p["serving"][key]
+            else:
+                p["serving"][key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(profile_resolver.ProfileError):
                 self.render(p)
+        p = self.profile()
+        args = p["launch"]["args"]
+        args[args.index("--limit-mm-per-prompt") + 1] = '{"image":0,"video":0}'
+        with self.assertRaises(profile_resolver.ProfileError):
+            self.render(p)
+        del p["serving"]["max_images"]
+        self.assertNotIn("max_images", self.render(p)["serving"])
 
     def test_a_modality_missing_from_the_limit_is_enabled(self):
         # vLLM serves up to 999 items of any modality that --limit-mm-per-prompt
         # leaves out, so {"image":0} alone keeps video on.
         p = self.profile()
+        p["serving"].pop("max_images", None)
         args = p["launch"]["args"]
         args[args.index("--limit-mm-per-prompt") + 1] = '{"image":0}'
         with self.assertRaises(profile_resolver.ProfileError):
@@ -266,6 +277,7 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(self.render(p)["serving"]["max_videos"], 1)
         # The dict form's count also defaults to 999 (vLLM BaseDummyOptions).
         p = self.profile()
+        p["serving"].pop("max_images", None)
         args = p["launch"]["args"]
         args[args.index("--limit-mm-per-prompt") + 1] = '{"image":0,"video":{"num_frames":16}}'
         with self.assertRaises(profile_resolver.ProfileError):
