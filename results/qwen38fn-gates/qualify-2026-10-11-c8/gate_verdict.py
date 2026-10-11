@@ -104,8 +104,10 @@ def main(ev):
             for r, n, f, a, m in releases]
         if REFUSED in text:
             fail.append("clause 12: the worker refused the KV arena (MemFree short after the release)")
-        elif len(releases) != 1 or releases[0][0] != MODEL_ROOT or float(releases[0][3]) < 17.0:
-            missing.append(f"clause 12: want one release line under {MODEL_ROOT} for the 17.9 GiB arena, got {releases}")
+        elif (len(releases) != 1 or releases[0][0] != MODEL_ROOT or int(releases[0][1]) < 1
+              or float(releases[0][3]) < 17.0):
+            missing.append(f"clause 12: want one release line under {MODEL_ROOT}, at least one file, "
+                           f"for the 17.9 GiB arena, got {releases}")
     for name, marker in MARKERS.items():
         f = obs / name
         if f.is_file() and marker not in f.read_text(errors="replace"):

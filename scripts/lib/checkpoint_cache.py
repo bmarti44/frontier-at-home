@@ -75,8 +75,8 @@ def release_tree(root: str) -> int:
     """Drop the unmapped page cache of every regular file under ``root``.
 
     Symlinks are neither followed nor advised, so nothing outside ``root`` is
-    touched. A file this user cannot open is skipped. Any other error is
-    raised. Returns the number of files advised.
+    touched. A file this user cannot open, or one deleted during the walk, is
+    skipped. Any other error is raised. Returns the number of files advised.
     """
     if not root or os.path.realpath(root) == "/" or not os.path.isdir(root):
         raise ValueError(f"refusing to release page cache under {root!r}")
@@ -88,7 +88,7 @@ def release_tree(root: str) -> int:
                 continue
             try:
                 fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
-            except PermissionError:
+            except (PermissionError, FileNotFoundError):
                 continue
             try:
                 os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_DONTNEED)

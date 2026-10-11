@@ -34,7 +34,8 @@ The owner asked to fix it and qualify again (2026-10-11).
 
 - **`checkpoint_cache.release_tree(root)`** advises `DONTNEED` on every regular
   file under `root`.
-  - It skips symlinks and files it cannot open, and raises any other error.
+  - It skips symlinks, files it cannot open, and files deleted during the
+    walk. It raises any other error.
   - It refuses `/` and missing directories.
 - **`qwen38fn_worker.HostCacheReleaseWorker`** subclasses the text-only worker,
   which stays unchanged on main. It adds two startup-only steps:
@@ -142,18 +143,20 @@ failed. So do:
     - Otherwise the run did not test the fix: `NO_RESULT`.
 12. **The fixed worker ran.**
     - The server log has exactly one release line, under
-      `/home/bmarti44/models`, for an arena of at least 17 GiB.
+      `/home/bmarti44/models`, covering at least one file, for an arena of at
+      least 17 GiB.
     - If it has `refusing to allocate the KV arena`, that is a `FAIL`: the
       release did not free enough.
     - Any other shape is `NO_RESULT`.
 
-`gate_mutations.py` runs 41 synthetic cases, and all must match before
+`gate_mutations.py` runs 42 synthetic cases, and all must match before
 scoring:
 - PASS: clean, an evidence-only later commit, and MMMU at 53 and at 63;
 - FAIL: one case per failing clause, including `admissionlate` and `refused`;
 - NO_RESULT: each missing or malformed input, including a missing launch
   line, missing or cold precondition lines, a missing release line, a release
-  under the wrong root, and frozen files changed after the freeze.
+  under the wrong root, a release covering zero files, and frozen files
+  changed after the freeze.
 
 On the c7 scorer, which has no clause 11 or 12, the five new cases score PASS.
 That is the RED.
@@ -177,6 +180,19 @@ That is the RED.
      change.
    - README and AGENTS.md name the new default.
    - The boot-restore fallback stays `dsv4`.
+   - Known risk, the reverse direction: the release lives only in this
+     profile's worker. When `qwen38fn` stops, its own checkpoint and PLE
+     pages stay cached in front of the next engine's load. The PR #13 switch
+     run logged one NVRM line in exactly that case (`qwen38-1m` after
+     `qwen38fn`, `../switch-2026-10-11/`).
+     - So the fallback above, the switch's automatic rollback, and any later
+       switch away from a `qwen38fn` default can log an NVRM line in the
+       other engine.
+     - The general fix is a switch-level release of `~/models` before every
+       start. That is switch code and a separate change, and it is reported
+       to the owner as the follow-up.
+     - The promotion switch itself starts `qwen38fn` from a stopped host, so
+       it is not exposed.
    - Known risk: boot restore waits 180 s for three stable samples at
      `minimum_start_gib`. A co-tenant holding memory at boot can make it fall
      back to `dsv4`. The operator recovers with
@@ -221,4 +237,13 @@ and 7.
 
 ## Review history
 
-None yet.
+- **Round 1 on `61689dc2`:** no critical or high findings; one MEDIUM and
+  two LOW.
+  - MEDIUM: the reverse switch direction is still exposed. Recorded as a
+    known risk under "If it passes", with the switch-level follow-up.
+  - LOW: `release_tree` failed on a file deleted mid-walk. It now skips
+    `FileNotFoundError` (regression test
+    `test_a_file_deleted_during_the_walk_is_skipped`).
+  - LOW: clause 12 accepted a zero-file release. It now requires at least
+    one file (mutation `zerofiles`).
+  - RED in the commit after `61689dc2`. This file's commit is the new freeze.
