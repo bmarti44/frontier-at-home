@@ -1,0 +1,14 @@
+2026-10-11T02:47:56Z DIAGNOSTIC b-1m-nodg profile qwen3.8-flash-next/cuda-spark-128g-1m hook sitecustomize_b.py
+2026-10-11T02:47:56Z head a23765f28c8e222d57439fbaba3efeb91d38ea62 dirty=0
+2026-10-11T02:47:56Z sha256 configs/profiles/qwen3.8-flash-next/cuda-spark-128g-1m.json:18b1adc4406b5031190b00c18b9854468a930fc9ffdc46e383454222e52d7a04 /home/bmarti44/qwen38fn/results/qwen38fn-gates/diag-drafter-2026-10-11/sitecustomize_b.py:4a96d4626a8199664b42a5bd60e07332d7d9e4f2bf1354ce849874dbff590000 /home/bmarti44/qwen38fn/results/qwen38fn-gates/diag-drafter-2026-10-11/watch.py:6d8c4a41bc3f6f40e27f8a4d6bf27e264e7cdbbbec132b6efc2b2c9fc770adba results/qwen38fn-gates/diag-drafter-2026-10-11/run-diag.sh:6de1baabb190e77865b36d537ad9c94f37def9ea60f1a8d047274fac791f7fba 
+{"pass":true,"required_gib":112.0,"mem_available_gib":115.62,"stable_samples_observed":3}
+2026-10-11T02:47:58Z launching in scope qwen38fn-diag-b-1m-nodg-3131948
+{"pass":true,"required_gib":86.0,"mem_available_gib":115.581,"stable_samples_observed":3}
+2026-10-11T02:57:27Z start exit nonzero
+(EngineCore pid=3132501) INFO 10-10 22:57:11 [model_runner.py:413] Model loading took 75.65 GiB memory and 531.506712 seconds
+(EngineCore pid=3132501) INFO 10-10 22:57:23 [gpu_worker.py:634] Initial free memory 113.02 GiB, reserved 17.9 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control of KV cache memory size. If OOM'ed, check the difference of initial free memory between the current run and the previous run where kv_cache_memory_bytes is suggested and update it correspondingly.
+(EngineCore pid=3132501) INFO 10-10 22:57:24 [kv_cache_utils.py:2570] GPU KV cache size: 1,079,117 tokens, Maximum concurrency for 262,144 tokens per request: 4.12x
+idle_mem_available_kib=18947164
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","stopped":true}
+2026-10-11T02:57:29Z postrun MemAvailable:=121179676 SwapFree:=16059988 
+2026-10-11T02:57:29Z driver exit
