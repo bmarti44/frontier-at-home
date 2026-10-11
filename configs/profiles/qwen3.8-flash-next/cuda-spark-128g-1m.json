@@ -5,10 +5,12 @@
   "backend": "cuda",
   "hardware_class": "spark",
   "ram_tier_gib": 128,
-  "purpose": "Qwen3.8-Flash-Next for agentic coding: four native 262,144-token slots (1,048,576 total), NVFP4 experts, PLE table read in place from NVMe, MTP k=3, fp8 KV, prefix cache, decode CUDA graphs. Not the default until the owner decides.",
+  "purpose": "Qwen3.8-Flash-Next for agentic coding: four native 262,144-token slots (1,048,576 total), NVFP4 experts, PLE table read in place from NVMe, MTP k=3, fp8 KV, prefix cache, decode CUDA graphs. Optional engine (switch alias qwen38fn); qwen38-1m stays the default. Text only.",
   "status": {
-    "state": "estimated",
-    "basis": "Community single-Spark vLLM reports (tonyd2wild, madeye; Sep 2026): ~76 GiB resident weights with the PLE table on NVMe, 36.8-45.8 tok/s single-stream decode with MTP3, ~1,600-1,824 tok/s prefill, KV pool ~0.5-1.0M fp8 tokens. Not yet measured on this host."
+    "state": "qualified",
+    "decision": "measured 2026-10-11 (candidate 5, scripts/94_qualify_profile.py plus the preregistered gate_verdict.py): gate PASS. 0 kill lines and 0.00 GiB swap growth in both starts, external low point 12.25 GiB, vLLM KV 1,079,117 tokens at 262,144, direct 1M fill 1,000,672 tokens, restart identity 3/3, tools 20/20, agent gate 4/4, soak 212 requests 0 errors. Decode 25.80 tok/s @0 and 35.54 @28K, prefill 2,684 tok/s @28K beat qwen38-1m; short-prompt TTFT 0.569 s misses the 0.5 s target (qwen38-1m 0.39 s). Holdout (results/qwen38fn-gates/holdout-2026-10-11/): GSM8K 98/100, MMLU-Pro 218/247, HumanEval 138/164 = 454/511 vs qwen38-1m 438/511. Fidelity NO_RESULT: no BF16 teacher; NVFP4 weights and fp8 KV as NVIDIA publishes them. Text only: images at 1M are NO_GO (results/qwen38fn-gates/diag-vision-2026-10-11/). Optional engine; owner's choice 2026-10-11, qwen38-1m stays default.",
+    "qualified_at": "2026-10-11",
+    "evidence": "results/qwen38fn-gates/qualify-2026-10-11-c4/"
   },
   "engine": "vllm-qwen38fn-r001",
   "artifact_roles": {
@@ -132,6 +134,16 @@
   },
   "context_cap": 1048576,
   "port_role": "production",
+  "switch_alias": "qwen38fn",
+  "switch": {
+    "mode": "generic",
+    "served_model_id": "qwen3.8-flash-next",
+    "health_path": "/health",
+    "context_check": {
+      "kind": "model_card",
+      "max_model_len": 262144
+    }
+  },
   "bench": {
     "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m"
   },
