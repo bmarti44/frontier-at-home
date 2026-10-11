@@ -129,6 +129,20 @@ class ReleaseTreeTest(unittest.TestCase):
         self.assertEqual(count, 3)
         self.assertNotIn(str(self.root / "b/deep/z.bin"), [s[0] for s in seen])
 
+    def test_a_file_deleted_during_the_walk_is_skipped(self):
+        # A download's temporary file can vanish between the walk and the open.
+        real_open = os.open
+
+        def vanishing(path, flags, *a):
+            if str(path).endswith("y.safetensors"):
+                raise FileNotFoundError(2, "gone")
+            return real_open(path, flags, *a)
+
+        with mock.patch.object(checkpoint_cache.os, "open", side_effect=vanishing):
+            count, seen = self.fadvised()
+        self.assertEqual(count, 3)
+        self.assertNotIn(str(self.root / "b/y.safetensors"), [s[0] for s in seen])
+
     def test_other_open_errors_and_fadvise_errors_are_raised(self):
         with mock.patch.object(checkpoint_cache.os, "posix_fadvise", side_effect=OSError(5, "EIO")):
             with self.assertRaises(OSError):

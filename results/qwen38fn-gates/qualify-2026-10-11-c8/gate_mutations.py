@@ -73,7 +73,7 @@ def build(ev: Path, mut: str) -> None:
     root = "/tmp/models" if mut == "wrongroot" else "/home/bmarti44/models"
     release = "" if mut == "norelease" else (
         f"(EngineCore pid=1) INFO 10-11 13:09:03 [qwen38fn_worker.py:66] host page cache released under {root} "
-        "(496 files); MemFree 24.10 GiB, KV arena 17.90 GiB + margin 2.00 GiB\n")
+        f"({0 if mut == 'zerofiles' else 496} files); MemFree 24.10 GiB, KV arena 17.90 GiB + margin 2.00 GiB\n")
     if mut == "refused":
         release = release.replace("INFO", "ERROR").rstrip("\n") + ": refusing to allocate the KV arena\n"
     server = "" if mut == "emptyserver" else (
@@ -126,7 +126,7 @@ EXPECT = {
     "xid": "FAIL", "breach": "FAIL", "oom": "FAIL", "swap": "FAIL", "lowmem": "FAIL", "admission": "FAIL",
     "admissionlate": "FAIL", "nolaunch": "NO_RESULT", "headtoolcall": "NO_RESULT",
     "refused": "FAIL", "norelease": "NO_RESULT", "wrongroot": "NO_RESULT",
-    "noprecondition": "NO_RESULT", "coldcache": "NO_RESULT",
+    "noprecondition": "NO_RESULT", "coldcache": "NO_RESULT", "zerofiles": "NO_RESULT",
     "context": "FAIL", "tokens": "FAIL", "identity": "FAIL", "tool": "FAIL", "agent": "FAIL",
     "soak": "FAIL", "kvcap": "FAIL", "visionworse": "FAIL", "visionerror": "FAIL",
     "cap": "NO_RESULT", "short": "NO_RESULT", "noserverlog": "NO_RESULT", "noprobe": "NO_RESULT",
