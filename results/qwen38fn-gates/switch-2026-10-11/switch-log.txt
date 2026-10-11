@@ -1,0 +1,42 @@
+2026-10-11T13:14:56Z head 10995023964f313536efcd0e1d6693ce4651294a branch main
+2026-10-11T13:14:56Z status before: {"active_profile":"qwen38-1m","schema_version":1,"state":"recorded"}
+2026-10-11T13:14:56Z BEGIN qwen38fn: sudo -n scripts/52_engine_switch.sh qwen38fn
+{"pass":true,"required_gib":113.0,"mem_available_gib":115.335,"stable_samples_observed":3}
+Waiting for qwen38fn load: MemAvailable=35.30 GiB
+Waiting for qwen38fn load: MemAvailable=32.80 GiB
+Waiting for qwen38fn load: MemAvailable=36.96 GiB
+Waiting for qwen38fn load: MemAvailable=31.97 GiB
+Waiting for qwen38fn load: MemAvailable=36.39 GiB
+Waiting for qwen38fn load: MemAvailable=31.71 GiB
+Waiting for qwen38fn load: MemAvailable=36.64 GiB
+Waiting for qwen38fn load: MemAvailable=32.24 GiB
+Waiting for qwen38fn load: MemAvailable=36.32 GiB
+Waiting for qwen38fn load: MemAvailable=32.72 GiB
+Waiting for qwen38fn load: MemAvailable=27.98 GiB
+Waiting for qwen38fn load: MemAvailable=33.08 GiB
+Waiting for qwen38fn load: MemAvailable=28.87 GiB
+Waiting for qwen38fn load: MemAvailable=34.04 GiB
+Waiting for qwen38fn load: MemAvailable=29.39 GiB
+Waiting for qwen38fn load: MemAvailable=34.27 GiB
+Waiting for qwen38fn load: MemAvailable=25.43 GiB
+Waiting for qwen38fn load: MemAvailable=25.68 GiB
+Waiting for qwen38fn load: MemAvailable=33.53 GiB
+2026-10-11T13:25:19Z END qwen38fn: exit 0 in 623 s
+2026-10-11T13:25:19Z status after qwen38fn: {"active_profile":"qwen38fn","schema_version":1,"state":"recorded"}
+2026-10-11T13:25:19Z MemAvailable after qwen38fn: 12.61 GiB
+2026-10-11T13:25:19Z models on 8013: {"object":"list","data":[{"id":"qwen3.8-flash-next","object":"model","created":1791725119,"owned_by":"vllm","root":"/home/bmarti44/models/qwen3.8-flash-next-nvfp4","parent":null,"max_model_len":262144,"permission":[{"id":"modelperm-98346d471ebd235f","object":"model_permission","created":1791725119,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"organization":"*","group":null,"is_blocking":false}]},{"id":"default","object":"model","created":1791725119,"owned_by":"vllm","root":"/home/bmarti44/models/qwen3.8-flash-next-nvfp4","parent":null,"max_model_len":262144,"permission":[{"id":"modelperm-97c3a3ca198e43aa","object":"model_permission","created":1791725119,"allow_create_engine":false,"allow_sampling":true,"allow_logprobs":true,"allow_search_indices":false,"allow_view":true,"allow_fine_tuning":false,"organization":"*","group":null,"is_blocking":false}]}]}
+2026-10-11T13:25:19Z unauthenticated 8010/health: HTTP 401
+2026-10-11T13:25:19Z copied the switch's semantic probe response
+2026-10-11T13:25:19Z BEGIN qwen38-1m: sudo -n scripts/52_engine_switch.sh qwen38-1m
+{"pass":true,"required_gib":100.0,"mem_available_gib":115.494,"stable_samples_observed":3}
+2026-10-11T13:26:18Z END qwen38-1m: exit 0 in 59 s
+2026-10-11T13:26:18Z status after qwen38-1m: {"active_profile":"qwen38-1m","schema_version":1,"state":"recorded"}
+2026-10-11T13:26:18Z MemAvailable after qwen38-1m: 20.63 GiB
+2026-10-11T13:26:18Z BEGIN stop: sudo -n scripts/52_engine_switch.sh stop
+STOPPED qwen38-1m (active.json unchanged; '/home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh restore' restarts it)
+2026-10-11T13:26:20Z END stop: exit 0 in 2 s
+2026-10-11T13:26:20Z status after stop: {"active_profile":"qwen38-1m","schema_version":1,"state":"recorded"}
+2026-10-11T13:26:20Z MemAvailable after stop: 115.44 GiB
+2026-10-11T13:26:20Z units: qwen38fn-engine=inactive qwen38-engine=inactive
+2026-10-11T13:26:20Z kernel NVRM/Xid/OOM lines: 1
+2026-10-11T13:26:20Z done
