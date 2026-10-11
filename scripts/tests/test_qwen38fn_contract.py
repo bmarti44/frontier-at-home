@@ -47,13 +47,13 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             p, profile_resolver.load_model(SLUG),
             profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json"))
 
-    def test_profile_is_a_switch_alias_pending_candidate_8(self):
+    def test_profile_is_a_switch_alias_pending_candidate_9(self):
         # Candidate 5's PASS covers the text-only launch; images on is a new
-        # configuration, so the status waits for candidate 8's own gate.
+        # configuration, so the status waits for candidate 9's own gate.
         p = self.profile()
         status = p["status"]
         self.assertEqual(status["state"], "estimated")
-        self.assertIn("results/qwen38fn-gates/qualify-2026-10-11-c8/", status["basis"])
+        self.assertIn("results/qwen38fn-gates/qualify-2026-10-11-c9/", status["basis"])
         self.assertEqual(p["switch_alias"], "qwen38fn")
         self.assertEqual(p["switch"], {
             "mode": "generic",
@@ -79,6 +79,14 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(p["safety"]["kill_floor_gib"], 8)
         self.assertEqual(p["memory_model"]["floor_gib"], 8)
         self.assertEqual(p["safety"]["minimum_start_gib"], 115)
+
+    def test_the_soak_is_held_to_the_owner_floor(self):
+        # 35_soak.py defaults to 12 GiB; this profile's owner-set floor is 8
+        # (2026-10-11). Candidate 8's soak (min 9.92 GiB) failed only against
+        # the unset 12 (results/qwen38fn-gates/qualify-2026-10-11-c8/RESULT.md).
+        p = self.profile()
+        self.assertEqual(p["qualification_options"]["soak_mem_floor_gib"], 8)
+        self.assertEqual(p["qualification_options"]["soak_mem_floor_gib"], p["safety"]["kill_floor_gib"])
 
     def test_agentic_serving_semantics_are_explicit(self):
         argv = self.profile()["launch"]["args"]

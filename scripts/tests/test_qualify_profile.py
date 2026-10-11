@@ -134,6 +134,34 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "4")
         self.assertEqual(manifest["profile"]["speed_max_tokens_per_event"], 4)
 
+    def test_a_declared_soak_floor_reaches_the_soak_cell(self) -> None:
+        # 35_soak.py holds every run to 12 GiB unless DSV4_SOAK_MEM_FLOOR_GIB
+        # says otherwise. A profile whose owner-set floor is lower declares
+        # qualification_options.soak_mem_floor_gib; candidate 8 failed its soak
+        # at 9.92 GiB against the unset 12 (results/qwen38fn-gates/qualify-2026-10-11-c8).
+        out = self.tmp / "bundle-soak"
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "--profile", "qwen3.8-flash-next/cuda-spark-128g-1m",
+             "--host", str(self.host), "--dry-run", "--out", str(out), "--cells", "soak", "--with-soak"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        manifest = json.loads((out / "manifest.json").read_text())
+        self.assertEqual(manifest["cells"]["soak"]["env"], {"DSV4_SOAK_MEM_FLOOR_GIB": "8.0"})
+        self.assertEqual(manifest["profile"]["soak_mem_floor_gib"], 8.0)
+
+    def test_a_profile_without_a_soak_floor_keeps_the_soak_default(self) -> None:
+        out = self.tmp / "bundle-soak-default"
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "--profile", GLM_PROFILE, "--host", str(self.host), "--dry-run",
+             "--out", str(out), "--cells", "soak", "--with-soak"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        manifest = json.loads((out / "manifest.json").read_text())
+        self.assertIsNone(manifest["cells"]["soak"]["env"])
+        self.assertIsNone(manifest["profile"]["soak_mem_floor_gib"])
+
     def test_non_speculative_profile_keeps_the_frozen_speed_bench(self) -> None:
         out = self.tmp / "bundle4"
         proc = subprocess.run(
@@ -389,6 +417,31 @@ class Helpers(unittest.TestCase):
             kit.select_cells(kit.parse_args(["--profile", GLM_PROFILE, "--cells", "speed,bogus"]))
         self.assertEqual(kit.select_cells(kit.parse_args(["--profile", GLM_PROFILE, "--cells", "context,speed"])),
                          ["speed", "context"])
+
+
+
+class SoakFloorOption(unittest.TestCase):
+    def test_the_floor_is_a_finite_number_no_lower_than_the_kill_floor(self) -> None:
+        self.assertIsNone(kit.soak_floor_gib({}, 8))
+        self.assertEqual(kit.soak_floor_gib({"soak_mem_floor_gib": 8}, 8), 8.0)
+        self.assertEqual(kit.soak_floor_gib({"soak_mem_floor_gib": 12.5}, None), 12.5)
+        for bad in (7.5, "8", True, float("nan"), float("inf"), None):
+            with self.subTest(value=bad), self.assertRaises(kit.KitError):
+                kit.soak_floor_gib({"soak_mem_floor_gib": bad}, 8)
+
+    def test_the_cell_runs_with_the_declared_environment_and_logs_it(self) -> None:
+        tmp = Path(tempfile.mkdtemp(prefix="qualify-env-"))
+        self.addCleanup(shutil.rmtree, tmp, True)
+        log = tmp / "log.txt"
+        code, _ = kit.run_subprocess(
+            [sys.executable, "-c", "import os; print('floor=' + os.environ['DSV4_SOAK_MEM_FLOOR_GIB'])"],
+            log, {"DSV4_SOAK_MEM_FLOOR_GIB": "8.0"})
+        self.assertEqual(code, 0)
+        text = log.read_text()
+        self.assertIn("$ DSV4_SOAK_MEM_FLOOR_GIB=8.0 ", text)
+        self.assertIn("floor=8.0", text)
+        code, _ = kit.run_subprocess([sys.executable, "-c", "pass"], log)
+        self.assertEqual(code, 0)
 
 
 if __name__ == "__main__":
