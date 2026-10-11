@@ -6,12 +6,15 @@
 # The hook reaches the engine only through a scratch PYTHONPATH: a host file
 # whose paths.repo is a scratch dir of symlinks to this worktree's
 # scripts/lib plus sitecustomize.py. Production files are unchanged.
-# Usage: run-diag.sh <label> <scratch dir> [profile] [hook file]
+# Usage: run-diag.sh <label> <scratch dir> [profile] [hook file] [stop GiB] [dropcache 0|1]
 set -Eeuo pipefail
 LABEL=${1:?usage: run-diag.sh <label> <scratch dir> [profile]}
 SCRATCH=${2:?scratch dir}
 PROFILE=${3:-qwen3.8-flash-next/cuda-spark-128g-1m}
 HOOK=${4:-sitecustomize.py}
+STOP_GIB=${5:-15}
+DROPCACHE=${6:-0}
+MODEL_DIR=$HOME/models/qwen3.8-flash-next-nvfp4
 WT=/home/bmarti44/qwen38fn
 DIAG=$WT/results/qwen38fn-gates/diag-drafter-2026-10-11
 OBS=$DIAG/$LABEL
@@ -51,7 +54,9 @@ SAMPLER=$!
 journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 &
 JOURNAL=$!
 WATCH=
+DROP=
 cleanup() {
+    [[ -z $DROP ]] || kill "$DROP" 2>/dev/null || true
     "${SERVE[@]}" stop >>"$OBS/driver.log" 2>&1 || true
     [[ -z $WATCH ]] || kill "$WATCH" 2>/dev/null || true
     kill "$SAMPLER" "$JOURNAL" 2>/dev/null || true
@@ -71,19 +76,28 @@ cleanup() {
 }
 trap cleanup EXIT
 
-log "DIAGNOSTIC $LABEL profile $PROFILE hook $HOOK"
+log "DIAGNOSTIC $LABEL profile $PROFILE hook $HOOK stop_gib $STOP_GIB dropcache $DROPCACHE"
 log "head $(git rev-parse HEAD) dirty=$(git status --porcelain --untracked-files=no | wc -l)"
-log "sha256 $(sha256sum "configs/profiles/$PROFILE.json" "$DIAG/$HOOK" "$DIAG/watch.py" "$0" | awk '{printf "%s:%s ", $2, $1}')"
+log "sha256 $(sha256sum "configs/profiles/$PROFILE.json" "$DIAG/$HOOK" "$DIAG/watch.py" "$DIAG/dropcache.py" "$0" | awk '{printf "%s:%s ", $2, $1}')"
 python3 "$WT/scripts/03_memory_guard.py" --required-gib 112 --stable-samples 3 --timeout-seconds 600 \
     | tee -a "$OBS/driver.log"
-python3 "$DIAG/watch.py" "$SERVER_LOG" "$SERVER_OFF" "$OBS/watch.log" "$UNIT" &
+python3 "$DIAG/watch.py" "$SERVER_LOG" "$SERVER_OFF" "$OBS/watch.log" "$UNIT" "$STOP_GIB" &
 WATCH=$!
+if [[ $DROPCACHE == 1 ]]; then
+    python3 "$DIAG/dropcache.py" "$MODEL_DIR" "$OBS/dropcache.log" &
+    DROP=$!
+fi
 log "launching in scope $UNIT"
 systemd-run --user --scope -q --unit="$UNIT" \
     -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec=1800 \
     -- "${SERVE[@]}" start 2>&1 | tee -a "$OBS/driver.log" || log "start exit nonzero"
 wait "$WATCH" || true
 WATCH=
+[[ -z $DROP ]] || { kill "$DROP" 2>/dev/null || true; DROP=; }
+if tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" | grep -q "Starting vLLM server on"; then
+    log "server ready; sampling idle memory for 60 s"
+    sleep 60
+fi
 tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" | grep -E "Model loading took|GPU KV cache size|Initial free memory" \
     | tee -a "$OBS/driver.log" || true
 awk '/MemAvailable/{printf "idle_mem_available_kib=%s\n", $2}' /proc/meminfo | tee -a "$OBS/driver.log"

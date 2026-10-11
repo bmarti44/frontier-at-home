@@ -3,10 +3,11 @@
 
 After the drafter's weights load (the second "Loading weights took" line),
 send SIGUSR1 to EngineCore at +1/+2/+3 s and when MemAvailable first drops
-below each of 24/21/18/16 GiB. SIGKILL the scope below 15 GiB at any time.
+below each of 24/21/18/16 GiB. SIGKILL the scope below the stop level
+(default 15 GiB) at any time.
 Exit when the server is ready or the scope is gone.
 
-Usage: watch.py <server log> <offset> <out log> <scope unit>
+Usage: watch.py <server log> <offset> <out log> <scope unit> [stop GiB, default 15]
 """
 import os
 import re
@@ -16,7 +17,8 @@ import sys
 import time
 
 server_log, offset, out, unit = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
-THRESHOLDS, STOP_GIB, AFTER_LOAD_S = (24.0, 21.0, 18.0, 16.0), 15.0, (1.0, 2.0, 3.0)
+STOP_GIB = float(sys.argv[5]) if len(sys.argv) > 5 else 15.0
+THRESHOLDS, AFTER_LOAD_S = (24.0, 21.0, 18.0, 16.0), (1.0, 2.0, 3.0)
 
 
 def avail_gib():
