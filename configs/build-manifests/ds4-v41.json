@@ -1,0 +1,35 @@
+{
+ "binaries": {
+  "ds4": {
+   "sha256": "2008707c6f2a589afc83862dec3286dfff22da962d6fe0f8a61c8c5461be20bd"
+  },
+  "ds4-agent": {
+   "sha256": "7dfb2f5640ceb49d16a241a65e40ad2e905c5621eb1ade12e7d663cb71a6dc6f"
+  },
+  "ds4-bench": {
+   "sha256": "c09b114d4fc3c97ff7650df797ddf680cdf57a9fac408879bb968c385f925612"
+  },
+  "ds4-eval": {
+   "sha256": "4fca4a4454d190ee46aea32401ded017988ae2ccc30a34dd59fc8aa99af705be"
+  },
+  "ds4-server": {
+   "sha256": "6bf4f8df9f0613afaa7e3ffe7a189770b5388333facef24e3878a7259de47c26"
+  }
+ },
+ "build_command": "make -j2 cuda-spark MAKEFLAGS=-j2 (CUDA_ARCH=sm_121 via target)",
+ "build_dir": "~/.cache/ds4-v41-0aaea5a2 (git worktree, detached, clean)",
+ "build_warnings": 0,
+ "built_at": "2026-09-25T23:13:46Z",
+ "engine_commit": "0aaea5a238fb41a35106a551e73c8409dfb751ac",
+ "engine_repo": "https://github.com/antirez/ds4",
+ "gcc_version": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+ "h2d_staging_audit": "expert/model staging uses cudaMallocHost pinned buffers (ds4_cuda.cu); cudaHostRegister of the mmapped model returns 'operation not supported' on GB10 and ds4 falls back to pinned staging. Measure during smoke before first large serving run.",
+ "model_free_tests": {
+  "make test-engram": "PASS",
+  "tests/test_cuda_q8_rows": "PASS",
+  "tests/test_cuda_ssd_cache": "PASS",
+  "tests/test_deepseek41_cuda": "PASS",
+  "tests/test_deepseek41_cuda --attention-output-large": "PASS"
+ },
+ "nvcc_version": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Wed_Aug_20_01:57:39_PM_PDT_2025\nCuda compilation tools, release 13.0, V13.0.88\nBuild cuda_13.0.r13.0/compiler.36424714_0"
+}

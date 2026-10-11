@@ -1,0 +1,77 @@
+{
+ "profile_id": "deepseek-v4.1-flash/cuda-spark-128g-1m",
+ "mechanism": "systemd-run",
+ "status": "estimated",
+ "port": 8013,
+ "context_cap": 1048576,
+ "stack_label": "ds4-v41-q2",
+ "switch_alias": "dsv41flash",
+ "env": {
+  "HOME": "/home/bmarti44",
+  "LANG": "C.UTF-8",
+  "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ },
+ "diagnostics_unset": [
+  "DS4_DECODE_STAGE_TIMING",
+  "DS4_TOKEN_TIMING",
+  "DS4_TOKEN_TIMING_LOG"
+ ],
+ "digest_checks": [
+  {
+   "path": "/home/bmarti44/.cache/ds4-v41-0aaea5a2/ds4-server",
+   "sha256": "6bf4f8df9f0613afaa7e3ffe7a189770b5388333facef24e3878a7259de47c26"
+  },
+  {
+   "path": "/home/bmarti44/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.gguf",
+   "identity": {
+    "first_bytes": 1048576,
+    "first_bytes_sha256": "f7b02eadba19f0beabc5549d39d5520db21bc8acf57ddcf47f11f02e322542c8",
+    "size_bytes": 365713686528,
+    "device": 66306,
+    "inode": 3855305,
+    "full_sha256_pin": "configs/pins/ds41f-weights.json"
+   }
+  }
+ ],
+ "membudget": {
+  "weights_gib": 9.37,
+  "ctx": 1048576,
+  "kv_bytes_per_token": 890,
+  "overhead_gib": 45.22,
+  "extra_gib": 0,
+  "floor_gib": 10
+ },
+ "binary": "/home/bmarti44/.cache/ds4-v41-0aaea5a2/ds4-server",
+ "argv": [
+  "--cuda",
+  "-m",
+  "/home/bmarti44/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.gguf",
+  "-c",
+  "262144",
+  "--batched-session",
+  "4",
+  "--host",
+  "127.0.0.1",
+  "--port",
+  "8013",
+  "--ssd-streaming",
+  "--ssd-streaming-cache-experts",
+  "42gb"
+ ],
+ "systemd": {
+  "unit": "dsv41-engine",
+  "properties": {
+   "Type": "exec",
+   "User": "bmarti44",
+   "MemoryHigh": "96G",
+   "MemoryMax": "100G",
+   "MemorySwapMax": "0",
+   "OOMPolicy": "kill",
+   "KillMode": "control-group",
+   "Delegate": "no",
+   "NoNewPrivileges": "yes"
+  },
+  "server_log": "/home/dsv4/ds4-project/engine-switch/dsv41.server.log",
+  "flock": "/run/lock/frontier-at-home/inference.lock"
+ }
+}

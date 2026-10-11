@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import unittest
+from pathlib import Path
 
 from scripts.tests.switch_safety_fixtures import (
     SCRIPT,
@@ -12,6 +14,8 @@ from scripts.tests.switch_safety_fixtures import (
     proc_identity,
 )
 
+
+ROOT = Path(__file__).resolve().parents[2]
 
 SHOW_MAINPID = {
     "argv_prefix": [
@@ -243,6 +247,232 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             self.assertNotIn(
                 "stop", [call[0] for call in fixture.systemctl_calls()]
             )
+
+    # -- Generic profile aliases -------------------------------------------
+    # The source-only fixture has no profile tree, so each test pre-loads the
+    # resolved plan exactly as generic_load caches it (generic_plan[alias:key]).
+
+    @staticmethod
+    def generic_plan_lines(fixture, **overrides) -> str:
+        plan = {
+            "alias": "dsv41flash",
+            "relpath": "configs/profiles/deepseek-v4.1-flash/cuda-spark-128g-1m.json",
+            "status": "qualified",
+            "binary": str(fixture.artifacts / "bin" / "ds4-server"),
+            "binary_sha256": "0" * 64,
+            "model": str(fixture.artifacts / "models" / "dsv41.gguf"),
+            "mmproj": "",
+            "draft_model": "",
+            "unit": "dsv41-engine.service",
+            "unit_name": "dsv41-engine",
+            "user": "bmarti44",
+            "log_name": "dsv41",
+            "required_gib": "110",
+            "floor_gib": "10",
+            "timeout": "1800",
+            "served_model_id": "deepseek-v4.1-flash",
+            "health_path": "",
+            "context_check": "",
+            "context_path": "",
+        }
+        plan.update(overrides)
+        return "".join(
+            f"generic_plan[dsv41flash:{key}]='{value}'\n"
+            for key, value in plan.items()
+        )
+
+    def test_generic_guard_failure_under_if_caller_cannot_proceed(self):
+        with SwitchSafetyFixture() as fixture:
+            result = fixture.run_function(
+                self.generic_plan_lines(fixture)
+                + "generic_identities[dsv41flash]=verified\n"
+                "if start_generic_profile dsv41flash; then\n"
+                '    printf "STARTER_PROCEEDED\\n"\n'
+                "    exit 90\n"
+                "fi\n"
+                'printf "CALLER_CONTINUED\\n"'
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("pre-load memory release gate failed", result.stderr)
+            self.assertNotIn("STARTER_PROCEEDED", result.stdout)
+            self.assertNotIn("CALLER_CONTINUED", result.stdout)
+            guard_args = (fixture.root / "guard.called").read_text()
+            self.assertIn("--required-gib 110", guard_args)
+            self.assertEqual(fixture.systemctl_calls(), [])
+
+    def test_generic_start_aborts_before_launch_when_memwatch_never_arms(self):
+        with SwitchSafetyFixture() as fixture:
+            fixture.set_systemctl_responses({
+                "argv_prefix": [
+                    "show", "dsv41-engine.service", "--property=LoadState",
+                    "--value",
+                ],
+                "stdout": "not-found\n",
+                "returncode": 0,
+            })
+            result = fixture.run_function(
+                self.generic_plan_lines(fixture)
+                + "generic_identities[dsv41flash]=verified\n"
+                "export SWITCH_GUARD_EXIT=0\n"
+                "start_generic_profile dsv41flash\n"
+                'printf "STARTER_PROCEEDED\\n"',
+                timeout=30,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(
+                "dsv41flash memory watchdog failed to initialize", result.stderr
+            )
+            self.assertNotIn("STARTER_PROCEEDED", result.stdout)
+            self.assertIn("--required-gib 110",
+                          (fixture.root / "guard.called").read_text())
+            calls = fixture.systemctl_calls()
+            self.assertEqual(len(calls), 1)
+            self.assertNotIn("stop", [call[0] for call in calls])
+            self.assertFalse((fixture.state / "dsv41.process.json").exists())
+
+    def test_generic_start_refuses_an_estimated_profile_before_the_guard(self):
+        with SwitchSafetyFixture() as fixture:
+            result = fixture.run_function(
+                self.generic_plan_lines(fixture, status="estimated")
+                + "generic_identities[dsv41flash]=verified\n"
+                "start_generic_profile dsv41flash\n"
+                'printf "STARTER_PROCEEDED\\n"'
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("estimated", result.stderr)
+            self.assertNotIn("STARTER_PROCEEDED", result.stdout)
+            self.assertFalse((fixture.root / "guard.called").exists())
+            self.assertEqual(fixture.systemctl_calls(), [])
+
+    def test_stop_generic_live_start_ticks_mismatch_fails_closed(self):
+        with SwitchSafetyFixture() as fixture:
+            engine = fixture.spawn_sleep()
+            pgid, ticks = proc_identity(engine.pid)
+            record = fixture.state / "dsv41.process.json"
+            record.write_text(json.dumps({
+                "pid": engine.pid, "pgid": pgid, "start_ticks": ticks + 1,
+                "exe_sha256": fixture.process_exe_sha256(engine.pid),
+                "unit": "dsv41-engine.service",
+                "memwatch_pid": engine.pid, "memwatch_start_ticks": ticks,
+            }))
+            fixture.set_systemctl_responses({
+                "argv_prefix": [
+                    "show", "dsv41-engine.service", "--property=MainPID", "--value",
+                ],
+                "stdout": f"{engine.pid}\n",
+                "returncode": 0,
+            })
+
+            result = fixture.run_function(
+                self.generic_plan_lines(fixture)
+                + "stop_generic_verified dsv41flash"
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("stale dsv41flash PID identity", result.stderr)
+            self.assertTrue(record.exists())
+            self.assertIsNone(engine.poll())
+            self.assertNotIn(
+                "stop", [call[0] for call in fixture.systemctl_calls()]
+            )
+
+    def test_stop_generic_dead_record_is_removed_without_unit_stop(self):
+        with SwitchSafetyFixture() as fixture:
+            dead = fixture.spawn_sleep()
+            pgid, ticks = proc_identity(dead.pid)
+            fixture.stop_child(dead)
+            record = fixture.state / "dsv41.process.json"
+            record.write_text(json.dumps({
+                "pid": dead.pid, "pgid": pgid, "start_ticks": ticks,
+                "exe_sha256": "0" * 64, "unit": "dsv41-engine.service",
+                "memwatch_pid": dead.pid, "memwatch_start_ticks": ticks,
+            }))
+            fixture.set_systemctl_responses({
+                "argv_prefix": [
+                    "show", "dsv41-engine.service", "--property=MainPID", "--value",
+                ],
+                "stdout": "0\n",
+                "returncode": 0,
+            })
+
+            result = fixture.run_function(
+                self.generic_plan_lines(fixture)
+                + "stop_generic_verified dsv41flash"
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(record.exists())
+            self.assertEqual(len(fixture.systemctl_calls()), 1)
+
+    def test_stop_generic_unresolvable_alias_fails_closed(self):
+        with SwitchSafetyFixture() as fixture:
+            result = fixture.run_function("stop_generic_verified dsv41flash")
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("dsv41flash", result.stderr)
+            self.assertEqual(fixture.systemctl_calls(), [])
+
+    def test_legacy_verify_serving_stops_at_a_wrong_served_model(self):
+        # verify_serving runs as a condition (restore, rollback, "already
+        # active"), where set -e is off: a wrong /v1/models id must still end
+        # the check before any further probe.
+        fake_curl = (
+            "clean_curl() {\n"
+            '    printf "CURL %s\\n" "${*: -1}" >>"$SWITCH_FIXTURE_ROOT/curl.log"\n'
+            '    printf \'{"data":[{"id":"%s"}]}\' "$FAKE_MODEL_ID"\n'
+            "}\n"
+        )
+        with SwitchSafetyFixture() as fixture:
+            result = fixture.run_function(
+                fake_curl
+                + "FAKE_MODEL_ID=deepseek-v4-flash\n"
+                "if verify_serving glm52; then echo VERIFY_OK; else echo VERIFY_FAILED; fi\n",
+                timeout=30,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("VERIFY_FAILED", result.stdout)
+            calls = (fixture.root / "curl.log").read_text().splitlines()
+            self.assertEqual(len(calls), 1, calls)
+            self.assertIn("/v1/models", calls[0])
+
+    def test_generic_readiness_requires_the_profile_served_model_id(self):
+        # A DeepSeek V4 server answering on the port must never satisfy the
+        # dsv41flash readiness or serving checks.
+        fake_curl = (
+            "clean_curl() {\n"
+            '    printf "CURL %s\\n" "${*: -1}" >>"$SWITCH_FIXTURE_ROOT/curl.log"\n'
+            '    printf \'{"data":[{"id":"%s"}]}\' "$FAKE_MODEL_ID"\n'
+            "}\n"
+            "verify_generic_process_ready() { return 0; }\n"
+        )
+        with SwitchSafetyFixture() as fixture:
+            library = fixture.repo / "scripts" / "lib"
+            library.mkdir(parents=True)
+            shutil.copy(ROOT / "scripts/lib/switch_generic.py", library)
+            result = fixture.run_function(
+                self.generic_plan_lines(fixture, timeout="1")
+                + fake_curl
+                + "FAKE_MODEL_ID=deepseek-v4-flash\n"
+                "if wait_model_ready dsv41flash; then echo WAIT_OK; else echo WAIT_FAILED; fi\n"
+                "if verify_serving dsv41flash; then echo VERIFY_OK; else echo VERIFY_FAILED; fi\n"
+                "FAKE_MODEL_ID=deepseek-v4.1-flash\n"
+                "if wait_model_ready dsv41flash; then echo WAIT2_OK; else echo WAIT2_FAILED; fi\n",
+                timeout=30,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("WAIT_FAILED", result.stdout)
+            self.assertIn("VERIFY_FAILED", result.stdout)
+            self.assertIn("WAIT2_OK", result.stdout)
+            calls = (fixture.root / "curl.log").read_text()
+            self.assertIn("/v1/models", calls)
+            self.assertNotIn("/v1/chat/completions", calls)
+            self.assertNotIn("/slots", calls)
+            self.assertNotIn("/health", calls)
 
     def test_laguna_hash_verification_rejects_tampered_second_shard(self):
         with SwitchSafetyFixture() as fixture:
