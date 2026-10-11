@@ -182,11 +182,10 @@ class ProductionPlan(unittest.TestCase):
             json.loads((ROOT / "configs/build-manifests/ds4-v41.json")
                        .read_text())["binaries"]["ds4-server"]["sha256"])
 
-    def test_qwen38fn_plan_carries_the_profile_contract(self) -> None:
+    def test_qwen38fn_plan_carries_the_qualified_profile_contract(self) -> None:
         plan = production_plan("qwen38fn")
         self.assertEqual(plan["alias"], "qwen38fn")
-        # Candidate 8 (images on) is pending; test_qwen38fn_contract pins it.
-        self.assertEqual(plan["status"], "estimated")
+        self.assertEqual(plan["status"], "qualified")
         self.assertEqual(
             plan["relpath"],
             "configs/profiles/qwen3.8-flash-next/cuda-spark-128g-1m.json")
@@ -199,7 +198,7 @@ class ProductionPlan(unittest.TestCase):
         self.assertEqual(plan["unit_name"], "qwen38fn-engine")
         self.assertEqual(plan["user"], "bmarti44")
         self.assertEqual(plan["log_name"], "qwen38fn")
-        self.assertEqual(plan["required_gib"], "115")
+        self.assertEqual(plan["required_gib"], "114")
         self.assertEqual(plan["floor_gib"], "8")
         self.assertEqual(plan["timeout"], "1800")
         self.assertEqual(plan["served_model_id"], "qwen3.8-flash-next")
@@ -225,8 +224,7 @@ class ProductionPlan(unittest.TestCase):
         os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0",
         "host-bound: hashes the local runtime interpreter and model metadata")
     def test_qwen38fn_artifacts_verify_on_this_host(self) -> None:
-        # The status gate is pinned separately; this walks the digests alone.
-        plan = dict(production_plan("qwen38fn"), status="qualified")
+        plan = production_plan("qwen38fn")
         if not os.path.isfile(plan["binary"]):
             self.skipTest("runtime not present on this host")
         identities = generic.verify_artifacts(plan)

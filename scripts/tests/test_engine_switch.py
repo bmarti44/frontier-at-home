@@ -1471,9 +1471,9 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertIn("START dsv41flash", actions)
             self.assertNotIn("DSV4 start", actions)
 
-    # -- qwen38fn: Qwen3.8-Flash-Next on vLLM. `<alias>-qualified-for-test`
-    # keeps these cases independent of the profile's status flips (candidate
-    # 7 re-qualifies it with images on); test_qwen38fn_contract pins the status.
+    # -- qwen38fn: Qwen3.8-Flash-Next on vLLM, the first qualified generic alias.
+    # It needs no `-qualified-for-test` marker: the committed profile is
+    # qualified (candidate 9, images on). Most cases switch from qwen38-1m.
 
     def qwen38fn_root(self, root: Path, *, hashes: bool = True) -> None:
         (root / "active.json").write_text(
@@ -1481,7 +1481,6 @@ class EngineSwitchTests(unittest.TestCase):
         )
         (root / "qwen-running").touch()
         (root / "qwen-hashes-valid").touch()
-        (root / "qwen38fn-qualified-for-test").touch()
         if hashes:
             (root / "qwen38fn-hashes-valid").touch()
 
@@ -1519,7 +1518,7 @@ class EngineSwitchTests(unittest.TestCase):
                          f"{PRODUCTION_REPO}/scripts/lib")
         self.assertEqual(snapshot["env"]["VLLM_MOE_USE_DEEP_GEMM"], "0")
 
-    def test_qwen38fn_switches_from_the_default(self):
+    def test_qwen38fn_switches_from_the_default_without_a_test_marker(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self.qwen38fn_root(root)
@@ -1621,7 +1620,6 @@ class EngineSwitchTests(unittest.TestCase):
             )
             (root / "qwen38fn-running").touch()
             (root / "qwen-hashes-valid").touch()
-            (root / "qwen38fn-qualified-for-test").touch()
             (root / "qwen38fn-hashes-valid").touch()
             result = self.run_switch(root, "qwen38-1m")
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -1664,7 +1662,6 @@ class EngineSwitchTests(unittest.TestCase):
             (root / "active.json").write_text(
                 json.dumps({"schema_version": 1, "profile": "qwen38fn"})
             )
-            (root / "qwen38fn-qualified-for-test").touch()
             (root / "qwen38fn-hashes-valid").touch()
             result = self.run_switch(root, "restore")
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -1683,7 +1680,6 @@ class EngineSwitchTests(unittest.TestCase):
             (root / "active.json").write_text(
                 json.dumps({"schema_version": 1, "profile": "qwen38fn"})
             )
-            (root / "qwen38fn-qualified-for-test").touch()
             (root / "qwen38fn-hashes-valid").touch()
             (root / "fail-qwen38fn-start").touch()
             result = self.run_switch(root, "restore")
