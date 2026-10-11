@@ -6,8 +6,10 @@ speculative decoding, and four native 262,144-token slots. Candidate 5
 qualified it text-only as the optional ``qwen38fn`` switch alias. Candidate 7
 turned image input on under the owner's 8 GiB floor (2026-10-11) and failed
 on NVRM lines at the KV arena: another engine's model files were still in
-page cache. Candidate 8 adds the host page-cache release, so the profile is
-``estimated`` until that run passes.
+page cache. Candidate 8 added the host page-cache release, and candidate 9
+qualified the images-on launch with the soak at the repository's 5 GiB floor
+(results/qwen38fn-gates/qualify-2026-10-11-c9). Admission is derived from that
+run.
 """
 from __future__ import annotations
 
@@ -15,6 +17,7 @@ import ast
 import hashlib
 import importlib.util
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -32,6 +35,7 @@ PROFILE = "cuda-spark-128g-1m.json"
 QWEN38_TOKENIZER_CONFIG = Path("/home/bmarti44/models/qwen3.8-27b/tokenizer_config.json")
 FLASH_CHAT_TEMPLATE = Path("/home/bmarti44/models/qwen3.8-flash-next-nvfp4/chat_template.jinja")
 HOST_BOUND = os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0"
+C9 = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c9"
 
 
 def arg(argv, flag):
@@ -47,13 +51,15 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             p, profile_resolver.load_model(SLUG),
             profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json"))
 
-    def test_profile_is_a_switch_alias_pending_candidate_9(self):
-        # Candidate 5's PASS covers the text-only launch; images on is a new
-        # configuration, so the status waits for candidate 9's own gate.
+    def test_profile_is_a_switch_alias_qualified_by_candidate_9(self):
+        # Candidate 5's PASS covered the text-only launch; images on is a new
+        # configuration, qualified by candidate 9's own preregistered gate.
         p = self.profile()
         status = p["status"]
-        self.assertEqual(status["state"], "estimated")
+        self.assertEqual(status["state"], "qualified")
         self.assertIn("results/qwen38fn-gates/qualify-2026-10-11-c9/", status["basis"])
+        verdict = json.loads((C9 / "gate-summary.json").read_text())
+        self.assertEqual((verdict["verdict"], verdict["fail"], verdict["missing"]), ("PASS", [], []))
         self.assertEqual(p["switch_alias"], "qwen38fn")
         self.assertEqual(p["switch"], {
             "mode": "generic",
@@ -78,7 +84,27 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         p = self.profile()
         self.assertEqual(p["safety"]["kill_floor_gib"], 8)
         self.assertEqual(p["memory_model"]["floor_gib"], 8)
-        self.assertEqual(p["safety"]["minimum_start_gib"], 115)
+        self.assertEqual(p["safety"]["minimum_start_gib"], 114)
+
+    def test_admission_is_derived_from_candidate_9(self):
+        # PREREG "If it passes": peak = the highest MemAvailable at or before
+        # the one launch line minus the run's low point (clause 10);
+        # overhead_gib = peak - resident_weights_gib - extra_gib rounded up to
+        # 0.1 GiB, and minimum_start_gib = ceil(peak + kill floor).
+        driver = (C9 / "observe/start1/driver.log").read_text().splitlines()
+        launch = [line.split()[0] for line in driver if "start1: launching in scope" in line]
+        self.assertEqual(len(launch), 1)
+        samples = []
+        for line in (C9 / "observe/start1/meminfo.log").read_text().splitlines():
+            samples.append((line.split()[0], int(re.search(r"MemAvailable:=(\d+)", line).group(1)) / 1048576))
+        baseline = max(gib for stamp, gib in samples if stamp <= launch[0])
+        peak = baseline - min(gib for _, gib in samples)
+        self.assertAlmostEqual(peak, 105.674, places=2)
+        p = self.profile()
+        budget, safety = p["memory_model"], p["safety"]
+        self.assertEqual(budget["overhead_gib"],
+                         math.ceil(round((peak - budget["resident_weights_gib"] - budget["extra_gib"]) * 10, 6)) / 10)
+        self.assertEqual(safety["minimum_start_gib"], math.ceil(peak + safety["kill_floor_gib"]))
 
     def test_the_soak_uses_the_repository_floor(self):
         # Candidate 8's soak (min 9.92 GiB) failed only against 35_soak.py's
@@ -162,12 +188,13 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         # without it. 93_profile_serve admits only when MemAvailable covers
         # weights + overhead + extra + floor. Candidate 5 peaked at 102.97 GiB
         # used text-only; images add at least 3.1 GiB
-        # (results/qwen38fn-gates/diag-vision-2026-10-11). The quiet host read
-        # 115.2-115.6 GiB on 2026-10-11.
+        # (results/qwen38fn-gates/diag-vision-2026-10-11); candidate 9, images
+        # on, peaked at 105.67 GiB. The quiet host read 115.2-115.6 GiB on
+        # 2026-10-11.
         memory_model = self.profile()["memory_model"]
         self.assertGreaterEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"], 84.2)
         self.assertGreaterEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"]
-                                + memory_model["extra_gib"], 102.97 + 3.1)
+                                + memory_model["extra_gib"], 105.67)
         self.assertLessEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"]
                              + memory_model["extra_gib"] + memory_model["floor_gib"], 115.0)
 
@@ -323,13 +350,15 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
 
     def test_switch_admission_covers_the_measured_peak(self):
         # The generic switch admits on safety.minimum_start_gib alone. Candidate
-        # 5's two starts used up to (preload - low) GiB through the 1M fill;
-        # admission must leave the kill floor above that peak.
+        # 5's two starts (text only) and candidate 9's start (images on) used up
+        # to (preload - low) GiB through the 1M fill; admission must leave the
+        # kill floor above that peak.
         p = self.profile()
         safety = p["safety"]
         peaks = []
-        for start in ("start1", "start2"):
-            log = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4/observe" / start / "meminfo.log"
+        for log in (ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4/observe/start1/meminfo.log",
+                    ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4/observe/start2/meminfo.log",
+                    C9 / "observe/start1/meminfo.log"):
             available = [int(re.search(r"MemAvailable:=(\d+)", line).group(1)) / 1048576
                          for line in log.read_text().splitlines()]
             peaks.append(available[0] - min(available))
