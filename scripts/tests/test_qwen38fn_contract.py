@@ -174,28 +174,28 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertIn(".stop()", methods["compile_or_warm_up_model"])
         self.assertIn("finally:", methods["compile_or_warm_up_model"])
 
-    def test_images_are_served_at_the_processor_maximum_and_video_stays_off(self):
-        # The default (qwen38-1m) serves images, not video. Images carry no
-        # width/height override, so vLLM profiles the encoder at the processor's
-        # own largest image and real requests cannot exceed what startup measured.
+    def test_text_only_until_media_is_qualified(self):
+        # Images at 1M are NO_GO (results/qwen38fn-gates/diag-vision-2026-10-11):
+        # after 100 MMMU images the direct 1M fill crossed the 10.5 GiB stop.
         p = self.profile()
         argv = p["launch"]["args"]
-        self.assertEqual(json.loads(arg(argv, "--limit-mm-per-prompt")), {"image": 4, "video": 0})
-        self.assertEqual(p["serving"]["max_images"], 4)
-        self.assertNotIn("max_videos", p["serving"])
-        self.assertNotIn("--mm-processor-kwargs", argv)
-        # vLLM keeps a processed-input LRU cache (default 4 GiB) in both the API
-        # server and the engine core: up to 8 GiB of host memory on a profile
-        # whose measured idle headroom is about 2 GiB above the 10 GiB floor.
-        self.assertEqual(arg(argv, "--mm-processor-cache-gb"), "0")
-        self.assertEqual(p["qualification_targets"]["vision_min"], 0.64)
-        self.assertNotIn("vision_thinking_mode", p.get("qualification_options", {}))
+        self.assertEqual(arg(argv, "--limit-mm-per-prompt"), '{"image":0,"video":0}')
+        self.assertNotIn("max_images", p["serving"])
+        self.assertNotIn("vision_min", p["qualification_targets"])
 
-    def test_memory_model_carries_the_vision_tower(self):
-        # The text-only load reported 75.65 GiB of weights; the BF16 vision tower
-        # (model.visual.*, model-00009) adds 897,862,112 bytes.
-        self.assertGreaterEqual(self.profile()["memory_model"]["resident_weights_gib"],
-                                75.65 + 897_862_112 / 2**30)
+    def test_launch_is_the_configuration_candidate_5_qualified(self):
+        # qualify-2026-10-11-c4 (gate PASS) recorded the rendered argv and env.
+        # Only the interpreter pin moved, from the python3 symlink to the file
+        # it names; the bytes are the same.
+        ev = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4"
+        recorded = json.loads((ev / "manifest.json").read_text())["profile"]
+        out = profile_resolver.resolve(self.profile(), profile_resolver.load_model(SLUG),
+                                       profile_resolver.load_host(ev / "host-worktree.json"))
+        self.assertEqual(out["argv"], recorded["argv"])
+        self.assertEqual(out["env"], recorded["env"])
+        self.assertEqual(out["binary"], recorded["binary"] + ".12")
+        self.assertEqual(profile_resolver.load_model(SLUG)["engines"][self.profile()["engine"]]["binary_sha256"],
+                         recorded["binary_sha256"])
 
     def test_render_carries_safety_containment_and_runtime_pin(self):
         p = self.profile()
