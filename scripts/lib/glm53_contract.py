@@ -126,7 +126,11 @@ def verify_inventory(root: Path, manifest: dict) -> dict[str, tuple[int, int, in
 
 
 def _enabled_media(argv: list) -> set[str]:
-    """Modalities --limit-mm-per-prompt enables; both when the flag is absent."""
+    """Modalities --limit-mm-per-prompt enables.
+
+    vLLM serves up to 999 items of any modality the limit omits, so a missing
+    flag or a missing key leaves that modality on.
+    """
     if "--limit-mm-per-prompt" not in argv:
         return {"image", "video"}
     index = argv.index("--limit-mm-per-prompt")
@@ -138,7 +142,10 @@ def _enabled_media(argv: list) -> set[str]:
         raise ValueError("invalid --limit-mm-per-prompt")
     enabled = set()
     for modality in ("image", "video"):
-        limit = limits.get(modality, 0)
+        if modality not in limits:
+            enabled.add(modality)
+            continue
+        limit = limits[modality]
         count = limit.get("count", 0) if isinstance(limit, dict) else limit
         if type(count) is not int or count < 0:
             raise ValueError("invalid --limit-mm-per-prompt")
