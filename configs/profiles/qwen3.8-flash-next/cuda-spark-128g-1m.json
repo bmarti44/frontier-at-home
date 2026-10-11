@@ -8,7 +8,7 @@
   "purpose": "Qwen3.8-Flash-Next for agentic coding: four native 262,144-token slots (1,048,576 total), NVFP4 experts, PLE table read in place from NVMe, MTP k=3, fp8 KV, prefix cache, decode CUDA graphs. Optional engine (switch alias qwen38fn); qwen38-1m stays the default. Images on (4 per prompt), video off.",
   "status": {
     "state": "estimated",
-    "basis": "Candidate 5 (results/qwen38fn-gates/qualify-2026-10-11-c4/) qualified this launch text-only. Candidate 7 turns image input on under the owner's 8 GiB floor (2026-10-11) and is pending its preregistered gate: results/qwen38fn-gates/qualify-2026-10-11-c7/."
+    "basis": "Candidate 5 (results/qwen38fn-gates/qualify-2026-10-11-c4/) qualified this launch text-only. Candidate 7 (images on under the owner's 8 GiB floor) failed on NVRM lines at the KV arena: qwen38-1m's GGUF was still in page cache (results/qwen38fn-gates/qualify-2026-10-11-c7/). Candidate 8 adds the host page-cache release (qwen38fn_worker.HostCacheReleaseWorker) and is pending its preregistered gate: results/qwen38fn-gates/qualify-2026-10-11-c8/."
   },
   "engine": "vllm-qwen38fn-r001",
   "artifact_roles": {
@@ -91,7 +91,7 @@
       "--default-chat-template-kwargs",
       "{\"reasoning_effort\":\"low\"}",
       "--worker-cls",
-      "qwen38fn_worker.CheckpointCacheReleaseWorker",
+      "qwen38fn_worker.HostCacheReleaseWorker",
       "--middleware",
       "vllm_reasoning_compat.ReasoningContentMiddleware",
       "--middleware",
@@ -118,7 +118,7 @@
     "minimum_start_gib": 115,
     "sample_hz": 1,
     "startup_timeout_seconds": 1800,
-    "note": "8 GiB whole-host floor: owner decision 2026-10-11 to keep 1M with images on (DeepSeek's 1M-fast profile set the 8 GiB precedent); AGENTS.md's 1M gate asks 10. minimum_start_gib is the switch's only admission: candidate 5 used up to 102.97 GiB text-only and images add 3.1-3.3 GiB (results/qwen38fn-gates/diag-vision-2026-10-11), so 115 = the quiet host's 115.2-115.6 GiB, and candidate 7 must measure peak + 8 <= 115. cgroup MemoryCurrent is blind to CUDA unified memory on GB10; the external memwatch is the real guard. The PLE table's page cache is clean and file-backed (reclaimable)."
+    "note": "8 GiB whole-host floor: owner decision 2026-10-11 to keep 1M with images on (DeepSeek's 1M-fast profile set the 8 GiB precedent); AGENTS.md's 1M gate asks 10. minimum_start_gib is the switch's only admission: candidate 5 used up to 102.97 GiB text-only and images add 3.1-3.3 GiB (results/qwen38fn-gates/diag-vision-2026-10-11), so 115 = the quiet host's 115.2-115.6 GiB, and candidate 7 must measure peak + 8 <= 115. cgroup MemoryCurrent is blind to CUDA unified memory on GB10; the external memwatch is the real guard. The PLE table's page cache is clean and file-backed (reclaimable). MemAvailable admission cannot see another engine's cached model files; HostCacheReleaseWorker drops the model root's page cache before the weights load and again before the KV arena, and refuses the arena unless MemFree covers it plus 2 GiB (candidate 7 met it at MemFree 10.2 GiB)."
   },
   "memory_model": {
     "kv_bytes_per_token": 0,

@@ -244,7 +244,9 @@ class HostCacheReleaseWorkerTest(WorkerHarness, unittest.TestCase):
             self.assertEqual(margin, 2.0)
             calls, release, free = self.host(17.9 + 1.5 + margin)
             with release, free, self.assertLogs("vllm.qwen38fn_worker", "INFO") as logs:
-                self.assertEqual(worker.initialize_from_config(self.arena(int(9.4 * gib), int(8.5 * gib))), "allocated")
+                # The cache groups' tensors all view one 17.9 GiB backing allocation.
+                arena = self.arena(*[int(17.9 * gib)] * 6)
+                self.assertEqual(worker.initialize_from_config(arena), "allocated")
             self.assertEqual(calls, ["/m"])
             self.assertIn("MemFree 21.40 GiB", logs.output[0])
             self.assertIn("KV arena 17.90 GiB + margin 2.00 GiB", logs.output[0])
