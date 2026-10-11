@@ -1,0 +1,131 @@
+{
+ "schema_version": 1,
+ "scope": "Native vLLM runtime for the qwen3.8-flash-next lossless speed-lever screen; no qualification claim",
+ "runtime_root": "{cache_root}/qwen38-flash-next/native-runtime-002/runtime",
+ "base_runtime": {
+  "build_manifest": "configs/build-manifests/qwen38-flash-next-runtime.json",
+  "root": "{cache_root}/qwen38-flash-next/native-runtime-001",
+  "how": "cp -a of native-runtime-001 (interpreter, packages, flashinfer AOT jit-cache unchanged), then patches 0002-0009 applied with git apply in site-packages; 0001 is already in runtime-001",
+  "verified": "runtime-001's site-packages/vllm equals the pinned wheel plus 0001 byte for byte (diff -rq of the extracted wheel + 0001 against runtime-001, 2026-10-11). Its digest by this manifest's vllm_tree method is base_vllm_tree. runtime-001's manifest records 83b7a48d... for the same tree, by a method that was not written down and could not be reproduced",
+  "base_vllm_tree": {
+   "sha256": "c08e99825f3704d33e11fe217caa223b116604dde647a877b41a6983b3bdd093",
+   "files": 5352
+  }
+ },
+ "interpreter": {
+  "path": "runtime/bin/python3.12",
+  "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+  "note": "same bytes as runtime-001"
+ },
+ "vllm": {
+  "repository": "https://github.com/vllm-project/vllm",
+  "commit": "72d59adc2c76de8f77aad640c7a04d663a970735",
+  "version": "0.31.1rc1.dev152+g72d59adc2",
+  "wheel": {
+   "url": "https://wheels.vllm.ai/72d59adc2c76de8f77aad640c7a04d663a970735/vllm-0.31.1rc1.dev152%2Bg72d59adc2-cp38-abi3-manylinux_2_28_aarch64.whl",
+   "sha256": "193958524f386e52fd4ca605e320db4f0add5716c0671c07c876a179f4d3b88e"
+  }
+ },
+ "cuda_compile": "none",
+ "patches": [
+  {
+   "file": "patches/qwen38fn/0001-vllm-pr58439-fa537316.runtime.diff",
+   "sha256": "c83a758390febfdb0a6495cce3bcf21ae01ae680ebdf44e52fc6f62e7c461506",
+   "name": "vLLM PR #58439 [Qwen4Exp] checkpoint-mapped PLE storage",
+   "state": "open",
+   "scope": "runtime-001's applied diff, byte for byte (vllm/ paths only)",
+   "enabled_by": "--engram-config '{\"checkpoint_mapped\":true}' (already in the main profile)",
+   "url": "https://github.com/vllm-project/vllm/pull/58439",
+   "head": "fa53731693ac9ddcb911aa9c45d325a2a1341135"
+  },
+  {
+   "file": "patches/qwen38fn/0002-vllm-pr59528.diff",
+   "sha256": "39fb1fcea9d3c16cb63f5e5d7af6f0de49d4cafdd311510d1c543afd7f7f51e8",
+   "name": "vLLM PR #59528 keep the GLM-5.3 kpool tail and Qwen4 QSA ring out of the null block",
+   "state": "merged 2026-10-08 as 240785b8, after this nightly",
+   "scope": "vllm/ hunks only (tests dropped)",
+   "enabled_by": "always on: correctness fix (padding and dummy rows were written into shared block 0)",
+   "url": "https://github.com/vllm-project/vllm/pull/59528",
+   "head": "c25289d5cf19c1e2b2876a04bc7e087537df13d4"
+  },
+  {
+   "file": "patches/qwen38fn/0003-vllm-pr58449.diff",
+   "sha256": "27936e6d7fa937bedae802d82427de6cdd6632a7d92d9beca6d8da6867e3f155",
+   "name": "vLLM PR #58449 fused draft metadata updates for the QSA side cache",
+   "state": "open",
+   "scope": "vllm/ hunks only (tests dropped)",
+   "enabled_by": "always on: replaces the 'Fused multi-step draft decode is not supported' fallback",
+   "url": "https://github.com/vllm-project/vllm/pull/58449",
+   "head": "848dbf89ecb00408351e00c39689d3a8c2f1a4c9"
+  },
+  {
+   "file": "patches/qwen38fn/0004-vllm-pr58737.diff",
+   "sha256": "79049db651665ea79926f1abc07abe7f4460a4c0210223692e554e7403a3bd90",
+   "name": "vLLM PR #58737 fuse the mamba align block-table gather into one Triton kernel",
+   "state": "open",
+   "scope": "vllm/ hunks only (tests dropped)",
+   "enabled_by": "always on: bit-identical kernel fusion",
+   "url": "https://github.com/vllm-project/vllm/pull/58737",
+   "head": "88ee262457c8032b9081dc140752cafc382d5150"
+  },
+  {
+   "file": "patches/qwen38fn/0005-jschmied-vllm-pr4.diff",
+   "sha256": "346e8c48a193bfa5d2497169019c4127b2063bbb5428ef0b331c0a47460aac70",
+   "name": "jschmied/vllm PR #4 PLE prefetch MADV_WILLNEED + lookup at its own layer (on #58439)",
+   "state": "open",
+   "scope": "vllm/ hunks only (tests dropped)",
+   "enabled_by": "gated by 0006",
+   "url": "https://github.com/jschmied/vllm/pull/4",
+   "head": "ae0f7fdfc46e4b75f05001b86c40eab3550c850f"
+  },
+  {
+   "file": "patches/qwen38fn/0006-local-gate-ple-willneed.diff",
+   "sha256": "a683bc86add192a527efea5a12e694d44481818eb6d13920ebbb2a8c7ce9b6ab",
+   "name": "local: put 0005 behind QWEN38FN_PLE_WILLNEED (read once at import, default off)",
+   "state": "local",
+   "scope": "off keeps #58439's behaviour; one startup log line",
+   "enabled_by": "QWEN38FN_PLE_WILLNEED=1 (lever L1)"
+  },
+  {
+   "file": "patches/qwen38fn/0007-salient-0002-draft-vocab.diff",
+   "sha256": "cdd2b5e8e10d008e858c1b14b5d241f4da48ab7215eb5773c5a55d15c1ca7ac0",
+   "name": "salient-data recipe patch 0002, reduced-vocabulary MTP drafting part only (qwen4_exp/nvidia/mtp.py); ports tonyd2wild mtp_draft_vocab.py (Apache-2.0)",
+   "state": "community recipe (Apache-2.0)",
+   "scope": "the FP8 dense-cast hunks (modelopt.py, model.py, qsa.py) are excluded: owner decision 2026-10-11, lossless levers only",
+   "enabled_by": "fixed by 0009",
+   "url": "https://github.com/salient-data/qwen38-next-dgx-recipe/blob/0b46ed90a986e58f542fb84c1bda3d785102acd1/recipe/patches/0002-fp8-dense-and-draft-vocab.patch",
+   "head": "0b46ed90a986e58f542fb84c1bda3d785102acd1"
+  },
+  {
+   "file": "patches/qwen38fn/0008-salient-0003-pr59973.diff",
+   "sha256": "c9706749df1283d30340ed2909ea798a061d865c76b33b1487fa25f5f6a70d6e",
+   "name": "vLLM PR #59973 quantized draft lm_head (MRV2), as ported by salient-data patch 0003 with the reduced-vocabulary draft-rows hook",
+   "state": "open",
+   "scope": "applied as published",
+   "enabled_by": "--speculative-config draft_lm_head_quantization=nvfp4 (lever L2)",
+   "url": "https://github.com/vllm-project/vllm/pull/59973",
+   "head": "e037067e (salient port; PR now at 0c2ed06ac005871507645ecc63e05a28058e15bf)"
+  },
+  {
+   "file": "patches/qwen38fn/0009-local-draft-vocab-init.diff",
+   "sha256": "09c5080a52604e08eb16a7bbebfd0d0e794d7ac62999cda44035649fc2f8d354",
+   "name": "local: QWEN4EXP_DRAFT_VOCAB read once when the drafter is built and validated; compute_logits rebound instead of reading the environment per draft step; the recipe's FP8 lm_head rebuild removed",
+   "state": "local",
+   "scope": "AGENTS.md: switches resolve once at initialization",
+   "enabled_by": "QWEN4EXP_DRAFT_VOCAB=65536 (lever L2)"
+  }
+ ],
+ "vllm_tree": {
+  "sha256": "9e2e0f3138668a751f8c5e39f6bb81a886848148971417811c4c3ffab8660071",
+  "files": 5353,
+  "method": "sha256 over the sorted lines relpath + NUL + sha256(file bytes) hex + LF, relpath relative to site-packages/vllm, excluding __pycache__/ and *.pyc (scripts/tests/test_qwen38fn_tune_contract.py tree_sha256)"
+ },
+ "levers": {
+  "L0": "patches 0002-0004, always on in runtime-002",
+  "L1": "QWEN38FN_PLE_WILLNEED=1",
+  "L2": "QWEN4EXP_DRAFT_VOCAB=65536 and speculative-config draft_lm_head_quantization=nvfp4",
+  "L3": "speculative-config num_speculative_tokens 4, num_speculative_tokens_per_batch_size [[1,1,4],[2,4,3]] (upstream option, no patch)",
+  "L4": "--kv-cache-dtype-skip-layers 48 (in the nightly as #60023) with --kv-cache-memory-bytes 20600000000"
+ },
+ "import_check": "pending: run once production is stopped (an import beside the serving engine would eat its headroom)"
+}
