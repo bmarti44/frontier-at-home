@@ -112,7 +112,7 @@ def build(ev: Path, mut: str) -> None:
         {"test": t, "pass": not (mut == "agent" and t == "turn-continuation")} for t in tests]}))
     (ev / "soak").mkdir()
     floor = {"mem_floor_gib": 12.0, "mem_floor_source": "default"} if mut == "soakfloor" else \
-        {"mem_floor_gib": 8.0, "mem_floor_source": "env-override"}
+        {"mem_floor_gib": 5.0, "mem_floor_source": "default"}
     (ev / "soak" / "soak.json").write_text(json.dumps({"pass": mut != "soak", "mem_available_min_gib": 9.9, **floor}))
     correct = {"visionworse": 52, "vision53": 53, "vision63": 63}.get(mut, 64)
     if mut != "novision":

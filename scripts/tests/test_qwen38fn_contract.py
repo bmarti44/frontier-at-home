@@ -80,13 +80,14 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(p["memory_model"]["floor_gib"], 8)
         self.assertEqual(p["safety"]["minimum_start_gib"], 115)
 
-    def test_the_soak_is_held_to_the_owner_floor(self):
-        # 35_soak.py defaults to 12 GiB; this profile's owner-set floor is 8
-        # (2026-10-11). Candidate 8's soak (min 9.92 GiB) failed only against
-        # the unset 12 (results/qwen38fn-gates/qualify-2026-10-11-c8/RESULT.md).
+    def test_the_soak_uses_the_repository_floor(self):
+        # Candidate 8's soak (min 9.92 GiB) failed only against 35_soak.py's
+        # old 12 GiB default (results/qwen38fn-gates/qualify-2026-10-11-c8). The
+        # owner set one 5 GiB soak floor for every profile (2026-10-11), so the
+        # profile declares none; its 8 GiB kill floor stays the memory guard.
         p = self.profile()
-        self.assertEqual(p["qualification_options"]["soak_mem_floor_gib"], 8)
-        self.assertEqual(p["qualification_options"]["soak_mem_floor_gib"], p["safety"]["kill_floor_gib"])
+        self.assertEqual(p["qualification_options"], {"speed_max_tokens_per_event": 4})
+        self.assertEqual(p["safety"]["kill_floor_gib"], 8)
 
     def test_agentic_serving_semantics_are_explicit(self):
         argv = self.profile()["launch"]["args"]
