@@ -4,7 +4,9 @@
 # (MemorySwapMax=0, OOMPolicy=kill, RuntimeMaxSec), with a 1 Hz /proc/meminfo
 # sampler and the kernel log. Measures greedy probes, block-aware speed (with
 # vLLM spec-decode counters around it) and tool-call, then stops the engine.
-# Production must already be stopped (52_engine_switch.sh stop).
+# Production must already be stopped (52_engine_switch.sh stop): the arm holds
+# the system inference lock that a serving engine holds, so it refuses to start
+# beside one and a concurrent switch cannot start an engine beside the arm.
 set -Eeuo pipefail
 ARM=${1:?usage: run-arm.sh <arm>}
 WT=/home/bmarti44/qwen38fn-tune
@@ -35,9 +37,22 @@ SERVER_LOG=$HOME/.frontier-at-home/logs/$SLUG.server.log
 MEMWATCH_LOG=$HOME/.frontier-at-home/logs/$SLUG.memwatch.log
 UNIT=qwen38fn-tune-$ARM-$$
 OBS=$EV/$ARM
+INFERENCE_LOCK=/run/lock/frontier-at-home/inference.lock
 [[ ! -e $OBS ]] || { echo "$OBS exists; a rerun needs a new arm id" >&2; exit 2; }
-mkdir -p "$OBS"
 cd "$WT"
+
+# Preflight. Nothing here creates the arm directory, so an abort leaves no arm
+# behind for the scorer and the same arm id can be retried.
+DIRTY=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)
+[[ $DIRTY -eq 0 ]] || { echo "$WT has $DIRTY tracked changes; commit before an arm" >&2; exit 2; }
+python3 "$EV/screen_verdict.py" --may-run "$EV" "$ARM" || { echo "$ARM is not the next due arm" >&2; exit 2; }
+# Only this shell holds the lock: the engine and memwatch start with fd 8
+# closed, so nothing that outlives an arm can block production's restore.
+exec 8>"$INFERENCE_LOCK"
+flock -n 8 || { echo "$INFERENCE_LOCK is held: an engine is serving; stop it first" >&2; exit 2; }
+GUARD=$(python3 "$WT/scripts/03_memory_guard.py" --required-gib 114.5 --stable-samples 3 --timeout-seconds 600 2>&1) \
+    || { printf '%s\n' "$GUARD" >&2; echo "memory guard did not pass; no arm directory was created" >&2; exit 2; }
+mkdir -p "$OBS"
 
 stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 log() { printf '%s %s\n' "$(stamp)" "$*" | tee -a "$OBS/driver.log"; }
@@ -62,6 +77,7 @@ journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 &
 JOURNAL=$!
 cleanup() {
     "${SERVE[@]}" stop >>"$OBS/driver.log" 2>&1 || true
+    sleep 5   # teardown kernel lines reach the journal capture
     kill "$SAMPLER" "$JOURNAL" 2>/dev/null || true
     tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" >"$OBS/server.log" 2>/dev/null || true
     tail -c +$((MEMWATCH_OFF + 1)) -- "$MEMWATCH_LOG" >"$OBS/memwatch.log" 2>/dev/null || true
@@ -80,16 +96,20 @@ cleanup() {
 trap cleanup EXIT
 
 log "arm $ARM profile $PROFILE stack $STACK tokens_per_event $K"
-log "head $(git -C "$WT" rev-parse HEAD) dirty=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)"
+log "head $(git -C "$WT" rev-parse HEAD) dirty=$DIRTY"
+log "inference lock $INFERENCE_LOCK held by the driver"
+printf '%s\n' "$GUARD" | tee -a "$OBS/driver.log"
 log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
-python3 "$WT/scripts/03_memory_guard.py" --required-gib 114.5 --stable-samples 3 --timeout-seconds 600 \
-    | tee -a "$OBS/driver.log"
+sleep 2   # at least one meminfo sample precedes the launching line
 
 log "$ARM: launching in scope $UNIT"
 t0=$SECONDS
-systemd-run --user --scope -q --unit="$UNIT" \
+if ! systemd-run --user --scope -q --unit="$UNIT" \
     -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec=7200 \
-    -- "${SERVE[@]}" start | tee -a "$OBS/driver.log"
+    -- "${SERVE[@]}" start 8>&- | tee -a "$OBS/driver.log"; then
+    log "FAILED_ATTEMPT $ARM: launch did not reach ready"
+    exit 1
+fi
 log "$ARM: ready after $((SECONDS - t0)) s"
 awk '/MemAvailable/{printf "%s idle_mem_available_kib=%s\n", "'"$(stamp)"'", $2}' /proc/meminfo | tee -a "$OBS/driver.log"
 NEW_LOG() { tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG"; }
@@ -105,7 +125,8 @@ if [[ $block != "$BLOCK_TOKENS" || -z $kv || $kv -lt 1048576 ]]; then
     exit 1
 fi
 
-python3 "$SMOKE/probe.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/probe.json" | tee -a "$OBS/driver.log"
+python3 "$SMOKE/probe.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/probe.json" | tee -a "$OBS/driver.log" \
+    || log "probe exit nonzero"
 metrics "$OBS/metrics-before.txt"
 python3 "$WT/scripts/30_bench_speed_blocks.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/speed.json" \
     --stack-label "$STACK" --reps 3 --warmup 1 --max-tokens 384 --min-completion-tokens 200 --seed 42 \
@@ -115,7 +136,8 @@ python3 "$WT/scripts/30_bench_speed_blocks.py" --base-url "http://127.0.0.1:$POR
     | tee -a "$OBS/speed.log" | tail -5 | tee -a "$OBS/driver.log" || log "speed exit nonzero"
 metrics "$OBS/metrics-after.txt"
 python3 "$WT/scripts/39_bench_toolcall.py" --base-url "http://127.0.0.1:$PORT/v1" --model qwen3.8-flash-next \
-    --out "$OBS/toolcall.json" --temperature 0 2>&1 | tail -3 | tee -a "$OBS/driver.log" || log "toolcall exit nonzero"
+    --out "$OBS/toolcall.json" --temperature 0 2>&1 | tee -a "$OBS/toolcall.log" | tail -3 | tee -a "$OBS/driver.log" \
+    || log "toolcall exit nonzero"
 "${SERVE[@]}" stop | tee -a "$OBS/driver.log"
 for ((i = 0; i < 60; i++)); do
     systemctl --user is-active -q "$UNIT.scope" || { log "$ARM: scope empty after stop"; break; }

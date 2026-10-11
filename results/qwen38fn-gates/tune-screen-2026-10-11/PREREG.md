@@ -24,13 +24,27 @@ On 2026-10-11 the owner chose to tune Flash-Next with **lossless levers only**. 
 
 **Precondition.** Production is stopped first with `sudo -n scripts/52_engine_switch.sh stop`, and restored after the last arm. arlab is paused by the owner.
 
+**Preflight** (before the arm directory exists, so an abort leaves no arm behind and the same arm id can be retried):
+- the worktree has no tracked changes;
+- `screen_verdict.py --may-run` confirms the arm is the next one due: its base is the last kept arm, it is not skipped, and no earlier arm is pending;
+- the driver takes the system inference lock (`/run/lock/frontier-at-home/inference.lock`) that a serving engine holds. It refuses to start beside one, and a concurrent switch cannot start an engine beside the arm. The engine and memwatch start with that fd closed.
+
 **Start.**
-- `03_memory_guard.py --required-gib 114.5`, 3 stable samples.
+- `03_memory_guard.py --required-gib 114.5`, 3 stable samples (also in the preflight).
 - Then `93_profile_serve.sh --profile <arm profile> --port 8017` inside a user scope: `MemoryHigh=92G`, `MemoryMax=96G`, `MemorySwapMax=0`, `OOMPolicy=kill`, `RuntimeMaxSec=7200`.
 - The profile's memwatch is armed at its 8 GiB floor.
 - A 1 Hz `/proc/meminfo` sampler and `journalctl -k` run for the whole arm.
 
-**Readiness.** Attention block 3,200 tokens, and KV capacity ≥ 1,048,576 tokens at 262,144 per request. Otherwise the driver logs `FAILED_ATTEMPT`.
+**Readiness.** The launch reaches ready, the attention block is 3,200 tokens, and KV capacity is ≥ 1,048,576 tokens at 262,144 per request. Otherwise the driver logs `FAILED_ATTEMPT` and stops the arm. The scorer then measures memory and kill lines only, and the arm is unsafe.
+
+**Integrity** (an arm that fails these is `NO_RESULT`, because the harness, not the lever, is wrong):
+- `server.log` has the `session start` marker and `memwatch.log` has `ARMED`;
+- the startup lines show exactly the arm's levers:
+  - runtime-002 arms print `checkpoint_mapped PLE: QWEN38FN_PLE_WILLNEED=1` with L1 and `=0` without it;
+  - they print `Qwen4Exp MTP draft vocabulary: token ids [0, 65536)` with L2 and `: full` without it;
+  - `Quantized a nvfp4 copy of the lm_head` and the non-default arg `'draft_lm_head_quantization': 'nvfp4'` appear only with L2;
+  - the non-default args contain `'num_speculative_tokens_per_batch_size'` only with L3 and `'kv_cache_dtype_skip_layers'` only with L4;
+  - a0 (runtime-001) prints none of these.
 
 **Measured, in order:**
 1. `probe.json`: the three greedy probes (`../smoke-2026-10-11/probe.py`). Their sha256 is compared with candidate 5's (`../qualify-2026-10-11-c4/probe-start1.json`), which candidate 9 matched. This is recorded, not gating.
@@ -57,6 +71,7 @@ On 2026-10-11 the owner chose to tune Flash-Next with **lossless levers only**. 
 - no memwatch `BREACH|EMERGENCY_STOP`;
 - swap growth ≤ 0.25 GiB;
 - peak use ≤ 106 GiB;
+- for every arm after a0, *projected 1M peak* ≤ 107 GiB. This is the arm's peak − a0's peak + candidate 9's measured 1M-fill peak (105.674 GiB). The screen fills only 28,672 tokens, about 2.3 GiB below a 1M fill, and c10's admission clause `ceil(peak + 8) ≤ 115` allows a 1M peak of at most 107 GiB;
 - KV capacity ≥ 1,048,576;
 - tool-call ≥ 19/20;
 - both speed cells `valid`;
@@ -66,20 +81,33 @@ Ratios are taken against the arm's base: r0 and r28 are decode medians at 0 and 
 
 - **a1 (L0, the runtime change) passes** if it is safe and min(r0, r28) ≥ 0.97 and rp ≥ 0.95. Otherwise the screen ends `NO_GO (runtime-002)`, and nothing goes to c10.
 - **A lever (a2 to a5) is kept** if its arm is safe, √(r0 · r28) ≥ 1.03, min(r0, r28) ≥ 0.98 and rp ≥ 0.95. Otherwise it is dropped.
-- **a5 is `SKIPPED`** unless its base arm's peak use is ≤ 104.7 GiB.
+- **a5 is `SKIPPED`** unless its base arm's peak use is ≤ 104.7 GiB. This is a host-safety guard for the screen itself. L4's safety at 1M is decided by the projected-peak clause here and finally by c10's own 1M run. An a5 that ran although its skip applied makes the screen `NO_RESULT`.
+- **A lever that no arm tested** (for example, after a drop, before its amended arm runs) leaves the screen `INCOMPLETE`, listed in `untested_levers`. It is never `COMPLETE`.
 - **a0 must itself be safe.** Otherwise the screen is `NO_RESULT`: the host or the harness is wrong, not a lever.
 
 The result is the kept set and the arm that carries it. That arm's profile becomes candidate c10's launch, under its own preregistration (plan A2: 5 matched ABBA blocks against the main profile, the full c9 clause set, and a holdout spend if the probe hashes differ).
 
 **Missing or malformed evidence for an arm makes it `NO_RESULT`.** Its lever counts as not kept, and the screen reports it.
 
-`screen_verdict.py --self-test` runs synthetic cases before scoring, and all must match:
+`screen_verdict.py --self-test` runs synthetic cases before scoring, and all 28 must match:
 - a clean screen keeps every lever;
-- each safety clause dropping a lever;
-- a1 failing;
-- a5 skipped;
-- a missing file;
-- an `arms.json` base that disagrees with the decisions.
+- each safety clause dropping a lever, including the projected 1M peak, a readiness failure with no later files, and a null prefill rep;
+- a1 regressing or failing readiness (`NO_GO`), and an unsafe baseline (`NO_RESULT`);
+- a5 skipped, and an a5 that ran despite its skip;
+- a missing file, an unarmed memwatch, and a missing or misplaced switch line;
+- an `arms.json` base that disagrees with the decisions;
+- a dropped lever without amended arms (`INCOMPLETE`);
+- `--may-run` admitting only the next due arm.
+
+**Amended before any load (2026-10-11).** One focused review found one HIGH issue and seven MEDIUM issues. Each was fixed with a self-test case before the first arm loaded:
+- a dropped lever scored `COMPLETE`;
+- readiness failures scored `NO_RESULT`;
+- a null prefill rep crashed the scorer;
+- a guard abort left an arm directory;
+- the a5 skip was not enforced;
+- the peak was calibrated at 28K, not 1M;
+- the switch lines and markers were not asserted;
+- the inference lock was not held.
 
 ## Reported, not gating
 
@@ -88,4 +116,5 @@ The result is the kept set and the arm that carries it. That arm's profile becom
 - the startup switch lines;
 - load time;
 - idle MemAvailable;
-- the probe hash match against candidate 5.
+- the probe hash match against candidate 5 and against the arm's base;
+- projected 1M peak per arm.
