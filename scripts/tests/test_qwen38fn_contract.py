@@ -2,9 +2,10 @@
 
 The profile serves NVIDIA's NVFP4 checkpoint on upstream vLLM with the PLE
 n-gram table read in place from NVMe (vLLM PR #58439 checkpoint_mapped), MTP
-speculative decoding, and four native 262,144-token slots. Candidate 5's gate
-passed, so the profile is ``qualified`` and served as the optional ``qwen38fn``
-switch alias; qwen38-1m stays the default.
+speculative decoding, and four native 262,144-token slots. Candidate 5
+qualified it text-only as the optional ``qwen38fn`` switch alias. Candidate 7
+turns image input on under the owner's 8 GiB floor (2026-10-11), so the
+profile is ``estimated`` until that run passes.
 """
 from __future__ import annotations
 
@@ -44,15 +45,13 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             p, profile_resolver.load_model(SLUG),
             profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json"))
 
-    def test_profile_is_a_qualified_switch_alias_with_four_native_slots(self):
+    def test_profile_is_a_switch_alias_pending_candidate_7(self):
+        # Candidate 5's PASS covers the text-only launch; images on is a new
+        # configuration, so the status waits for candidate 7's own gate.
         p = self.profile()
         status = p["status"]
-        self.assertEqual(status["state"], "qualified")
-        self.assertEqual(status["qualified_at"], "2026-10-11")
-        self.assertEqual(status["evidence"], "results/qwen38fn-gates/qualify-2026-10-11-c4/")
-        gate = json.loads((ROOT / status["evidence"] / "gate-summary.json").read_text())
-        self.assertEqual(gate["verdict"], "PASS")
-        self.assertEqual((gate["fail"], gate["missing"]), ([], []))
+        self.assertEqual(status["state"], "estimated")
+        self.assertIn("results/qwen38fn-gates/qualify-2026-10-11-c7/", status["basis"])
         self.assertEqual(p["switch_alias"], "qwen38fn")
         self.assertEqual(p["switch"], {
             "mode": "generic",
@@ -69,7 +68,15 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         # Native context only: static YaRN degrades short-context quality.
         self.assertFalse(any("yarn" in a for a in argv))
         self.assertNotIn("--hf-overrides", argv)
-        self.assertGreaterEqual(p["safety"]["kill_floor_gib"], 10)
+
+    def test_owner_floor_is_8_gib_and_admission_fits_the_quiet_host(self):
+        # Owner decision 2026-10-11: keep 1M with images on and kill at 8 GiB
+        # (DeepSeek's 1M-fast profile set the precedent). The switch admits on
+        # minimum_start_gib alone; this host reads 115.2-115.6 GiB when quiet.
+        p = self.profile()
+        self.assertEqual(p["safety"]["kill_floor_gib"], 8)
+        self.assertEqual(p["memory_model"]["floor_gib"], 8)
+        self.assertEqual(p["safety"]["minimum_start_gib"], 115)
 
     def test_agentic_serving_semantics_are_explicit(self):
         argv = self.profile()["launch"]["args"]
@@ -142,13 +149,16 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         # 25.73 GiB at idle, with 1.44 GiB of other processes pushed to swap,
         # so the engine took ~88.1 GiB with its 3.91 GiB arena: ~84.2 GiB
         # without it. 93_profile_serve admits only when MemAvailable covers
-        # weights + overhead + extra + floor; the quiet host read 114.0 GiB
-        # (2026-10-11 01:35Z).
+        # weights + overhead + extra + floor. Candidate 5 peaked at 102.97 GiB
+        # used text-only; images add at least 3.1 GiB
+        # (results/qwen38fn-gates/diag-vision-2026-10-11). The quiet host read
+        # 115.2-115.6 GiB on 2026-10-11.
         memory_model = self.profile()["memory_model"]
         self.assertGreaterEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"], 84.2)
-        self.assertEqual(memory_model["floor_gib"], 10)
+        self.assertGreaterEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"]
+                                + memory_model["extra_gib"], 102.97 + 3.1)
         self.assertLessEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"]
-                             + memory_model["extra_gib"] + memory_model["floor_gib"], 114.0)
+                             + memory_model["extra_gib"] + memory_model["floor_gib"], 115.0)
 
     def test_startup_cannot_compile_kernels_and_tolerates_uma_free_memory(self):
         for name in ("qwen3.8-flash-next/cuda-spark-128g-1m", "qwen3.8-flash-next/cuda-spark-128g-smoke"):
@@ -187,24 +197,31 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertIn(".stop()", methods["compile_or_warm_up_model"])
         self.assertIn("finally:", methods["compile_or_warm_up_model"])
 
-    def test_text_only_until_media_is_qualified(self):
-        # Images at 1M are NO_GO (results/qwen38fn-gates/diag-vision-2026-10-11):
-        # after 100 MMMU images the direct 1M fill crossed the 10.5 GiB stop.
+    def test_images_on_and_video_off_like_the_default(self):
+        # Images at 1M were NO_GO above the 10 GiB floor
+        # (results/qwen38fn-gates/diag-vision-2026-10-11); the owner moved the
+        # floor to 8 GiB. The vision tower adds 897,862,112 BF16 bytes to the
+        # 75.65 GiB text-only load (vLLM reported 76.49 GiB with images on).
         p = self.profile()
         argv = p["launch"]["args"]
-        self.assertEqual(arg(argv, "--limit-mm-per-prompt"), '{"image":0,"video":0}')
-        self.assertNotIn("max_images", p["serving"])
-        self.assertNotIn("vision_min", p["qualification_targets"])
+        self.assertEqual(arg(argv, "--limit-mm-per-prompt"), '{"image":4,"video":0}')
+        self.assertEqual(p["serving"]["max_images"], 4)
+        self.assertNotIn("max_videos", p["serving"])
+        self.assertGreaterEqual(p["memory_model"]["resident_weights_gib"], 76.49)
 
-    def test_launch_is_the_configuration_candidate_5_qualified(self):
+    def test_launch_is_candidate_5_plus_image_input(self):
         # qualify-2026-10-11-c4 (gate PASS) recorded the rendered argv and env.
-        # Only the interpreter pin moved, from the python3 symlink to the file
-        # it names; the bytes are the same.
+        # Candidate 7 changes only the image limit. The interpreter pin moved
+        # from the python3 symlink to the file it names; the bytes are the same.
         ev = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4"
         recorded = json.loads((ev / "manifest.json").read_text())["profile"]
         out = profile_resolver.resolve(self.profile(), profile_resolver.load_model(SLUG),
                                        profile_resolver.load_host(ev / "host-worktree.json"))
-        self.assertEqual(out["argv"], recorded["argv"])
+        expected = list(recorded["argv"])
+        index = expected.index("--limit-mm-per-prompt") + 1
+        self.assertEqual(expected[index], '{"image":0,"video":0}')
+        expected[index] = '{"image":4,"video":0}'
+        self.assertEqual(out["argv"], expected)
         self.assertEqual(out["env"], recorded["env"])
         self.assertEqual(out["binary"], recorded["binary"] + ".12")
         self.assertEqual(profile_resolver.load_model(SLUG)["engines"][self.profile()["engine"]]["binary_sha256"],
