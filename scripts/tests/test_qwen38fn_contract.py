@@ -80,6 +80,15 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(arg(argv, "--engram-config"), '{"checkpoint_mapped":true}')
         self.assertIn('"method":"mtp"', arg(argv, "--speculative-config"))
 
+    def test_bench_and_agent_gate_can_see_mtp_blocks_and_cache_reuse(self):
+        p = self.profile()
+        argv = p["launch"]["args"]
+        # One SSE event carries the accepted token plus up to every draft token.
+        draft = json.loads(arg(argv, "--speculative-config"))["num_speculative_tokens"]
+        self.assertEqual(p["qualification_options"]["speed_max_tokens_per_event"], 1 + draft)
+        # The agent gate reads prefix-cache reuse from usage.prompt_tokens_details.
+        self.assertIn("--enable-prompt-tokens-details", argv)
+
     def test_kv_arena_holds_four_full_slots_at_the_smoke_measured_cost(self):
         # The smoke's 4,200,000,000-byte arena reported 194,493 tokens at
         # --max-model-len 131,072, so its concurrency was >= 194,493/131,072.

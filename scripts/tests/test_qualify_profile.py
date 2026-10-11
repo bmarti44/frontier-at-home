@@ -116,6 +116,37 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertEqual(manifest["cells_selected"], ["speed", "soak"])
         self.assertIsNone(manifest["cells"]["soak"]["skip_reason"])
 
+    def test_speculative_profile_selects_the_block_aware_speed_bench(self) -> None:
+        # qualification_options.speed_max_tokens_per_event says one SSE event can carry
+        # several tokens (MTP); the frozen bench would count events as tokens.
+        out = self.tmp / "bundle3"
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "--profile", "qwen3.8-flash-next/cuda-spark-128g-1m",
+             "--host", str(self.host), "--dry-run", "--out", str(out), "--cells", "speed"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        manifest = json.loads((out / "manifest.json").read_text())
+        self.assertIn("30_bench_speed_blocks.py", manifest["scripts"])
+        self.assertIn("30_bench_speed.py", manifest["scripts"])
+        speed = manifest["cells"]["speed"]["argv"]
+        self.assertTrue(speed[1].endswith("/30_bench_speed_blocks.py"))
+        self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "4")
+        self.assertEqual(manifest["profile"]["speed_max_tokens_per_event"], 4)
+
+    def test_non_speculative_profile_keeps_the_frozen_speed_bench(self) -> None:
+        out = self.tmp / "bundle4"
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "--profile", GLM_PROFILE, "--host", str(self.host),
+             "--dry-run", "--out", str(out), "--cells", "speed"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        manifest = json.loads((out / "manifest.json").read_text())
+        speed = manifest["cells"]["speed"]["argv"]
+        self.assertTrue(speed[1].endswith("/30_bench_speed.py"))
+        self.assertNotIn("--max-tokens-per-event", speed)
+
 
 class Parsers(unittest.TestCase):
     def test_parse_speed_matches_30_bench_speed_shape(self) -> None:
