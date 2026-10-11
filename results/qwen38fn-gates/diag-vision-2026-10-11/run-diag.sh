@@ -42,7 +42,10 @@ MEMWATCH_OFF=$(size_of "$MEMWATCH_LOG")
 SAMPLER=$!
 journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 &
 JOURNAL=$!
+# Armed only once the scope exists, so a dip during the guard wait cannot
+# fire it early and disarm it for the run.
 ( while sleep 1; do
+    systemctl --user is-active -q "$UNIT.scope" 2>/dev/null || continue
     if (( $(avail_kib) < STOP_KIB )); then
         printf '%s STOP MemAvailable below 10.5 GiB: SIGKILL scope\n' "$(stamp)" >>"$OBS/driver.log"
         systemctl --user kill --signal=SIGKILL "$UNIT.scope" 2>/dev/null || true
@@ -73,7 +76,7 @@ trap cleanup EXIT
 log "DIAGNOSTIC vision profile $PROFILE"
 log "head $(git rev-parse HEAD) dirty=$(git status --porcelain --untracked-files=no | wc -l)"
 log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
-python3 "$WT/scripts/03_memory_guard.py" --required-gib 112 --stable-samples 3 --timeout-seconds 600 \
+python3 "$WT/scripts/03_memory_guard.py" --required-gib 114 --stable-samples 3 --timeout-seconds 600 \
     | tee -a "$OBS/driver.log"
 log "launching in scope $UNIT"
 t0=$SECONDS
@@ -86,6 +89,15 @@ log "idle_mem_available_kib=$(avail_kib)"
 tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" \
     | grep -E "Model loading took|GPU KV cache size|Encoder cache will be initialized|text-only|mm_prefix|MMEncoderAttention|[Aa]ttention backend|Using .*[Bb]ackend" \
     | cut -c1-400 | tee -a "$OBS/driver.log" || true
+block=$(tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" | grep -oP 'Setting attention block size to \K[0-9]+' | tail -1 || true)
+kv=$(tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG" \
+    | grep -oP 'GPU KV cache size: \K[0-9,]+(?= tokens, Maximum concurrency for 262,144 tokens per request)' \
+    | tail -1 | tr -d , || true)
+log "attention block size ${block:-unknown}; KV capacity ${kv:-unknown} tokens at 262,144"
+if [[ $block != 3200 || -z $kv || $kv -lt 1048576 ]]; then
+    log "DIAG FAIL: block ${block:-unknown} (want 3200), KV ${kv:-unknown} (want >= 1048576)"
+    exit 1
+fi
 python3 "$SMOKE/probe.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/probe.json" | tee -a "$OBS/driver.log"
 python3 - "$OBS/probe.json" "$C5/probe-start1.json" <<'PY' | tee -a "$OBS/driver.log"
 import json, sys
