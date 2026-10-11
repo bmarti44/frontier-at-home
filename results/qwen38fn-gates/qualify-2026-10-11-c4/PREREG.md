@@ -87,6 +87,10 @@ malformed evidence, or a `FAILED_ATTEMPT` line in a driver log, gives
 ## Reported, not gating this verdict
 
 - **Speed:** block-aware decode and prefill against the `qwen38-1m` targets.
+  The smoke's diagnostic decode is not a baseline for this run: candidate 4's
+  drafter FP8 MoE runs on TRITON, not DeepGEMM, and the PLE page cache starts
+  cold because the checkpoint is evicted at startup. Both are production-path
+  conditions.
   Speed targets are general; misses are reported (owner decision 2026-09-11).
   These are the only numbers eligible for the README, and only if this gate
   passes.
@@ -112,9 +116,15 @@ Promotion stays the owner's decision (Phase 3).
   19,219,565,254 bytes. The arena is 19.22 GB (candidate 3).
 - **Footprint.** The engine's non-KV footprint is about 84.2 GiB. The
   projection for a quiet 114 GiB host was about 11.9 GiB. Diagnostic arm C
-  (`../diag-drafter-2026-10-11/`) ran candidate 4's configuration on the full
-  arena: vLLM reported 1,079,117 tokens at 262,144, and idle was 13.9 GiB from
-  a 115.2 GiB start. That run was diagnostic, not evidence for this gate.
+  (`../diag-drafter-2026-10-11/`) ran the full arena with the same two changes
+  in diagnostic form: `VLLM_MOE_USE_DEEP_GEMM=0` set through a scratch hook,
+  and an external `dropcache.py` process that started before launch and
+  stopped at ready. The engine still ran `glm53_worker.ReleaseLoadCacheWorker`.
+  vLLM reported 1,079,117 tokens at 262,144, and idle was 13.9 GiB from a
+  115.2 GiB start. That run was diagnostic, not evidence for this gate. The
+  in-process `CheckpointCacheReleaseWorker` (same files, advice and 1 s
+  interval, first pass at `load_model`) runs on the GPU for the first time in
+  start 1.
 - **Correction.** The smoke's RESULT.md said "13–15 GiB on a quiet host" for
   a 22.7 GB arena. That subtracted from MemTotal rather than MemAvailable, so
   it was wrong. That file is frozen evidence and is left unchanged.
@@ -164,6 +174,20 @@ Promotion stays the owner's decision (Phase 3).
 
   NVRM lines stay kill lines. The fix keeps them from happening; the gate
   does not tolerate them.
+
+- **Candidate 5:** the commit that adds this line, in this same directory,
+  because no start had run. It closes review round 3:
+  - high: the start-1 and diagnostic raw logs were gitignored (`*.log`).
+    They are force-added in `f47693cf`. Each start's `observe/*.log` here
+    is force-added the same way when its evidence is committed.
+  - medium: the arm C description above now says what arm C ran.
+  - low:
+    - the worker's warmup stop is guarded when this class's `load_model`
+      never ran (regression test in `scripts/tests/test_checkpoint_cache.py`);
+    - the 1 Hz sampler now also logs `MemFree`, which the NVRM lines track;
+    - the speed note above says the smoke is not a baseline.
+
+  `gate_mutations.py` passes 25/25.
 
 ## Running start 2
 

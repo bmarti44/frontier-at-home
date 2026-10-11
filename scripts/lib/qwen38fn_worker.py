@@ -25,4 +25,6 @@ class CheckpointCacheReleaseWorker(ReleaseLoadCacheWorker):
         try:
             return super().compile_or_warm_up_model()
         finally:
-            self._checkpoint_evictor.stop()
+            evictor = getattr(self, "_checkpoint_evictor", None)
+            if evictor is not None:
+                evictor.stop()

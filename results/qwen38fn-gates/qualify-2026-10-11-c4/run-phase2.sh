@@ -43,7 +43,7 @@ MEMWATCH_OFF=$(size_of "$MEMWATCH_LOG")
         cg=$(systemctl --user show -p ControlGroup --value "$UNIT.scope" 2>/dev/null || true)
     fi
     printf '%s ' "$(stamp)"
-    awk '/^(MemAvailable|SwapTotal|SwapFree|Cached|AnonPages|Mapped|Dirty):/{printf "%s=%s ", $1, $2}' /proc/meminfo
+    awk '/^(MemAvailable|MemFree|SwapTotal|SwapFree|Cached|AnonPages|Mapped|Dirty):/{printf "%s=%s ", $1, $2}' /proc/meminfo
     [[ -n $cg && -r /sys/fs/cgroup$cg/memory.current ]] && printf 'cgroup_memory_current=%s ' "$(<"/sys/fs/cgroup$cg/memory.current")"
     printf '\n'
     sleep 1
