@@ -7,6 +7,7 @@ speculative decoding, and four native 262,144-token slots. It stays
 """
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import json
@@ -151,6 +152,27 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
                 # vLLM requires utilization x total <= free at startup; on UMA
                 # free is MemAvailable, below 0.92 x 121.7 GiB with a co-tenant.
                 self.assertEqual(arg(argv, "--gpu-memory-utilization"), "0.85")
+
+    def test_startup_avoids_the_drafter_requant_and_checkpoint_cache_pressure(self):
+        # Phase 2 candidate 3 start 1 died at startup
+        # (results/qwen38fn-gates/diag-drafter-2026-10-11). The drafter's
+        # DeepGEMM UE8M0 requant grew by more than 16 GiB. Large GPU
+        # allocations met MemFree of 1-3 GiB behind checkpoint page cache
+        # (NVRM NV_ERR_NO_MEMORY). Diagnostic arm C fixed both.
+        p = self.profile()
+        env, argv = p["launch"]["env"], p["launch"]["args"]
+        self.assertEqual(env["VLLM_MOE_USE_DEEP_GEMM"], "0")
+        self.assertEqual(arg(argv, "--worker-cls"), "qwen38fn_worker.CheckpointCacheReleaseWorker")
+        tree = ast.parse((ROOT / "scripts/lib/qwen38fn_worker.py").read_text())
+        cls = next(n for n in tree.body
+                   if isinstance(n, ast.ClassDef) and n.name == "CheckpointCacheReleaseWorker")
+        self.assertEqual([ast.unparse(b) for b in cls.bases], ["ReleaseLoadCacheWorker"])
+        methods = {n.name: ast.unparse(n) for n in cls.body if isinstance(n, ast.FunctionDef)}
+        # Evict from before the weights load until warmup ends; nothing runs while serving.
+        self.assertIn("CheckpointCacheEvictor(self.vllm_config.model_config.model)", methods["load_model"])
+        self.assertIn(".start()", methods["load_model"])
+        self.assertIn(".stop()", methods["compile_or_warm_up_model"])
+        self.assertIn("finally:", methods["compile_or_warm_up_model"])
 
     def test_text_only_until_media_is_qualified(self):
         argv = self.profile()["launch"]["args"]
