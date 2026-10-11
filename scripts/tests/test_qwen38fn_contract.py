@@ -80,6 +80,27 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(arg(argv, "--engram-config"), '{"checkpoint_mapped":true}')
         self.assertIn('"method":"mtp"', arg(argv, "--speculative-config"))
 
+    def test_kv_arena_holds_four_full_slots_at_the_smoke_measured_cost(self):
+        # The smoke's 4,200,000,000-byte arena reported 194,493 tokens at
+        # --max-model-len 131,072, so its concurrency was >= 194,493/131,072.
+        # vLLM charges a request cdiv(L, 3200) blocks per attention group plus a
+        # fixed count per GDN-state and QSA-ring group, and cdiv(262,144, 3200)
+        # is exactly twice cdiv(131,072, 3200), so twice the measured
+        # per-request cost bounds one 262,144-token slot from above.
+        log = ROOT / "results/qwen38fn-gates/smoke-2026-10-11/observe/server-start1.log"
+        self.assertIn("GPU KV cache size: 194,493 tokens, Maximum concurrency for "
+                      "131,072 tokens per request", log.read_text())
+        smoke_arena, smoke_tokens, smoke_len = 4_200_000_000, 194_493, 131_072
+        required = -(-4 * 2 * smoke_arena * smoke_len // smoke_tokens)
+        p = self.profile()
+        arena = int(arg(p["launch"]["args"], "--kv-cache-memory-bytes"))
+        self.assertGreaterEqual(arena, required)
+        # Every byte past the bound comes out of the 10 GiB whole-host floor.
+        self.assertLessEqual(arena, required * 1.01)
+        memory_model = p["memory_model"]
+        self.assertEqual(memory_model["kv_bytes_per_token"], 0)
+        self.assertGreaterEqual(memory_model["extra_gib"], arena / 2**30)
+
     def test_startup_cannot_compile_kernels_and_tolerates_uma_free_memory(self):
         for name in ("qwen3.8-flash-next/cuda-spark-128g-1m", "qwen3.8-flash-next/cuda-spark-128g-smoke"):
             slug, profile = name.split("/")
