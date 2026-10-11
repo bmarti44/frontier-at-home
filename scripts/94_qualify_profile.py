@@ -933,6 +933,7 @@ def run_cell(name: str, plan: dict, out: Path, resolved: dict) -> dict:
         exits = {}
         wall = 0.0
         kept = []
+        not_run = []
         for suite, argv in plan["suites"].items():
             # A suite that already produced its result in this bundle is kept,
             # not re-run: holdout rows are spend-once (31_bench_accuracy.py's
@@ -944,13 +945,22 @@ def run_cell(name: str, plan: dict, out: Path, resolved: dict) -> dict:
                 with open(log_path, "a", encoding="utf-8") as log:
                     log.write(f"$ (kept) acc-{suite}.json already present; suite not re-run\n")
                 continue
+            # Holdout rows are spend-once: after a failure (often a server that
+            # is gone), do not start another holdout draw.
+            split = argv[argv.index("--split") + 1] if "--split" in argv else None
+            if split == "holdout" and any(c != 0 for c in exits.values()):
+                not_run.append(suite)
+                with open(log_path, "a", encoding="utf-8") as log:
+                    log.write(f"$ (not run) {suite}: an earlier suite failed; holdout rows are spend-once\n")
+                continue
             code, seconds = run_subprocess(argv, log_path)
             exits[suite] = code
             wall += seconds
         record["exit_code"] = exits
         record["wall_s"] = wall
         record["suites_kept_from_previous_run"] = kept
-        failed = [s for s, c in exits.items() if c != 0]
+        record["suites_not_run_after_failure"] = not_run
+        failed = [s for s, c in exits.items() if c != 0] + not_run
     else:
         code, wall = run_subprocess(plan["argv"], log_path)
         record["exit_code"] = code

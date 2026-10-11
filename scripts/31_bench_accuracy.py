@@ -1251,6 +1251,9 @@ def main() -> int:
     # Computed for every split, not just holdout: a dev artifact that names the
     # rows it used is what makes an accidental dev/holdout overlap detectable.
     rowset_digest = holdout_rowset_digest(args.suite, args.split, rows, indices)
+    # Reach the server before the "started" entry spends the holdout rows: a
+    # server that is already gone fails here with the ledger untouched.
+    model, models_response = client.get_model()
     if args.split == "holdout":
         if config_digest is None:
             raise RuntimeError("internal error: holdout config digest was not derived")
@@ -1273,7 +1276,6 @@ def main() -> int:
             return 3
 
     try:
-        model, models_response = client.get_model()
         args.transcripts_dir.mkdir(parents=True, exist_ok=True)
         audit_count = min(10, len(indices))
         audit_positions = set(random.Random(SEED).sample(range(len(indices)), audit_count))

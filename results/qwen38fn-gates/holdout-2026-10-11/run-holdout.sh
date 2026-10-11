@@ -79,6 +79,18 @@ check_no_survivors() {
     return 1
 }
 
+# README: the ledger namespace is "" (31_bench_accuracy.py reads DSV4_LEDGER_NAMESPACE).
+unset DSV4_LEDGER_NAMESPACE
+# HumanEval's sandbox fails closed at its suite start, after the holdout is
+# drawn; check it with the bench's own resolver before any load.
+python3 - "$WT/scripts/31_bench_accuracy.py" <<'PY' | tee -a "$OBS/driver.log"
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("bench", sys.argv[1])
+bench = importlib.util.module_from_spec(spec)
+sys.modules["bench"] = bench
+spec.loader.exec_module(bench)
+print("humaneval runtime", bench.resolve_humaneval_runtime_digest())
+PY
 log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
 log "head $(git -C "$WT" rev-parse HEAD) dirty=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)"
 python3 "$WT/scripts/03_memory_guard.py" --required-gib 114 --stable-samples 3 --timeout-seconds 600 \
