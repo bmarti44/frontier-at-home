@@ -1,0 +1,59 @@
+{
+  "index": 921,
+  "task_id": 921,
+  "rendered_prompt_sha256": "976a98bb6152da517a4f6a944bb99224b02c757dec02155583e6ccb1383d41a1",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this problem step by step.\n\n- A loaf of bread has 24 slices.\n- Abby eats 2 slices per day.\n- Josh eats twice as much as Abby, so Josh eats 2 × 2 = 4 slices per day.\n- Together, they eat 2 + 4 = 6 slices per day.\n- The loaf will last 24 ÷ 6 = 4 days.\n</think>\n\nAbby eats 2 slices per day.\nJosh eats twice as much as Abby: 2 × 2 = 4 slices per day.\nTogether they eat: 2 + 4 = 6 slices per day.\nThe loaf has 24 slices, so it will last: 24 ÷ 6 = 4 days.\n\nAnswer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.8635476939962246
+  },
+  "response": {
+    "id": "cmpl-85ff2820b95bf731",
+    "object": "text_completion",
+    "created": 1791693724,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this problem step by step.\n\n- A loaf of bread has 24 slices.\n- Abby eats 2 slices per day.\n- Josh eats twice as much as Abby, so Josh eats 2 × 2 = 4 slices per day.\n- Together, they eat 2 + 4 = 6 slices per day.\n- The loaf will last 24 ÷ 6 = 4 days.\n</think>\n\nAbby eats 2 slices per day.\nJosh eats twice as much as Abby: 2 × 2 = 4 slices per day.\nTogether they eat: 2 + 4 = 6 slices per day.\nThe loaf has 24 slices, so it will last: 24 ÷ 6 = 4 days.\n\nAnswer: 4",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 103,
+      "total_tokens": 278,
+      "completion_tokens": 175,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

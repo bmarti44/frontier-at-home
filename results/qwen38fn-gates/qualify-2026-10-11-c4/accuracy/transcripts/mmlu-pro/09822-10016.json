@@ -1,0 +1,58 @@
+{
+  "index": 9822,
+  "task_id": 10016,
+  "rendered_prompt_sha256": "66acce0d961157a56b6923867503c6ac33c82d16ebe82c494fb73037d5eb239b",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Using Ohm's Law: V = IR\n\nFirst, find the resistance:\nR = V₁ / I₁ = 120 V / 8.00 A = 15 Ω\n\nNow find the new current when V₂ = 180 V:\nI₂ = V₂ / R = 180 V / 15 Ω = 12.0 A\n\nThe answer is C.\n</think>\n\nAnswer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.13845327400486
+  },
+  "response": {
+    "id": "cmpl-9c1a72794f60f00b",
+    "object": "text_completion",
+    "created": 1791699703,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Using Ohm's Law: V = IR\n\nFirst, find the resistance:\nR = V₁ / I₁ = 120 V / 8.00 A = 15 Ω\n\nNow find the new current when V₂ = 180 V:\nI₂ = V₂ / R = 180 V / 15 Ω = 12.0 A\n\nThe answer is C.\n</think>\n\nAnswer: C",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 208,
+      "total_tokens": 305,
+      "completion_tokens": 97,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

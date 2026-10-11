@@ -1,0 +1,59 @@
+{
+  "index": 132,
+  "task_id": 132,
+  "rendered_prompt_sha256": "310884c3a2aab71e810f97491ce884e3e02bd0bf2c8deb45a3fcfb5f76b03153",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nPam rode the roller coaster 2 times.\nFred rode the roller coaster 4 times.\nEach of them rode the luge 2 times (so Pam rode luge 2 times, Fred rode luge 2 times).\n\nTotal rides:\n- Pam: 2 (roller coaster) + 2 (luge) = 4 rides\n- Fred: 4 (roller coaster) + 2 (luge) = 6 rides\n\nTotal rides = 4 + 6 = 10 rides\n\nEach ride costs 6 tickets.\n\nTotal tickets = 10 × 6 = 60 tickets.\n</think>\n\nLet me break this down:\n\n**Pam's rides:**\n- Roller coaster: 2 times\n- Luge: 2 times\n- Total: 4 rides\n\n**Fred's rides:**\n- Roller coaster: 4 times\n- Luge: 2 times\n- Total: 6 rides\n\n**Total rides:** 4 + 6 = 10 rides\n\n**Total tickets:** 10 × 6 = 60 tickets\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.004470833002415
+  },
+  "response": {
+    "id": "cmpl-9a939e3aa87801c1",
+    "object": "text_completion",
+    "created": 1791693879,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nPam rode the roller coaster 2 times.\nFred rode the roller coaster 4 times.\nEach of them rode the luge 2 times (so Pam rode luge 2 times, Fred rode luge 2 times).\n\nTotal rides:\n- Pam: 2 (roller coaster) + 2 (luge) = 4 rides\n- Fred: 4 (roller coaster) + 2 (luge) = 6 rides\n\nTotal rides = 4 + 6 = 10 rides\n\nEach ride costs 6 tickets.\n\nTotal tickets = 10 × 6 = 60 tickets.\n</think>\n\nLet me break this down:\n\n**Pam's rides:**\n- Roller coaster: 2 times\n- Luge: 2 times\n- Total: 4 rides\n\n**Fred's rides:**\n- Roller coaster: 4 times\n- Luge: 2 times\n- Total: 6 rides\n\n**Total rides:** 4 + 6 = 10 rides\n\n**Total tickets:** 10 × 6 = 60 tickets\n\nAnswer: 60",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 124,
+      "total_tokens": 373,
+      "completion_tokens": 249,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

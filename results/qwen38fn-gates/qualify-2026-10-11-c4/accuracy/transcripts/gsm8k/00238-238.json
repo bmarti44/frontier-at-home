@@ -1,0 +1,60 @@
+{
+  "index": 238,
+  "task_id": 238,
+  "rendered_prompt_sha256": "05da83901e0fa7fd07afdc2f6ef9b240ee1f009d225a40109717aab6a5f68c4d",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Jessa is 20 years old.\n- Joan is five years older than Jessa, so Joan is 20 + 5 = 25 years old.\n- Mary is two years younger than Joan, so Mary is 25 - 2 = 23 years old.\n\nSum = 20 + 25 + 23 = 68.\n</think>\n\nJessa is 20 years old.\nJoan is 5 years older than Jessa: 20 + 5 = 25.\nMary is 2 years younger than Joan: 25 - 2 = 23.\n\nSum: 20 + 25 + 23 = 68.\n\nAnswer: 68",
+  "finish_reason": "stop",
+  "expected": "68",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.743939157000568
+  },
+  "response": {
+    "id": "cmpl-bf2e4221fe2de751",
+    "object": "text_completion",
+    "created": 1791693625,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Jessa is 20 years old.\n- Joan is five years older than Jessa, so Joan is 20 + 5 = 25 years old.\n- Mary is two years younger than Joan, so Mary is 25 - 2 = 23 years old.\n\nSum = 20 + 25 + 23 = 68.\n</think>\n\nJessa is 20 years old.\nJoan is 5 years older than Jessa: 20 + 5 = 25.\nMary is 2 years younger than Joan: 25 - 2 = 23.\n\nSum: 20 + 25 + 23 = 68.\n\nAnswer: 68",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 105,
+      "total_tokens": 279,
+      "completion_tokens": 174,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>system\nReasoning effort is set to low. Keep your thinking brief and focused, moving directly to the conclusion without unnecessary elaboration.<|im_end|>\n<|im_start|>user\nMary is two years younger than Joan, who is five years older than Jessa. If Jessa is 20 years old, what is the sum of the ages of the three girls?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|>\n<|im_start|>assistant\n<think>\n"
+}

@@ -1,0 +1,59 @@
+{
+  "index": 66,
+  "task_id": 66,
+  "rendered_prompt_sha256": "7b6df183947bb40ab5c0f245d89e36d2f7106db4cc75bbef92916b9893e6a02b",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me break down this problem:\n\n- 4 schools\n- Each school has:\n  - 1 girls' basketball team (5 players)\n  - 1 boys' basketball team (5 players)\n  - 1 coach for the girls' team\n  - 1 coach for the boys' team\n\nSo per school: 5 + 5 + 1 + 1 = 12 people\n\nTotal: 4 × 12 = 48 people\n</think>\n\nLet me work through this step by step.\n\n**Per school:**\n- Girls' team: 5 players\n- Boys' team: 5 players\n- Coach for girls' team: 1\n- Coach for boys' team: 1\n\nTotal per school: 5 + 5 + 1 + 1 = 12 people\n\n**All 4 schools:**\n4 × 12 = 48 people\n\nAnswer: 48",
+  "finish_reason": "stop",
+  "expected": "48",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.333407819001877
+  },
+  "response": {
+    "id": "cmpl-bbf4e15d7b14a6b2",
+    "object": "text_completion",
+    "created": 1791693655,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me break down this problem:\n\n- 4 schools\n- Each school has:\n  - 1 girls' basketball team (5 players)\n  - 1 boys' basketball team (5 players)\n  - 1 coach for the girls' team\n  - 1 coach for the boys' team\n\nSo per school: 5 + 5 + 1 + 1 = 12 people\n\nTotal: 4 × 12 = 48 people\n</think>\n\nLet me work through this step by step.\n\n**Per school:**\n- Girls' team: 5 players\n- Boys' team: 5 players\n- Coach for girls' team: 1\n- Coach for boys' team: 1\n\nTotal per school: 5 + 5 + 1 + 1 = 12 people\n\n**All 4 schools:**\n4 × 12 = 48 people\n\nAnswer: 48",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 124,
+      "total_tokens": 326,
+      "completion_tokens": 202,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

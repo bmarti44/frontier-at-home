@@ -1,0 +1,59 @@
+{
+  "index": 851,
+  "task_id": 851,
+  "rendered_prompt_sha256": "5e2e5f4b3b9f67ada9be4034c99477bd082147ca32efcb3f5c9e7297b24cdf4d",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "James buys 2 pairs of shoes per month.\nHe spends $2640 on shoes each year.\n\nFirst, find how many pairs he buys per year:\n2 pairs/month × 12 months = 24 pairs per year\n\nThen, find the average cost per pair:\n$2640 ÷ 24 = $110\n</think>\n\nJames buys 2 pairs of shoes per month, so in a year he buys:\n\n2 × 12 = 24 pairs of shoes\n\nHe spends $2640 per year, so the average cost per pair is:\n\n$2640 ÷ 24 = $110\n\nAnswer: 110",
+  "finish_reason": "stop",
+  "expected": "110",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.721026497994899
+  },
+  "response": {
+    "id": "cmpl-94bcf3f1b92481da",
+    "object": "text_completion",
+    "created": 1791694050,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "James buys 2 pairs of shoes per month.\nHe spends $2640 on shoes each year.\n\nFirst, find how many pairs he buys per year:\n2 pairs/month × 12 months = 24 pairs per year\n\nThen, find the average cost per pair:\n$2640 ÷ 24 = $110\n</think>\n\nJames buys 2 pairs of shoes per month, so in a year he buys:\n\n2 × 12 = 24 pairs of shoes\n\nHe spends $2640 per year, so the average cost per pair is:\n\n$2640 ÷ 24 = $110\n\nAnswer: 110",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 103,
+      "total_tokens": 256,
+      "completion_tokens": 153,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

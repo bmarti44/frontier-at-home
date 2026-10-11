@@ -1,0 +1,59 @@
+{
+  "index": 970,
+  "task_id": 970,
+  "rendered_prompt_sha256": "02a459e555af9ccb5a588d77a0fee7947064a62d4749c5b250fae27dcf54ec3f",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Carlton's team has 13 players.\nZeke's team has 7 more players than Carlton's, so Zeke's team has 13 + 7 = 20 players.\nCombined: 13 + 20 = 33 players.\n</think>\n\nCarlton's team has 13 players.\nZeke's team has 13 + 7 = 20 players.\nCombined: 13 + 20 = 33 players.\n\nAnswer: 33",
+  "finish_reason": "stop",
+  "expected": "33",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.9995427020039642
+  },
+  "response": {
+    "id": "cmpl-a7b5dc5b2466c6de",
+    "object": "text_completion",
+    "created": 1791693862,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Carlton's team has 13 players.\nZeke's team has 7 more players than Carlton's, so Zeke's team has 13 + 7 = 20 players.\nCombined: 13 + 20 = 33 players.\n</think>\n\nCarlton's team has 13 players.\nZeke's team has 13 + 7 = 20 players.\nCombined: 13 + 20 = 33 players.\n\nAnswer: 33",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 100,
+      "total_tokens": 212,
+      "completion_tokens": 112,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

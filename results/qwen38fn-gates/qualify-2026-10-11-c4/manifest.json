@@ -16,14 +16,15 @@
       "--out",
       "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4",
       "--cells",
-      "speed,toolcall,teacher,context",
-      "--with-soak"
+      "accuracy",
+      "--accuracy-split",
+      "dev"
     ]
   },
   "dry_run": false,
   "no_launch": true,
-  "start_unix": 1791690199.6530817,
-  "start_iso": "2026-10-11T03:43:19.727128+00:00",
+  "start_unix": 1791693520.9942884,
+  "start_iso": "2026-10-11T04:38:41.068489+00:00",
   "profile": {
     "profile_id": "qwen3.8-flash-next/cuda-spark-128g-1m",
     "model_slug": "qwen3.8-flash-next",
@@ -216,7 +217,7 @@
     "gpu_driver": "580.159.03"
   },
   "git": {
-    "head": "b738d944a0e9f657d611911462f007f438b1d180",
+    "head": "8cf8af18e98181c68d22066ddb4ea69dedd04069",
     "branch": "claim-model/qwen3.8-flash-next/cuda",
     "dirty": true
   },
@@ -234,13 +235,15 @@
     "30_bench_speed_blocks.py": "f3d9fdf9d3308d4959b1e759b00e413ca5ea0560af65f5293fe34fe7ea6ac60b"
   },
   "cells_selected": [
-    "speed",
-    "toolcall",
-    "teacher",
-    "context",
-    "soak"
+    "accuracy"
   ],
-  "cells_kept_from_previous_run": [],
+  "cells_kept_from_previous_run": [
+    "context",
+    "soak",
+    "speed",
+    "teacher",
+    "toolcall"
+  ],
   "cells": {
     "speed": {
       "argv": [
@@ -374,12 +377,111 @@
       "wall_s": 1806.7032236399973,
       "start_unix": 1791690855.3701236,
       "end_unix": 1791692662.0754278
+    },
+    "accuracy": {
+      "argv": {
+        "gsm8k": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/acc-gsm8k.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "gsm8k",
+          "--split",
+          "dev",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/transcripts/gsm8k",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low"
+        ],
+        "mmlu-pro": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/acc-mmlu-pro.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "mmlu-pro",
+          "--split",
+          "dev",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/transcripts/mmlu-pro",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low"
+        ],
+        "humaneval": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/acc-humaneval.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "humaneval",
+          "--split",
+          "all",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/transcripts/humaneval",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low"
+        ]
+      },
+      "skip_reason": null,
+      "evidence": "accuracy/acc-<suite>.json",
+      "status": "OK",
+      "exit_code": {
+        "gsm8k": 0,
+        "mmlu-pro": 0,
+        "humaneval": 0
+      },
+      "wall_s": 10671.958029464993,
+      "start_unix": 1791693521.1211016,
+      "end_unix": 1791704193.0799391
     }
   },
   "served_models_listed": [
     "qwen3.8-flash-next",
     "default"
   ],
-  "end_unix": 1791692662.075981,
-  "end_iso": "2026-10-11T04:24:22.075990+00:00"
+  "end_unix": 1791704193.0802562,
+  "end_iso": "2026-10-11T07:36:33.080260+00:00"
 }

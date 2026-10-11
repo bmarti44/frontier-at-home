@@ -1,0 +1,59 @@
+{
+  "index": 289,
+  "task_id": 289,
+  "rendered_prompt_sha256": "b0ed617c6856ac0986914c7e608a525df509d1f8385dfe2fc114480a0dd5cbb1",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Fast lane car speed: 60 miles/hour\n- Slow lane car speed: half of 60 = 30 miles/hour\n- Distance: 480 miles\n\nTime for slow lane car = Distance / Speed = 480 / 30 = 16 hours\n</think>\n\nThe car in the slow lane travels at half the speed of the fast lane car:\n- Fast lane speed: 60 mph\n- Slow lane speed: 60 / 2 = 30 mph\n\nTime = Distance / Speed = 480 / 30 = 16 hours\n\nAnswer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.548647566
+  },
+  "response": {
+    "id": "cmpl-8f031f4fbb9d0e52",
+    "object": "text_completion",
+    "created": 1791693564,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Fast lane car speed: 60 miles/hour\n- Slow lane car speed: half of 60 = 30 miles/hour\n- Distance: 480 miles\n\nTime for slow lane car = Distance / Speed = 480 / 30 = 16 hours\n</think>\n\nThe car in the slow lane travels at half the speed of the fast lane car:\n- Fast lane speed: 60 mph\n- Slow lane speed: 60 / 2 = 30 mph\n\nTime = Distance / Speed = 480 / 30 = 16 hours\n\nAnswer: 16",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 129,
+      "total_tokens": 277,
+      "completion_tokens": 148,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

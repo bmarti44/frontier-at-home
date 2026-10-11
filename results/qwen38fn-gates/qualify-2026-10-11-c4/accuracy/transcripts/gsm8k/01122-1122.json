@@ -1,0 +1,59 @@
+{
+  "index": 1122,
+  "task_id": 1122,
+  "rendered_prompt_sha256": "b64e6739ae778378d2bba64544011815bc9554b3c0da5f3eb4b1d0fc99f0405a",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\n- Order: 400 toys\n- 5 workers available\n- 2 workers produce 6 toys/hour each\n- 2 workers produce 4 toys/hour each\n- 1 worker produces x toys/hour (unknown)\n- They work 10 hours\n- After 10 hours, they still need 20 more toys\n\nSo total produced in 10 hours = 400 - 20 = 380 toys\n\nProduction per hour:\n- 2 workers × 6 toys/hour = 12 toys/hour\n- 2 workers × 4 toys/hour = 8 toys/hour\n- 1 worker × x toys/hour = x toys/hour\n\nTotal per hour = 12 + 8 + x = 20 + x\n\nIn 10 hours: 10(20 + x) = 380\n20 + x = 38\nx = 18\n\nThe fifth worker produces 18 toys per hour.\n</think>\n\n**Setting up the problem:**\n\n- Total order: 400 toys\n- After 10 hours, they still need 20 more toys\n- So they produced: 400 − 20 = **380 toys** in 10 hours\n\n**Production per hour:**\n- 2 workers × 6 toys/hr = 12 toys/hr\n- 2 workers × 4 toys/hr = 8 toys/hr\n- 1 worker × x toys/hr = x toys/hr\n\n**Equation:**\n\n10 × (12 + 8 + x) = 380\n\n10 × (20 + x) = 380\n\n20 + x = 38\n\nx = 18\n\nAnswer: 18",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.345961599996372
+  },
+  "response": {
+    "id": "cmpl-945c6cedc48c4e20",
+    "object": "text_completion",
+    "created": 1791693675,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\n- Order: 400 toys\n- 5 workers available\n- 2 workers produce 6 toys/hour each\n- 2 workers produce 4 toys/hour each\n- 1 worker produces x toys/hour (unknown)\n- They work 10 hours\n- After 10 hours, they still need 20 more toys\n\nSo total produced in 10 hours = 400 - 20 = 380 toys\n\nProduction per hour:\n- 2 workers × 6 toys/hour = 12 toys/hour\n- 2 workers × 4 toys/hour = 8 toys/hour\n- 1 worker × x toys/hour = x toys/hour\n\nTotal per hour = 12 + 8 + x = 20 + x\n\nIn 10 hours: 10(20 + x) = 380\n20 + x = 38\nx = 18\n\nThe fifth worker produces 18 toys per hour.\n</think>\n\n**Setting up the problem:**\n\n- Total order: 400 toys\n- After 10 hours, they still need 20 more toys\n- So they produced: 400 − 20 = **380 toys** in 10 hours\n\n**Production per hour:**\n- 2 workers × 6 toys/hr = 12 toys/hr\n- 2 workers × 4 toys/hr = 8 toys/hr\n- 1 worker × x toys/hr = x toys/hr\n\n**Equation:**\n\n10 × (12 + 8 + x) = 380\n\n10 × (20 + x) = 380\n\n20 + x = 38\n\nx = 18\n\nAnswer: 18",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 163,
+      "total_tokens": 565,
+      "completion_tokens": 402,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

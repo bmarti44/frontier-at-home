@@ -1,0 +1,59 @@
+{
+  "index": 969,
+  "task_id": 969,
+  "rendered_prompt_sha256": "0fbc86e63ed58126e68da16263f578bc1240ab162c345d0f3730879616f3ed08",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nJohn is buying phones for: himself, his 2 kids, and his wife = 4 phones total.\n\nThe phone price is $600.\n\n\"Each phone after the first 2 is half price.\"\n\nSo:\n- Phone 1: $600\n- Phone 2: $600\n- Phone 3: $600 / 2 = $300\n- Phone 4: $600 / 2 = $300\n\nTotal = $600 + $600 + $300 + $300 = $1800\n</think>\n\nJohn is buying 4 phones total (himself, 2 kids, and his wife).\n\n- Phone 1: $600\n- Phone 2: $600\n- Phone 3: $300 (half price)\n- Phone 4: $300 (half price)\n\nTotal: $600 + $600 + $300 + $300 = $1,800\n\nAnswer: 1800",
+  "finish_reason": "stop",
+  "expected": "1800",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.857738635000715
+  },
+  "response": {
+    "id": "cmpl-be08ba9a0cfe321d",
+    "object": "text_completion",
+    "created": 1791693890,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nJohn is buying phones for: himself, his 2 kids, and his wife = 4 phones total.\n\nThe phone price is $600.\n\n\"Each phone after the first 2 is half price.\"\n\nSo:\n- Phone 1: $600\n- Phone 2: $600\n- Phone 3: $600 / 2 = $300\n- Phone 4: $600 / 2 = $300\n\nTotal = $600 + $600 + $300 + $300 = $1800\n</think>\n\nJohn is buying 4 phones total (himself, 2 kids, and his wife).\n\n- Phone 1: $600\n- Phone 2: $600\n- Phone 3: $300 (half price)\n- Phone 4: $300 (half price)\n\nTotal: $600 + $600 + $300 + $300 = $1,800\n\nAnswer: 1800",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 115,
+      "total_tokens": 365,
+      "completion_tokens": 250,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

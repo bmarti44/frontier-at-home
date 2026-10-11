@@ -1,0 +1,59 @@
+{
+  "index": 297,
+  "task_id": 297,
+  "rendered_prompt_sha256": "30ecc0c0ee640ce348b601a2f5f3d18b2bcb2daab6a7fc16dfd61d8e77f6fb09",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me calculate the total crates sold and compare to the target.\n\nTarget: 120 crates\n\nCrates sold:\n- Monday: closed (0)\n- Tuesday: 15\n- Wednesday: 12\n- Thursday: 18\n- Friday: closed (0)\n- Weekend (Saturday + Sunday): 20\n\nTotal sold = 15 + 12 + 18 + 20 = 65\n\nDifference from target = 120 - 65 = 55\n</think>\n\nLet me add up the crates Sam sold:\n\n- Monday: 0 (closed)\n- Tuesday: 15\n- Wednesday: 12\n- Thursday: 18\n- Friday: 0 (closed)\n- Weekend: 20\n\nTotal sold = 15 + 12 + 18 + 20 = 65 crates\n\nTarget = 120 crates\n\nDifference = 120 - 65 = 55 crates\n\nAnswer: 55",
+  "finish_reason": "stop",
+  "expected": "55",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.348182660003658
+  },
+  "response": {
+    "id": "cmpl-8fccd3c9abf18907",
+    "object": "text_completion",
+    "created": 1791694157,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me calculate the total crates sold and compare to the target.\n\nTarget: 120 crates\n\nCrates sold:\n- Monday: closed (0)\n- Tuesday: 15\n- Wednesday: 12\n- Thursday: 18\n- Friday: closed (0)\n- Weekend (Saturday + Sunday): 20\n\nTotal sold = 15 + 12 + 18 + 20 = 65\n\nDifference from target = 120 - 65 = 55\n</think>\n\nLet me add up the crates Sam sold:\n\n- Monday: 0 (closed)\n- Tuesday: 15\n- Wednesday: 12\n- Thursday: 18\n- Friday: 0 (closed)\n- Weekend: 20\n\nTotal sold = 15 + 12 + 18 + 20 = 65 crates\n\nTarget = 120 crates\n\nDifference = 120 - 65 = 55 crates\n\nAnswer: 55",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 144,
+      "total_tokens": 371,
+      "completion_tokens": 227,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

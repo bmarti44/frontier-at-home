@@ -1,0 +1,59 @@
+{
+  "index": 179,
+  "task_id": 179,
+  "rendered_prompt_sha256": "b48db26f5428b0937cf3c8ab64abc9583adecd934179c0d1f5c098dd64329dbe",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Lloyd earns $10 per hour.\nFirst week: 5 hours\nSecond week: 8 hours\nTotal hours: 5 + 8 = 13 hours\nTotal earnings: 13 × $10 = $130\n</think>\n\nLloyd earns $10 per hour.\n\n- First week: 5 hours × $10 = $50\n- Second week: 8 hours × $10 = $80\n- Total: $50 + $80 = $130\n\nAnswer: 130",
+  "finish_reason": "stop",
+  "expected": "130",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.1981713170025614
+  },
+  "response": {
+    "id": "cmpl-902ee7474478ed57",
+    "object": "text_completion",
+    "created": 1791694010,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Lloyd earns $10 per hour.\nFirst week: 5 hours\nSecond week: 8 hours\nTotal hours: 5 + 8 = 13 hours\nTotal earnings: 13 × $10 = $130\n</think>\n\nLloyd earns $10 per hour.\n\n- First week: 5 hours × $10 = $50\n- Second week: 8 hours × $10 = $80\n- Total: $50 + $80 = $130\n\nAnswer: 130",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 109,
+      "total_tokens": 230,
+      "completion_tokens": 121,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

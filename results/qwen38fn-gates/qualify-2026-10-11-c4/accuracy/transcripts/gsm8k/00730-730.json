@@ -1,0 +1,59 @@
+{
+  "index": 730,
+  "task_id": 730,
+  "rendered_prompt_sha256": "18d33707f9f7d1fb96296fedc1db8b9229478ce5246bc7db2bf4b9f8c909e99d",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me solve this step by step.\n\nParker chews 4 pieces of gum per day.\nHe needs gum for 30 days.\nTotal pieces needed = 4 × 30 = 120 pieces.\n\nEach pack has 15 pieces.\nNumber of packs needed = 120 ÷ 15 = 8 packs.\n</think>\n\nParker chews 4 pieces per day for 30 days:\n4 × 30 = 120 pieces needed\n\nEach pack has 15 pieces:\n120 ÷ 15 = 8 packs\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.018223770995974
+  },
+  "response": {
+    "id": "cmpl-b1ed587e5b312f90",
+    "object": "text_completion",
+    "created": 1791693630,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me solve this step by step.\n\nParker chews 4 pieces of gum per day.\nHe needs gum for 30 days.\nTotal pieces needed = 4 × 30 = 120 pieces.\n\nEach pack has 15 pieces.\nNumber of packs needed = 120 ÷ 15 = 8 packs.\n</think>\n\nParker chews 4 pieces per day for 30 days:\n4 × 30 = 120 pieces needed\n\nEach pack has 15 pieces:\n120 ÷ 15 = 8 packs\n\nAnswer: 8",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 111,
+      "total_tokens": 248,
+      "completion_tokens": 137,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

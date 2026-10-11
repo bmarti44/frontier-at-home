@@ -1,0 +1,59 @@
+{
+  "index": 811,
+  "task_id": 811,
+  "rendered_prompt_sha256": "7f62b4ed1d949fc7613e35ba93974b94831fd3c4ef2199d9512089ab3273d966",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nFelix charges $0.25 per branch climbed.\nHe made $105 during the week.\n\nFirst, find total branches climbed in the week:\n$105 ÷ $0.25 = 420 branches\n\nNow, find average branches per day. A week has 7 days.\n420 ÷ 7 = 60 branches per day\n</think>\n\nTo find the average number of branches Felix climbed per day:\n\n1. **Total branches climbed in the week:** $105 ÷ $0.25 = 420 branches\n2. **Average per day (7 days in a week):** 420 ÷ 7 = 60 branches\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.130978704997688
+  },
+  "response": {
+    "id": "cmpl-9dd7d7ca905d32b1",
+    "object": "text_completion",
+    "created": 1791694100,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nFelix charges $0.25 per branch climbed.\nHe made $105 during the week.\n\nFirst, find total branches climbed in the week:\n$105 ÷ $0.25 = 420 branches\n\nNow, find average branches per day. A week has 7 days.\n420 ÷ 7 = 60 branches per day\n</think>\n\nTo find the average number of branches Felix climbed per day:\n\n1. **Total branches climbed in the week:** $105 ÷ $0.25 = 420 branches\n2. **Average per day (7 days in a week):** 420 ÷ 7 = 60 branches\n\nAnswer: 60",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 148,
+      "total_tokens": 318,
+      "completion_tokens": 170,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

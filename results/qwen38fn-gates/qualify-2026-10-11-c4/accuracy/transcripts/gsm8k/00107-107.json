@@ -1,0 +1,59 @@
+{
+  "index": 107,
+  "task_id": 107,
+  "rendered_prompt_sha256": "66326a7a3b477f738ac28609669fc24a8e544f0e1678542caae29c2421285972",
+  "rendering": "official-encoder-qwen38-thinking-effort-low",
+  "encoder": "qwen38",
+  "completion": "Let me work through this step by step.\n\nMonday: 1 hour (1-hour episode)\nTuesday: 1 hour (1-hour episode)\nWednesday: some number of 30-minute episodes\nThursday: 1 hour + 30 minutes = 1.5 hours\nFriday: 2 × 1 hour = 2 hours\n\nTotal so far (without Wednesday): 1 + 1 + 1.5 + 2 = 5.5 hours\n\nTotal watched: 7 hours\n\nWednesday: 7 - 5.5 = 1.5 hours = 90 minutes\n\nNumber of 30-minute episodes: 90 / 30 = 3\n</think>\n\nLet me add up the TV time for each day:\n\n- **Monday:** 1 hour\n- **Tuesday:** 1 hour\n- **Wednesday:** ? (some 30-minute episodes)\n- **Thursday:** 1 hour + 30 minutes = 1.5 hours\n- **Friday:** 2 × 1 hour = 2 hours\n\nTotal without Wednesday: 1 + 1 + 1.5 + 2 = 5.5 hours\n\nWednesday's time: 7 − 5.5 = 1.5 hours = 90 minutes\n\nNumber of 30-minute episodes: 90 ÷ 30 = **3**\n\nAnswer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "qwen3.8-flash-next",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.240202525004861
+  },
+  "response": {
+    "id": "cmpl-b1ee615b468aa7d2",
+    "object": "text_completion",
+    "created": 1791694036,
+    "model": "qwen3.8-flash-next",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Let me work through this step by step.\n\nMonday: 1 hour (1-hour episode)\nTuesday: 1 hour (1-hour episode)\nWednesday: some number of 30-minute episodes\nThursday: 1 hour + 30 minutes = 1.5 hours\nFriday: 2 × 1 hour = 2 hours\n\nTotal so far (without Wednesday): 1 + 1 + 1.5 + 2 = 5.5 hours\n\nTotal watched: 7 hours\n\nWednesday: 7 - 5.5 = 1.5 hours = 90 minutes\n\nNumber of 30-minute episodes: 90 / 30 = 3\n</think>\n\nLet me add up the TV time for each day:\n\n- **Monday:** 1 hour\n- **Tuesday:** 1 hour\n- **Wednesday:** ? (some 30-minute episodes)\n- **Thursday:** 1 hour + 30 minutes = 1.5 hours\n- **Friday:** 2 × 1 hour = 2 hours\n\nTotal without Wednesday: 1 + 1 + 1.5 + 2 = 5.5 hours\n\nWednesday's time: 7 − 5.5 = 1.5 hours = 90 minutes\n\nNumber of 30-minute episodes: 90 ÷ 30 = **3**\n\nAnswer: 3",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.31.1rc1.dev152+g72d59adc2-ef09e563",
+    "usage": {
+      "prompt_tokens": 181,
+      "total_tokens": 479,
+      "completion_tokens": 298,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

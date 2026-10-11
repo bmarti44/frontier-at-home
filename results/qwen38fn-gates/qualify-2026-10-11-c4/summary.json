@@ -5,10 +5,10 @@
   "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m",
   "served_model": "qwen3.8-flash-next",
   "out": "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4",
-  "start_unix": 1791690199.6530817,
-  "end_unix": 1791692662.075981,
-  "start_iso": "2026-10-11T03:43:19.727128+00:00",
-  "end_iso": "2026-10-11T04:24:22.075990+00:00",
+  "start_unix": 1791693520.9942884,
+  "end_unix": 1791704193.0802562,
+  "start_iso": "2026-10-11T04:38:41.068489+00:00",
+  "end_iso": "2026-10-11T07:36:33.080260+00:00",
   "targets": {
     "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
     "decode_tok_s_min": {
@@ -32,46 +32,11 @@
   "cells": {
     "speed": {
       "status": "OK",
-      "evidence": "speed/speed.json",
-      "start_unix": 1791690199.7745829,
-      "argv": [
-        "/usr/bin/python3",
-        "/home/bmarti44/qwen38fn/scripts/30_bench_speed_blocks.py",
-        "--base-url",
-        "http://127.0.0.1:8017",
-        "--out",
-        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/speed/speed.json",
-        "--stack-label",
-        "qwen3.8-flash-next-cuda-spark-128g-1m",
-        "--reps",
-        "2",
-        "--warmup",
-        "1",
-        "--max-tokens",
-        "384",
-        "--min-completion-tokens",
-        "200",
-        "--seed",
-        "42",
-        "--context-levels",
-        "0,28672",
-        "--ignore-eos-supported",
-        "--request-timeout",
-        "900",
-        "--extra-body",
-        "{\"min_tokens\":320}",
-        "--model-id",
-        "qwen3.8-flash-next",
-        "--max-tokens-per-event",
-        "4",
-        "--output-tokenizer-path",
-        "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json",
-        "--output-tokenizer-sha256",
-        "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3"
-      ],
-      "skip_reason": null,
       "exit_code": 0,
       "wall_s": 132.75270078599715,
+      "start_unix": 1791690199.7745829,
+      "end_unix": 1791690332.527672,
+      "evidence": "speed/speed.json",
       "result": {
         "levels": {
           "0": {
@@ -91,77 +56,175 @@
         },
         "suite_valid": true,
         "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m"
-      },
-      "end_unix": 1791690332.527672
+      }
     },
     "toolcall": {
       "status": "OK",
-      "evidence": "toolcall/toolcall.json",
-      "start_unix": 1791690332.5280645,
-      "argv": [
-        "/usr/bin/python3",
-        "/home/bmarti44/qwen38fn/scripts/39_bench_toolcall.py",
-        "--base-url",
-        "http://127.0.0.1:8017/v1",
-        "--model",
-        "qwen3.8-flash-next",
-        "--out",
-        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/toolcall/toolcall.json",
-        "--temperature",
-        "0"
-      ],
-      "skip_reason": null,
       "exit_code": 0,
       "wall_s": 68.25562023800012,
+      "start_unix": 1791690332.5280645,
+      "end_unix": 1791690400.7844043,
+      "evidence": "toolcall/toolcall.json",
       "result": {
         "passed": 20,
         "total": 20,
         "score": 1.0,
         "suite": "toolcall-v1"
-      },
-      "end_unix": 1791690400.7844043
+      }
     },
     "teacher": {
       "status": "SKIPPED",
-      "evidence": "teacher/summary.json",
+      "exit_code": null,
+      "wall_s": null,
       "start_unix": 1791690400.7851093,
-      "argv": null,
-      "skip_reason": "model.json declares no reference_logits block (BF16 teacher logits dataset)",
-      "end_unix": 1791690400.7851112
+      "end_unix": 1791690400.7851112,
+      "evidence": "teacher/summary.json",
+      "status_reason": "model.json declares no reference_logits block (BF16 teacher logits dataset)"
+    },
+    "accuracy": {
+      "status": "OK",
+      "evidence": "accuracy/acc-<suite>.json",
+      "start_unix": 1791693521.1211016,
+      "argv": {
+        "gsm8k": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/acc-gsm8k.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "gsm8k",
+          "--split",
+          "dev",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/transcripts/gsm8k",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low"
+        ],
+        "mmlu-pro": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/acc-mmlu-pro.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "mmlu-pro",
+          "--split",
+          "dev",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/transcripts/mmlu-pro",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low"
+        ],
+        "humaneval": [
+          "/usr/bin/python3",
+          "/home/bmarti44/qwen38fn/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8017",
+          "--out",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/acc-humaneval.json",
+          "--stack-label",
+          "qwen3.8-flash-next-cuda-spark-128g-1m",
+          "--suite",
+          "humaneval",
+          "--split",
+          "all",
+          "--transcripts-dir",
+          "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/accuracy/transcripts/humaneval",
+          "--encoder",
+          "qwen38",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "qwen3.8-flash-next/cuda-spark-128g-1m",
+          "--config-hash",
+          "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
+          "--reasoning-effort",
+          "low"
+        ]
+      },
+      "skip_reason": null,
+      "exit_code": {
+        "gsm8k": 0,
+        "mmlu-pro": 0,
+        "humaneval": 0
+      },
+      "wall_s": 10671.958029464993,
+      "suites_kept_from_previous_run": [],
+      "result": {
+        "suites": {
+          "gsm8k": {
+            "accuracy": 0.99,
+            "n": 100,
+            "correct": 99,
+            "invalid_count": 0,
+            "split": "dev",
+            "wilson95": [
+              0.9455138038212946,
+              0.9982325679358593
+            ]
+          },
+          "mmlu-pro": {
+            "accuracy": 0.8735177865612648,
+            "n": 253,
+            "correct": 221,
+            "invalid_count": 1,
+            "split": "dev",
+            "wilson95": [
+              0.826898653159873,
+              0.9089638546603478
+            ]
+          },
+          "humaneval": {
+            "accuracy": 0.8475609756097561,
+            "n": 164,
+            "correct": 139,
+            "invalid_count": 0,
+            "split": "all",
+            "wilson95": [
+              0.7846483514233873,
+              0.8945640481887178
+            ]
+          }
+        }
+      },
+      "end_unix": 1791704193.0799391
     },
     "context": {
       "status": "OK",
-      "evidence": "context/summary.json",
-      "start_unix": 1791690400.7946732,
-      "argv": [
-        "/usr/bin/python3",
-        "/home/bmarti44/qwen38fn/scripts/50_probe_context.py",
-        "--base-url",
-        "http://127.0.0.1:8017",
-        "--model",
-        "qwen3.8-flash-next",
-        "--out",
-        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/context",
-        "--stack-label",
-        "qwen3.8-flash-next-cuda-spark-128g-1m",
-        "--slots",
-        "4",
-        "--tokens-per-slot",
-        "250128",
-        "--tokenizer-path",
-        "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json",
-        "--tokenizer-sha256",
-        "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
-        "--phase",
-        "both",
-        "--profile-id",
-        "qwen3.8-flash-next/cuda-spark-128g-1m",
-        "--mem-floor-gib",
-        "10"
-      ],
-      "skip_reason": null,
       "exit_code": 0,
       "wall_s": 454.5748519300032,
+      "start_unix": 1791690400.7946732,
+      "end_unix": 1791690855.369709,
+      "evidence": "context/summary.json",
       "result": {
         "verdict": "PASS",
         "total_tokens": 1000672,
@@ -179,30 +242,15 @@
           "memory_floor_pass": true,
           "total_tokens_ok": true
         }
-      },
-      "end_unix": 1791690855.369709
+      }
     },
     "soak": {
       "status": "OK",
-      "evidence": "soak/soak.json",
-      "start_unix": 1791690855.3701236,
-      "argv": [
-        "/usr/bin/python3",
-        "/home/bmarti44/qwen38fn/scripts/35_soak.py",
-        "--base-url",
-        "http://127.0.0.1:8017",
-        "--stack-label",
-        "qwen3.8-flash-next-cuda-spark-128g-1m",
-        "--config-hash",
-        "qwen3.8-flash-next-cuda-spark-128g-1m-c007c047fa69",
-        "--out",
-        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c4/soak/soak.json",
-        "--model",
-        "qwen3.8-flash-next"
-      ],
-      "skip_reason": null,
       "exit_code": 0,
       "wall_s": 1806.7032236399973,
+      "start_unix": 1791690855.3701236,
+      "end_unix": 1791692662.0754278,
+      "evidence": "soak/soak.json",
       "result": {
         "pass": true,
         "failed_gates": [],
@@ -211,8 +259,7 @@
         "decode_overall_median_tok_s": 31.0023153662907,
         "mem_available_min_gib": 12.483440399169922,
         "duration_seconds_actual": 1806.6314869019989
-      },
-      "end_unix": 1791692662.0754278
+      }
     }
   },
   "rows": [
@@ -303,6 +350,33 @@
       "measured": 20,
       "target": null,
       "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "gsm8k",
+      "measured": 0.99,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "humaneval",
+      "measured": 0.8475609756097561,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "mmlu-pro",
+      "measured": 0.8735177865612648,
+      "target": null,
+      "target_mode": "min",
       "baseline": null,
       "status": "measured"
     },
