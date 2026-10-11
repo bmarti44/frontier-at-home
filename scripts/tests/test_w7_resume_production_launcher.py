@@ -19,6 +19,15 @@ SPEC.loader.exec_module(MODULE)
 
 class W7ProductionLauncherTest(unittest.TestCase):
     def test_all_runtime_programs_are_kernel_sealed(self) -> None:
+        # The sealed launcher reads git state from its hard-coded production
+        # checkout (MODULE.REPO), not from this tree, and refuses to run while
+        # that checkout has any change or untracked file.
+        status = subprocess.run(
+            ["/usr/bin/git", "-C", MODULE.REPO, "status", "--porcelain"],
+            capture_output=True, text=True, check=False,
+        )
+        if status.returncode != 0 or status.stdout:
+            self.skipTest(f"precondition: {MODULE.REPO} is not a clean checkout")
         result = subprocess.run(
             [str(LAUNCHER), "--self-test"], cwd=ROOT, text=True,
             capture_output=True, timeout=15,
