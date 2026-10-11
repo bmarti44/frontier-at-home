@@ -126,11 +126,6 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   `speed_max_tokens_per_event` (1 + the speculative draft length, for
   servers that stream several tokens per SSE event, such as vLLM MTP) makes
   the speed cell run `scripts/30_bench_speed_blocks.py`.
-  `soak_mem_floor_gib` holds the soak cell to that floor through
-  `DSV4_SOAK_MEM_FLOOR_GIB` instead of `scripts/35_soak.py`'s 12 GiB default.
-  It is for a profile whose owner-set `safety.kill_floor_gib` sits below
-  12 GiB. It must be a finite number no lower than that kill floor, and the
-  kit records it in the manifest's soak cell.
 
 ## `model.json`: optional `reference_logits`
 

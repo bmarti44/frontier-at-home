@@ -16,9 +16,10 @@ import sys
 from pathlib import Path
 
 # Owner decision 2026-10-11: images on at 1M, kill floor 8 GiB. Candidate 8
-# added the host page-cache release that candidate 7 lacked; candidate 9 holds
-# the soak to the same 8 GiB floor (qualification_options.soak_mem_floor_gib).
-SOAK_FLOOR_GIB = 8.0
+# added the host page-cache release that candidate 7 lacked; candidate 9 scores
+# the soak at the repository-wide 5 GiB soak floor (owner, 2026-10-11), which
+# is 35_soak.py's default.
+SOAK_FLOOR_GIB = 5.0
 SWAP_MAX_GIB, FLOOR_GIB, TOOLCALL_MIN = 0.25, 8.0, 19
 # The profile's safety.minimum_start_gib: the switch's only admission.
 ADMISSION_GIB = 115.0
@@ -237,8 +238,8 @@ def main(ev):
                                 "mem_available_min_gib": soak.get("mem_available_min_gib")}
         if not isinstance(soak.get("pass"), bool):
             missing.append("soak.pass malformed")
-        elif soak.get("mem_floor_gib") != SOAK_FLOOR_GIB or soak.get("mem_floor_source") != "env-override":
-            missing.append(f"clause 8: soak not held to the declared {SOAK_FLOOR_GIB} GiB floor ({checks['soak_floor']})")
+        elif soak.get("mem_floor_gib") != SOAK_FLOOR_GIB or soak.get("mem_floor_source") != "default":
+            missing.append(f"clause 8: soak not held to the repository {SOAK_FLOOR_GIB} GiB floor ({checks['soak_floor']})")
         elif not soak["pass"]:
             fail.append("clause 8: soak")
 

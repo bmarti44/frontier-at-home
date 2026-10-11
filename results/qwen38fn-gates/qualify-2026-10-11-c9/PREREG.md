@@ -1,4 +1,4 @@
-# Qwen3.8-Flash-Next candidate 9: images on at 1M, host page-cache release, soak at the owner floor (preregistered)
+# Qwen3.8-Flash-Next candidate 9: images on at 1M, host page-cache release, soak at the 5 GiB repository floor (preregistered)
 
 This is an acceptance run of profile `qwen3.8-flash-next/cuda-spark-128g-1m`
 on the Spark. This file was committed before any weights were loaded for this
@@ -34,8 +34,9 @@ failed only clause 8, the soak.**
   a minimum of 9.92 GiB. But `35_soak.py` scored that against its default
   12 GiB floor: the kit passes the profile's 8 GiB floor to the context cell
   and not to the soak.
-- **That is a harness mismatch.** Candidate 9 closes it and changes nothing
-  else.
+- **That is a harness mismatch.** The owner closed it for every profile: one
+  5 GiB soak floor across the board (2026-10-11). Candidate 9 adopts that
+  floor and changes nothing else.
 
 **CPU-only falsifier (before this freeze):**
 - Reading qwen38-1m's GGUF and mmproj into page cache gave MemFree 91.08 GiB
@@ -43,7 +44,7 @@ failed only clause 8, the soak.**
 - One `posix_fadvise(DONTNEED)` pass over the 496 files in `~/models`, run as
   this user, gave MemFree 108.58 GiB (Cached 5.59).
 
-## What changed (test-first: RED `fd22a0d0` and `44bd120b` for the page-cache release, `3404256a` for the soak floor)
+## What changed (test-first: RED `fd22a0d0` and `44bd120b` for the page-cache release, `73a2f298` for the soak floor)
 
 - **`checkpoint_cache.release_tree(root)`** advises `DONTNEED` on every regular
   file under `root`.
@@ -62,14 +63,21 @@ failed only clause 8, the soak.**
   - The arena is the single backing allocation every `KVCacheTensor` views
     (vLLM's `worker/utils.py` asserts one size), or `kv_cache_memory_bytes` if
     that is larger.
-- **The kit's soak floor (candidate 9).**
-  - A profile may declare `qualification_options.soak_mem_floor_gib`.
-  - `94_qualify_profile.py` validates it: a finite number no lower than the
-    profile's `kill_floor_gib`.
-  - It runs the soak with `DSV4_SOAK_MEM_FLOOR_GIB` set to that value, and
-    records the value in the manifest's soak cell and the cell log.
-  - This profile declares 8, the owner's floor. Profiles that declare nothing
-    keep `35_soak.py`'s 12 GiB default.
+- **One soak floor for every profile (candidate 9, owner decision
+  2026-10-11).**
+  - `35_soak.py`'s default floor is 5 GiB, down from 12.
+    `DSV4_SOAK_MEM_FLOOR_GIB` may raise it for a run, but not below 5 GiB:
+    the lower bound moved from 8 to 5. The soak records the floor it was
+    scored against (`mem_floor_gib`, `mem_floor_source`).
+  - Each profile's own memwatch kill floor (8 GiB here) remains the memory
+    guard during the soak. The soak floor only rejects a run that got near
+    exhaustion.
+  - The kit (`94_qualify_profile.py`) and every profile are unchanged; they
+    run the soak at its default.
+  - `qualification_eligible_floor` stays tied to the frozen 2026-08 DSV4
+    decision procedure (`34_decision.py`, 12 GiB), so this soak records it as
+    `false`. That flag is about admissibility to that historical procedure,
+    not to this gate.
 - **The profile** selects `--worker-cls qwen38fn_worker.HostCacheReleaseWorker`.
   Every other argv and env value is candidate 7 revision 2's: images 4, video
   0, `--mm-processor-cache-gb 0`, floor 8 GiB, admission 115 GiB
@@ -147,9 +155,11 @@ failed. So do:
    candidate 5's (`../qualify-2026-10-11-c4/probe-start1.json`).
 6. **Tool-call ≥ 19/20.**
 7. **Agent gate:** all four tests pass.
-8. **Soak:** the soak cell passes, held to the declared floor.
-   - `soak.json` must record `mem_floor_gib` 8.0 and `mem_floor_source`
-     `env-override`; otherwise `NO_RESULT`.
+8. **Soak:** the soak cell passes, held to the repository floor.
+   - `soak.json` must record `mem_floor_gib` 5.0 and `mem_floor_source`
+     `default`; otherwise `NO_RESULT`.
+   - Clause 3 still holds the whole run, the soak included, to 8 GiB from the
+     external sampler, and clause 1 to the memwatch's 8 GiB kill floor.
    - The soak still checks its own gates: zero errors, enough requests, no
      degradation beyond 25%, health, and duration.
 9. **Vision not significantly worse than the default:**
@@ -180,14 +190,17 @@ scoring:
 - FAIL: one case per failing clause, including `admissionlate` and `refused`;
 - NO_RESULT: each missing or malformed input, including a missing launch
   line, missing or cold precondition lines, a missing release line, a release
-  under the wrong root, a release covering zero files, a soak not held to
-  the declared floor (`soakfloor`), and frozen files changed after the
+  under the wrong root, a release covering zero files, a soak scored at
+  the old 12 GiB default (`soakfloor`), and frozen files changed after the
   freeze.
 
 **RED:**
 - on the c7 scorer, which has no clause 11 or 12, candidate 8's five new
   cases score PASS;
-- on the c8 scorer, `soakfloor` scores PASS.
+- on the c8 scorer, `soakfloor` scores PASS;
+- on the unchanged code, the 5 GiB floor tests in
+  `test_soak_memory_floor_bounds.py`, `test_qualify_profile.py` and
+  `test_qwen38fn_contract.py` fail (`73a2f298`).
 
 ## If it passes
 
@@ -277,6 +290,11 @@ three probes), so no public randomness is drawn. This follows candidates 5,
   - RED in `44bd120b`. Candidate 8 froze at `7a3812c0`.
 - **Candidate 8 run (`../qualify-2026-10-11-c8/`): FAIL on clause 8 only,** a
   harness mismatch.
-  - It is fixed here as an execution defect: only the soak floor changes,
-    with RED in `3404256a`.
+  - First fixed as an execution defect with a per-profile kit option
+    (`qualification_options.soak_mem_floor_gib`, RED `3404256a`, candidate
+    `46cd83c8`). Round 1 review of `46cd83c8` found no critical or high
+    issues.
+  - Before any run, the owner replaced that with one 5 GiB soak floor for
+    every profile (2026-10-11). The per-profile option is withdrawn; the kit
+    and the schema doc return to their `a946a783` state. RED in `73a2f298`.
   - This file's commit is candidate 9's freeze.
