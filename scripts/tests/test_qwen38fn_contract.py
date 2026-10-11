@@ -174,9 +174,24 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertIn(".stop()", methods["compile_or_warm_up_model"])
         self.assertIn("finally:", methods["compile_or_warm_up_model"])
 
-    def test_text_only_until_media_is_qualified(self):
-        argv = self.profile()["launch"]["args"]
-        self.assertEqual(arg(argv, "--limit-mm-per-prompt"), '{"image":0,"video":0}')
+    def test_images_are_served_at_the_processor_maximum_and_video_stays_off(self):
+        # The default (qwen38-1m) serves images, not video. Images carry no
+        # width/height override, so vLLM profiles the encoder at the processor's
+        # own largest image and real requests cannot exceed what startup measured.
+        p = self.profile()
+        argv = p["launch"]["args"]
+        self.assertEqual(json.loads(arg(argv, "--limit-mm-per-prompt")), {"image": 4, "video": 0})
+        self.assertEqual(p["serving"]["max_images"], 4)
+        self.assertNotIn("max_videos", p["serving"])
+        self.assertNotIn("--mm-processor-kwargs", argv)
+        self.assertEqual(p["qualification_targets"]["vision_min"], 0.64)
+        self.assertNotIn("vision_thinking_mode", p.get("qualification_options", {}))
+
+    def test_memory_model_carries_the_vision_tower(self):
+        # The text-only load reported 75.65 GiB of weights; the BF16 vision tower
+        # (model.visual.*, model-00009) adds 897,862,112 bytes.
+        self.assertGreaterEqual(self.profile()["memory_model"]["resident_weights_gib"],
+                                75.65 + 897_862_112 / 2**30)
 
     def test_render_carries_safety_containment_and_runtime_pin(self):
         p = self.profile()
@@ -196,7 +211,7 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertRegex(engine["binary_sha256"], r"^[0-9a-f]{64}$")
         self.assertTrue((ROOT / engine["build_manifest"]).is_file())
 
-    def test_text_only_serving_still_rejects_bad_media_fields(self):
+    def test_serving_rejects_bad_media_fields(self):
         for key, value in (("max_images", 0), ("audio_clips", 1)):
             p = self.profile()
             p["serving"][key] = value
