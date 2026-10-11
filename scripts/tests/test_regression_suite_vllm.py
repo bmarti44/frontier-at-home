@@ -102,6 +102,12 @@ class FakeEngine:
         cached = reuse // BLOCK * BLOCK
         if self.mode == "vllm-lossy":
             cached = max(0, cached - BLOCK)
+        # vLLM with MTP/EAGLE drops one more trailing block on every hit
+        # (single_type_kv_cache_manager drop_eagle_block).
+        if self.mode == "vllm-mtp":
+            cached = max(0, cached - BLOCK)
+        if self.mode == "vllm-mtp-lossy":
+            cached = max(0, cached - 2 * BLOCK)
         return len(prompt), cached
 
     def usage(self, total, cached):
@@ -209,6 +215,24 @@ class VllmAgentGateTests(unittest.TestCase):
 
     def test_one_block_short_of_full_reuse_fails_the_repeat(self):
         rc, report, _ = self.run_gate("vllm-lossy", *self.vllm_args())
+        self.assertEqual(rc, 1)
+        prefix = next(r for r in report["results"] if r["test"] == "prefix-cache")
+        self.assertFalse(prefix["pass"], prefix)
+
+    def test_mtp_block_drop_passes_when_declared(self):
+        rc, report, _ = self.run_gate("vllm-mtp", *self.vllm_args(), "--spec-block-drop")
+        self.assertEqual(rc, 0, report)
+        self.assertTrue(all(r["pass"] for r in report["results"]), report)
+        self.assertIs(report["spec_block_drop"], True)
+
+    def test_mtp_block_drop_fails_the_repeat_when_not_declared(self):
+        rc, report, _ = self.run_gate("vllm-mtp", *self.vllm_args())
+        self.assertEqual(rc, 1)
+        prefix = next(r for r in report["results"] if r["test"] == "prefix-cache")
+        self.assertFalse(prefix["pass"], prefix)
+
+    def test_a_block_short_of_mtp_reuse_still_fails(self):
+        rc, report, _ = self.run_gate("vllm-mtp-lossy", *self.vllm_args(), "--spec-block-drop")
         self.assertEqual(rc, 1)
         prefix = next(r for r in report["results"] if r["test"] == "prefix-cache")
         self.assertFalse(prefix["pass"], prefix)
