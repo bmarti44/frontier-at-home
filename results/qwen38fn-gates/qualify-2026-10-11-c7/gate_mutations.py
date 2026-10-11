@@ -14,6 +14,11 @@ from pathlib import Path
 SCORER = Path(__file__).resolve().parent / "gate_verdict.py"
 CANDIDATE = "results/qwen38fn-gates/qualify-2026-10-11-c7"
 GIB_KIB = 2**20
+LAUNCH = 5
+
+
+def stamp(second: int) -> str:
+    return f"2026-10-11T00:{second // 60:02d}:{second % 60:02d}Z"
 
 
 def git_repo(repo: Path, mut: str) -> str:
@@ -24,6 +29,9 @@ def git_repo(repo: Path, mut: str) -> str:
     profile = repo / "configs/profiles/qwen3.8-flash-next/p.json"
     profile.parent.mkdir(parents=True)
     profile.write_text("v1\n")
+    toolcall = repo / "evalsets/toolcall/cases.jsonl"
+    toolcall.parent.mkdir(parents=True)
+    toolcall.write_text("{}\n")
     (repo / "evidence.txt").write_text("start1\n")
     git("init", "-q")
     if mut != "noprereg":
@@ -32,8 +40,9 @@ def git_repo(repo: Path, mut: str) -> str:
         prereg.write_text("rule\n")
     git("add", "-A")
     git("commit", "-qm", "freeze")
-    if mut in ("headevidence", "headfrozen"):
-        (profile if mut == "headfrozen" else repo / "evidence.txt").write_text("changed\n")
+    if mut in ("headevidence", "headfrozen", "headtoolcall"):
+        changed = {"headfrozen": profile, "headtoolcall": toolcall}.get(mut, repo / "evidence.txt")
+        changed.write_text("changed\n")
         git("commit", "-qam", "later")
     return git("rev-parse", "HEAD")
 
@@ -44,11 +53,16 @@ def build(ev: Path, mut: str) -> None:
     obs.mkdir(parents=True)
     lines = []
     for i in range(700):
-        avail = (117 if mut == "admission" else 115) * GIB_KIB if i == 0 else int(9.5 * GIB_KIB) - i * 10
+        # Samples 0-5 are before the launch line (stamped at second 5).
+        if i <= LAUNCH:
+            avail = (117 if mut == "admission" or (mut == "admissionlate" and i) else
+                     114 if mut == "admissionlate" else 115) * GIB_KIB
+        else:
+            avail = int(9.5 * GIB_KIB) - i * 10
         if mut == "lowmem" and i == 300:
             avail = int(7.9 * GIB_KIB)
         swap_free = 16 * GIB_KIB - (GIB_KIB // 2 if mut == "swap" and i > 100 else 0)
-        lines.append(f"t MemAvailable:={avail} SwapTotal:={16 * GIB_KIB} SwapFree:={swap_free} \n")
+        lines.append(f"{stamp(i)} MemAvailable:={avail} SwapTotal:={16 * GIB_KIB} SwapFree:={swap_free} \n")
     if mut == "short":
         lines = lines[:100]
     (obs / "meminfo.log").write_text("".join(lines))
@@ -63,7 +77,8 @@ def build(ev: Path, mut: str) -> None:
     if mut != "noserverlog":
         (obs / "server.log").write_text(server)
     dirty = 1 if mut == "dirty" else 0
-    (obs / "driver.log").write_text(f"2026-10-11T00:00:00Z head {head} dirty={dirty}\n"
+    launch = "" if mut == "nolaunch" else f"{stamp(LAUNCH)} start1: launching in scope u (RuntimeMaxSec=1)\n"
+    (obs / "driver.log").write_text(f"{stamp(0)} head {head} dirty={dirty}\n" + launch
                                     + ("FAILED_ATTEMPT survivors\n" if mut == "attempt" else "ok\n"))
     (ev / "manifest.json").write_text(json.dumps(
         {"profile": {"context_cap": 1_000_000 if mut == "cap" else 1_048_576}}))
@@ -99,6 +114,7 @@ def build(ev: Path, mut: str) -> None:
 EXPECT = {
     "clean": "PASS", "headevidence": "PASS", "vision53": "PASS", "vision63": "PASS",
     "xid": "FAIL", "breach": "FAIL", "oom": "FAIL", "swap": "FAIL", "lowmem": "FAIL", "admission": "FAIL",
+    "admissionlate": "FAIL", "nolaunch": "NO_RESULT", "headtoolcall": "NO_RESULT",
     "context": "FAIL", "tokens": "FAIL", "identity": "FAIL", "tool": "FAIL", "agent": "FAIL",
     "soak": "FAIL", "kvcap": "FAIL", "visionworse": "FAIL", "visionerror": "FAIL",
     "cap": "NO_RESULT", "short": "NO_RESULT", "noserverlog": "NO_RESULT", "noprobe": "NO_RESULT",

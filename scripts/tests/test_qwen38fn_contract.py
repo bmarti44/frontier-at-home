@@ -209,10 +209,20 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertNotIn("max_videos", p["serving"])
         self.assertGreaterEqual(p["memory_model"]["resident_weights_gib"], 76.49)
 
+    def test_processor_cache_is_off_as_in_the_measured_run(self):
+        # vLLM's processor cache defaults to 4 GiB, held once in the API server
+        # and once in the engine core: up to 8 GiB the memory model does not
+        # count. The 3.1-3.3 GiB image cost was measured with it off (diag run
+        # 2, 100 images); it only skips re-processing a repeated image.
+        argv = self.profile()["launch"]["args"]
+        self.assertEqual(argv.count("--mm-processor-cache-gb"), 1)
+        self.assertEqual(arg(argv, "--mm-processor-cache-gb"), "0")
+
     def test_launch_is_candidate_5_plus_image_input(self):
         # qualify-2026-10-11-c4 (gate PASS) recorded the rendered argv and env.
-        # Candidate 7 changes only the image limit. The interpreter pin moved
-        # from the python3 symlink to the file it names; the bytes are the same.
+        # Candidate 7 changes only the image limit and turns the processor
+        # cache off. The interpreter pin moved from the python3 symlink to the
+        # file it names; the bytes are the same.
         ev = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4"
         recorded = json.loads((ev / "manifest.json").read_text())["profile"]
         out = profile_resolver.resolve(self.profile(), profile_resolver.load_model(SLUG),
@@ -221,6 +231,7 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         index = expected.index("--limit-mm-per-prompt") + 1
         self.assertEqual(expected[index], '{"image":0,"video":0}')
         expected[index] = '{"image":4,"video":0}'
+        expected[index + 1:index + 1] = ["--mm-processor-cache-gb", "0"]
         self.assertEqual(out["argv"], expected)
         self.assertEqual(out["env"], recorded["env"])
         self.assertEqual(out["binary"], recorded["binary"] + ".12")
