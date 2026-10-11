@@ -5,7 +5,7 @@
   "backend": "cuda",
   "hardware_class": "spark",
   "ram_tier_gib": 128,
-  "purpose": "Qwen3.8-Flash-Next for agentic coding: four native 262,144-token slots (1,048,576 total), NVFP4 experts, PLE table read in place from NVMe, MTP k=3, fp8 KV, prefix cache, decode CUDA graphs, up to 4 images per request (no video). Not the default until the owner decides.",
+  "purpose": "Qwen3.8-Flash-Next for agentic coding: four native 262,144-token slots (1,048,576 total), NVFP4 experts, PLE table read in place from NVMe, MTP k=3, fp8 KV, prefix cache, decode CUDA graphs. Not the default until the owner decides.",
   "status": {
     "state": "estimated",
     "basis": "Community single-Spark vLLM reports (tonyd2wild, madeye; Sep 2026): ~76 GiB resident weights with the PLE table on NVMe, 36.8-45.8 tok/s single-stream decode with MTP3, ~1,600-1,824 tok/s prefill, KV pool ~0.5-1.0M fp8 tokens. Not yet measured on this host."
@@ -85,9 +85,7 @@
       "--engram-config",
       "{\"checkpoint_mapped\":true}",
       "--limit-mm-per-prompt",
-      "{\"image\":4,\"video\":0}",
-      "--mm-processor-cache-gb",
-      "0",
+      "{\"image\":0,\"video\":0}",
       "--default-chat-template-kwargs",
       "{\"reasoning_effort\":\"low\"}",
       "--worker-cls",
@@ -122,16 +120,15 @@
   },
   "memory_model": {
     "kv_bytes_per_token": 0,
-    "resident_weights_gib": 77,
+    "resident_weights_gib": 76,
     "overhead_gib": 8.2,
     "extra_gib": 18.0,
     "floor_gib": 10,
-    "basis": "Sized from the 2026-10-11 diagnostic smoke (results/qwen38fn-gates/smoke-2026-10-11). Every logged KV usage reading is a whole number of blocks over 91, so its 4,200,000,000-byte arena held 92 blocks (<= 45,652,174 bytes each), and 194,493 tokens at --max-model-len 131,072 means a request reserves 62 blocks: one group grows by cdiv(L, 3200) (41) and 21 are GDN state (4 groups x 5) plus the QSA ring (1). A 262,144-token slot reserves 103 blocks; four need 412, plus the BlockPool null block and 2 x 4 transient prefill blocks (the smoke held 36 blocks for a 32-block reservation): 421 blocks <= 19,219,565,254 bytes. The fixed 19.22 GB arena (--kv-cache-memory-bytes, 17.90 GiB) is extra_gib. resident_weights_gib + overhead_gib = 84.2 GiB is the measured non-KV footprint (MemAvailable 112.38 -> 25.73 GiB plus 1.44 GiB pushed to swap, less the 3.91 GiB arena; vLLM reported 75.67 GiB of weights). Projected idle on a quiet 114 GiB host: ~11.9 GiB, above the 10 GiB floor with little room; the direct 1M fill needs a quiet host. vLLM's startup log must show >= 1,048,576 tokens at 262,144. Measured 2026-10-11 (results/qwen38fn-gates/diag-drafter-2026-10-11, arm C: drafter FP8 MoE off DeepGEMM, checkpoint page cache evicted during startup): vLLM reported 1,079,117 tokens at 262,144; idle 13.9 GiB from a 115.2 GiB quiet start (101.3 GiB used vs 102.2 GiB modeled); 0 NVRM lines. Images on (candidate 6): the BF16 vision tower (model.visual.*, 897,862,112 bytes) adds 0.84 GiB to the text-only 75.65 GiB load, so resident_weights_gib is 77; vLLM's startup profile_run runs the encoder on the processor's largest image, so no request needs a larger encoder pass than startup measured."
+    "basis": "Sized from the 2026-10-11 diagnostic smoke (results/qwen38fn-gates/smoke-2026-10-11). Every logged KV usage reading is a whole number of blocks over 91, so its 4,200,000,000-byte arena held 92 blocks (<= 45,652,174 bytes each), and 194,493 tokens at --max-model-len 131,072 means a request reserves 62 blocks: one group grows by cdiv(L, 3200) (41) and 21 are GDN state (4 groups x 5) plus the QSA ring (1). A 262,144-token slot reserves 103 blocks; four need 412, plus the BlockPool null block and 2 x 4 transient prefill blocks (the smoke held 36 blocks for a 32-block reservation): 421 blocks <= 19,219,565,254 bytes. The fixed 19.22 GB arena (--kv-cache-memory-bytes, 17.90 GiB) is extra_gib. resident_weights_gib + overhead_gib = 84.2 GiB is the measured non-KV footprint (MemAvailable 112.38 -> 25.73 GiB plus 1.44 GiB pushed to swap, less the 3.91 GiB arena; vLLM reported 75.67 GiB of weights). Projected idle on a quiet 114 GiB host: ~11.9 GiB, above the 10 GiB floor with little room; the direct 1M fill needs a quiet host. vLLM's startup log must show >= 1,048,576 tokens at 262,144. Measured 2026-10-11 (results/qwen38fn-gates/diag-drafter-2026-10-11, arm C: drafter FP8 MoE off DeepGEMM, checkpoint page cache evicted during startup): vLLM reported 1,079,117 tokens at 262,144; idle 13.9 GiB from a 115.2 GiB quiet start (101.3 GiB used vs 102.2 GiB modeled); 0 NVRM lines."
   },
   "serving": {
     "parallel_slots": 4,
-    "request_context_cap": 262144,
-    "max_images": 4
+    "request_context_cap": 262144
   },
   "context_cap": 1048576,
   "port_role": "production",
@@ -142,7 +139,7 @@
     "speed_max_tokens_per_event": 4
   },
   "qualification_targets": {
-    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18, vision-2026-08-19; vision re-measured by the kit at 64/100 in qualify-2026-09-11-kit-check); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
+    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
     "decode_tok_s_min": {
       "0": 17.46,
       "28672": 26.71
@@ -155,7 +152,6 @@
     },
     "context_pass": true,
     "toolcall_min": 19,
-    "vision_min": 0.64,
     "delta_nll_max": 0.01
   }
 }
