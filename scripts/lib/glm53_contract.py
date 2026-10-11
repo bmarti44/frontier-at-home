@@ -125,21 +125,46 @@ def verify_inventory(root: Path, manifest: dict) -> dict[str, tuple[int, int, in
     return identities
 
 
+def _enabled_media(argv: list) -> set[str]:
+    """Modalities --limit-mm-per-prompt enables; both when the flag is absent."""
+    if "--limit-mm-per-prompt" not in argv:
+        return {"image", "video"}
+    index = argv.index("--limit-mm-per-prompt")
+    try:
+        limits = json.loads(argv[index + 1])
+    except (IndexError, json.JSONDecodeError) as error:
+        raise ValueError("invalid --limit-mm-per-prompt") from error
+    if not isinstance(limits, dict):
+        raise ValueError("invalid --limit-mm-per-prompt")
+    enabled = set()
+    for modality in ("image", "video"):
+        limit = limits.get(modality, 0)
+        count = limit.get("count", 0) if isinstance(limit, dict) else limit
+        if type(count) is not int or count < 0:
+            raise ValueError("invalid --limit-mm-per-prompt")
+        if count > 0:
+            enabled.add(modality)
+    return enabled
+
+
 def validate_serving(profile: dict) -> None:
     """The profile cap is aggregate; vLLM's max-model-len is per request."""
     serving = profile.get("serving")
+    argv = profile["launch"].get("args", [])
+    # Media fields follow --limit-mm-per-prompt: an enabled modality declares
+    # its maximum, and a text-only profile declares none.
+    media = _enabled_media(argv)
     required = {"parallel_slots", "request_context_cap"}
-    # Media limits are optional so a text-only vLLM profile (media disabled
-    # with --limit-mm-per-prompt) carries just its topology.
-    media = {"max_images", "max_videos", "video_frames"}
-    if (not isinstance(serving, dict) or not required <= set(serving)
-            or set(serving) - required - media):
+    if "image" in media:
+        required |= {"max_images"}
+    if "video" in media:
+        required |= {"max_videos", "video_frames"}
+    if not isinstance(serving, dict) or set(serving) != required:
         raise ValueError("invalid serving topology schema")
     if any(type(serving[k]) is not int or serving[k] <= 0 for k in serving):
         raise ValueError("serving topology values must be positive integers")
     if serving["parallel_slots"] * serving["request_context_cap"] != profile["context_cap"]:
         raise ValueError("aggregate context topology mismatch")
-    argv = profile["launch"].get("args", [])
     for flag, expected in (("--max-model-len", serving["request_context_cap"]),
                            ("--max-num-seqs", serving["parallel_slots"])):
         if argv.count(flag) != 1 or any(arg.startswith(flag + "=") for arg in argv):
