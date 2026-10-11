@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import threading
+import types
 import unittest
 from unittest import mock
 
@@ -79,6 +80,59 @@ class CheckpointCacheEvictorTest(unittest.TestCase):
 
     def test_stop_without_start_is_a_no_op(self):
         checkpoint_cache.CheckpointCacheEvictor(str(self.dir)).stop()
+
+
+
+class CheckpointCacheReleaseWorkerLifecycleTest(unittest.TestCase):
+    """qwen38fn_worker under stub vLLM/torch modules: start at load, stop after warmup."""
+
+    def run_worker(self, body, warm_up=lambda self: "warm"):
+        base = type("Worker", (), {
+            "load_model": lambda self, *a, **k: "loaded",
+            "compile_or_warm_up_model": warm_up,
+            "determine_available_memory": lambda self: 0,
+        })
+        gpu_worker = types.ModuleType("vllm.v1.worker.gpu_worker")
+        gpu_worker.Worker = base
+        torch = types.ModuleType("torch")
+        torch.accelerator = types.SimpleNamespace(empty_cache=lambda: None)
+        stubs = {"torch": torch, "vllm": types.ModuleType("vllm"), "vllm.v1": types.ModuleType("vllm.v1"),
+                 "vllm.v1.worker": types.ModuleType("vllm.v1.worker"), "vllm.v1.worker.gpu_worker": gpu_worker}
+        with mock.patch.dict(sys.modules, stubs):
+            for name in ("glm53_worker", "qwen38fn_worker"):
+                sys.modules.pop(name, None)
+            import qwen38fn_worker
+            with mock.patch.object(qwen38fn_worker, "CheckpointCacheEvictor") as evictor_cls:
+                worker = qwen38fn_worker.CheckpointCacheReleaseWorker()
+                worker.vllm_config = types.SimpleNamespace(model_config=types.SimpleNamespace(model="/m"))
+                body(worker, evictor_cls)
+
+    def test_load_starts_and_warmup_stops_the_evictor(self):
+        def body(worker, evictor_cls):
+            self.assertEqual(worker.load_model(), "loaded")
+            evictor_cls.assert_called_once_with("/m")
+            evictor_cls.return_value.start.assert_called_once_with()
+            evictor_cls.return_value.stop.assert_not_called()
+            self.assertEqual(worker.compile_or_warm_up_model(), "warm")
+            evictor_cls.return_value.stop.assert_called_once_with()
+        self.run_worker(body)
+
+    def test_a_failed_warmup_still_stops_the_evictor(self):
+        def warm_up(self):
+            raise RuntimeError("capture failed")
+
+        def body(worker, evictor_cls):
+            worker.load_model()
+            with self.assertRaisesRegex(RuntimeError, "capture failed"):
+                worker.compile_or_warm_up_model()
+            evictor_cls.return_value.stop.assert_called_once_with()
+        self.run_worker(body, warm_up)
+
+    def test_warmup_without_this_load_is_a_no_op(self):
+        def body(worker, evictor_cls):
+            self.assertEqual(worker.compile_or_warm_up_model(), "warm")
+            evictor_cls.assert_not_called()
+        self.run_worker(body)
 
 
 if __name__ == "__main__":
