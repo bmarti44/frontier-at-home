@@ -73,7 +73,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertEqual(statuses["glm-5.2"], "active")
         self.assertEqual(statuses["qwen3.8-27b"], "qualified")
         self.assertEqual(statuses["laguna-s-2.1"], "qualified")
-        self.assertEqual(statuses["qwen3.8-flash-next"], "active")
+        self.assertEqual(statuses["qwen3.8-flash-next"], "qualified")
 
     def test_readme_claim_links_are_catalogued_and_keep_active_models(self):
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))

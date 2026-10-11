@@ -2,8 +2,9 @@
 
 The profile serves NVIDIA's NVFP4 checkpoint on upstream vLLM with the PLE
 n-gram table read in place from NVMe (vLLM PR #58439 checkpoint_mapped), MTP
-speculative decoding, and four native 262,144-token slots. It stays
-``estimated`` until the qualification bundle exists.
+speculative decoding, and four native 262,144-token slots. Candidate 5's gate
+passed, so the profile is ``qualified`` and served as the optional ``qwen38fn``
+switch alias; qwen38-1m stays the default.
 """
 from __future__ import annotations
 
@@ -43,10 +44,22 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             p, profile_resolver.load_model(SLUG),
             profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json"))
 
-    def test_profile_is_estimated_four_native_slots_totalling_one_million(self):
+    def test_profile_is_a_qualified_switch_alias_with_four_native_slots(self):
         p = self.profile()
-        self.assertEqual(p["status"]["state"], "estimated")
-        self.assertNotIn("switch_alias", p)
+        status = p["status"]
+        self.assertEqual(status["state"], "qualified")
+        self.assertEqual(status["qualified_at"], "2026-10-11")
+        self.assertEqual(status["evidence"], "results/qwen38fn-gates/qualify-2026-10-11-c4/")
+        gate = json.loads((ROOT / status["evidence"] / "gate-summary.json").read_text())
+        self.assertEqual(gate["verdict"], "PASS")
+        self.assertEqual((gate["fail"], gate["missing"]), ([], []))
+        self.assertEqual(p["switch_alias"], "qwen38fn")
+        self.assertEqual(p["switch"], {
+            "mode": "generic",
+            "served_model_id": "qwen3.8-flash-next",
+            "health_path": "/health",
+            "context_check": {"kind": "model_card", "max_model_len": 262144},
+        })
         self.assertEqual(p["context_cap"], 1048576)
         self.assertEqual(p["serving"]["parallel_slots"], 4)
         self.assertEqual(p["serving"]["request_context_cap"], 262144)
