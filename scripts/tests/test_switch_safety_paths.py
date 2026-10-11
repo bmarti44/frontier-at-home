@@ -293,7 +293,8 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             "unit": "qwen38fn-engine.service",
             "unit_name": "qwen38fn-engine",
             "log_name": "qwen38fn",
-            "required_gib": "113",
+            "required_gib": "114",
+            "floor_gib": "8",
             "served_model_id": "qwen3.8-flash-next",
             "health_path": "/health",
             "context_check": json.dumps(
@@ -514,7 +515,7 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             self.assertIn("pre-load memory release gate failed", result.stderr)
             self.assertNotIn("STARTER_PROCEEDED", result.stdout)
             self.assertNotIn("CALLER_CONTINUED", result.stdout)
-            self.assertIn("--required-gib 113",
+            self.assertIn("--required-gib 114",
                           (fixture.root / "guard.called").read_text())
             self.assertEqual(fixture.systemctl_calls(), [])
             self.assertFalse((fixture.state / "qwen38fn.process.json").exists())

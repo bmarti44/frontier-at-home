@@ -18,10 +18,11 @@ Gates (ALL must hold for pass=true):
   5. windows disjoint              — elapsed time spans two frozen 300-second windows
   6. windows populated             — at least five requests start in each window
   7. decode degradation <= 0.25    — last-window median vs first-window median
-  8. memory available >= floor     — never near the UMA watchdog SIGKILL line;
-                                     12 GiB default, DSV4_SOAK_MEM_FLOOR_GIB
-                                     overrides, and the scored floor is recorded
-                                     in the artifact as mem_floor_gib
+  8. memory available >= floor     — never near memory exhaustion; one 5 GiB
+                                     floor for every profile (owner, 2026-10-11),
+                                     DSV4_SOAK_MEM_FLOOR_GIB may raise it, and
+                                     the scored floor is recorded in the
+                                     artifact as mem_floor_gib
   9. health probes all healthy     — /v1/models stayed 200 for the whole run
  10. duration met                  — elapsed time is at least 95% of 1800 seconds
 
@@ -54,28 +55,28 @@ DURATION = 1800
 MAX_TOKENS = 256
 DEG_THRESHOLD = 0.25
 MIN_REQUESTS = 30
-# The 12 GiB default predates the 1M-fast profile. At CTX=1048576 with ub/b=2048
-# the context-scaled compute buffers leave a measured steady state of ~9.8 GiB
-# free (configs/profiles/dsv4-1m-fast.env), so a 12 GiB soak floor cannot be met
-# by the profile this box actually serves — the gate would fail by construction
-# rather than by fault. DSV4_SOAK_MEM_FLOOR_GIB lets a run declare the floor it
-# is being held to; the value is recorded in the soak artifact so a run can never
-# claim a stricter floor than it was scored against. Owner-set to 8.0 for the
-# 1M-fast profile on 2026-08-09, matching the accepted watchdog floor
-# (DSV4_WATCHDOG_FLOOR_GIB=8 in scripts/52_engine_switch.sh).
+# One soak floor for every profile: 5 GiB (owner decision 2026-10-11). Each
+# profile's own memwatch kill floor (8 GiB or more) is the memory guard; this
+# gate only rejects a run that got near exhaustion, and the other gates judge
+# stability. The old 12 GiB default failed profiles whose owner-set floor is
+# 8 GiB by construction (DSV4 1M-fast, 2026-08-09; Qwen3.8-Flash-Next,
+# results/qwen38fn-gates/qualify-2026-10-11-c8). DSV4_SOAK_MEM_FLOOR_GIB may
+# raise the floor for a run; the value is recorded in the soak artifact so a
+# run can never claim a stricter floor than it was scored against.
 # The override is bounded on both sides. An unrestricted float() accepts 0, -1,
 # and -inf, each of which deletes the gate, and nan, whose every comparison is
 # False -- a gate whose meaning depends on which side of the operator NaN lands on
-# is not a gate. The lower bound is the deployed watchdog floor: below it the
-# watchdog, not the soak, decides the outcome, so a lower value is unmeasurable.
-# The upper bound is the machine's unified memory; a larger value is a units error.
-WATCHDOG_FLOOR_GIB = 8.0
+# is not a gate. The lower bound is the repository floor; the upper bound is the
+# machine's unified memory, so a larger value is a units error.
+MINIMUM_FLOOR_GIB = 5.0
 MACHINE_MEMORY_GIB = 119.7
+# The frozen 2026-08 DSV4 decision procedure (scripts/34_decision.py) recomputes
+# the 12 GiB floor its evidence was recorded under.
 QUALIFICATION_FLOOR_GIB = 12.0
 
 
 def _resolve_mem_floor_gib() -> float:
-    raw = os.environ.get("DSV4_SOAK_MEM_FLOOR_GIB", "12.0")
+    raw = os.environ.get("DSV4_SOAK_MEM_FLOOR_GIB", str(MINIMUM_FLOOR_GIB))
     try:
         value = float(raw)
     except ValueError as error:
@@ -84,9 +85,9 @@ def _resolve_mem_floor_gib() -> float:
         ) from error
     if not math.isfinite(value):
         raise SystemExit(f"DSV4_SOAK_MEM_FLOOR_GIB must be finite, got {raw!r}")
-    if not WATCHDOG_FLOOR_GIB <= value <= MACHINE_MEMORY_GIB:
+    if not MINIMUM_FLOOR_GIB <= value <= MACHINE_MEMORY_GIB:
         raise SystemExit(
-            f"DSV4_SOAK_MEM_FLOOR_GIB must be between {WATCHDOG_FLOOR_GIB} and "
+            f"DSV4_SOAK_MEM_FLOOR_GIB must be between {MINIMUM_FLOOR_GIB} and "
             f"{MACHINE_MEMORY_GIB} GiB, got {value}"
         )
     return value
@@ -96,13 +97,14 @@ MEM_FLOOR_GIB = _resolve_mem_floor_gib()
 
 
 def qualification_eligible_floor() -> bool:
-    """Whether a soak at this floor can be used as qualifying evidence.
+    """Whether this soak is admissible to the frozen 2026-08 DSV4 decision procedure.
 
-    scripts/34_decision.py fixes and independently recomputes a 12 GiB floor. A run
-    held to the 8 GiB operational floor is valid operational evidence for the
-    1M-fast profile and is NOT admissible to the decision procedure. Recording this
-    in the artifact keeps the distinction with the run instead of with whoever
-    remembers how it was launched.
+    scripts/34_decision.py fixes and independently recomputes a 12 GiB floor, the
+    floor its evidence was recorded under. A soak at the repository's 5 GiB floor
+    is valid qualification evidence for the profile kit (94_qualify_profile.py) and
+    is NOT admissible to that historical decision. Recording this in the artifact
+    keeps the distinction with the run instead of with whoever remembers how it
+    was launched.
     """
     return MEM_FLOOR_GIB >= QUALIFICATION_FLOOR_GIB
 

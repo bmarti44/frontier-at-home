@@ -29,7 +29,7 @@ and no model on disk.
 | teacher | token-weighted delta-NLL / top-1 loss vs BF16 teacher logits (AGENTS.md fidelity limits) | `49_score_teacher_windows.py` | `teacher/summary.json` |
 | accuracy | gsm8k / mmlu-pro / humaneval (holdout by default; `--accuracy-split dev`) | `31_bench_accuracy.py` x3 | `accuracy/acc-<suite>.json` |
 | context | direct full fill: `serving.parallel_slots` x (tokens-per-slot - 12,016 headroom for template + answer) with needles, controls, memory floor = `safety.kill_floor_gib` | `50_probe_context.py --phase both` | `context/summary.json` |
-| soak | 30-minute sustained load (off by default, `--with-soak`) | `35_soak.py` | `soak/soak.json` |
+| soak | 30-minute sustained load, memory floor 5 GiB for every profile (off by default, `--with-soak`) | `35_soak.py` | `soak/soak.json` |
 
 Context runs last because it takes about an hour. Every cell's stdout and
 stderr go to `<out>/<cell>/log.txt`; `manifest.json` records host facts, git

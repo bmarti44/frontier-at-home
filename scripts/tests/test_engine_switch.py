@@ -1473,7 +1473,7 @@ class EngineSwitchTests(unittest.TestCase):
 
     # -- qwen38fn: Qwen3.8-Flash-Next on vLLM, the first qualified generic alias.
     # It needs no `-qualified-for-test` marker: the committed profile is
-    # qualified. qwen38-1m stays the default, so most cases switch from it.
+    # qualified (candidate 9, images on). Most cases switch from qwen38-1m.
 
     def qwen38fn_root(self, root: Path, *, hashes: bool = True) -> None:
         (root / "active.json").write_text(
@@ -1503,7 +1503,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(argv[argv.index("--max-num-seqs") + 1], "4")
         self.assertEqual(argv[argv.index("--port") + 1], "8013")
         self.assertEqual(argv[argv.index("--limit-mm-per-prompt") + 1],
-                         '{"image":0,"video":0}')
+                         '{"image":4,"video":0}')
         systemd = snapshot["systemd"]
         self.assertEqual(systemd["unit"], "qwen38fn-engine")
         self.assertEqual(systemd["properties"]["User"], "bmarti44")

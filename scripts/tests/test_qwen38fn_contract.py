@@ -2,9 +2,14 @@
 
 The profile serves NVIDIA's NVFP4 checkpoint on upstream vLLM with the PLE
 n-gram table read in place from NVMe (vLLM PR #58439 checkpoint_mapped), MTP
-speculative decoding, and four native 262,144-token slots. Candidate 5's gate
-passed, so the profile is ``qualified`` and served as the optional ``qwen38fn``
-switch alias; qwen38-1m stays the default.
+speculative decoding, and four native 262,144-token slots. Candidate 5
+qualified it text-only as the optional ``qwen38fn`` switch alias. Candidate 7
+turned image input on under the owner's 8 GiB floor (2026-10-11) and failed
+on NVRM lines at the KV arena: another engine's model files were still in
+page cache. Candidate 8 added the host page-cache release, and candidate 9
+qualified the images-on launch with the soak at the repository's 5 GiB floor
+(results/qwen38fn-gates/qualify-2026-10-11-c9). Admission is derived from that
+run.
 """
 from __future__ import annotations
 
@@ -12,6 +17,7 @@ import ast
 import hashlib
 import importlib.util
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -29,6 +35,7 @@ PROFILE = "cuda-spark-128g-1m.json"
 QWEN38_TOKENIZER_CONFIG = Path("/home/bmarti44/models/qwen3.8-27b/tokenizer_config.json")
 FLASH_CHAT_TEMPLATE = Path("/home/bmarti44/models/qwen3.8-flash-next-nvfp4/chat_template.jinja")
 HOST_BOUND = os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0"
+C9 = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c9"
 
 
 def arg(argv, flag):
@@ -44,15 +51,15 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             p, profile_resolver.load_model(SLUG),
             profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json"))
 
-    def test_profile_is_a_qualified_switch_alias_with_four_native_slots(self):
+    def test_profile_is_a_switch_alias_qualified_by_candidate_9(self):
+        # Candidate 5's PASS covered the text-only launch; images on is a new
+        # configuration, qualified by candidate 9's own preregistered gate.
         p = self.profile()
         status = p["status"]
         self.assertEqual(status["state"], "qualified")
-        self.assertEqual(status["qualified_at"], "2026-10-11")
-        self.assertEqual(status["evidence"], "results/qwen38fn-gates/qualify-2026-10-11-c4/")
-        gate = json.loads((ROOT / status["evidence"] / "gate-summary.json").read_text())
-        self.assertEqual(gate["verdict"], "PASS")
-        self.assertEqual((gate["fail"], gate["missing"]), ([], []))
+        self.assertIn("results/qwen38fn-gates/qualify-2026-10-11-c9/", status["basis"])
+        verdict = json.loads((C9 / "gate-summary.json").read_text())
+        self.assertEqual((verdict["verdict"], verdict["fail"], verdict["missing"]), ("PASS", [], []))
         self.assertEqual(p["switch_alias"], "qwen38fn")
         self.assertEqual(p["switch"], {
             "mode": "generic",
@@ -69,7 +76,44 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         # Native context only: static YaRN degrades short-context quality.
         self.assertFalse(any("yarn" in a for a in argv))
         self.assertNotIn("--hf-overrides", argv)
-        self.assertGreaterEqual(p["safety"]["kill_floor_gib"], 10)
+
+    def test_owner_floor_is_8_gib_and_admission_fits_the_quiet_host(self):
+        # Owner decision 2026-10-11: keep 1M with images on and kill at 8 GiB
+        # (DeepSeek's 1M-fast profile set the precedent). The switch admits on
+        # minimum_start_gib alone; this host reads 115.2-115.6 GiB when quiet.
+        p = self.profile()
+        self.assertEqual(p["safety"]["kill_floor_gib"], 8)
+        self.assertEqual(p["memory_model"]["floor_gib"], 8)
+        self.assertEqual(p["safety"]["minimum_start_gib"], 114)
+
+    def test_admission_is_derived_from_candidate_9(self):
+        # PREREG "If it passes": peak = the highest MemAvailable at or before
+        # the one launch line minus the run's low point (clause 10);
+        # overhead_gib = peak - resident_weights_gib - extra_gib rounded up to
+        # 0.1 GiB, and minimum_start_gib = ceil(peak + kill floor).
+        driver = (C9 / "observe/start1/driver.log").read_text().splitlines()
+        launch = [line.split()[0] for line in driver if "start1: launching in scope" in line]
+        self.assertEqual(len(launch), 1)
+        samples = []
+        for line in (C9 / "observe/start1/meminfo.log").read_text().splitlines():
+            samples.append((line.split()[0], int(re.search(r"MemAvailable:=(\d+)", line).group(1)) / 1048576))
+        baseline = max(gib for stamp, gib in samples if stamp <= launch[0])
+        peak = baseline - min(gib for _, gib in samples)
+        self.assertAlmostEqual(peak, 105.674, places=2)
+        p = self.profile()
+        budget, safety = p["memory_model"], p["safety"]
+        self.assertEqual(budget["overhead_gib"],
+                         math.ceil(round((peak - budget["resident_weights_gib"] - budget["extra_gib"]) * 10, 6)) / 10)
+        self.assertEqual(safety["minimum_start_gib"], math.ceil(peak + safety["kill_floor_gib"]))
+
+    def test_the_soak_uses_the_repository_floor(self):
+        # Candidate 8's soak (min 9.92 GiB) failed only against 35_soak.py's
+        # old 12 GiB default (results/qwen38fn-gates/qualify-2026-10-11-c8). The
+        # owner set one 5 GiB soak floor for every profile (2026-10-11), so the
+        # profile declares none; its 8 GiB kill floor stays the memory guard.
+        p = self.profile()
+        self.assertEqual(p["qualification_options"], {"speed_max_tokens_per_event": 4})
+        self.assertEqual(p["safety"]["kill_floor_gib"], 8)
 
     def test_agentic_serving_semantics_are_explicit(self):
         argv = self.profile()["launch"]["args"]
@@ -142,13 +186,17 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         # 25.73 GiB at idle, with 1.44 GiB of other processes pushed to swap,
         # so the engine took ~88.1 GiB with its 3.91 GiB arena: ~84.2 GiB
         # without it. 93_profile_serve admits only when MemAvailable covers
-        # weights + overhead + extra + floor; the quiet host read 114.0 GiB
-        # (2026-10-11 01:35Z).
+        # weights + overhead + extra + floor. Candidate 5 peaked at 102.97 GiB
+        # used text-only; images add at least 3.1 GiB
+        # (results/qwen38fn-gates/diag-vision-2026-10-11); candidate 9, images
+        # on, peaked at 105.67 GiB. The quiet host read 115.2-115.6 GiB on
+        # 2026-10-11.
         memory_model = self.profile()["memory_model"]
         self.assertGreaterEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"], 84.2)
-        self.assertEqual(memory_model["floor_gib"], 10)
+        self.assertGreaterEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"]
+                                + memory_model["extra_gib"], 105.67)
         self.assertLessEqual(memory_model["resident_weights_gib"] + memory_model["overhead_gib"]
-                             + memory_model["extra_gib"] + memory_model["floor_gib"], 114.0)
+                             + memory_model["extra_gib"] + memory_model["floor_gib"], 115.0)
 
     def test_startup_cannot_compile_kernels_and_tolerates_uma_free_memory(self):
         for name in ("qwen3.8-flash-next/cuda-spark-128g-1m", "qwen3.8-flash-next/cuda-spark-128g-smoke"):
@@ -175,10 +223,10 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         p = self.profile()
         env, argv = p["launch"]["env"], p["launch"]["args"]
         self.assertEqual(env["VLLM_MOE_USE_DEEP_GEMM"], "0")
-        self.assertEqual(arg(argv, "--worker-cls"), "qwen38fn_worker.CheckpointCacheReleaseWorker")
+        self.assertEqual(arg(argv, "--worker-cls"), "qwen38fn_worker.HostCacheReleaseWorker")
         tree = ast.parse((ROOT / "scripts/lib/qwen38fn_worker.py").read_text())
-        cls = next(n for n in tree.body
-                   if isinstance(n, ast.ClassDef) and n.name == "CheckpointCacheReleaseWorker")
+        classes = {n.name: n for n in tree.body if isinstance(n, ast.ClassDef)}
+        cls = classes["CheckpointCacheReleaseWorker"]
         self.assertEqual([ast.unparse(b) for b in cls.bases], ["ReleaseLoadCacheWorker"])
         methods = {n.name: ast.unparse(n) for n in cls.body if isinstance(n, ast.FunctionDef)}
         # Evict from before the weights load until warmup ends; nothing runs while serving.
@@ -186,25 +234,59 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertIn(".start()", methods["load_model"])
         self.assertIn(".stop()", methods["compile_or_warm_up_model"])
         self.assertIn("finally:", methods["compile_or_warm_up_model"])
+        # Candidate 7 met the KV arena with another engine's GGUF in page cache
+        # (results/qwen38fn-gates/qualify-2026-10-11-c7). Candidate 8 releases
+        # the model root before the weights load and again before the arena,
+        # then refuses an arena that MemFree cannot cover. Both are startup-only.
+        cls = classes["HostCacheReleaseWorker"]
+        self.assertEqual([ast.unparse(b) for b in cls.bases], ["CheckpointCacheReleaseWorker"])
+        methods = {n.name: ast.unparse(n) for n in cls.body if isinstance(n, ast.FunctionDef)}
+        self.assertEqual(set(methods), {"load_model", "initialize_from_config"})
+        self.assertIn("release_tree(", methods["load_model"])
+        self.assertIn("release_tree(", methods["initialize_from_config"])
+        self.assertIn("mem_free_gib()", methods["initialize_from_config"])
+        self.assertIn("raise RuntimeError", methods["initialize_from_config"])
 
-    def test_text_only_until_media_is_qualified(self):
-        # Images at 1M are NO_GO (results/qwen38fn-gates/diag-vision-2026-10-11):
-        # after 100 MMMU images the direct 1M fill crossed the 10.5 GiB stop.
+    def test_images_on_and_video_off_like_the_default(self):
+        # Images at 1M were NO_GO above the 10 GiB floor
+        # (results/qwen38fn-gates/diag-vision-2026-10-11); the owner moved the
+        # floor to 8 GiB. The vision tower adds 897,862,112 BF16 bytes to the
+        # 75.65 GiB text-only load (vLLM reported 76.49 GiB with images on).
         p = self.profile()
         argv = p["launch"]["args"]
-        self.assertEqual(arg(argv, "--limit-mm-per-prompt"), '{"image":0,"video":0}')
-        self.assertNotIn("max_images", p["serving"])
-        self.assertNotIn("vision_min", p["qualification_targets"])
+        self.assertEqual(arg(argv, "--limit-mm-per-prompt"), '{"image":4,"video":0}')
+        self.assertEqual(p["serving"]["max_images"], 4)
+        self.assertNotIn("max_videos", p["serving"])
+        self.assertGreaterEqual(p["memory_model"]["resident_weights_gib"], 76.49)
 
-    def test_launch_is_the_configuration_candidate_5_qualified(self):
+    def test_processor_cache_is_off_as_in_the_measured_run(self):
+        # vLLM's processor cache defaults to 4 GiB, held once in the API server
+        # and once in the engine core: up to 8 GiB the memory model does not
+        # count. The 3.1-3.3 GiB image cost was measured with it off (diag run
+        # 2, 100 images); it only skips re-processing a repeated image.
+        argv = self.profile()["launch"]["args"]
+        self.assertEqual(argv.count("--mm-processor-cache-gb"), 1)
+        self.assertEqual(arg(argv, "--mm-processor-cache-gb"), "0")
+
+    def test_launch_is_candidate_5_plus_image_input(self):
         # qualify-2026-10-11-c4 (gate PASS) recorded the rendered argv and env.
-        # Only the interpreter pin moved, from the python3 symlink to the file
-        # it names; the bytes are the same.
+        # Candidates 7 and 8 change only the image limit, the processor cache
+        # (off), and the worker class (candidate 8's host page-cache release).
+        # The interpreter pin moved from the python3 symlink to the file it
+        # names; the bytes are the same.
         ev = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4"
         recorded = json.loads((ev / "manifest.json").read_text())["profile"]
         out = profile_resolver.resolve(self.profile(), profile_resolver.load_model(SLUG),
                                        profile_resolver.load_host(ev / "host-worktree.json"))
-        self.assertEqual(out["argv"], recorded["argv"])
+        expected = list(recorded["argv"])
+        index = expected.index("--limit-mm-per-prompt") + 1
+        self.assertEqual(expected[index], '{"image":0,"video":0}')
+        expected[index] = '{"image":4,"video":0}'
+        expected[index + 1:index + 1] = ["--mm-processor-cache-gb", "0"]
+        worker = expected.index("--worker-cls") + 1
+        self.assertEqual(expected[worker], "qwen38fn_worker.CheckpointCacheReleaseWorker")
+        expected[worker] = "qwen38fn_worker.HostCacheReleaseWorker"
+        self.assertEqual(out["argv"], expected)
         self.assertEqual(out["env"], recorded["env"])
         self.assertEqual(out["binary"], recorded["binary"] + ".12")
         self.assertEqual(profile_resolver.load_model(SLUG)["engines"][self.profile()["engine"]]["binary_sha256"],
@@ -229,18 +311,29 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertTrue((ROOT / engine["build_manifest"]).is_file())
 
     def test_serving_rejects_bad_media_fields(self):
-        # Media fields follow --limit-mm-per-prompt: a text-only launch must not
-        # declare an image or video maximum it cannot serve.
-        for key, value in (("max_images", 0), ("audio_clips", 1), ("max_images", 4), ("max_videos", 1)):
+        # Media fields follow --limit-mm-per-prompt: an enabled modality declares
+        # a positive maximum, and a disabled one declares none.
+        for key, value in (("max_images", 0), ("audio_clips", 1), ("max_images", None), ("max_videos", 1)):
             p = self.profile()
-            p["serving"][key] = value
-            with self.subTest(key=key), self.assertRaises(profile_resolver.ProfileError):
+            if value is None:
+                del p["serving"][key]
+            else:
+                p["serving"][key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(profile_resolver.ProfileError):
                 self.render(p)
+        p = self.profile()
+        args = p["launch"]["args"]
+        args[args.index("--limit-mm-per-prompt") + 1] = '{"image":0,"video":0}'
+        with self.assertRaises(profile_resolver.ProfileError):
+            self.render(p)
+        del p["serving"]["max_images"]
+        self.assertNotIn("max_images", self.render(p)["serving"])
 
     def test_a_modality_missing_from_the_limit_is_enabled(self):
         # vLLM serves up to 999 items of any modality that --limit-mm-per-prompt
         # leaves out, so {"image":0} alone keeps video on.
         p = self.profile()
+        p["serving"].pop("max_images", None)
         args = p["launch"]["args"]
         args[args.index("--limit-mm-per-prompt") + 1] = '{"image":0}'
         with self.assertRaises(profile_resolver.ProfileError):
@@ -249,6 +342,7 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(self.render(p)["serving"]["max_videos"], 1)
         # The dict form's count also defaults to 999 (vLLM BaseDummyOptions).
         p = self.profile()
+        p["serving"].pop("max_images", None)
         args = p["launch"]["args"]
         args[args.index("--limit-mm-per-prompt") + 1] = '{"image":0,"video":{"num_frames":16}}'
         with self.assertRaises(profile_resolver.ProfileError):
@@ -256,13 +350,15 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
 
     def test_switch_admission_covers_the_measured_peak(self):
         # The generic switch admits on safety.minimum_start_gib alone. Candidate
-        # 5's two starts used up to (preload - low) GiB through the 1M fill;
-        # admission must leave the kill floor above that peak.
+        # 5's two starts (text only) and candidate 9's start (images on) used up
+        # to (preload - low) GiB through the 1M fill; admission must leave the
+        # kill floor above that peak.
         p = self.profile()
         safety = p["safety"]
         peaks = []
-        for start in ("start1", "start2"):
-            log = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4/observe" / start / "meminfo.log"
+        for log in (ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4/observe/start1/meminfo.log",
+                    ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4/observe/start2/meminfo.log",
+                    C9 / "observe/start1/meminfo.log"):
             available = [int(re.search(r"MemAvailable:=(\d+)", line).group(1)) / 1048576
                          for line in log.read_text().splitlines()]
             peaks.append(available[0] - min(available))

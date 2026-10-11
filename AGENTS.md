@@ -259,8 +259,8 @@ alias needs only a profile, `model.json`, a conformance fixture and the
 test-table entries, with no new switch code. The switch refuses any generic
 profile that is not `qualified`, so `dsv41flash` stays refused until its gates
 pass and the profile status flips. `qwen38fn` (Qwen3.8-Flash-Next on vLLM) is
-the first qualified generic alias: an optional engine, while `qwen38-1m` stays
-the serving default.
+the first qualified generic alias and, since 2026-10-11, the serving default;
+`qwen38-1m` stays a switchable engine.
 
 The switch must serialize on one lock, verify hashes, stop only the
 identity-verified process group, validate authentication/health/semantics and

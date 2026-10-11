@@ -1,0 +1,36 @@
+2026-10-11T19:28:26Z preload MemAvailable:=120848592 SwapFree:=16552460 
+2026-10-11T19:28:26Z head c73c16b050bdca0df54422cf61ee83adaa78c7bf dirty=0
+2026-10-11T19:28:35Z primed MemFree:=92055548 MemAvailable:=120893160 Cached:=27277328 
+{"pass":true,"required_gib":114.5,"mem_available_gib":115.299,"stable_samples_observed":3}
+2026-10-11T19:28:37Z precondition 16.55 GiB /home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf
+2026-10-11T19:28:37Z precondition 0.86 GiB /home/bmarti44/models/qwen3.8-27b/mmproj-Qwen3.8-27B-f16.gguf
+2026-10-11T19:28:37Z start1: launching in scope qwen38fn-c9-start1-4061140 (RuntimeMaxSec=18000)
+{"pass":true,"required_gib":87.0,"mem_available_gib":115.297,"stable_samples_observed":3}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","pid":4061432,"port":8017}
+2026-10-11T19:39:54Z start1: ready after 677 s
+2026-10-11T19:39:54Z idle_mem_available_kib=11950196
+2026-10-11T19:39:54Z start1: attention block size 3200 tokens
+2026-10-11T19:39:54Z start1: KV capacity 1079117 tokens at 262,144 per request
+{"greedy": ["10bbe8c78923", "e54ccf0ee194", "221c11ec3fb7"], "tokens_per_chunk": [3.6666666666666665, 2.6296296296296298, 3.3333333333333335]}
+[speed] starting
+[speed] OK
+[toolcall] starting
+[toolcall] OK
+[vision] starting
+[vision] OK
+[teacher] starting
+[teacher] SKIPPED
+[context] starting
+[context] OK
+[soak] starting
+[soak] OK
+PASS: /home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c9/SUMMARY.md
+PASS  prefix-cache: repeat cache_n=19200/22662 (>=total-6400: True); shared-prefix cache_n=19200 (checkpoint-bounded floor 13446: True)
+PASS  turn-continuation: appended turn 2: prompt_n=3518 cache_n=19200 (< 7900 required; a full re-prefill means in-slot reuse broke)
+PASS  slot-thrash: turn-2 after utility call: prompt_n=3485 cache_n=19200 (< 7900 required; single-slot server re-prefills ~20000)
+PASS  prefill-throughput: novel prompt cache_n=0 (<100: True); prefill=2692 tok/s (>=350: True); prompt processing=8.4s (<=75: True); prompt time is client-measured TTFT; tuned ub/b=2048 profile measures ~434 tok/s — a failure here usually means the fast buffers were reverted (see docs/speed-tuning-2026-07-23.md)
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","stopped":true}
+2026-10-11T20:23:45Z start1: scope empty after stop
+2026-10-11T20:23:45Z postrun MemAvailable:=121108556 SwapFree:=16552472 
+ERROR: qwen3.8-flash-next/cuda-spark-128g-1m is not running (state file absent)
+2026-10-11T20:23:45Z driver exit

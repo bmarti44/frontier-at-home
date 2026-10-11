@@ -11,6 +11,12 @@ It skips pages a process has mapped, so in-place mappings (the PLE table) and
 the loader's live mmap stay intact. The evictor runs one pass at start, one
 pass every ``interval_s`` on a daemon thread, and one final pass at stop. A
 pass that fails is raised by ``stop()``, never swallowed.
+
+``release_tree`` applies the same advice once to every file under a model
+root. Another engine's model files stay cached after that engine stops.
+MemAvailable counts them as free, but the driver cannot use them for a large
+allocation. Candidate 7 met its KV arena at MemFree 10.2 GiB with qwen38-1m's
+GGUF still cached (results/qwen38fn-gates/qualify-2026-10-11-c7).
 """
 from __future__ import annotations
 
@@ -63,3 +69,38 @@ class CheckpointCacheEvictor:
         if self._error is not None:
             raise RuntimeError("checkpoint page-cache eviction failed") from self._error
         self.evict_once()
+
+
+def release_tree(root: str) -> int:
+    """Drop the unmapped page cache of every regular file under ``root``.
+
+    Symlinks are neither followed nor advised, so nothing outside ``root`` is
+    touched. A file this user cannot open, or one deleted during the walk, is
+    skipped. Any other error is raised. Returns the number of files advised.
+    """
+    if not root or os.path.realpath(root) == "/" or not os.path.isdir(root):
+        raise ValueError(f"refusing to release page cache under {root!r}")
+    count = 0
+    for directory, _, names in os.walk(root):
+        for name in names:
+            path = os.path.join(directory, name)
+            if os.path.islink(path) or not os.path.isfile(path):
+                continue
+            try:
+                fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            except (PermissionError, FileNotFoundError):
+                continue
+            try:
+                os.posix_fadvise(fd, 0, 0, os.POSIX_FADV_DONTNEED)
+            finally:
+                os.close(fd)
+            count += 1
+    return count
+
+
+def mem_free_gib(meminfo: str = "/proc/meminfo") -> float:
+    with open(meminfo) as stream:
+        for line in stream:
+            if line.startswith("MemFree:"):
+                return int(line.split()[1]) / 2**20
+    raise ValueError(f"no MemFree line in {meminfo}")

@@ -26,7 +26,7 @@ two minutes.
 
 ```bash
 sudo -n scripts/52_engine_switch.sh glm53-1m     # switch in
-sudo -n scripts/52_engine_switch.sh qwen38-1m    # switch back to the default
+sudo -n scripts/52_engine_switch.sh qwen38fn     # switch back to the default
 scripts/52_engine_switch.sh status --json
 ```
 

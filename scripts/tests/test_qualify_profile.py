@@ -134,6 +134,23 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "4")
         self.assertEqual(manifest["profile"]["speed_max_tokens_per_event"], 4)
 
+    def test_every_profile_soaks_at_the_repository_floor(self) -> None:
+        # One soak floor for every profile (owner, 2026-10-11): 35_soak.py's
+        # 5 GiB default. The kit passes no per-profile floor to the soak.
+        for profile in (GLM_PROFILE, "qwen3.8-flash-next/cuda-spark-128g-1m"):
+            out = self.tmp / ("bundle-soak-" + profile.replace("/", "-"))
+            proc = subprocess.run(
+                [sys.executable, str(SCRIPT), "--profile", profile, "--host", str(self.host), "--dry-run",
+                 "--out", str(out), "--cells", "soak", "--with-soak"],
+                capture_output=True, text=True, check=False,
+            )
+            with self.subTest(profile=profile):
+                self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+                manifest = json.loads((out / "manifest.json").read_text())
+                self.assertNotIn("env", manifest["cells"]["soak"])
+                self.assertNotIn("soak_mem_floor_gib", manifest["profile"])
+                self.assertNotIn("--mem-floor-gib", manifest["cells"]["soak"]["argv"])
+
     def test_non_speculative_profile_keeps_the_frozen_speed_bench(self) -> None:
         out = self.tmp / "bundle4"
         proc = subprocess.run(
@@ -389,6 +406,7 @@ class Helpers(unittest.TestCase):
             kit.select_cells(kit.parse_args(["--profile", GLM_PROFILE, "--cells", "speed,bogus"]))
         self.assertEqual(kit.select_cells(kit.parse_args(["--profile", GLM_PROFILE, "--cells", "context,speed"])),
                          ["speed", "context"])
+
 
 
 if __name__ == "__main__":
