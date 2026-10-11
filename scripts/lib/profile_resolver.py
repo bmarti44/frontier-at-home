@@ -59,6 +59,8 @@ PROFILE_KEYS = {
     "memory_model", "offload", "context_cap", "port_role", "bench",
     "switch_alias", "verify_on_hardware", "serving", "qualification_targets",
     "qualification_options",
+    # Generic switch contract (scripts/lib/switch_generic.py validates it).
+    "switch",
 }
 LAUNCH_KEYS = {
     "mechanism", "user", "runuser", "delegate", "log_name", "env",
@@ -256,12 +258,55 @@ def _substitute(value: str, mapping: dict, label: str) -> str:
     return rendered
 
 
+VLLM_TOPOLOGY_FLAGS = ("--max-model-len", "--max-num-seqs")
+
+
+def _single_flag_value(argv: list, flags: tuple) -> str | None:
+    hits = [i for i, arg in enumerate(argv) if arg in flags]
+    if any(arg.startswith(flag + "=") for arg in argv for flag in flags) or len(hits) > 1:
+        raise ValueError(f"serving topology requires at most one of {flags}")
+    if not hits:
+        return None
+    if hits[0] + 1 == len(argv):
+        raise ValueError(f"{argv[hits[0]]} has no value")
+    return argv[hits[0] + 1]
+
+
+def validate_serving_topology(profile: dict) -> None:
+    """Aggregate context_cap = parallel_slots x request_context_cap.
+
+    vLLM profiles keep the GLM-5.3 contract (media limits, --max-model-len,
+    --max-num-seqs). ds4 profiles declare only the slot topology, which must
+    agree with -c/--ctx (per-session context) and --batched-session.
+    """
+    argv = profile["launch"].get("args", [])
+    if any(arg.split("=", 1)[0] in VLLM_TOPOLOGY_FLAGS for arg in argv):
+        from glm53_contract import validate_serving
+        validate_serving(profile)
+        return
+    serving = profile.get("serving")
+    fields = {"parallel_slots", "request_context_cap"}
+    if not isinstance(serving, dict) or set(serving) != fields:
+        raise ValueError("invalid serving topology schema")
+    if any(type(serving[k]) is not int or serving[k] <= 0 for k in fields):
+        raise ValueError("serving topology values must be positive integers")
+    if serving["parallel_slots"] * serving["request_context_cap"] != profile["context_cap"]:
+        raise ValueError("aggregate context topology mismatch")
+    ctx = _single_flag_value(argv, ("-c", "--ctx"))
+    if ctx != str(serving["request_context_cap"]):
+        raise ValueError("serving topology disagrees with -c/--ctx")
+    sessions = _single_flag_value(argv, ("--batched-session",))
+    if serving["parallel_slots"] > 1 and sessions != str(serving["parallel_slots"]):
+        raise ValueError("serving topology disagrees with --batched-session")
+    if serving["parallel_slots"] == 1 and sessions not in (None, "1"):
+        raise ValueError("serving topology disagrees with --batched-session")
+
+
 def resolve(profile: dict, model: dict, host: dict, verb: str = "start") -> dict:
     """Render a validated profile against a host into a launch snapshot."""
     if "serving" in profile:
-        from glm53_contract import validate_serving
         try:
-            validate_serving(profile)
+            validate_serving_topology(profile)
         except (KeyError, TypeError, ValueError) as error:
             raise ProfileError(f"invalid serving context topology: {error}") from error
     backend = profile["backend"]

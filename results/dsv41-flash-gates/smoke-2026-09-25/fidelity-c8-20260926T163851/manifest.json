@@ -1,0 +1,170 @@
+{
+ "arm": "fidelity",
+ "artifact_sha256": {
+  "command.txt": "9b7a04d24ba4b1dd93098074b3c025153d359313197a1540f9d349e02d0a2437",
+  "containment/cmd.log": "b1fca29f23852fe0360c59bdbdfb9682c3b1135dc1b3295911066d10363e8c79",
+  "containment/kernel.log": "7364e30cbc6c5027d75fafb989c05ee0f66a94597b045bbf491b45dcb969d70e",
+  "containment/main.log": "43c04a3461a52afddb5666909ce5aed503d68108ee1856e1554a44e4f52ff0c4",
+  "containment/samples.log": "10fb8cf2274360b681dcae2a79370947c8c800e84c0fd9912c7e6fa9eff08e8c",
+  "cuda.tsv": "3dae44207b3a00f73115d0b525e26de0f3b2578234ecabd66ef1dc8576914242",
+  "exit_code.txt": "e6c21e8d260fe71882debdb339d2402a2ca7648529bc2303f48649bce0380017",
+  "fidelity-score-exit.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+  "fidelity-score.log": "5d34f6d71bfa135d4fcb691337a80b1b60f34a2498f82eae6858c86e6382bc3d",
+  "fidelity-summary.json": "5079020407e39a89b3d721b54f3669d838f706319b03de232a0415e2c454d475",
+  "finished_at.txt": "3438cfb1470e388f415dd4e3a3135b6ba7813ff18c8157dd1e2a438d7004ca9a",
+  "fixture-manifest.tsv": "47fc28ffd4a0f688cfd18ae0377a1cc37fb823a69150ae2a2ac73a8a797b912e",
+  "frozen-check-post-run.json": "a06c05f5640588364ac255a9ffbda1a4dfc8eacace17d13254e2bffdfd79a52d",
+  "frozen-check-post-score.json": "12c105c1216ed3b3a8bc5613805b18977d568e913c06ee78c136e63df382538a",
+  "frozen-check.json": "657f965e7e1b31e49a9b589613d09fbd83be5b4b2d74da38c7af19ca8b56e185",
+  "identity.json": "2a8a6fb41be28813670b26fb794d17e418b4adf1c0596364985df3b097d5a2d4",
+  "metal-reference.tsv": "22977d4a7a292df81d137b8cef1f7cccde104b007328cf26577e5cde9d389414",
+  "started_at.txt": "0fed304a1a5b085d2f5aa02c7f544471f5e8a92d47e2b478828154c5ea244b31",
+  "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout.txt": "535a2a823a88743a4800921bf80991144828a3e7bff607e85c43001ff154d47a",
+  "unit.txt": "598003a107aa170db23fae34d328093984d9ec9dc940cc93097e4d73e31ffd33"
+ },
+ "cgroup": "path=/user.slice/user-1000.slice/user@1000.service/app.slice/glm52-dsv41-smoke-fidelity-20260926T163854.service memory_high=77309411328 memory_max=81604378624 memory_swap_max=0 memory_oom_group=1",
+ "command": "/home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/score_official /home/bmarti44/models/deepseek-v4.1-flash/DeepSeek-V4.1-Flash-Q2.gguf /home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/deepseek-v4.1-flash-20260919-router/manifest.tsv /home/bmarti44/spark-deepseek-v4-flash/results/dsv41-flash-gates/smoke-2026-09-25/fidelity-c8-20260926T163851/cuda.tsv 34816 --ssd-streaming --ssd-streaming-cache-experts 42gb",
+ "component_sha256": {
+  "frozen-inputs-c8.json": "a5e348b1968f0581dd632fe064226a9743c08c56074a72089796b0f5c7ef2f89",
+  "score_fidelity.py": "361e052ced8a03e35a41baa2ceac3adf51e19f15da4cef997d0c960fd7d2c6b1"
+ },
+ "derived_post_hoc": false,
+ "finished_at": "2026-09-26T17:13:58,795315557+00:00",
+ "frozen_checks": {
+  "frozen-check-post-run.json": {
+   "checks": {
+    "03_memory_guard.py": true,
+    "base-default.tsv": true,
+    "bundle_attempt.py": true,
+    "fixture_manifest.tsv": true,
+    "frozen_check.py": true,
+    "frozen_inputs": true,
+    "frozen_inputs_committed": true,
+    "frozen_paths_clean": true,
+    "glm_safe_run.sh": true,
+    "run_smoke.sh": true,
+    "score_fidelity.py": true,
+    "test_bundle_attempt.py": true,
+    "test_score_fidelity.py": true
+   },
+   "commit": "a02549d7b63819969fc19cf9900a49bcec92b3fa",
+   "component_sha256": {
+    "03_memory_guard.py": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58",
+    "base-default.tsv": "22977d4a7a292df81d137b8cef1f7cccde104b007328cf26577e5cde9d389414",
+    "bundle_attempt.py": "ae48d205fd0dd5aaea137e412d35754c623b365e1406df569ca0bbc8fa039f4e",
+    "fixture_manifest.tsv": "47fc28ffd4a0f688cfd18ae0377a1cc37fb823a69150ae2a2ac73a8a797b912e",
+    "frozen_check.py": "d6e3ab246b3f8380ab27ecf097509d9204c3804d04f7fbaabd404fdaf22ea6de",
+    "frozen_inputs": "a5e348b1968f0581dd632fe064226a9743c08c56074a72089796b0f5c7ef2f89",
+    "glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "run_smoke.sh": "24dbf021f290b8e8e4ed22523d485cd20a352596e1e70dc3b075b0b330784f32",
+    "score_fidelity.py": "361e052ced8a03e35a41baa2ceac3adf51e19f15da4cef997d0c960fd7d2c6b1",
+    "test_bundle_attempt.py": "3c9ee2b572b7b7230c09cfac33986fa47f16bbe1613f21eccaaeba63fd01c52a",
+    "test_score_fidelity.py": "a386e4614e112e94d998c121d99dfa59b18ebe892b168856f389e569a7d7a484"
+   },
+   "frozen_inputs_path": "results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c8.json",
+   "ok": true,
+   "phase": "frozen-check-post-run.json",
+   "recorded_at": 1790442838.956552
+  },
+  "frozen-check-post-score.json": {
+   "checks": {
+    "03_memory_guard.py": true,
+    "base-default.tsv": true,
+    "bundle_attempt.py": true,
+    "fixture_manifest.tsv": true,
+    "frozen_check.py": true,
+    "frozen_inputs": true,
+    "frozen_inputs_committed": true,
+    "frozen_paths_clean": true,
+    "glm_safe_run.sh": true,
+    "run_smoke.sh": true,
+    "score_fidelity.py": true,
+    "test_bundle_attempt.py": true,
+    "test_score_fidelity.py": true
+   },
+   "commit": "a02549d7b63819969fc19cf9900a49bcec92b3fa",
+   "component_sha256": {
+    "03_memory_guard.py": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58",
+    "base-default.tsv": "22977d4a7a292df81d137b8cef1f7cccde104b007328cf26577e5cde9d389414",
+    "bundle_attempt.py": "ae48d205fd0dd5aaea137e412d35754c623b365e1406df569ca0bbc8fa039f4e",
+    "fixture_manifest.tsv": "47fc28ffd4a0f688cfd18ae0377a1cc37fb823a69150ae2a2ac73a8a797b912e",
+    "frozen_check.py": "d6e3ab246b3f8380ab27ecf097509d9204c3804d04f7fbaabd404fdaf22ea6de",
+    "frozen_inputs": "a5e348b1968f0581dd632fe064226a9743c08c56074a72089796b0f5c7ef2f89",
+    "glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "run_smoke.sh": "24dbf021f290b8e8e4ed22523d485cd20a352596e1e70dc3b075b0b330784f32",
+    "score_fidelity.py": "361e052ced8a03e35a41baa2ceac3adf51e19f15da4cef997d0c960fd7d2c6b1",
+    "test_bundle_attempt.py": "3c9ee2b572b7b7230c09cfac33986fa47f16bbe1613f21eccaaeba63fd01c52a",
+    "test_score_fidelity.py": "a386e4614e112e94d998c121d99dfa59b18ebe892b168856f389e569a7d7a484"
+   },
+   "frozen_inputs_path": "results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c8.json",
+   "ok": true,
+   "phase": "frozen-check-post-score.json",
+   "recorded_at": 1790442839.5773258
+  },
+  "frozen-check.json": {
+   "checks": {
+    "03_memory_guard.py": true,
+    "base-default.tsv": true,
+    "bundle_attempt.py": true,
+    "fixture_manifest.tsv": true,
+    "frozen_check.py": true,
+    "frozen_inputs": true,
+    "frozen_inputs_committed": true,
+    "frozen_paths_clean": true,
+    "glm_safe_run.sh": true,
+    "run_smoke.sh": true,
+    "score_fidelity.py": true,
+    "test_bundle_attempt.py": true,
+    "test_score_fidelity.py": true
+   },
+   "commit": "a02549d7b63819969fc19cf9900a49bcec92b3fa",
+   "component_sha256": {
+    "03_memory_guard.py": "3928675ff7ab496910d80775f536cceb6ee9b28f40b33ebbbd634e219a08cf58",
+    "base-default.tsv": "22977d4a7a292df81d137b8cef1f7cccde104b007328cf26577e5cde9d389414",
+    "bundle_attempt.py": "ae48d205fd0dd5aaea137e412d35754c623b365e1406df569ca0bbc8fa039f4e",
+    "fixture_manifest.tsv": "47fc28ffd4a0f688cfd18ae0377a1cc37fb823a69150ae2a2ac73a8a797b912e",
+    "frozen_check.py": "d6e3ab246b3f8380ab27ecf097509d9204c3804d04f7fbaabd404fdaf22ea6de",
+    "frozen_inputs": "a5e348b1968f0581dd632fe064226a9743c08c56074a72089796b0f5c7ef2f89",
+    "glm_safe_run.sh": "2ddffb19f79b790c419db8ac53574d23ccf9f2c7699136fbaa55fc2a890b19e6",
+    "run_smoke.sh": "24dbf021f290b8e8e4ed22523d485cd20a352596e1e70dc3b075b0b330784f32",
+    "score_fidelity.py": "361e052ced8a03e35a41baa2ceac3adf51e19f15da4cef997d0c960fd7d2c6b1",
+    "test_bundle_attempt.py": "3c9ee2b572b7b7230c09cfac33986fa47f16bbe1613f21eccaaeba63fd01c52a",
+    "test_score_fidelity.py": "a386e4614e112e94d998c121d99dfa59b18ebe892b168856f389e569a7d7a484"
+   },
+   "frozen_inputs_path": "results/dsv41-flash-gates/smoke-2026-09-25/frozen-inputs-c8.json",
+   "ok": true,
+   "phase": "frozen-check.json",
+   "recorded_at": 1790440734.494432
+  }
+ },
+ "frozen_commit": "a02549d7b63819969fc19cf9900a49bcec92b3fa",
+ "identity": {
+  "post": {
+   "binary": "/home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/score_official",
+   "binary_sha256": "a22923fb1693ec0235b458b477aeea8c657df060761a1f88a45aa37da8f002a1",
+   "expected_sha256": "a22923fb1693ec0235b458b477aeea8c657df060761a1f88a45aa37da8f002a1",
+   "model_bytes": 365713686528,
+   "model_inode": 3855305,
+   "model_mtime_ns": 1790381086494531483,
+   "ok": true,
+   "phase": "post"
+  },
+  "pre": {
+   "binary": "/home/bmarti44/.cache/ds4-v41-0aaea5a2/gguf-tools/quality-testing/score_official",
+   "binary_sha256": "a22923fb1693ec0235b458b477aeea8c657df060761a1f88a45aa37da8f002a1",
+   "expected_sha256": "a22923fb1693ec0235b458b477aeea8c657df060761a1f88a45aa37da8f002a1",
+   "model_bytes": 365713686528,
+   "model_inode": 3855305,
+   "model_mtime_ns": 1790381086494531483,
+   "ok": true,
+   "phase": "pre"
+  },
+  "verified": true
+ },
+ "kill_floor_kib": 41943040,
+ "kind": "fidelity_smoke_not_capability",
+ "schema_version": 1,
+ "started_at": "2026-09-26T16:38:54,570634440+00:00",
+ "unit": "glm52-dsv41-smoke-fidelity-20260926T163854"
+}

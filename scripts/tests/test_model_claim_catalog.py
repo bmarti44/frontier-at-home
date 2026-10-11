@@ -44,6 +44,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
             "kimi-k2.7-code",
             "deepseek-v4-pro",
             "deepseek-v4-flash",
+            "deepseek-v4.1-flash",
             "gpt-oss",
             "mistral-large-3",
         }

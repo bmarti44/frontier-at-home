@@ -40,7 +40,7 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   instead of `sha256`.
 - `launch.mechanism` — how the process is started:
   - `systemd-run`: transient unit with `containment` properties + flock
-    (qwen38, qwen38-1m, laguna, glm53-1m).
+    (qwen38, qwen38-1m, laguna, glm53-1m, and every generic alias).
   - `setsid-memwatch`: memory_guard → memwatch arm → `setsid env -i`
     (glm52). `memory_guard.required_gib` = `safety.minimum_start_gib`;
     `memwatch.threshold_gib` = `safety.kill_floor_gib`.
@@ -68,9 +68,37 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   tweaked config" re-spends. Re-running a spent rowset requires an
   owner-authorized `DSV4_LEDGER_NAMESPACE`; the profile system never mints
   namespaces.
-- `switch_alias` — reserved for the six production aliases pinned by the
-  AGENTS.md operator CLI (`dsv4|glm52|qwen38|qwen38-1m|laguna|glm53-1m`);
-  exactly one profile may carry each.
+- `switch_alias` — the `scripts/52_engine_switch.sh <alias>` name; exactly
+  one profile may carry each. The six legacy aliases
+  (`dsv4|glm52|qwen38|qwen38-1m|laguna|glm53-1m`) keep dedicated switch
+  code. Any other alias must match `^[a-z0-9][a-z0-9.-]{0,31}$`, must not be
+  a switch verb (`status|stop|restore|render`), and must carry a generic
+  `switch` block (below); it then needs no switch code at all.
+
+- `switch` — the generic switch contract, validated fail-closed by
+  `scripts/lib/switch_generic.py` (unknown keys are errors):
+  - `mode`: `"generic"` (required).
+  - `served_model_id` (required): the exact id `/v1/models` must list. The
+    readiness and serving checks use it; there is no default.
+  - `health_path`: `null` or a local path such as `"/health"` that must
+    answer 2xx before readiness.
+  - `context_check`: `null`, `{"kind": "slots", "slots": N, "n_ctx": M}`
+    (llama.cpp `/slots`), or `{"kind": "model_card", "max_model_len": M}`
+    (the served id's `/v1/models` card).
+
+  A generic profile must use `launch.mechanism` `systemd-run` with a
+  non-root `launch.user`, `containment`, `port_role: production`, and
+  `safety.minimum_start_gib` / `kill_floor_gib` / `startup_timeout_seconds`
+  (memory guard, memwatch floor, readiness deadline). Its unit and
+  `log_name` must not collide with a legacy alias. `artifact_roles` may name
+  `model` (required), `mmproj` and `draft_model`; launch args may use only
+  `{model} {port} {mmproj} {draft_model}` and env only `{port} {repo}
+  {cache_root}`. Every role path and the engine binary need a digest
+  (`sha256`, or the sampled `identity` form for very large GGUFs). The switch
+  refuses a generic profile whose `status.state` is not `qualified`, so an
+  `estimated` profile can be committed and rendered but never served.
+  Identity records and watchdog files live at
+  `<state_root>/<log_name>.{process.json,memwatch.*}`.
 
 - `serving` — optional explicit topology for a multi-sequence engine (vLLM):
   `parallel_slots`, `request_context_cap`, `max_images`, `max_videos`, and

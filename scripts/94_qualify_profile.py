@@ -206,6 +206,9 @@ def resolve_profile(args: argparse.Namespace) -> dict:
     served = args.served_model
     if served is None:
         served = argv_value(argv, "--served-model-name") or argv_value(argv, "--alias")
+    if served is None:
+        # Generic switch profiles declare the id their server reports.
+        served = (raw_profile.get("switch") or {}).get("served_model_id")
     model_path = argv_value(argv, "--model") or argv_value(argv, "-m")
     tokenizer_path = None
     tokenizer_sha = None

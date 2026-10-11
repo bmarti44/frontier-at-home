@@ -1,0 +1,40 @@
+{
+ "kind": "roofline_estimate_not_measurement",
+ "source": "GGUF header of DeepSeek-V4.1-Flash-Q2.gguf (weights/deepseek-v4.1-flash/manifest.json); tensor bytes from sorted data offsets",
+ "routed_expert_bytes": 152882380800,
+ "routed_expert_count": 15360,
+ "bytes_per_expert": 9953280.0,
+ "decode_routed_bytes_per_token": 2388787200.0,
+ "decode_routed_bytes_formula": "6 active experts x 40 MoE layers x bytes_per_expert",
+ "dense_always_read_bytes": 8743600128,
+ "engram_disk_only_bytes": 202758045696,
+ "memory_bandwidth_bytes_per_s": 204750000000.0,
+ "memory_bandwidth_basis": "GB10 273 GB/s x 0.75",
+ "nvme_bytes_per_s": 10050000000.0,
+ "nvme_basis": "results/glm52-gates/NVME-characterization-final-2026-08-03.json exact_record_80pct_engine_target (9.73 MB randread QD4 best 12.56 GB/s); V4.1 expert record 9.95 MB",
+ "formula": "s/token = (1-h)*routed/nvme + (dense + h*routed)/mem_bw; engram row reads and compute ignored",
+ "rows": [
+  {
+   "expert_cache_hit_rate": 0.0,
+   "seconds_per_token": 0.2803940543856541,
+   "tokens_per_s": 3.5664094311522008
+  },
+  {
+   "expert_cache_hit_rate": 0.5,
+   "seconds_per_token": 0.1673823442331201,
+   "tokens_per_s": 5.974345768555255
+  },
+  {
+   "expert_cache_hit_rate": 0.77,
+   "seconds_per_token": 0.10635602075075173,
+   "tokens_per_s": 9.402382610228786
+  },
+  {
+   "expert_cache_hit_rate": 0.9,
+   "seconds_per_token": 0.07697297611109288,
+   "tokens_per_s": 12.991572504052964
+  }
+ ],
+ "stop_threshold_tokens_per_s": 2.0,
+ "verdict": "NOT_FALSIFIED"
+}
