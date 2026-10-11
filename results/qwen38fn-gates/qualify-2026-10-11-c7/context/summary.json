@@ -1,0 +1,40 @@
+{
+  "scope": "direct fill of 4 slots x 250128 tokens",
+  "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m",
+  "model": "qwen3.8-flash-next",
+  "profile_id": "qwen3.8-flash-next/cuda-spark-128g-1m",
+  "slots": 4,
+  "tokens_per_slot": 250128,
+  "total_tokens": 0,
+  "all_slots_ok": false,
+  "needles_correct": 0,
+  "needles_total": 0,
+  "controls_ok": false,
+  "min_mem_available_gib": null,
+  "median_mem_available_gib": null,
+  "min_mem_at_unix": null,
+  "memory_floor_gib": 8.0,
+  "memory_floor_pass": false,
+  "max_ttft_s": null,
+  "total_wall_s": null,
+  "per_slot": [],
+  "checks": {
+    "short_phase_ok": false,
+    "full_phase_ran": false,
+    "all_slots_ok": false,
+    "needles_all_correct": false,
+    "controls_ok": false,
+    "memory_floor_pass": false,
+    "total_tokens_ok": false
+  },
+  "formulas": {
+    "total_tokens": "sum(usage.prompt_tokens over full-phase slots)",
+    "slot_ok": "http_status==200 and finish_reason and 0<=server-client<=512 and needle_correct and controls_ok",
+    "needle_correct": "the three asked 8-digit codes all appear in content in the asked order (regex (?<!\\d)\\d{8}(?!\\d))",
+    "controls_ok": "'NO_EXTRA_RECORD' in content and every 8-digit code found is one of the asked codes",
+    "memory_floor_pass": "min(MemAvailable)/2^20 >= mem_floor_gib over 1 s samples during the full phase",
+    "ttft_s": "(first content fragment perf_counter - request start perf_counter)",
+    "verdict": "PASS iff all checks true"
+  },
+  "verdict": "FAIL"
+}

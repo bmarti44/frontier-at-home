@@ -1,0 +1,361 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "qwen3.8-flash-next/cuda-spark-128g-1m",
+  "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m",
+  "served_model": "qwen3.8-flash-next",
+  "out": "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7",
+  "start_unix": 1791738593.3126745,
+  "end_unix": 1791739281.6161766,
+  "start_iso": "2026-10-11T17:09:53.420089+00:00",
+  "end_iso": "2026-10-11T17:21:21.616181+00:00",
+  "targets": {
+    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
+    "decode_tok_s_min": {
+      "0": 17.46,
+      "28672": 26.71
+    },
+    "prefill_tok_s_min": {
+      "28672": 698.7
+    },
+    "ttft_s_max": {
+      "0": 0.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "delta_nll_max": 0.01
+  },
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "FAIL",
+      "evidence": "speed/speed.json",
+      "start_unix": 1791738593.4674792,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn/scripts/30_bench_speed_blocks.py",
+        "--base-url",
+        "http://127.0.0.1:8017",
+        "--out",
+        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/speed/speed.json",
+        "--stack-label",
+        "qwen3.8-flash-next-cuda-spark-128g-1m",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "qwen3.8-flash-next",
+        "--max-tokens-per-event",
+        "4",
+        "--output-tokenizer-path",
+        "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json",
+        "--output-tokenizer-sha256",
+        "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3"
+      ],
+      "skip_reason": null,
+      "exit_code": 1,
+      "wall_s": 26.267761580005754,
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": null,
+            "median_ttft_s": null,
+            "median_prefill_tok_s": null,
+            "valid": false,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": null,
+            "median_ttft_s": null,
+            "median_prefill_tok_s": null,
+            "valid": false,
+            "reps": 2
+          }
+        },
+        "suite_valid": false,
+        "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m"
+      },
+      "end_unix": 1791738619.7355518,
+      "status_reason": "script exit 1",
+      "log_tail": "$ /usr/bin/python3 /home/bmarti44/qwen38fn/scripts/30_bench_speed_blocks.py --base-url http://127.0.0.1:8017 --out /home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/speed/speed.json --stack-label qwen3.8-flash-next-cuda-spark-128g-1m --reps 2 --warmup 1 --max-tokens 384 --min-completion-tokens 200 --seed 42 --context-levels 0,28672 --ignore-eos-supported --request-timeout 900 --extra-body {\"min_tokens\":320} --model-id qwen3.8-flash-next --max-tokens-per-event 4 --output-tokenizer-path /home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json --output-tokenizer-sha256 0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3"
+    },
+    "toolcall": {
+      "status": "OK",
+      "evidence": "toolcall/toolcall.json",
+      "start_unix": 1791738619.7359555,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8017/v1",
+        "--model",
+        "qwen3.8-flash-next",
+        "--out",
+        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 0.0556011159933405,
+      "result": {
+        "passed": 0,
+        "total": 20,
+        "score": 0.0,
+        "suite": "toolcall-v1"
+      },
+      "end_unix": 1791738619.7916713
+    },
+    "vision": {
+      "status": "FAIL",
+      "evidence": "vision/summary.json",
+      "start_unix": 1791738619.7919612,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn/scripts/38_bench_vision.py",
+        "--base-url",
+        "http://127.0.0.1:8017",
+        "--out",
+        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/vision",
+        "--thinking-mode",
+        "chat",
+        "--model-id",
+        "qwen3.8-flash-next"
+      ],
+      "skip_reason": null,
+      "exit_code": 1,
+      "wall_s": 0.13962263900612015,
+      "result": null,
+      "end_unix": 1791738619.9316764,
+      "status_reason": "script exit 1",
+      "log_tail": "$ /usr/bin/python3 /home/bmarti44/qwen38fn/scripts/38_bench_vision.py --base-url http://127.0.0.1:8017 --out /home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/vision --thinking-mode chat --model-id qwen3.8-flash-next\n38_bench_vision.py: <urlopen error [Errno 111] Connection refused>"
+    },
+    "teacher": {
+      "status": "SKIPPED",
+      "evidence": "teacher/summary.json",
+      "start_unix": 1791738619.9320707,
+      "argv": null,
+      "skip_reason": "model.json declares no reference_logits block (BF16 teacher logits dataset)",
+      "end_unix": 1791738619.932072
+    },
+    "context": {
+      "status": "FAIL",
+      "evidence": "context/summary.json",
+      "start_unix": 1791738619.9330325,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn/scripts/50_probe_context.py",
+        "--base-url",
+        "http://127.0.0.1:8017",
+        "--model",
+        "qwen3.8-flash-next",
+        "--out",
+        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/context",
+        "--stack-label",
+        "qwen3.8-flash-next-cuda-spark-128g-1m",
+        "--slots",
+        "4",
+        "--tokens-per-slot",
+        "250128",
+        "--tokenizer-path",
+        "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json",
+        "--tokenizer-sha256",
+        "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+        "--phase",
+        "both",
+        "--profile-id",
+        "qwen3.8-flash-next/cuda-spark-128g-1m",
+        "--mem-floor-gib",
+        "8"
+      ],
+      "skip_reason": null,
+      "exit_code": 1,
+      "wall_s": 0.7288799480011221,
+      "result": {
+        "verdict": "FAIL",
+        "total_tokens": 0,
+        "min_mem_available_gib": null,
+        "memory_floor_gib": 8.0,
+        "needles_correct": 0,
+        "needles_total": 0,
+        "max_ttft_s": null,
+        "checks": {
+          "short_phase_ok": false,
+          "full_phase_ran": false,
+          "all_slots_ok": false,
+          "needles_all_correct": false,
+          "controls_ok": false,
+          "memory_floor_pass": false,
+          "total_tokens_ok": false
+        }
+      },
+      "end_unix": 1791738620.6621861,
+      "status_reason": "script exit 1",
+      "log_tail": "$ /usr/bin/python3 /home/bmarti44/qwen38fn/scripts/50_probe_context.py --base-url http://127.0.0.1:8017 --model qwen3.8-flash-next --out /home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/context --stack-label qwen3.8-flash-next-cuda-spark-128g-1m --slots 4 --tokens-per-slot 250128 --tokenizer-path /home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json --tokenizer-sha256 0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3 --phase both --profile-id qwen3.8-flash-next/cuda-spark-128g-1m --mem-floor-gib 8\n{\"verdict\": \"FAIL\", \"total_tokens\": 0, \"needles_correct\": 0, \"needles_total\": 0, \"min_mem_available_gib\": null, \"max_ttft_s\": null}"
+    },
+    "soak": {
+      "status": "FAIL",
+      "evidence": "soak/soak.json",
+      "start_unix": 1791738620.66263,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn/scripts/35_soak.py",
+        "--base-url",
+        "http://127.0.0.1:8017",
+        "--stack-label",
+        "qwen3.8-flash-next-cuda-spark-128g-1m",
+        "--config-hash",
+        "qwen3.8-flash-next-cuda-spark-128g-1m-6993f8a86f37",
+        "--out",
+        "/home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/soak/soak.json",
+        "--model",
+        "qwen3.8-flash-next"
+      ],
+      "skip_reason": null,
+      "exit_code": -15,
+      "wall_s": 660.9530044169951,
+      "result": null,
+      "end_unix": 1791739281.6157448,
+      "status_reason": "script exit -15",
+      "log_tail": "$ /usr/bin/python3 /home/bmarti44/qwen38fn/scripts/35_soak.py --base-url http://127.0.0.1:8017 --stack-label qwen3.8-flash-next-cuda-spark-128g-1m --config-hash qwen3.8-flash-next-cuda-spark-128g-1m-6993f8a86f37 --out /home/bmarti44/qwen38fn/results/qwen38fn-gates/qualify-2026-10-11-c7/soak/soak.json --model qwen3.8-flash-next"
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": null,
+      "target": 17.46,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": null,
+      "target": 0.5,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": null,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": false,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": null,
+      "target": 26.71,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": null,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": null,
+      "target": 698.7,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": false,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 0,
+      "target": 19,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "verdict",
+      "measured": "FAIL",
+      "target": "PASS",
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "FAIL"
+    },
+    {
+      "cell": "context",
+      "metric": "total_tokens",
+      "measured": 0,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "min_mem_available_gib",
+      "measured": null,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "FAIL",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}
