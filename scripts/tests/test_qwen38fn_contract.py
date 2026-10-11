@@ -216,7 +216,9 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertTrue((ROOT / engine["build_manifest"]).is_file())
 
     def test_serving_rejects_bad_media_fields(self):
-        for key, value in (("max_images", 0), ("audio_clips", 1)):
+        # Media fields follow --limit-mm-per-prompt: a text-only launch must not
+        # declare an image or video maximum it cannot serve.
+        for key, value in (("max_images", 0), ("audio_clips", 1), ("max_images", 4), ("max_videos", 1)):
             p = self.profile()
             p["serving"][key] = value
             with self.subTest(key=key), self.assertRaises(profile_resolver.ProfileError):
