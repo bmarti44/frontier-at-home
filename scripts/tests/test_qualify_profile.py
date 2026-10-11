@@ -474,6 +474,51 @@ class AccuracyResumeKeepsFinishedSuites(unittest.TestCase):
             self.assertIn("(kept) acc-gsm8k.json", (cell_dir / "log.txt").read_text())
 
 
+class AccuracyHoldoutStopsAfterAFailure(unittest.TestCase):
+    """Holdout rows are spend-once: after a failed suite, no further holdout suite starts."""
+
+    def run_suites(self, split, failing):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            cell_dir = out / "accuracy"
+            ran = []
+
+            def fake_run(argv, log_path):
+                suite = argv[-1]
+                ran.append(suite)
+                if suite == failing:
+                    return 1, 1.0
+                (cell_dir / f"acc-{suite}.json").write_text(json.dumps(
+                    {"suite": suite, "split": argv[2], "n": 10, "correct": 5, "accuracy": 0.5}))
+                return 0, 1.0
+
+            plan = {"suites": {"gsm8k": ["x", "--split", split, "gsm8k"],
+                               "mmlu-pro": ["x", "--split", split, "mmlu-pro"],
+                               "humaneval": ["x", "--split", "all", "humaneval"]},
+                    "skip_reason": None, "evidence": "accuracy/acc-<suite>.json"}
+            resolved = {"profile_id": "p", "binary_sha256": "0" * 64, "digest_checks": [], "argv": []}
+            saved = kit.run_subprocess
+            kit.run_subprocess = fake_run
+            try:
+                record = kit.run_cell("accuracy", plan, out, resolved)
+            finally:
+                kit.run_subprocess = saved
+            log = (cell_dir / "log.txt").read_text() if (cell_dir / "log.txt").exists() else ""
+            return ran, record, log
+
+    def test_failed_suite_stops_later_holdout_draws(self):
+        ran, record, log = self.run_suites("holdout", failing="gsm8k")
+        self.assertEqual(ran, ["gsm8k", "humaneval"])
+        self.assertEqual(record["suites_not_run_after_failure"], ["mmlu-pro"])
+        self.assertEqual(record["status"], "FAIL")
+        self.assertIn("(not run) mmlu-pro", log)
+
+    def test_dev_split_keeps_running_after_a_failure(self):
+        ran, record, _ = self.run_suites("dev", failing="gsm8k")
+        self.assertEqual(ran, ["gsm8k", "mmlu-pro", "humaneval"])
+        self.assertEqual(record["suites_not_run_after_failure"], [])
+
+
 class ResummarizeMode(unittest.TestCase):
     def test_resummarize_selects_no_cell_and_implies_no_launch(self) -> None:
         args = kit.parse_args(["--profile", GLM_PROFILE, "--resummarize", "--out", "/tmp/x"])
