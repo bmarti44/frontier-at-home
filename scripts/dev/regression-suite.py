@@ -61,13 +61,15 @@ Usage:
                                           #   mandatory pre-promotion gate
                                           #   for any serving-knob change
   regression-suite.py agent-gate --base http://127.0.0.1:8017 \
-      --engine vllm --model default --prefix-block-tokens 3200
+      --engine vllm --model default --prefix-block-tokens 3200 --spec-block-drop
 
 vLLM (--engine vllm) returns no llama.cpp `timings`: reuse comes from
 usage.prompt_tokens_details.cached_tokens, which the server must report
 (--enable-prompt-tokens-details), and prefill time is the client-measured
 TTFT of a streamed request. --prefix-block-tokens N makes the reuse floors
-block-granular, because vLLM caches whole N-token blocks only.
+block-granular, because vLLM caches whole N-token blocks only; with
+--spec-block-drop (MTP/EAGLE servers drop one more trailing block on every
+hit) the floors allow two blocks.
 """
 import argparse, json, sys, time, urllib.request, urllib.error, uuid
 
@@ -77,6 +79,9 @@ RESULTS = []
 MODEL = "d"
 ENGINE = "llama.cpp"
 PREFIX_BLOCK_TOKENS = None
+# Tokens a healthy block-granular cache may leave unreused: one block, or
+# two when the server also drops a trailing block on hits (vLLM MTP/EAGLE).
+REUSE_SLACK = None
 
 def load_prefix(frac=0.46):
     text = open(FIXTURE).read()
@@ -155,9 +160,10 @@ def t_prefix_cache(base):
         ok1 = r2["cache_n"] >= 0.99 * total
     else:
         # Block-granular caches hit whole blocks only, and the last prompt
-        # token always runs, so a repeat reuses all but under one block.
-        repeat_rule = f">=total-{PREFIX_BLOCK_TOKENS}"
-        ok1 = r2["cache_n"] >= total - PREFIX_BLOCK_TOKENS
+        # token always runs, so a repeat reuses all but under one block
+        # (under two when the server drops a trailing block for MTP).
+        repeat_rule = f">=total-{REUSE_SLACK}"
+        ok1 = r2["cache_n"] >= total - REUSE_SLACK
     # Shared-prefix divergence: DSV4's cache cannot trim the tail, so the
     # server rolls back to the nearest context checkpoint, which can trail
     # the divergence point by up to the checkpoint spacing (default 8192)
@@ -166,7 +172,7 @@ def t_prefix_cache(base):
     CHECKPOINT_SPACING = 8192
     # A block-granular cache likewise rolls back to the last whole block
     # before the divergence point; the coarser of the two bounds applies.
-    floor = total - max(CHECKPOINT_SPACING, PREFIX_BLOCK_TOKENS or 0) - 1024
+    floor = total - max(CHECKPOINT_SPACING, REUSE_SLACK or 0) - 1024
     ok2 = r3["cache_n"] >= floor
     return record("prefix-cache", ok1 and ok2,
                   f"repeat cache_n={r2['cache_n']}/{total} ({repeat_rule}: {ok1}); "
@@ -184,7 +190,7 @@ def t_slot_thrash(base):
              {"role": "user", "content": "Now give one example record number."}]
     t2 = timings(chat(base, conv, 64))
     # A block-granular cache re-runs up to one block before the new turn.
-    limit = 1500 + (PREFIX_BLOCK_TOKENS or 0)
+    limit = 1500 + (REUSE_SLACK or 0)
     ok = t2["prompt_n"] < limit
     return record("slot-thrash", ok,
                   f"turn-2 after utility call: prompt_n={t2['prompt_n']} cache_n={t2['cache_n']} (< {limit} required; single-slot server re-prefills ~20000)")
@@ -282,7 +288,7 @@ def t_turn_continuation(base):
     conv += [{"role": "assistant", "content": reply},
              {"role": "user", "content": "Now give one example record number."}]
     t2 = timings(chat(base, conv, 64))
-    limit = 1500 + (PREFIX_BLOCK_TOKENS or 0)
+    limit = 1500 + (REUSE_SLACK or 0)
     ok = t2["prompt_n"] < limit
     return record("turn-continuation", ok,
                   f"appended turn 2: prompt_n={t2['prompt_n']} cache_n={t2['cache_n']} "
@@ -295,7 +301,7 @@ TESTS = {"prefix-cache": t_prefix_cache, "slot-thrash": t_slot_thrash,
          "turn-continuation": t_turn_continuation}
 
 def main(argv=None):
-    global MODEL, ENGINE, PREFIX_BLOCK_TOKENS
+    global MODEL, ENGINE, PREFIX_BLOCK_TOKENS, REUSE_SLACK
     ap = argparse.ArgumentParser()
     ap.add_argument("tests", nargs="+")
     # No default: port 8011's engine changes with operational posture (see
@@ -310,12 +316,18 @@ def main(argv=None):
                     help="request model name; vLLM rejects names it does not serve")
     ap.add_argument("--prefix-block-tokens", type=int,
                     help="prefix-cache block size in tokens; makes reuse floors block-granular")
+    ap.add_argument("--spec-block-drop", action="store_true",
+                    help="server drops one trailing block on prefix hits (vLLM MTP/EAGLE): allow two blocks of slack")
     args = ap.parse_args(argv)
     if args.engine == "vllm" and args.prefix_block_tokens is None:
         ap.error("--engine vllm requires --prefix-block-tokens (vLLM caches whole blocks)")
     if args.prefix_block_tokens is not None and args.prefix_block_tokens <= 0:
         ap.error("--prefix-block-tokens must be positive")
+    if args.spec_block_drop and args.prefix_block_tokens is None:
+        ap.error("--spec-block-drop requires --prefix-block-tokens")
     MODEL, ENGINE, PREFIX_BLOCK_TOKENS = args.model, args.engine, args.prefix_block_tokens
+    if PREFIX_BLOCK_TOKENS is not None:
+        REUSE_SLACK = PREFIX_BLOCK_TOKENS * (2 if args.spec_block_drop else 1)
     aliases = {
         "all-llamacpp": ["prefix-cache", "slot-thrash"],
         "agent-gate": ["prefix-cache", "turn-continuation", "slot-thrash",
@@ -335,7 +347,8 @@ def main(argv=None):
         report = {"when": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                   "base": args.base, "results": RESULTS}
         if ENGINE == "vllm":
-            report.update(engine=ENGINE, model=MODEL, prefix_block_tokens=PREFIX_BLOCK_TOKENS)
+            report.update(engine=ENGINE, model=MODEL, prefix_block_tokens=PREFIX_BLOCK_TOKENS,
+                          spec_block_drop=args.spec_block_drop)
         with open(args.json, "w") as f:
             json.dump(report, f, indent=1)
     return 0 if ok else 1
