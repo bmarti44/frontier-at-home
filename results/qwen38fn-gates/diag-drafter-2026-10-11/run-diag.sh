@@ -6,11 +6,12 @@
 # The hook reaches the engine only through a scratch PYTHONPATH: a host file
 # whose paths.repo is a scratch dir of symlinks to this worktree's
 # scripts/lib plus sitecustomize.py. Production files are unchanged.
-# Usage: run-diag.sh <label> <scratch dir> [profile]
+# Usage: run-diag.sh <label> <scratch dir> [profile] [hook file]
 set -Eeuo pipefail
 LABEL=${1:?usage: run-diag.sh <label> <scratch dir> [profile]}
 SCRATCH=${2:?scratch dir}
 PROFILE=${3:-qwen3.8-flash-next/cuda-spark-128g-1m}
+HOOK=${4:-sitecustomize.py}
 WT=/home/bmarti44/qwen38fn
 DIAG=$WT/results/qwen38fn-gates/diag-drafter-2026-10-11
 OBS=$DIAG/$LABEL
@@ -21,7 +22,7 @@ mkdir -p "$OBS"
 FAKE=$SCRATCH/repo-$LABEL
 mkdir -p "$FAKE/scripts/lib"
 for f in "$WT"/scripts/lib/*.py; do ln -s "$f" "$FAKE/scripts/lib/"; done
-ln -s "$DIAG/sitecustomize.py" "$FAKE/scripts/lib/sitecustomize.py"
+ln -s "$DIAG/$HOOK" "$FAKE/scripts/lib/sitecustomize.py"
 python3 - "$WT/results/qwen38fn-gates/qualify-2026-10-11/host-worktree.json" "$FAKE" "$OBS/host-diag.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -70,9 +71,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-log "DIAGNOSTIC $LABEL profile $PROFILE"
+log "DIAGNOSTIC $LABEL profile $PROFILE hook $HOOK"
 log "head $(git rev-parse HEAD) dirty=$(git status --porcelain --untracked-files=no | wc -l)"
-log "sha256 $(sha256sum "configs/profiles/$PROFILE.json" "$DIAG/sitecustomize.py" "$DIAG/watch.py" "$0" | awk '{printf "%s:%s ", $2, $1}')"
+log "sha256 $(sha256sum "configs/profiles/$PROFILE.json" "$DIAG/$HOOK" "$DIAG/watch.py" "$0" | awk '{printf "%s:%s ", $2, $1}')"
 python3 "$WT/scripts/03_memory_guard.py" --required-gib 112 --stable-samples 3 --timeout-seconds 600 \
     | tee -a "$OBS/driver.log"
 python3 "$DIAG/watch.py" "$SERVER_LOG" "$SERVER_OFF" "$OBS/watch.log" "$UNIT" &
