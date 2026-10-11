@@ -198,7 +198,7 @@ class ProductionPlan(unittest.TestCase):
         self.assertEqual(plan["unit_name"], "qwen38fn-engine")
         self.assertEqual(plan["user"], "bmarti44")
         self.assertEqual(plan["log_name"], "qwen38fn")
-        self.assertEqual(plan["required_gib"], "110")
+        self.assertEqual(plan["required_gib"], "113")
         self.assertEqual(plan["floor_gib"], "10")
         self.assertEqual(plan["timeout"], "1800")
         self.assertEqual(plan["served_model_id"], "qwen3.8-flash-next")
@@ -225,6 +225,8 @@ class ProductionPlan(unittest.TestCase):
         "host-bound: hashes the local runtime interpreter and model metadata")
     def test_qwen38fn_artifacts_verify_on_this_host(self) -> None:
         plan = production_plan("qwen38fn")
+        if not os.path.isfile(plan["binary"]):
+            self.skipTest("runtime not present on this host")
         identities = generic.verify_artifacts(plan)
         self.assertEqual(sorted(identities),
                          sorted(check["path"] for check in plan["digest_checks"]))

@@ -237,6 +237,36 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(profile_resolver.ProfileError):
                 self.render(p)
 
+    def test_a_modality_missing_from_the_limit_is_enabled(self):
+        # vLLM serves up to 999 items of any modality that --limit-mm-per-prompt
+        # leaves out, so {"image":0} alone keeps video on.
+        p = self.profile()
+        args = p["launch"]["args"]
+        args[args.index("--limit-mm-per-prompt") + 1] = '{"image":0}'
+        with self.assertRaises(profile_resolver.ProfileError):
+            self.render(p)
+        p["serving"].update(max_videos=1, video_frames=32)
+        self.assertEqual(self.render(p)["serving"]["max_videos"], 1)
+
+    def test_switch_admission_covers_the_measured_peak(self):
+        # The generic switch admits on safety.minimum_start_gib alone. Candidate
+        # 5's two starts used up to (preload - low) GiB through the 1M fill;
+        # admission must leave the kill floor above that peak.
+        p = self.profile()
+        safety = p["safety"]
+        peaks = []
+        for start in ("start1", "start2"):
+            log = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c4/observe" / start / "meminfo.log"
+            available = [int(re.search(r"MemAvailable:=(\d+)", line).group(1)) / 1048576
+                         for line in log.read_text().splitlines()]
+            peaks.append(available[0] - min(available))
+        self.assertGreater(max(peaks), 100)
+        self.assertGreaterEqual(safety["minimum_start_gib"], max(peaks) + safety["kill_floor_gib"])
+        budget = p["memory_model"]
+        self.assertGreaterEqual(safety["minimum_start_gib"],
+                                budget["resident_weights_gib"] + budget["overhead_gib"]
+                                + budget["extra_gib"] + budget["floor_gib"])
+
     def test_model_pins_the_nvfp4_checkpoint_revision(self):
         model = profile_resolver.load_model(SLUG)
         artifact = model["artifacts"][self.profile()["artifact_roles"]["model"]]
