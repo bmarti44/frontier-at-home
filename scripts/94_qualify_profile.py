@@ -25,6 +25,7 @@ import argparse
 import datetime as _dt
 import hashlib
 import json
+import math
 import os
 import platform
 import shutil
@@ -118,6 +119,23 @@ def tail_text(path: Path, lines: int = LOG_TAIL_LINES) -> str:
 # ----------------------------------------------------------------------------
 # Profile resolution
 # ----------------------------------------------------------------------------
+
+
+def soak_floor_gib(options: dict, kill_floor_gib: Any) -> float | None:
+    """qualification_options.soak_mem_floor_gib, validated; None keeps 35_soak.py's 12 GiB default.
+
+    35_soak.py reads its floor only from DSV4_SOAK_MEM_FLOOR_GIB. A profile whose
+    owner-set kill floor is below 12 GiB declares the floor its soak is held to;
+    it may not sit below the profile's own kill floor.
+    """
+    if "soak_mem_floor_gib" not in options:
+        return None
+    value = options["soak_mem_floor_gib"]
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise KitError(f"qualification_options.soak_mem_floor_gib must be a finite number, got {value!r}")
+    if kill_floor_gib is not None and value < kill_floor_gib:
+        raise KitError(f"qualification_options.soak_mem_floor_gib {value} is below the kill floor {kill_floor_gib}")
+    return float(value)
 
 
 class KitError(RuntimeError):
@@ -305,6 +323,7 @@ def resolve_profile(args: argparse.Namespace) -> dict:
         "reference_logits": reference_logits,
         "qualification_targets": targets,
         "speed_max_tokens_per_event": options.get("speed_max_tokens_per_event"),
+        "soak_mem_floor_gib": soak_floor_gib(options, safety.get("kill_floor_gib")),
         "qualification_options": options or None,
         "vision_thinking_mode": vision_thinking_mode,
         "encoder": encoder,
@@ -526,8 +545,10 @@ def plan_cells(resolved: dict, args: argparse.Namespace, out: Path, base_url: st
                  "--config-hash", resolved["config_hash"], "--out", str(cell_dir("soak") / "soak.json")]
     if served:
         soak_argv += ["--model", served]
+    soak_floor = resolved.get("soak_mem_floor_gib")
     plans["soak"] = {"argv": soak_argv, "skip_reason": None if args.with_soak else "off by default (--with-soak)",
-                     "evidence": "soak/soak.json"}
+                     "evidence": "soak/soak.json",
+                     "env": {"DSV4_SOAK_MEM_FLOOR_GIB": str(soak_floor)} if soak_floor is not None else None}
     return plans
 
 
@@ -898,13 +919,15 @@ def wait_for_model(base_url: str, served: str | None, timeout_s: float) -> list[
 # ----------------------------------------------------------------------------
 
 
-def run_subprocess(argv: list[str], log_path: Path) -> tuple[int, float]:
+def run_subprocess(argv: list[str], log_path: Path, env: dict[str, str] | None = None) -> tuple[int, float]:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
+    prefix = "".join(f"{key}={value} " for key, value in sorted((env or {}).items()))
     with open(log_path, "a", encoding="utf-8") as log:
-        log.write(f"$ {' '.join(argv)}\n")
+        log.write(f"$ {prefix}{' '.join(argv)}\n")
         log.flush()
-        proc = subprocess.run(argv, stdout=log, stderr=subprocess.STDOUT, cwd=REPO_ROOT, check=False)
+        proc = subprocess.run(argv, stdout=log, stderr=subprocess.STDOUT, cwd=REPO_ROOT, check=False,
+                              env={**os.environ, **env} if env else None)
     return proc.returncode, time.monotonic() - started
 
 
@@ -965,7 +988,7 @@ def run_cell(name: str, plan: dict, out: Path, resolved: dict) -> dict:
         record["suites_not_run_after_failure"] = not_run
         failed = [s for s, c in exits.items() if c != 0] + not_run
     else:
-        code, wall = run_subprocess(plan["argv"], log_path)
+        code, wall = run_subprocess(plan["argv"], log_path, plan.get("env"))
         record["exit_code"] = code
         record["wall_s"] = wall
         failed = [name] if code != 0 else []
@@ -1136,7 +1159,8 @@ def main(argv: list[str] | None = None) -> int:
         "cells_kept_from_previous_run": sorted(previous),
         "cells": {**{name: entry["manifest"] for name, entry in previous.items()},
                   **{name: {"argv": plans[name].get("argv") if name != "accuracy" else plans[name].get("suites"),
-                            "skip_reason": plans[name].get("skip_reason"), "evidence": plans[name].get("evidence")}
+                            "skip_reason": plans[name].get("skip_reason"), "evidence": plans[name].get("evidence"),
+                            "env": plans[name].get("env")}
                      for name in cells}},
     }
     out.mkdir(parents=True, exist_ok=True)

@@ -8,7 +8,7 @@
   "purpose": "Qwen3.8-Flash-Next for agentic coding: four native 262,144-token slots (1,048,576 total), NVFP4 experts, PLE table read in place from NVMe, MTP k=3, fp8 KV, prefix cache, decode CUDA graphs. Optional engine (switch alias qwen38fn); qwen38-1m stays the default. Images on (4 per prompt), video off.",
   "status": {
     "state": "estimated",
-    "basis": "Candidate 5 (results/qwen38fn-gates/qualify-2026-10-11-c4/) qualified this launch text-only. Candidate 7 (images on under the owner's 8 GiB floor) failed on NVRM lines at the KV arena: qwen38-1m's GGUF was still in page cache (results/qwen38fn-gates/qualify-2026-10-11-c7/). Candidate 8 adds the host page-cache release (qwen38fn_worker.HostCacheReleaseWorker) and is pending its preregistered gate: results/qwen38fn-gates/qualify-2026-10-11-c8/."
+    "basis": "Candidate 5 (results/qwen38fn-gates/qualify-2026-10-11-c4/) qualified this launch text-only. Candidate 7 (images on under the owner's 8 GiB floor) failed on NVRM lines at the KV arena (results/qwen38fn-gates/qualify-2026-10-11-c7/). Candidate 8 added the host page-cache release and passed every clause except the soak, which the kit held to 35_soak.py's 12 GiB default (results/qwen38fn-gates/qualify-2026-10-11-c8/). Candidate 9 holds the soak to the profile's 8 GiB floor and is pending its preregistered gate: results/qwen38fn-gates/qualify-2026-10-11-c9/."
   },
   "engine": "vllm-qwen38fn-r001",
   "artifact_roles": {
@@ -149,7 +149,9 @@
     "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m"
   },
   "qualification_options": {
-    "speed_max_tokens_per_event": 4
+    "speed_max_tokens_per_event": 4,
+    "soak_mem_floor_gib": 8,
+    "note": "soak_mem_floor_gib: the owner-set 8 GiB floor (2026-10-11) also holds the soak; 35_soak.py's 12 GiB default failed candidate 8's soak at 9.92 GiB (results/qwen38fn-gates/qualify-2026-10-11-c8)."
   },
   "qualification_targets": {
     "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
