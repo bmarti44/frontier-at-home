@@ -68,7 +68,7 @@
       "--gpu-memory-utilization",
       "0.85",
       "--kv-cache-memory-bytes",
-      "16500000000",
+      "22700000000",
       "--enable-prefix-caching",
       "--enable-chunked-prefill",
       "--max-num-batched-tokens",
@@ -120,9 +120,9 @@
     "kv_bytes_per_token": 0,
     "resident_weights_gib": 76,
     "overhead_gib": 10,
-    "extra_gib": 16,
+    "extra_gib": 22,
     "floor_gib": 10,
-    "basis": "ESTIMATE until the first load: 76 GiB resident weights (PLE on NVMe), fixed 16.5 GB fp8 KV arena (--kv-cache-memory-bytes; ~1,048,576 tokens at ~15.7 KB/token), overhead for CUDA context, activations (4,096-token prefill chunks), MTP and CUDA graphs. KV bytes per token (fp8 KV + fp8 indexer, 12 QSA layers) from community single-Spark logs: 7.44 GiB holds 507,810 tokens = ~15.7 KB/token; replace with the engine-reported pool after the first load."
+    "basis": "Sized from the 2026-10-11 diagnostic smoke (results/qwen38fn-gates/smoke-2026-10-11): vLLM reported 75.67 GiB model load and the non-KV footprint was ~83.6 GiB at idle. Its 4,200,000,000-byte fp8 KV arena held 194,493 tokens at --max-model-len 131,072 (attention block 3,200). A request costs cdiv(L, 3200) blocks per attention group plus a fixed count per GDN-state and QSA-ring group, so twice that per-request cost bounds a 262,144-token slot and four slots need >= 22,643,587,173 bytes. The fixed 22.7 GB arena (--kv-cache-memory-bytes, 21.14 GiB) is extra_gib. Overhead covers CUDA context, 4,096-token prefill activations, MTP and CUDA graphs. Projected idle low point on a quiet host ~15 GiB before prefill activations, so the direct 1M fill needs a quiet host."
   },
   "serving": {
     "parallel_slots": 4,
