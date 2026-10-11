@@ -53,9 +53,10 @@ SAMPLER=$!
     printf '%s' "$(stamp)"
     while read -r pid; do
         awk -v p="$pid" '/^Name:/{n=$2} /^RssAnon:/{a=$2} /^RssFile:/{f=$2} /^RssShmem:/{s=$2}
-            END{if (a + f + s > 102400) printf " %s:%s:anon=%s:file=%s:shmem=%s", p, n, a, f, s}' "/proc/$pid/status" 2>/dev/null
+            END{if (a + f + s > 102400) printf " %s:%s:anon=%s:file=%s:shmem=%s", p, n, a, f, s}' "/proc/$pid/status" 2>/dev/null || true
     done <"/sys/fs/cgroup$cg/cgroup.procs"
-    printf '\n'
+    # CUDA allocations are invisible to RssAnon/RssFile; log the driver's per-process view too.
+    printf ' gpu=%s\n' "$(nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader,nounits 2>/dev/null | tr '\n' ';' || true)"
   done >>"$OBS/procs.log" ) &
 PROCS=$!
 journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 &
