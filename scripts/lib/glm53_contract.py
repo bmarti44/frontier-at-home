@@ -146,7 +146,7 @@ def _enabled_media(argv: list) -> set[str]:
             enabled.add(modality)
             continue
         limit = limits[modality]
-        count = limit.get("count", 0) if isinstance(limit, dict) else limit
+        count = limit.get("count", 999) if isinstance(limit, dict) else limit
         if type(count) is not int or count < 0:
             raise ValueError("invalid --limit-mm-per-prompt")
         if count > 0:
