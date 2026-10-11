@@ -184,6 +184,10 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(p["serving"]["max_images"], 4)
         self.assertNotIn("max_videos", p["serving"])
         self.assertNotIn("--mm-processor-kwargs", argv)
+        # vLLM keeps a processed-input LRU cache (default 4 GiB) in both the API
+        # server and the engine core: up to 8 GiB of host memory on a profile
+        # whose measured idle headroom is about 2 GiB above the 10 GiB floor.
+        self.assertEqual(arg(argv, "--mm-processor-cache-gb"), "0")
         self.assertEqual(p["qualification_targets"]["vision_min"], 0.64)
         self.assertNotIn("vision_thinking_mode", p.get("qualification_options", {}))
 
