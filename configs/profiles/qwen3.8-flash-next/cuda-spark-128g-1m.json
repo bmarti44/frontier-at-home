@@ -74,6 +74,7 @@
       "--max-num-batched-tokens",
       "4096",
       "--enable-auto-tool-choice",
+      "--enable-prompt-tokens-details",
       "--tool-call-parser",
       "qwen3_coder",
       "--reasoning-parser",
@@ -132,6 +133,9 @@
   "port_role": "production",
   "bench": {
     "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m"
+  },
+  "qualification_options": {
+    "speed_max_tokens_per_event": 4
   },
   "qualification_targets": {
     "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",

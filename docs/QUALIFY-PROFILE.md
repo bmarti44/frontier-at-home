@@ -22,7 +22,7 @@ and no model on disk.
 
 | cell | proves | script (exact argv in `manifest.json`) | evidence |
 |---|---|---|---|
-| speed | decode tok/s, TTFT, prefill tok/s at ctx 0 and 28,672 (2 reps + 1 warm-up, seed 42, `min_tokens` 320, output-token validation against the model tokenizer) | `30_bench_speed.py` | `speed/speed.json` |
+| speed | decode tok/s, TTFT, prefill tok/s at ctx 0 and 28,672 (2 reps + 1 warm-up, seed 42, `min_tokens` 320, output-token validation against the model tokenizer) | `30_bench_speed.py`, or `30_bench_speed_blocks.py --max-tokens-per-event K` when the profile sets `qualification_options.speed_max_tokens_per_event` (speculative servers stream up to K tokens per SSE event; decode = (tokens - K)/(t_last - t_first), early stop counts tokens) | `speed/speed.json` |
 | toolcall | deterministic tool-call probe, temperature 0 | `39_bench_toolcall.py` | `toolcall/toolcall.json` |
 | vision | MMMU-val-100 accuracy through chat completions, chat (non-thinking) template mode like the README rows, unless the profile's `qualification_options.vision_thinking_mode` or `--vision-thinking-mode` selects `thinking` | `38_bench_vision.py` | `vision/summary.json` |
 | media | the profile's declared `--limit-mm-per-prompt` maximum: N solid-colour images at WxH named in order, one F-frame video's motion direction, and N+1 images rejected with 400 | `51_probe_media_max.py` | `media/summary.json` |

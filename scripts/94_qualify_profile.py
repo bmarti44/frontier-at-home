@@ -54,7 +54,10 @@ CELL_SCRIPTS = {
     "context": "50_probe_context.py",
     "soak": "35_soak.py",
 }
-COMPOSED_SCRIPTS = ("92_resolve_profile.py", "93_profile_serve.sh", *CELL_SCRIPTS.values())
+# Speed cell for profiles whose qualification_options.speed_max_tokens_per_event says one SSE
+# event can carry several tokens (MTP); it wraps the frozen 30_bench_speed.py.
+BLOCK_SPEED_SCRIPT = "30_bench_speed_blocks.py"
+COMPOSED_SCRIPTS = ("92_resolve_profile.py", "93_profile_serve.sh", *CELL_SCRIPTS.values(), BLOCK_SPEED_SCRIPT)
 
 # Model slug -> chat encoder registered in scripts/31_bench_accuracy.py
 # (ENCODER_PATHS). A model without a row here gets its accuracy cell SKIPPED;
@@ -298,6 +301,7 @@ def resolve_profile(args: argparse.Namespace) -> dict:
         "check": check_result,
         "reference_logits": reference_logits,
         "qualification_targets": targets,
+        "speed_max_tokens_per_event": options.get("speed_max_tokens_per_event"),
         "qualification_options": options or None,
         "vision_thinking_mode": vision_thinking_mode,
         "encoder": encoder,
@@ -405,6 +409,10 @@ def plan_cells(resolved: dict, args: argparse.Namespace, out: Path, base_url: st
     ]
     if served:
         speed_argv += ["--model-id", served]
+    tokens_per_event = resolved.get("speed_max_tokens_per_event")
+    if tokens_per_event:
+        speed_argv[1] = str(SCRIPTS / BLOCK_SPEED_SCRIPT)
+        speed_argv += ["--max-tokens-per-event", str(tokens_per_event)]
     skip = None
     if tok_path and tok_sha:
         speed_argv += ["--output-tokenizer-path", tok_path, "--output-tokenizer-sha256", tok_sha]
