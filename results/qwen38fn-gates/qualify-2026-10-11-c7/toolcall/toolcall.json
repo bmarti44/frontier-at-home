@@ -1,0 +1,329 @@
+{
+  "suite": "toolcall-v1",
+  "pins_sha256": "286ed4b759d68ef5fc2d2fb4f53b9b6c52a7731ec290a5ef86fa3648631165ec",
+  "model": "qwen3.8-flash-next",
+  "base_url": "http://127.0.0.1:8017/v1",
+  "config_digest": "b3b00248b7126950cbe61d804df721f6a23618fd35c724ac61d22a6742f47747",
+  "per_case": [
+    {
+      "id": "typed-string",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Reykjavík"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "typed-integer",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "reserve_room",
+        "required_args": {
+          "room": "Cedar",
+          "attendees": 7
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "typed-boolean",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "set_light",
+        "required_args": {
+          "light": "porch",
+          "on": true
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "typed-array",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "label_issue",
+        "required_args": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "choose-weather-among-distractors",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Nairobi"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "choose-calendar-among-distractors",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "create_calendar_event",
+        "required_args": {
+          "title": "Design Review",
+          "start": "2026-09-03T14:30:00Z"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "parallel-weather",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Oslo"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "parallel-inventory",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "check_inventory",
+        "required_args": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "multi-turn-weather-final",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "multi-turn-order-final",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "no-tool-opinion",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "no-tool-translation",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "long-context-ticket",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "create_ticket",
+        "required_args": {
+          "title": "Payments timeout",
+          "severity": 2,
+          "component": "checkout-api"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "long-context-reference",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "track_shipment",
+        "required_args": {
+          "reference": "ZX-8841-Q"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "nested-json-shipment",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "create_shipment",
+        "required_args": {
+          "recipient": {
+            "name": "Ada Lovelace",
+            "address": {
+              "line1": "12 St James Square",
+              "city": "London",
+              "postal_code": "SW1Y 4LB",
+              "country": "GB"
+            }
+          },
+          "package": {
+            "dimensions_cm": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            },
+            "weight_kg": 2.5
+          }
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "nested-json-filter",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "search_products",
+        "required_args": {
+          "filter": {
+            "category": "laptops",
+            "price": {
+              "min": 800,
+              "max": 1500,
+              "currency": "USD"
+            },
+            "features": [
+              "wifi6",
+              "backlit-keyboard"
+            ]
+          }
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "enum-unit",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "get_forecast",
+        "required_args": {
+          "city": "Toronto",
+          "unit": "fahrenheit"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "enum-priority",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "create_task",
+        "required_args": {
+          "title": "Rotate signing key",
+          "priority": "high"
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "choose-email-among-distractors",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "send_email",
+        "required_args": {
+          "to": "dev@example.com",
+          "subject": "Build green",
+          "body": "Release can proceed."
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    {
+      "id": "typed-composite",
+      "passed": false,
+      "reason": "request failed",
+      "expected": {
+        "type": "tool_call",
+        "name": "deploy_service",
+        "required_args": {
+          "service": "ledger",
+          "version": "v4.2",
+          "replicas": 3,
+          "dry_run": true,
+          "notify": [
+            "alice",
+            "bob"
+          ]
+        }
+      },
+      "response": null,
+      "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+    }
+  ],
+  "passed": 0,
+  "total": 20,
+  "score": 0.0
+}

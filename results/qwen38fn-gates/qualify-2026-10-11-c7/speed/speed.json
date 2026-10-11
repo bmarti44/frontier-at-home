@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m",
+    "base_url": "http://127.0.0.1:8017",
+    "started_at": "2026-10-11T17:09:53.494673+00:00",
+    "finished_at": "2026-10-11T17:10:19.671704+00:00",
+    "reps": 2,
+    "warmup_reps": 1,
+    "ignore_eos_supported": true,
+    "max_tokens": 384,
+    "min_completion_tokens": 200,
+    "temperature": 0,
+    "seed": 42,
+    "prefill_rate_label": "incl. queue+setup",
+    "iqr_method": "inclusive quartiles",
+    "model": "qwen3.8-flash-next",
+    "tokenizer_path": "/home/bmarti44/qwen38fn/vendor/official-encoding/tokenizer.json",
+    "tokenizer_sha256": "8f9f37ca37fdc4f5fd36d5cf4d3b0e8392edb4e894fd10cc0d70b4957c8633cf",
+    "tokenizer_vocab_size": 129280,
+    "output_tokenizer_path": "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json",
+    "output_tokenizer_sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+    "output_tokenizer_vocab_size": 248077,
+    "fixture_path": "fixtures/ctx-32k.txt",
+    "fixture_total_tokens": 40657,
+    "decode_method": "block-aware: (client_completion_tokens - max_tokens_per_event) / (t_last_event - t_first_event)",
+    "max_tokens_per_event": 4,
+    "frozen_bench_sha256": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "wrapper_sha256": "f3d9fdf9d3308d4959b1e759b00e413ca5ea0560af65f5293fe34fe7ea6ac60b"
+  },
+  "cells": [
+    {
+      "ctx_tokens": 0,
+      "reps": [
+        {
+          "ttft_s": null,
+          "decode_tok_s": null,
+          "prefill_tok_s": null,
+          "completion_tokens": null,
+          "valid": false,
+          "error": "RuntimeError: stream returned HTTP 500: '{\"error\":{\"message\":\"cannot schedule new futures after shutdown\",\"type\":\"InternalServerError\",\"param\":null,\"code\":500}}'"
+        },
+        {
+          "ttft_s": null,
+          "decode_tok_s": null,
+          "prefill_tok_s": null,
+          "completion_tokens": null,
+          "valid": false,
+          "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+        }
+      ],
+      "median_decode": null,
+      "iqr_decode": null,
+      "median_ttft": null,
+      "gpu_before": "2411 MHz, 57",
+      "gpu_after": "2411 MHz, 58",
+      "invalid_reps": 2,
+      "valid": false
+    },
+    {
+      "ctx_tokens": 28672,
+      "reps": [
+        {
+          "ttft_s": null,
+          "decode_tok_s": null,
+          "prefill_tok_s": null,
+          "completion_tokens": null,
+          "valid": false,
+          "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+        },
+        {
+          "ttft_s": null,
+          "decode_tok_s": null,
+          "prefill_tok_s": null,
+          "completion_tokens": null,
+          "valid": false,
+          "error": "URLError: <urlopen error [Errno 111] Connection refused>"
+        }
+      ],
+      "median_decode": null,
+      "iqr_decode": null,
+      "median_ttft": null,
+      "gpu_before": "208 MHz, 56",
+      "gpu_after": "208 MHz, 55",
+      "invalid_reps": 2,
+      "valid": false
+    }
+  ],
+  "suite_valid": false
+}
