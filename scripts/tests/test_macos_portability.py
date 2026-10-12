@@ -94,6 +94,20 @@ class WatchdogIdentityTests(unittest.TestCase):
         self.assertEqual(ticks, identity[1])
 
 
+class ProfileServeSetupTests(unittest.TestCase):
+    def test_status_reaches_the_lifecycle_on_this_platform(self):
+        # Runtime-dir setup must use flags BSD tools accept (no `chmod --`).
+        import tempfile
+        with tempfile.TemporaryDirectory() as scratch:
+            env = dict(os.environ, FRONTIER_HOST="brians-mbp",
+                       FAH_RUN_DIR=f"{scratch}/run", FAH_LOG_DIR=f"{scratch}/logs")
+            result = subprocess.run(
+                ["bash", str(PROFILE_SERVE), "--profile",
+                 "qwen3.8-27b/apple-silicon-128g.json", "status"],
+                env=env, capture_output=True, text=True)
+        self.assertIn("is not running (state file absent)", result.stderr)
+
+
 class SetsidLauncherTests(unittest.TestCase):
     def test_serve_never_calls_bare_setsid(self):
         # macOS has no setsid(1); launch sites go through the launcher
