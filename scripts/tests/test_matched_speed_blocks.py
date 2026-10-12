@@ -164,7 +164,8 @@ class MatchedSpeedBlocks(unittest.TestCase):
                             "--b-profile", "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a4",
                             "--out", str(plan)], check=True)
             out = subprocess.run([sys.executable, str(TOOL), "run", "--plan", str(plan),
-                                  "--out", str(Path(tmp) / "run"), "--dry-run"],
+                                  "--out", str(Path(tmp) / "run"), "--dry-run",
+                                  "--release-tree", "/r/one", "--release-tree", "/r/two"],
                                  check=True, capture_output=True, text=True).stdout
         lines = [json.loads(line) for line in out.splitlines()]
         orders = self.tool.block_orders(RANDOMNESS, 2, "d")
@@ -178,6 +179,16 @@ class MatchedSpeedBlocks(unittest.TestCase):
             bench = line["bench"]
             self.assertEqual(bench[bench.index("--max-tokens-per-event") + 1], want_k)
             self.assertEqual(bench[bench.index("--context-levels") + 1], "0,28672")
+            # Every start first releases the named trees' page cache (a previous
+            # start on another runtime leaves its libraries cached).
+            self.assertEqual(line["release_trees"], ["/r/one", "/r/two"])
+
+    def test_arena_guard_refusal_is_not_a_kill_line(self):
+        refusal = ("RuntimeError: host page cache released under /m; MemFree 19.85 GiB: refusing to "
+                   "allocate the KV arena; page cache outside /m would leave the driver short (NVRM)")
+        self.assertEqual(self.tool.kill_lines("server.log", refusal + "\n"), [])
+        self.assertEqual(len(self.tool.kill_lines("server.log", "NVRM: Xid 79\n")), 1)
+        self.assertEqual(len(self.tool.kill_lines("kernel.log", refusal + "\n")), 1)
 
 
 if __name__ == "__main__":
