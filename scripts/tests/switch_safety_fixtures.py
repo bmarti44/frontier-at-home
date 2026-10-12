@@ -63,7 +63,14 @@ class SwitchSafetyFixture:
             self.artifacts / "models",
         ):
             directory.mkdir(parents=True, exist_ok=True)
+        # The source-only seam points the switch's drop_caches and meminfo at
+        # this tree. The default MemFree passes every profile's minimum start.
+        self.drop_caches = self.root / "proc" / "sys" / "vm" / "drop_caches"
+        self.drop_caches.parent.mkdir(parents=True)
+        self.drop_caches.write_text("")
+        self.set_meminfo(free_gib=120.0, available_gib=118.0)
         self._install_systemctl_shim()
+        self._install_sync_shim()
         self._install_guard_shim()
         self._install_memwatch_fixture()
         self.set_systemctl_responses()
@@ -136,12 +143,35 @@ import os
 import pathlib
 import sys
 
-pathlib.Path(os.environ["SWITCH_FIXTURE_ROOT"], "guard.called").write_text(
-    " ".join(sys.argv[1:])
-)
+root = pathlib.Path(os.environ["SWITCH_FIXTURE_ROOT"])
+(root / "guard.called").write_text(" ".join(sys.argv[1:]))
+drop = root / "proc" / "sys" / "vm" / "drop_caches"
+seen = drop.read_text().strip() if drop.is_file() else "<missing>"
+with (root / "order.log").open("a", encoding="utf-8") as stream:
+    stream.write(f"GUARD drop={seen}\\n")
 raise SystemExit(int(os.environ.get("SWITCH_GUARD_EXIT", "1")))
 """,
         )
+
+    def _install_sync_shim(self) -> None:
+        self._write_executable(
+            self.shims / "sync",
+            """#!/usr/bin/env bash
+printf 'SYNC\\n' >>"$SWITCH_FIXTURE_ROOT/order.log"
+""",
+        )
+
+    def set_meminfo(self, *, free_gib: float, available_gib: float) -> None:
+        kib = lambda gib: int(gib * 1048576)
+        (self.root / "proc" / "meminfo").write_text(
+            f"MemTotal:       {kib(119.67)} kB\n"
+            f"MemFree:        {kib(free_gib)} kB\n"
+            f"MemAvailable:   {kib(available_gib)} kB\n"
+        )
+
+    def order(self) -> list[str]:
+        path = self.root / "order.log"
+        return path.read_text().splitlines() if path.exists() else []
 
     def _install_memwatch_fixture(self) -> None:
         self._write_executable(

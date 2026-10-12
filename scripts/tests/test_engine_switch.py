@@ -1242,6 +1242,47 @@ class EngineSwitchTests(unittest.TestCase):
         )
         self.assertEqual(snapshot["env"]["HOME"], "/home/bmarti44")
 
+    def test_every_starter_drops_host_caches_then_admits_on_memfree(self):
+        # GB10's driver allocates from MemFree and never reclaims page cache,
+        # buffers or slab, which the MemAvailable guard counts as free
+        # (results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md).
+        source = SCRIPT.read_text()
+        dsv4 = json.loads((ROOT / "configs/profiles/deepseek-v4-flash/"
+                           "cuda-spark-128g-1m-fast.json").read_text())
+        starters = {
+            "start_dsv4() {": str(dsv4["safety"]["minimum_start_gib"]),
+            "start_glm52() {": "110",
+            "start_laguna_profile() {": "100",
+            "start_glm53_profile() {": "110",
+            "start_qwen_profile() {": "100",
+            "start_generic_profile() {": '"$required_gib"',
+        }
+        for head, required in starters.items():
+            with self.subTest(head):
+                start = source.index(head)
+                body = source[start:source.index("\n}\n", start)]
+                release = body.index("release_host_caches\n")
+                admit = body.index(f"require_free_memory {required} ||")
+                self.assertEqual(body.count("release_host_caches"), 1)
+                self.assertEqual(body.count("require_free_memory"), 1)
+                self.assertLess(release, admit)
+                if "03_memory_guard.py" in body:
+                    guard = body.index("03_memory_guard.py")
+                    self.assertLess(release, guard)
+                    self.assertLess(guard, admit)
+                    self.assertIn(f"--required-gib {required} ", body)
+                for launch in ("01_memwatch.sh", "dsv4_launcher start",
+                               "launch_systemd_profile"):
+                    if launch in body:
+                        self.assertLess(admit, body.index(launch))
+        production = source[source.index("else\n    REPO=/home/bmarti44"):
+                            source.index("readonly PROD_STATE")]
+        self.assertIn("PROD_DROP_CACHES=/proc/sys/vm/drop_caches", production)
+        self.assertIn("PROD_MEMINFO=/proc/meminfo", production)
+        testing = source[source.index('if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then\n    test_action()'):]
+        self.assertIn("release_host_caches() {", testing)
+        self.assertIn("require_free_memory() {", testing)
+
     def test_generic_starter_keeps_the_safety_contract(self):
         source = SCRIPT.read_text()
         starter = source[
