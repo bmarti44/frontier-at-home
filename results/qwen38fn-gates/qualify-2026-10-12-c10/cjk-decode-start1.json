@@ -1,0 +1,123 @@
+{
+ "method": "Candidate 10's draft (L2) can propose only token ids below 65,536, which covers most English, code and JSON tokens but not most Chinese or Japanese ones. Run 2 measures English prose only. This streams the same greedy prompts (English, Chinese, Japanese; thinking off) to one server and reports per language the block-aware decode (completion tokens - K) / (last event - first event), median of 3 reps after 1 warm-up, with the share of the output's token ids at or above 65,536 (the output re-tokenized by the model's tokenizer). Run once against candidate 10 (run 1) and once against production candidate 9, it gives each engine's CJK/English decode ratio.",
+ "k": 4,
+ "languages": {
+  "en": {
+   "median_decode_tok_s": 34.46131175464362,
+   "median_high_id_share": 0.049479166666666664,
+   "reps": [
+    {
+     "warmup": true,
+     "completion_tokens": 384,
+     "events": 158,
+     "decode_tok_s": 34.92811139409104,
+     "high_id_share": 0.028645833333333332,
+     "text_head": "**The Arterial Lifeline: The History, Geography, and Cultural Soul of the Yangtze River**\n\nThe Yangtze River, known in C"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 162,
+     "decode_tok_s": 34.46131175464362,
+     "high_id_share": 0.0546875,
+     "text_head": "**The Arterial Lifeline: The History, Geography, and Cultural Soul of the Yangtze River**\n\nThe Yangtze River, known in C"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 164,
+     "decode_tok_s": 34.14028666737543,
+     "high_id_share": 0.0390625,
+     "text_head": "**The Arterial Lifeline: The History, Geography, and Cultural Soul of the Yangtze River**\n\nThe Yangtze River, known in C"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 159,
+     "decode_tok_s": 35.05045922627936,
+     "high_id_share": 0.049479166666666664,
+     "text_head": "**The Arterial Lifeline: The History, Geography, and Cultural Soul of the Yangtze River**\n\nThe Yangtze River, known in C"
+    }
+   ],
+   "ratio_to_en": 1.0
+  },
+  "zh": {
+   "median_decode_tok_s": 18.21212976656045,
+   "median_high_id_share": 0.7864583333333334,
+   "reps": [
+    {
+     "warmup": true,
+     "completion_tokens": 384,
+     "events": 307,
+     "decode_tok_s": 18.0213123908446,
+     "high_id_share": 0.7916666666666666,
+     "text_head": "**大江奔流：长江的历史、地理与文化血脉**\n\n长江，这条发源于青藏高原唐古拉山脉主峰各拉丹冬雪山的巨龙，自西向东横贯中国腹地，最终注入东海。作为中国第一长河、世界第三长河，长江全长约6300公里，流域面积广阔，不仅是一条自然地理上的水系，"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 303,
+     "decode_tok_s": 18.21212976656045,
+     "high_id_share": 0.7864583333333334,
+     "text_head": "长江，这条横贯中国东西的巨龙，不仅是亚洲第一长河，也是世界第三长河。它发源于青藏高原唐古拉山脉主峰各拉丹冬雪山，自西向东流经青海、西藏、四川、云南、重庆、湖北、湖南、江西、安徽、江苏、上海等十一个省、自治区、直辖市，最终注入东海。全长约63"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 309,
+     "decode_tok_s": 17.553126235376713,
+     "high_id_share": 0.8020833333333334,
+     "text_head": "长江，这条横贯中国东西的巨龙，不仅是中华民族的母亲河之一，更是中华文明生生不息的血脉与灵魂。作为亚洲第一长河、世界第三长河，长江以其磅礴的气势和深厚的文化底蕴，塑造了中国的地理格局，滋养了沿岸的万千生灵，更在历史的长河中留下了不可磨灭的印记"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 296,
+     "decode_tok_s": 18.410018819592658,
+     "high_id_share": 0.765625,
+     "text_head": "**大江奔流：长江的历史、地理与文化灵魂**\n\n长江，这条发源于青藏高原唐古拉山脉各拉丹冬雪山的巨龙，自西向东横贯中国腹地，最终注入东海。作为中国第一长河、世界第三长河，它不仅是一条地理意义上的水系，更是中华民族的母亲河之一，承载着数千年的"
+    }
+   ],
+   "ratio_to_en": 0.5284804564674295
+  },
+  "ja": {
+   "median_decode_tok_s": 20.16213347908133,
+   "median_high_id_share": 0.6770833333333334,
+   "reps": [
+    {
+     "warmup": true,
+     "completion_tokens": 384,
+     "events": 283,
+     "decode_tok_s": 19.5587237610795,
+     "high_id_share": 0.6979166666666666,
+     "text_head": "富士山は、日本の最高峰として標高3,776メートルを誇り、その雄大な姿は世界中の人々を魅了し続けています。地理的には、本州の中央部、山梨県と静岡県の境界に位置する成層火山であり、その美しい円錐形の稜線は、長年にわたる噴火活動と風化作用によっ"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 288,
+     "decode_tok_s": 19.482227155983256,
+     "high_id_share": 0.6901041666666666,
+     "text_head": "富士山は、日本の最高峰として標高3,776メートルを誇り、その優美な円錐形の姿は世界中の人々を魅了し続けています。地理的には、本州の中央部、静岡県と山梨県の県境に位置する活火山であり、日本列島の地質学的な特徴を象徴する存在です。その成り立ち"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 270,
+     "decode_tok_s": 20.40034941765679,
+     "high_id_share": 0.671875,
+     "text_head": "富士山は、日本の象徴として世界中に知られる最高峰であり、その標高3,776メートルという威容は、古来より日本人の精神世界に深い影響を与えてきました。地理的には、本州の中央部、山梨県と静岡県の境界に位置する成層火山であり、その美しい円錐形の稜"
+    },
+    {
+     "warmup": false,
+     "completion_tokens": 384,
+     "events": 275,
+     "decode_tok_s": 20.16213347908133,
+     "high_id_share": 0.6770833333333334,
+     "text_head": "富士山は、日本の最高峰として標高3,776メートルを誇り、その優美な円錐形の姿は世界中で知られています。地理的には、本州の中央部、山梨県と静岡県の境界に位置し、活火山としての性質を持っています。その成り立ちには長い地質学的歴史があり、現在見"
+    }
+   ],
+   "ratio_to_en": 0.5850657578745391
+  }
+ }
+}

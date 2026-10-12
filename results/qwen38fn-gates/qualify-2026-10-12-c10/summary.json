@@ -1,0 +1,405 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-c10",
+  "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m-tune-c10",
+  "served_model": "qwen3.8-flash-next",
+  "out": "/home/bmarti44/qwen38fn-tune/results/qwen38fn-gates/qualify-2026-10-12-c10",
+  "start_unix": 1791775871.3876493,
+  "end_unix": 1791778370.1561706,
+  "start_iso": "2026-10-12T03:31:11.496550+00:00",
+  "end_iso": "2026-10-12T04:12:50.156174+00:00",
+  "targets": {
+    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
+    "decode_tok_s_min": {
+      "0": 17.46,
+      "28672": 26.71
+    },
+    "prefill_tok_s_min": {
+      "28672": 698.7
+    },
+    "ttft_s_max": {
+      "0": 0.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "delta_nll_max": 0.01
+  },
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "OK",
+      "evidence": "speed/speed.json",
+      "start_unix": 1791775871.5420454,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn-tune/scripts/30_bench_speed_blocks.py",
+        "--base-url",
+        "http://127.0.0.1:8017",
+        "--out",
+        "/home/bmarti44/qwen38fn-tune/results/qwen38fn-gates/qualify-2026-10-12-c10/speed/speed.json",
+        "--stack-label",
+        "qwen3.8-flash-next-cuda-spark-128g-1m-tune-c10",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "qwen3.8-flash-next",
+        "--max-tokens-per-event",
+        "4",
+        "--output-tokenizer-path",
+        "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json",
+        "--output-tokenizer-sha256",
+        "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 111.67774438898778,
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": 34.07445372026682,
+            "median_ttft_s": 0.2106748355,
+            "median_prefill_tok_s": 460.7605904744081,
+            "valid": true,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": 40.918221039930536,
+            "median_ttft_s": 12.797761927,
+            "median_prefill_tok_s": 2711.4901367551324,
+            "valid": true,
+            "reps": 2
+          }
+        },
+        "suite_valid": true,
+        "stack_label": "qwen3.8-flash-next-cuda-spark-128g-1m-tune-c10"
+      },
+      "end_unix": 1791775983.2201169
+    },
+    "toolcall": {
+      "status": "OK",
+      "evidence": "toolcall/toolcall.json",
+      "start_unix": 1791775983.2205088,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn-tune/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8017/v1",
+        "--model",
+        "qwen3.8-flash-next",
+        "--out",
+        "/home/bmarti44/qwen38fn-tune/results/qwen38fn-gates/qualify-2026-10-12-c10/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 56.19427508400986,
+      "result": {
+        "passed": 20,
+        "total": 20,
+        "score": 1.0,
+        "suite": "toolcall-v1"
+      },
+      "end_unix": 1791776039.4155188
+    },
+    "vision": {
+      "status": "OK",
+      "evidence": "vision/summary.json",
+      "start_unix": 1791776039.4162545,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn-tune/scripts/38_bench_vision.py",
+        "--base-url",
+        "http://127.0.0.1:8017",
+        "--out",
+        "/home/bmarti44/qwen38fn-tune/results/qwen38fn-gates/qualify-2026-10-12-c10/vision",
+        "--thinking-mode",
+        "chat",
+        "--model-id",
+        "qwen3.8-flash-next"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 79.45628890799708,
+      "result": {
+        "accuracy": 0.64,
+        "n": 100,
+        "correct": 64,
+        "invalid_count": 3,
+        "error_count": 0,
+        "ok": true,
+        "suite": "mmmu-val-100"
+      },
+      "end_unix": 1791776118.872913
+    },
+    "teacher": {
+      "status": "SKIPPED",
+      "evidence": "teacher/summary.json",
+      "start_unix": 1791776118.8737767,
+      "argv": null,
+      "skip_reason": "model.json declares no reference_logits block (BF16 teacher logits dataset)",
+      "end_unix": 1791776118.8737783
+    },
+    "context": {
+      "status": "OK",
+      "evidence": "context/summary.json",
+      "start_unix": 1791776118.8833447,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn-tune/scripts/50_probe_context.py",
+        "--base-url",
+        "http://127.0.0.1:8017",
+        "--model",
+        "qwen3.8-flash-next",
+        "--out",
+        "/home/bmarti44/qwen38fn-tune/results/qwen38fn-gates/qualify-2026-10-12-c10/context",
+        "--stack-label",
+        "qwen3.8-flash-next-cuda-spark-128g-1m-tune-c10",
+        "--slots",
+        "4",
+        "--tokens-per-slot",
+        "250128",
+        "--tokenizer-path",
+        "/home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json",
+        "--tokenizer-sha256",
+        "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+        "--phase",
+        "both",
+        "--profile-id",
+        "qwen3.8-flash-next/cuda-spark-128g-1m-tune-c10",
+        "--mem-floor-gib",
+        "8"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 450.17812683599186,
+      "result": {
+        "verdict": "PASS",
+        "total_tokens": 1000672,
+        "min_mem_available_gib": 9.841350555419922,
+        "memory_floor_gib": 8.0,
+        "needles_correct": 4,
+        "needles_total": 4,
+        "max_ttft_s": 416.678178038,
+        "checks": {
+          "short_phase_ok": true,
+          "full_phase_ran": true,
+          "all_slots_ok": true,
+          "needles_all_correct": true,
+          "controls_ok": true,
+          "memory_floor_pass": true,
+          "total_tokens_ok": true
+        }
+      },
+      "end_unix": 1791776569.0617049
+    },
+    "soak": {
+      "status": "OK",
+      "evidence": "soak/soak.json",
+      "start_unix": 1791776569.0621583,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/qwen38fn-tune/scripts/35_soak.py",
+        "--base-url",
+        "http://127.0.0.1:8017",
+        "--stack-label",
+        "qwen3.8-flash-next-cuda-spark-128g-1m-tune-c10",
+        "--config-hash",
+        "qwen3.8-flash-next-cuda-spark-128g-1m-tune-c10-f88dbc745f9f",
+        "--out",
+        "/home/bmarti44/qwen38fn-tune/results/qwen38fn-gates/qualify-2026-10-12-c10/soak/soak.json",
+        "--model",
+        "qwen3.8-flash-next"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 1801.0921704600041,
+      "result": {
+        "pass": true,
+        "failed_gates": [],
+        "n_requests": 256,
+        "n_errors": 0,
+        "decode_overall_median_tok_s": 37.623459372748286,
+        "mem_available_min_gib": 10.027645111083984,
+        "duration_seconds_actual": 1801.0461041409872
+      },
+      "end_unix": 1791778370.1558611
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": 34.07445372026682,
+      "target": 17.46,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": 0.2106748355,
+      "target": 0.5,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": 460.7605904744081,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": true,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": 40.918221039930536,
+      "target": 26.71,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": 12.797761927,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": 2711.4901367551324,
+      "target": 698.7,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": true,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 20,
+      "target": 19,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "accuracy",
+      "measured": 0.64,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "n",
+      "measured": 100,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "verdict",
+      "measured": "PASS",
+      "target": "PASS",
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "context",
+      "metric": "total_tokens",
+      "measured": 1000672,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "min_mem_available_gib",
+      "measured": 9.841350555419922,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "pass",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "decode_overall_median_tok_s",
+      "measured": 37.623459372748286,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "PASS",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}
