@@ -1,0 +1,23 @@
+2026-10-11T23:37:23Z arm a0 profile qwen3.8-flash-next/cuda-spark-128g-1m stack qwen3.8-flash-next-cuda-spark-128g-1m tokens_per_event 4
+2026-10-11T23:37:23Z head f1864113c19c99ee05f5156d94c365920c4a3220 dirty=0
+2026-10-11T23:37:23Z inference lock /run/lock/frontier-at-home/inference.lock held by the driver
+{"pass":true,"required_gib":114.5,"mem_available_gib":115.663,"stable_samples_observed":3}
+2026-10-11T23:37:23Z preload MemAvailable:=121279028 SwapFree:=16479840 
+2026-10-11T23:37:25Z a0: launching in scope qwen38fn-tune-a0-61545
+{"pass":true,"required_gib":87.0,"mem_available_gib":115.63,"stable_samples_observed":3}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","pid":61763,"port":8017}
+2026-10-11T23:48:42Z a0: ready after 677 s
+2026-10-11T23:48:42Z idle_mem_available_kib=12394852
+2026-10-11T23:48:42Z a0: attention block size 3200 tokens
+2026-10-11T23:48:42Z a0: KV capacity 1079117 tokens at 262,144 per request
+switchlog (EngineCore pid=62088) INFO 10-11 19:37:45 [gpu_worker.py:499] Using V2 Model Runner
+switchlog (EngineCore pid=62088) INFO 10-11 19:48:17 [speculator.py:118] Fused multi-step draft decode is not supported by attention backend(s) QWEN4_EXP_EXP_QSA_STATE; falling back to rebuilding attention metadata between draft steps.
+{"greedy": ["10bbe8c78923", "e54ccf0ee194", "221c11ec3fb7"], "tokens_per_chunk": [3.6666666666666665, 2.6296296296296298, 3.3333333333333335]}
+[19/20] id=choose-email-among-distractors passed=True
+[20/20] id=typed-composite passed=True
+{"ok": true, "out": "/home/bmarti44/qwen38fn-tune/results/qwen38fn-gates/tune-screen-2026-10-11/a0/toolcall.json", "score": 1.0}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m","stopped":true}
+2026-10-11T23:53:14Z a0: scope empty after stop
+2026-10-11T23:53:14Z postrun MemAvailable:=121296724 SwapFree:=16504380 
+ERROR: qwen3.8-flash-next/cuda-spark-128g-1m is not running (state file absent)
+2026-10-11T23:53:19Z driver exit
