@@ -46,7 +46,8 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
     `memwatch.threshold_gib` = `safety.kill_floor_gib`.
   - `delegated-launcher`: `runuser` + `env -i <env> <delegate> {verb}`;
     the delegate owns admission and safety (dsv4 via
-    `scripts/21_serve_llamacpp.sh`).
+    `scripts/21_serve_llamacpp.sh`) after the switch's cache release and
+    free-memory gate (below).
   - `setsid-watchdog-portable`: non-Linux hosts; setsid + recorded PGID +
     the platform watchdog (macOS: `scripts/06_memwatch_macos.sh`).
 - `launch.args` / `launch.env` accept placeholders
@@ -99,6 +100,12 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   `estimated` profile can be committed and rendered but never served.
   Identity records and watchdog files live at
   `<state_root>/<log_name>.{process.json,memwatch.*}`.
+
+  Every switch start, generic or legacy, first drops the kernel caches
+  (`sync`, then `drop_caches=3`). After the MemAvailable guard it also
+  requires MemFree of at least `minimum_start_gib`, because the GB10 driver
+  allocates from MemFree and does not reclaim cached files, buffers or slab.
+  A failed drop only warns; the MemFree gate decides.
 
 - `serving` — optional explicit topology for a multi-sequence engine (vLLM):
   `parallel_slots` and `request_context_cap` are required; `max_images`,

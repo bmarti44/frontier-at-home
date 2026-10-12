@@ -18,6 +18,8 @@ if [[ -n ${ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT:-} ]]; then
     PROD_GLM53_BINARY=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/bin/glm53-python3
     PROD_GLM53_MODEL=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/artifacts/models/glm53-weights
     PROD_CACHE_ROOT=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/cache
+    PROD_DROP_CACHES=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/proc/sys/vm/drop_caches
+    PROD_MEMINFO=$ENGINE_SWITCH_SOURCE_ONLY_FIXTURE_ROOT/proc/meminfo
 else
     REPO=/home/bmarti44/spark-deepseek-v4-flash
     PROD_STATE=/home/dsv4/ds4-project/engine-switch
@@ -27,9 +29,11 @@ else
     PROD_GLM53_BINARY=/home/bmarti44/.cache/glm53-flash/native-runtime-003/runtime/bin/python3
     PROD_GLM53_MODEL=/home/bmarti44/models/glm-5.3-flash/k2-densek4-mtp
     PROD_CACHE_ROOT=/home/bmarti44/.cache
+    PROD_DROP_CACHES=/proc/sys/vm/drop_caches
+    PROD_MEMINFO=/proc/meminfo
 fi
 readonly PROD_STATE PROD_LAGUNA_BINARY PROD_LAGUNA_MODEL PROD_LAGUNA_DRAFT \
-    PROD_GLM53_BINARY PROD_GLM53_MODEL PROD_CACHE_ROOT
+    PROD_GLM53_BINARY PROD_GLM53_MODEL PROD_CACHE_ROOT PROD_DROP_CACHES PROD_MEMINFO
 readonly PROD_BINARY=/home/bmarti44/.cache/glm52-dynexp2-patched/ds4-server
 readonly PROD_GGUF=/home/bmarti44/models/glm52-full-denseq40.gguf
 readonly PROFILE_MANIFEST=$REPO/configs/glm52-fullq4-production-profile.json
@@ -59,6 +63,8 @@ if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     GLM53_BINARY=$STATE/source/glm53-python3
     GLM53_MODEL=$STATE/glm53-model-weights
     CACHE_ROOT=$STATE/cache
+    DROP_CACHES=$STATE/drop_caches
+    MEMINFO=$STATE/meminfo
     # Render profiles from the checkout that owns this script so a worktree's
     # tests exercise its own configs/profiles rather than the production tree.
     REPO=$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/.." && pwd -P)
@@ -78,9 +84,12 @@ else
     GLM53_BINARY=$PROD_GLM53_BINARY
     GLM53_MODEL=$PROD_GLM53_MODEL
     CACHE_ROOT=$PROD_CACHE_ROOT
+    DROP_CACHES=$PROD_DROP_CACHES
+    MEMINFO=$PROD_MEMINFO
 fi
 readonly REPO STATE BINARY GGUF QWEN_BINARY QWEN_MODEL QWEN_MMPROJ \
-    LAGUNA_BINARY LAGUNA_MODEL LAGUNA_DRAFT GLM53_BINARY GLM53_MODEL CACHE_ROOT
+    LAGUNA_BINARY LAGUNA_MODEL LAGUNA_DRAFT GLM53_BINARY GLM53_MODEL CACHE_ROOT \
+    DROP_CACHES MEMINFO
 readonly ACTIVE=$STATE/active.json
 readonly LOCK=$STATE/switch.lock
 readonly GLM_PROCESS=$STATE/glm52.process.json
@@ -454,6 +463,35 @@ dsv4_launcher() {
 }
 
 sha256() { sha256sum -- "$1" | awk '{print $1}'; }
+
+# GB10 allocations come from MemFree: the driver never reclaims page cache,
+# block buffers or slab, while 03_memory_guard.py admits on MemAvailable,
+# which counts them as free. After a build the qwen38fn worker refused its KV
+# arena twice at MemFree 14.6 GiB although the guard had passed
+# (results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md). Every start
+# therefore drops the kernel caches once the previous engine has stopped and
+# admits on MemFree after the guard. A failed drop only warns: the MemFree
+# gate decides.
+release_host_caches() {
+    if ! { sync && printf '3\n' >"$DROP_CACHES"; } 2>/dev/null; then
+        printf 'WARNING: host cache release failed; the free-memory gate decides\n' >&2
+    fi
+    return 0
+}
+
+require_free_memory() {
+    local required_gib=$1 free_kib
+    free_kib=$(awk '$1 == "MemFree:" {print $2; found=1; exit}
+        END {exit !found}' "$MEMINFO") || {
+        printf 'cannot read MemFree from %s\n' "$MEMINFO" >&2
+        return 1
+    }
+    awk -v free="$free_kib" -v required="$required_gib" \
+        'BEGIN {exit !(free >= required * 1048576)}' && return 0
+    awk -v free="$free_kib" -v required="$required_gib" \
+        'BEGIN {printf "MemFree %.2f GiB < %s GiB after the host cache release\n", free / 1048576, required}' >&2
+    return 1
+}
 
 # Print an alias-shaped, non-legacy active.json profile (a generic alias), or
 # nothing. $1=1 also requires schema_version 1 (the status reading).
@@ -1314,6 +1352,9 @@ stop_profile() {
 }
 
 start_dsv4() {
+    # safety.minimum_start_gib of deepseek-v4-flash/cuda-spark-128g-1m-fast.
+    release_host_caches
+    require_free_memory 100 || die "pre-load free-memory gate failed"
     dsv4_launcher start
 }
 
@@ -1322,8 +1363,10 @@ start_glm52() {
     local memwatch_pid memwatch_ticks ready
     [[ ! -e $GLM_PROCESS ]] ||
         die "GLM process record already exists; refusing a second model"
+    release_host_caches
     "$REPO/scripts/03_memory_guard.py" --required-gib 110 \
         --stable-samples 3 --interval-seconds 1 --timeout-seconds 180
+    require_free_memory 110 || die "pre-load free-memory gate failed"
     rm -f -- "$GLM_WATCHDOG_TARGET" "$GLM_WATCHDOG_READY" \
         "$GLM_PROCESS.tmp"
     "$REPO/scripts/01_memwatch.sh" \
@@ -1463,9 +1506,11 @@ start_laguna_profile() {
         die "Laguna process record already exists; refusing a second model"
     { "$laguna_hashes_verified" || verify_laguna_profile_hashes; } ||
         die "Laguna artifact verification failed"
+    release_host_caches
     "$REPO/scripts/03_memory_guard.py" --required-gib 100 \
         --stable-samples 3 --interval-seconds 1 --timeout-seconds 180 ||
         die "pre-load memory release gate failed"
+    require_free_memory 100 || die "pre-load free-memory gate failed"
     cleanup_laguna_killed_unit ||
         die "Laguna killed-unit cleanup failed"
     rm -f -- "$LAGUNA_PROCESS.tmp" "$LAGUNA_WATCHDOG_TARGET" \
@@ -1680,9 +1725,11 @@ start_glm53_profile() {
     # safety.minimum_start_gib (110) and safety.kill_floor_gib (10) from the
     # glm53-1m profile: the AGENTS.md 1M gate floor; the cgroup limit is blind
     # to CUDA unified memory on GB10, so the external memwatch is the guard.
+    release_host_caches
     "$REPO/scripts/03_memory_guard.py" --required-gib 110 \
         --stable-samples 3 --interval-seconds 1 --timeout-seconds 180 ||
         die "pre-load memory release gate failed"
+    require_free_memory 110 || die "pre-load free-memory gate failed"
     cleanup_glm53_killed_unit ||
         die "GLM-5.3 killed-unit cleanup failed"
     rm -f -- "$GLM53_PROCESS.tmp" "$GLM53_WATCHDOG_TARGET" \
@@ -1902,9 +1949,11 @@ start_qwen_profile() {
         die "Qwen process record already exists; refusing a second model"
     { [[ $qwen_hashes_verified_profile == "$profile" ]] || "$verify_function"; } ||
         die "Qwen artifact verification failed"
+    release_host_caches
     "$REPO/scripts/03_memory_guard.py" --required-gib 100 \
         --stable-samples 3 --interval-seconds 1 --timeout-seconds 180 ||
         die "pre-load memory release gate failed"
+    require_free_memory 100 || die "pre-load free-memory gate failed"
     cleanup_qwen_killed_unit ||
         die "Qwen killed-unit cleanup failed"
     rm -f -- "$QWEN_PROCESS.tmp" "$QWEN_WATCHDOG_TARGET" \
@@ -2148,9 +2197,11 @@ start_generic_profile() {
         die "$alias process record already exists; refusing a second model"
     { [[ -n ${generic_identities[$alias]:-} ]] || verify_generic_hashes "$alias"; } ||
         die "$alias artifact verification failed"
+    release_host_caches
     "$REPO/scripts/03_memory_guard.py" --required-gib "$required_gib" \
         --stable-samples 3 --interval-seconds 1 --timeout-seconds 180 ||
         die "pre-load memory release gate failed"
+    require_free_memory "$required_gib" || die "pre-load free-memory gate failed"
     cleanup_generic_killed_unit "$unit" ||
         die "$alias killed-unit cleanup failed"
     rm -f -- "$record.tmp" "$target" "$ready_file" ||
@@ -2690,6 +2741,10 @@ restore_profile() {
 # functions so their complete systemd-run argv is covered by subprocess tests.
 if [[ ${ENGINE_SWITCH_TESTING:-0} == 1 ]]; then
     test_action() { printf '%s\n' "$*" >>"$STATE/actions.log"; }
+    # Test runs never write /proc/sys; test_switch_safety_paths.py runs the
+    # production definitions against a fixture /proc.
+    release_host_caches() { :; }
+    require_free_memory() { :; }
     # The generic alias whose loaded plan owns this unit (name or .service).
     generic_test_alias_for_unit() {
         local key name
