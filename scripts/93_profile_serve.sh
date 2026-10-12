@@ -88,7 +88,7 @@ LOCK_FILE=$RUN_DIR/inference.lock
 SERVER_LOG=$LOG_DIR/$SLUG.server.log
 MEMWATCH_LOG=$LOG_DIR/$SLUG.memwatch.log
 mkdir -p -- "$RUN_DIR" "$LOG_DIR"
-chmod 700 -- "$RUN_DIR" "$LOG_DIR"
+chmod 700 "$RUN_DIR" "$LOG_DIR"
 
 pid_alive() { kill -0 "$1" 2>/dev/null; }
 
@@ -96,10 +96,33 @@ proc_start_ticks() {
     if [[ -r /proc/$1/stat ]]; then
         awk '{print $22}' "/proc/$1/stat" 2>/dev/null
     else
-        # macOS: process start time string stands in for start ticks.
-        ps -p "$1" -o lstart= 2>/dev/null | tr -s ' ' '_'
+        # macOS: start time as epoch seconds, exactly as 06_memwatch_macos.sh
+        # derives it when verifying the published target before arming.
+        local lstart
+        lstart=$(LC_ALL=C ps -p "$1" -o lstart= 2>/dev/null) && [[ -n $lstart ]] \
+            || return 1
+        LC_ALL=C date -j -f '%a %b %d %T %Y' "$lstart" +%s 2>/dev/null
     fi
 }
+
+# The launcher's setsid() lands after bash records $! (tens of ms for the
+# Python shim); the watchdog verifies PGID == PID, so wait for it.
+await_group_leader() {
+    local attempt
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        [[ $(ps -o pgid= -p "$1" 2>/dev/null | tr -d ' ') == "$1" ]] && return 0
+        pid_alive "$1" || return 1
+        sleep 0.05
+    done
+    return 1
+}
+
+# setsid(1) where util-linux provides it; macOS uses the exec-only shim.
+if command -v setsid >/dev/null 2>&1; then
+    SETSID=(setsid)
+else
+    SETSID=(python3 "$SCRIPT_DIR/lib/setsid.py")
+fi
 
 delegated() {
     # The delegate owns the full lifecycle; hand it the rendered env and verb.
@@ -209,7 +232,7 @@ arm_memwatch() {
         [[ -r $memwatch ]] || die 'macOS memory watchdog is missing'
     fi
     rm -f -- "$TARGET_FILE" "$WATCHDOG_READY"
-    setsid bash "$memwatch" --target-file "$TARGET_FILE" \
+    "${SETSID[@]}" bash "$memwatch" --target-file "$TARGET_FILE" \
         --ready-file "$WATCHDOG_READY" --threshold-gib "$threshold" \
         --interval-sec 1 --log "$MEMWATCH_LOG" 9>&- >/dev/null 2>&1 &
     MEMWATCH_PID=$!
@@ -242,16 +265,16 @@ launch_server() {
     printf '\n===== %s session start %s =====\n' "$PROFILE_ID" \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$SERVER_LOG"
     if [[ ${#env_pairs[@]} -gt 0 ]]; then
-        setsid env -i "${env_pairs[@]}" "$binary" "${argv[@]}" \
+        "${SETSID[@]}" env -i "${env_pairs[@]}" "$binary" "${argv[@]}" \
             >>"$SERVER_LOG" 2>&1 9>&- &
     else
-        setsid "$binary" "${argv[@]}" >>"$SERVER_LOG" 2>&1 9>&- &
+        "${SETSID[@]}" "$binary" "${argv[@]}" >>"$SERVER_LOG" 2>&1 9>&- &
     fi
     SERVER_PID=$!
 }
 
 do_start() {
-    for command_name in curl date flock setsid; do need_command "$command_name"; done
+    for command_name in curl date flock; do need_command "$command_name"; done
     [[ ! -e $STATE_FILE ]] || die "$PROFILE_ID appears to be running (state file exists); run stop or status first"
 
     verify_digests >/dev/null || die 'artifact digest verification failed'
@@ -261,6 +284,10 @@ do_start() {
     release_gate
     arm_memwatch
     launch_server
+    await_group_leader "$SERVER_PID" || {
+        kill -KILL "$SERVER_PID" 2>/dev/null
+        die 'server did not become its own process group leader'
+    }
 
     local ticks identity
     ticks=$(proc_start_ticks "$SERVER_PID") || die 'cannot identify server process'
@@ -300,6 +327,20 @@ PY
     die "readiness timed out; see $SERVER_LOG"
 }
 
+# Hand the armed watchdog an authenticated DISARM so a deliberate stop is not
+# logged as FAIL_CLOSED. Returns nonzero when the watchdog did not exit.
+disarm_memwatch() {  # disarm_memwatch PID PGID START_TICKS MEMWATCH_PID
+    local attempt
+    pid_alive "$4" || return 0
+    printf 'DISARM %s %s %s\n' "$1" "$2" "$3" >"$TARGET_FILE.tmp" || return 1
+    mv -- "$TARGET_FILE.tmp" "$TARGET_FILE" || return 1
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        pid_alive "$4" || return 0
+        sleep 0.1
+    done
+    return 1
+}
+
 do_stop() {
     [[ -r $STATE_FILE ]] || die "$PROFILE_ID is not running (state file absent)"
     local pid ticks memwatch_pid current
@@ -308,6 +349,7 @@ do_stop() {
     memwatch_pid=$(python3 -c "import json;print(json.load(open('$STATE_FILE'))['memwatch_pid'])")
     current=$(proc_start_ticks "$pid" 2>/dev/null || true)
     if [[ -n $current && $current == "$ticks" ]]; then
+        disarm_memwatch "$pid" "$pid" "$ticks" "$memwatch_pid" || true
         kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
         local attempt
         for ((attempt = 0; attempt < 150; attempt++)); do

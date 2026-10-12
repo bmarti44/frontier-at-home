@@ -80,7 +80,7 @@ MEMORY_MODEL_KEYS = {
 }
 STATUS_KEYS = {
     "state", "decision", "qualified_at", "evidence", "basis", "reason",
-    "feasibility",
+    "feasibility", "attestation",
 }
 BENCH_KEYS = {"stack_label", "historical_stack_labels"}
 STATUS_STATES = {"qualified", "estimated", "unsupported"}

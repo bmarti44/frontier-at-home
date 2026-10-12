@@ -22,6 +22,9 @@ readonly W9_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-gates/harness/w9_real_captur
 readonly MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST='^results/glm52-goal/harness/decisive_matched\.sh:[0-9]+:TOKENIZER_NATIVE_SHA256=[0-9a-f]{64}$'
 readonly GLM53_PUBLIC_DIGEST_ALLOWLIST='^results/glm53-flash-gates/build-[a-z0-9-]+/main\.log:[0-9]+:[0-9T:+,.-]+ safety_artifact_verified name=(samples|kernel)\.log sha256=[0-9a-f]{64} size=[0-9]+$|^results/(glm53-flash|qwen38)-gates/qualify-[0-9a-z-]+/(speed|context)/log\.txt:1:\$ /usr/bin/python3 [^ ]+/scripts/(30_bench_speed|50_probe_context)\.py .*--(output-)?tokenizer-sha256 [0-9a-f]{64}( .*)?$|^results/qwen38fn-gates/(smoke-[0-9a-z-]+/kit|qualify-[0-9a-z-]+)/((speed|context)/log\.txt:1|SUMMARY\.md:[0-9]+):\$ /usr/bin/python3 [^ ]+/scripts/(30_bench_speed(_blocks)?|50_probe_context)\.py .*--(output-)?tokenizer-sha256 [0-9a-f]{64}( .*)?$|^results/qwen38fn-gates/diag-[0-9a-z-]+/[0-9a-z-]+/driver\.log:[0-9]+:[0-9TZ:-]+ sha256 ([^ :]+:[0-9a-f]{64} )+$|^results/qwen38fn-gates/holdout-[0-9a-z-]+/observe/[0-9a-z-]+/driver\.log:[0-9]+:humaneval runtime \{.image.: .python:3\.12-slim., .repo_digest.: .python@sha256:[0-9a-f]{64}., .pin_path.: .configs/pins/humaneval-runtime\.json., .pin_sha256.: .[0-9a-f]{64}.\}$'
 
+# 94_qualify_profile.py records each composed cell's argv on line 1 of its log;
+# the tokenizer digest there is public (any interpreter, any gates bundle).
+readonly KIT_LOG_PUBLIC_DIGEST_ALLOWLIST='^results/[a-z0-9.-]+-gates/[0-9a-z.-]+/(speed|context)/log\.txt:1:\$ [^ ]+/python[0-9.]* [^ ]+/scripts/(30_bench_speed(_blocks)?|50_probe_context)\.py .*--(output-)?tokenizer-sha256 [0-9a-f]{64}( .*)?$'
 readonly LINT_ALLOWLIST_FILE="$(
   cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
   pwd
@@ -114,7 +117,7 @@ redact_matches() {
 
 scan_stream() {
   local matches
-  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_PUBLIC_DIGEST_ALLOWLIST" || true)"
+  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_PUBLIC_DIGEST_ALLOWLIST|$KIT_LOG_PUBLIC_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1

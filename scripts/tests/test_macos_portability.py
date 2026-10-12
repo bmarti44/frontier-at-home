@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""Off-Spark (macOS) portability of the portable serve and build paths.
+
+The apple-silicon profiles were authored without ever running on a Mac.
+These tests pin the pieces that must agree for a Mac host to build the
+pinned engine where its profile looks for it.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+QWEN38_BUILD = ROOT / "scripts/12_build_qwen38_llamacpp.sh"
+PROFILE_SERVE = ROOT / "scripts/93_profile_serve.sh"
+MEMWATCH_MACOS = ROOT / "scripts/06_memwatch_macos.sh"
+SETSID_SHIM = ROOT / "scripts/lib/setsid.py"
+DARWIN = sys.platform == "darwin"
+
+
+def _shell_function(script: Path, name: str) -> str:
+    """One top-level `name() {` ... `}` definition from a bash script."""
+    body, inside = [], False
+    for line in script.read_text().splitlines():
+        if line.startswith(f"{name}() {{"):
+            inside = True
+        if inside:
+            body.append(line)
+            if line == "}":
+                return "\n".join(body)
+    raise AssertionError(f"{name} not found in {script}")
+
+
+def _readonly_block(script: Path) -> str:
+    """The script's leading readonly path constants, as shell source."""
+    lines = [line for line in script.read_text().splitlines()
+             if re.match(r"^readonly (CACHE_ROOT|SOURCE_DIR|BUILD_DIR)=", line)]
+    return "\n".join(lines)
+
+
+class Qwen38BuildCacheRootTests(unittest.TestCase):
+    def _cache_root(self, home: str) -> str:
+        source = _readonly_block(QWEN38_BUILD) + '\nprintf "%s" "$CACHE_ROOT"\n'
+        return subprocess.run(
+            ["bash", "-c", source], env={"HOME": home, "PATH": os.environ["PATH"]},
+            capture_output=True, text=True, check=True).stdout
+
+    def test_cache_root_follows_home(self):
+        # The profile's binary_path is {cache_root}/llamacpp-qwen38-9d77fa17/...;
+        # a hardcoded Linux home makes the Mac build unwritable.
+        self.assertEqual(self._cache_root("/Users/someone"),
+                         "/Users/someone/.cache/llamacpp-qwen38-9d77fa17")
+
+    def test_spark_cache_root_is_unchanged(self):
+        self.assertEqual(self._cache_root("/home/bmarti44"),
+                         "/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17")
+
+
+@unittest.skipUnless(DARWIN, "macOS process-identity primitives")
+class WatchdogIdentityTests(unittest.TestCase):
+    """93 publishes the target the macOS watchdog verifies before arming."""
+
+    def test_serve_start_ticks_match_memwatch_identity(self):
+        # 06 arms only when the published start_ticks is numeric and equal
+        # to its own epoch; anything else fails closed and leaves the server
+        # unguarded.
+        sleeper = subprocess.Popen(["sleep", "30"])
+        try:
+            source = "\n".join([
+                "set -Eeuo pipefail",
+                _shell_function(PROFILE_SERVE, "proc_start_ticks"),
+                'printf "%s\\n" "$(proc_start_ticks "$1")"',
+            ])
+            ticks = subprocess.run(["bash", "-c", source, "_", str(sleeper.pid)],
+                                   capture_output=True, text=True,
+                                   check=True).stdout.strip()
+            source = "\n".join([
+                "set -Eeuo pipefail", "export LC_ALL=C",
+                _shell_function(MEMWATCH_MACOS, "proc_identity"),
+                'proc_identity "$1"',
+            ])
+            identity = subprocess.run(["bash", "-c", source, "_", str(sleeper.pid)],
+                                      capture_output=True, text=True,
+                                      check=True).stdout.split()
+        finally:
+            sleeper.kill()
+            sleeper.wait()
+        self.assertRegex(ticks, r"^[0-9]+$")
+        self.assertEqual(ticks, identity[1])
+
+
+class ProfileServeSetupTests(unittest.TestCase):
+    def test_status_reaches_the_lifecycle_on_this_platform(self):
+        # Runtime-dir setup must use flags BSD tools accept (no `chmod --`).
+        import tempfile
+        with tempfile.TemporaryDirectory() as scratch:
+            env = dict(os.environ, FRONTIER_HOST="brians-mbp",
+                       FAH_RUN_DIR=f"{scratch}/run", FAH_LOG_DIR=f"{scratch}/logs")
+            result = subprocess.run(
+                ["bash", str(PROFILE_SERVE), "--profile",
+                 "qwen3.8-27b/apple-silicon-128g.json", "status"],
+                env=env, capture_output=True, text=True)
+        self.assertIn("is not running (state file absent)", result.stderr)
+
+
+class WatchdogDisarmTests(unittest.TestCase):
+    """93 stop hands the watchdog an authenticated DISARM before killing."""
+
+    def test_stop_disarms_the_platform_watchdog_cleanly(self):
+        import tempfile
+        memwatch = MEMWATCH_MACOS if DARWIN else ROOT / "scripts/01_memwatch.sh"
+        with tempfile.TemporaryDirectory() as scratch:
+            source = "\n".join([
+                "set -Eeuo pipefail",
+                f'TARGET_FILE={scratch}/target',
+                _shell_function(PROFILE_SERVE, "pid_alive"),
+                _shell_function(PROFILE_SERVE, "proc_start_ticks"),
+                _shell_function(PROFILE_SERVE, "disarm_memwatch"),
+                "sleep 60 & dummy=$!",
+                f'bash "{memwatch}" --target-file "$TARGET_FILE" '
+                f'--ready-file {scratch}/ready --threshold-gib 1 --interval-sec 1 '
+                f'--log {scratch}/memwatch.log 2>{scratch}/memwatch.err & wd=$!',
+                f"for i in $(seq 50); do [[ -r {scratch}/ready ]] && break; sleep 0.1; done",
+                'ticks=$(proc_start_ticks "$dummy")',
+                'printf "%s %s %s engine\\n" "$dummy" "$(ps -o pgid= -p "$dummy" | tr -d " ")" "$ticks" >"$TARGET_FILE"',
+                f'for i in $(seq 50); do grep -q ARMED {scratch}/ready && break; sleep 0.1; done',
+                'pgid=$(ps -o pgid= -p "$dummy" | tr -d " ")',
+                # Disarm names the PGID the watchdog armed on.
+                'disarm_memwatch "$dummy" "$pgid" "$ticks" "$wd"; rc=$?',
+                'kill -0 "$wd" 2>/dev/null && wd_alive=yes || wd_alive=no',
+                'kill "$dummy"; kill "$wd" 2>/dev/null || true',
+                'printf "%s %s\\n" "$rc" "$wd_alive"',
+            ])
+            rc, wd_alive = subprocess.run(["bash", "-c", source], capture_output=True,
+                                          text=True, check=True).stdout.split()
+            log = Path(scratch, "memwatch.log").read_text()
+        self.assertEqual((rc, wd_alive), ("0", "no"))
+        self.assertIn("DISARMED", log)
+        self.assertNotIn("FAIL_CLOSED", log)
+
+
+class SetsidLauncherTests(unittest.TestCase):
+    def test_serve_never_calls_bare_setsid(self):
+        # macOS has no setsid(1); launch sites go through the launcher
+        # resolved once at startup.
+        launches = [line for line in PROFILE_SERVE.read_text().splitlines()
+                    if re.match(r"^\s*setsid\s", line)]
+        self.assertEqual(launches, [])
+
+    def test_shim_makes_the_child_its_own_group_leader(self):
+        # Stop and the watchdog signal -PID, so PGID must equal the PID that
+        # bash recorded in $!.
+        source = (f'python3 "{SETSID_SHIM}" sleep 30 & child=$!; sleep 0.5; '
+                  'printf "%s %s\\n" "$child" "$(ps -o pgid= -p "$child" | tr -d " ")"; '
+                  'kill "$child"')
+        pid, pgid = subprocess.run(["bash", "-c", source], capture_output=True,
+                                   text=True, check=True).stdout.split()
+        self.assertEqual(pid, pgid)
+
+    def test_start_publishes_the_target_only_after_the_group_exists(self):
+        # The shim calls setsid() tens of milliseconds after bash records $!.
+        # A target published before then names a PGID the watchdog cannot
+        # verify, so it fails closed and the server runs unguarded.
+        source = "\n".join([
+            "set -Eeuo pipefail",
+            _shell_function(PROFILE_SERVE, "pid_alive"),
+            _shell_function(PROFILE_SERVE, "await_group_leader"),
+            f'python3 "{SETSID_SHIM}" sleep 30 & child=$!',
+            'await_group_leader "$child"',
+            'printf "%s %s\\n" "$child" "$(ps -o pgid= -p "$child" | tr -d " ")"',
+            'kill "$child"',
+        ])
+        pid, pgid = subprocess.run(["bash", "-c", source], capture_output=True,
+                                   text=True, check=True).stdout.split()
+        self.assertEqual(pid, pgid)
+        start = _shell_function(PROFILE_SERVE, "do_start")
+        self.assertLess(start.index("await_group_leader"), start.index("$TARGET_FILE.tmp"))
+
+
+if __name__ == "__main__":
+    unittest.main()

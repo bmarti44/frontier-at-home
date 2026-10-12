@@ -8,7 +8,7 @@ readonly LLAMACPP_TAG=b10488
 # Builds before b10450 have the Gated-DeltaNet CUDA corruption bug. Verify both
 # the human-readable tag and its immutable commit before configuring anything.
 readonly LLAMACPP_COMMIT=9d77fa17254e1dee4b9e92504c91611a60b1359f
-readonly CACHE_ROOT=/home/bmarti44/.cache/llamacpp-qwen38-9d77fa17
+readonly CACHE_ROOT=$HOME/.cache/llamacpp-qwen38-9d77fa17
 readonly SOURCE_DIR=$CACHE_ROOT/src
 readonly BUILD_DIR=$SOURCE_DIR/build
 

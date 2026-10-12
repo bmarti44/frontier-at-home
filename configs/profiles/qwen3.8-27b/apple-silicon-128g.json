@@ -26,7 +26,8 @@
    "99",
    "-fa",
    "on",
-   "--no-mmap",
+   "--load-mode",
+   "none",
    "-c",
    "262144",
    "--mmproj",
@@ -59,10 +60,10 @@
  },
  "memory_model": {
   "kv_bytes_per_token": 65536,
-  "overhead_gib": 3.0,
+  "overhead_gib": 21.5,
   "extra_gib": 0,
   "floor_gib": 10,
-  "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
+  "basis": "overhead measured 2026-10-11 on an M5 Max 128 GiB at the portable pin: 65.1 GiB server RSS after the G2 speed cells minus 27.96 GiB weights and 16.0 GiB f16 KV; Metal draft-mtp host growth (llama.cpp #30174) is the largest part (results/qwen38-gates/apple-silicon-128g-b11514-2026-10-11)"
  },
  "context_cap": 262144,
  "port_role": "production",

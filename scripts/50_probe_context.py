@@ -21,6 +21,7 @@ import platform
 import random
 import re
 import statistics
+import subprocess
 import sys
 import threading
 import time
@@ -29,8 +30,11 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+import host_memory  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
-MEMINFO_PATH = Path("/proc/meminfo")
+MEMINFO_PATH = host_memory.MEMINFO
 NEEDLE_FRACTIONS = (0.02, 0.20, 0.45, 0.70, 0.90, 0.98)
 # Slot i asks for needle TARGET_ORDER[i % 6]; slots 0 and 1 cover 2% and 98%.
 TARGET_ORDER = (0, 5, 2, 3, 1, 4)
@@ -261,20 +265,12 @@ class MemorySampler(threading.Thread):
         self.interval_s, self.meminfo, self.stop = interval_s, meminfo, threading.Event()
         self.samples: list[dict[str, Any]] = []
 
-    @staticmethod
-    def read_meminfo(path: Path) -> dict[str, int]:
-        values = {}
-        for line in path.read_text().splitlines():
-            key, _, rest = line.partition(":")
-            values[key] = int(rest.split()[0])
-        return values
-
     def run(self) -> None:
         while True:
             try:
-                info = self.read_meminfo(self.meminfo)
-                self.samples.append({"unix": time.time(), "mem_available_kib": info["MemAvailable"]})
-            except (OSError, KeyError, ValueError) as error:
+                kib = host_memory.available_kib(self.meminfo)
+                self.samples.append({"unix": time.time(), "mem_available_kib": kib})
+            except (OSError, ValueError, subprocess.SubprocessError) as error:
                 self.samples.append({"unix": time.time(), "error": str(error)})
             if self.stop.wait(self.interval_s):
                 return
@@ -360,8 +356,8 @@ def host_facts() -> dict[str, Any]:
     uname = platform.uname()
     facts: dict[str, Any] = {"uname": uname._asdict(), "nproc": os.cpu_count()}
     try:
-        facts["mem_total_kib"] = MemorySampler.read_meminfo(MEMINFO_PATH)["MemTotal"]
-    except (OSError, KeyError, ValueError):
+        facts["mem_total_kib"] = host_memory.total_kib()
+    except (OSError, ValueError, subprocess.SubprocessError):
         facts["mem_total_kib"] = None
     return facts
 

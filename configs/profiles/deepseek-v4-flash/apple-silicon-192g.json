@@ -9,7 +9,7 @@
   "state": "estimated",
   "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
  },
- "engine": "llamacpp-base",
+ "engine": "llamacpp-portable",
  "artifact_roles": {
   "model": "udq2kxl"
  },
@@ -25,7 +25,8 @@
    "99",
    "-fa",
    "on",
-   "--no-mmap",
+   "--load-mode",
+   "none",
    "-c",
    "1048576",
    "--parallel",
@@ -57,6 +58,5 @@
  "port_role": "production",
  "bench": {
   "stack_label": "deepseek-v4-flash-apple-silicon-mac-192g"
- },
- "purpose": "decode_baseline: pre-fusion"
+ }
 }

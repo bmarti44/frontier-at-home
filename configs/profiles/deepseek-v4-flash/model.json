@@ -23,17 +23,17 @@
    "binary_sha256": null,
    "note": "digest verified at launch by scripts/21_serve_llamacpp.sh against DSV4_BUILD_MANIFEST; CUDA-only fusion pin 0dc74e33"
   },
-  "llamacpp-base": {
-   "build_manifest": "configs/build-manifests/llamacpp.json",
-   "binary_path": "{cache_root}/llamacpp-32e789fd/src/build/bin/llama-server",
+  "llamacpp-portable": {
+   "build_manifest": null,
+   "binary_path": "{cache_root}/llamacpp-b11514-de7fa0a3/src/build/bin/llama-server",
    "binary_sha256": null,
-   "note": "base pin 32e789fd; the portable engine for Metal/ROCm/CPU (pre-fusion decode)"
+   "note": "the registry's portable pin (configs/pins/llamacpp.json) for every off-Spark profile; carries the fused hyper-connection ops (CUDA) and Metal hc support. Build with scripts/14_build_llamacpp_pin.sh --pin llamacpp-b11514-de7fa0a3 --host-class <class>"
   }
  },
  "backend_support": {
   "cuda": {"supported": true},
-  "apple-silicon": {"supported": true, "note": "llamacpp-base pin only (fusion ops are CUDA-only); >= 96 GiB unified memory required by weights"},
-  "rocm": {"supported": true, "note": "llamacpp-base or ds4 strix-halo target; >= 128 GiB class"},
+  "apple-silicon": {"supported": true, "note": "llamacpp-portable (upstream Metal); >= 96 GiB unified memory required by weights"},
+  "rocm": {"supported": true, "note": "llamacpp-portable or ds4 strix-halo target; >= 128 GiB class"},
   "cpu": {"supported": true, "note": "13B-active MoE; slow but runnable at >= 128 GiB"},
   "vulkan": {"supported": false, "reason": "no profile authored; schema supports it"},
   "intel-xe": {"supported": false, "reason": "no profile authored; schema supports it"},

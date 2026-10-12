@@ -11,10 +11,24 @@ numbers (docs/BACKEND-CONTRACT.md section 6).
 
 ## 0. Prerequisites
 
-- A host file: copy `configs/hosts/example-macbook-32g.json`, replace
-  `{HOME}` and the sizes with your machine's values, and save it as
-  `~/.config/frontier/host.json` (or `configs/hosts/<your-host>.json` in
-  your branch).
+- A host file: `scripts/04_host_facts.py --host-file ~/.config/frontier/host.json`
+  writes one from the detected class, backends, and memory tier. It handles
+  Mac, Strix Halo, discrete CUDA (tier = VRAM), and CPU hosts, and it never
+  overwrites an existing file. Commit it as `configs/hosts/<hostname>.json` to
+  share it. `configs/hosts/example-macbook-32g.json` shows the schema.
+- macOS: `brew install bash cmake flock` and put Homebrew's bin first in
+  `PATH`. The scripts need bash 4+ (`mapfile`; `/bin/bash` is 3.2) and
+  `flock(1)`. `setsid(1)` is not needed: `93_profile_serve.sh` falls back
+  to `scripts/lib/setsid.py`. Fetch weights with the `hf` CLI
+  (`uv tool install huggingface_hub`).
+- HumanEval (accuracy cell) runs each sample in a pinned Docker image
+  (`configs/pins/humaneval-runtime.json`). On macOS without Docker Desktop:
+  `brew install colima docker`, then
+  `colima start --arch aarch64 --vm-type vz --cpu 2 --memory 2` (without
+  `--arch aarch64` Colima may ask for qemu to emulate x86_64), then
+  `docker pull python@sha256:<repo_digest>` and
+  `docker tag python@sha256:<repo_digest> python:3.12-slim`.
+  `colima stop` when the run ends.
 - `scripts/00_preflight.sh` reports `host_lock: not-applicable
   (community host ...)` — the versions.lock equality assertions apply only
   to the reference Spark.
@@ -30,17 +44,32 @@ Facts must satisfy the profile's `backend`, `hardware_class`, and
 
 ## 2. Build the engine for your host class
 
+Every llama.cpp engine is built from a pin in `configs/pins/llamacpp.json`.
+Off-Spark profiles on upstream llama.cpp (Qwen3.8-27B, DeepSeek-V4-Flash)
+use the registry's `portable` pin. Laguna keeps the poolside fork pin.
+
 ```
-scripts/12_build_qwen38_llamacpp.sh --host-class metal      # example
-scripts/13_build_llamacpp.sh --host-class cpu               # DSV4 base pin
-scripts/13_build_laguna_llamacpp.sh --host-class metal      # verify-on-hardware
-scripts/11_build_ds4.sh --host-class metal                  # ds4 Makefile default
+P=$(python3 -c 'import json;print(json.load(open("configs/pins/llamacpp.json"))["portable"])')
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class metal                    # Apple Silicon
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class rocm --rocm-arch gfx1151 # Strix Halo (HIP)
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class vulkan                   # Strix Halo / other GPUs (Vulkan)
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class cuda-generic --cuda-arch 89
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class cpu
+scripts/14_build_llamacpp_pin.sh --pin llamacpp-laguna-06f8cebd --host-class metal  # verify-on-hardware
+scripts/11_build_ds4.sh --host-class metal                                          # ds4 Makefile default
 ```
 
-Classes: `cuda-generic | metal | rocm | cpu` (`--cuda-arch N`,
-`--rocm-arch gfxNNNN` where applicable). Off-Spark builds write a
-class-suffixed build manifest and never overwrite the committed Spark one.
-The manifest records the toolchain and the observed architecture assertion.
+Add `--dry-run` to print the resolved repository, commit, paths, and cmake
+flags without building. Classes: `cuda-spark | cuda-generic | metal | rocm |
+vulkan | cpu`. Off-Spark builds write a class-suffixed build manifest
+(`configs/build-manifests/<pin>-<class>.json`) and never overwrite the
+committed Spark one. The manifest records the toolchain flags and the
+observed architecture assertion.
+
+To try a newer llama.cpp, register a pin, point `portable` at it, rebuild,
+and re-run the gates on the same fixtures. Spark-qualified engines
+(`llamacpp-qwen38`, `llamacpp-laguna`, `llamacpp-fusion`) keep their pin
+until the Spark itself requalifies on the new one.
 
 ## 3. Fetch weights and check fit
 
@@ -63,6 +92,19 @@ scripts/93_profile_serve.sh --profile <model>/<profile-file> start
 
 On macOS the watchdog is `scripts/06_memwatch_macos.sh` (vm_stat
 availability; floors are conservative and themselves verify-on-hardware).
+The context and soak cells sample the same vm_stat availability
+(`scripts/lib/host_memory.py`), so their floors mean the same thing as the
+watchdog's. Nothing starts a model on its own: the whole bundle is one
+owner-run command, and it stops the server when it finishes:
+
+```
+scripts/94_qualify_profile.py --profile <model>/<profile-file> \
+    --accuracy-split dev --with-soak
+```
+
+Cells can run in separate sittings into the same `--out` (`--cells
+speed,toolcall,vision`, later `--cells accuracy`, ...); finished accuracy
+suites are kept, not re-run.
 All gates take `--base-url http://127.0.0.1:<port>` and are inherited
 unchanged (docs/BACKEND-CONTRACT.md section 4):
 

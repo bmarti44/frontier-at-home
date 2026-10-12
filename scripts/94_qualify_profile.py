@@ -324,13 +324,12 @@ def host_facts() -> dict:
         "nproc": os.cpu_count(),
         "python": sys.version.split()[0],
     }
+    sys.path.insert(0, str(SCRIPTS / "lib"))
+    import host_memory
     try:
-        for line in Path("/proc/meminfo").read_text().splitlines():
-            if line.startswith("MemTotal:"):
-                facts["mem_total_kib"] = int(line.split()[1])
-                facts["mem_total_gib"] = round(int(line.split()[1]) / 2**20, 2)
-                break
-    except OSError:
+        facts["mem_total_kib"] = host_memory.total_kib()
+        facts["mem_total_gib"] = round(facts["mem_total_kib"] / 2**20, 2)
+    except (OSError, ValueError, subprocess.SubprocessError):
         pass
     if shutil.which("nvidia-smi"):
         try:

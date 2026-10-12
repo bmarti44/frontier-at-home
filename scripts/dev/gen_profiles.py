@@ -30,10 +30,15 @@ BASIS = (
 KV = {model: entry["f16"] for model, entry in MATRIX["kv_bytes_per_token"].items()}
 
 
+# The portable pin folded --mmap/--no-mmap into --load-mode (configs/pins/
+# llamacpp.json removed_args); the Laguna fork pin still takes --no-mmap.
+NO_MMAP_PORTABLE = ["--load-mode", "none"]
+
+
 def qwen_args(ctx, ngl, parallel, mmproj, uma, moe_cpu=False):
     args = ["--model", "{model}", "-ngl", str(ngl), "-fa", "on"]
     if uma:
-        args.append("--no-mmap")
+        args += NO_MMAP_PORTABLE
     args += ["-c", str(ctx)]
     if mmproj:
         args += ["--mmproj", "{mmproj}"]
@@ -74,11 +79,11 @@ def laguna_args(ctx, parallel, draft, uma, moe_cpu=False):
 
 
 def dsv4_args(ctx, ngl, parallel, uma, moe_cpu=False):
-    # llamacpp-base pin: the fused hyper-connection ops are CUDA-only, so
-    # every off-Spark profile runs the pre-fusion decode baseline.
+    # Portable pin (configs/pins/llamacpp.json): upstream carries the DSV4
+    # fused hyper-connection ops (CUDA) and Metal hc support.
     args = ["--model", "{model}", "-ngl", str(ngl), "-fa", "on"]
     if uma:
-        args.append("--no-mmap")
+        args += NO_MMAP_PORTABLE
     args += ["-c", str(ctx)]
     if moe_cpu:
         args += ["-ot", "exps=CPU"]
@@ -95,14 +100,25 @@ SPECS = []
 
 def spec(model, engine, backend, hardware_class, tier, stem, roles, args, ctx,
          floor, verify=(), tight_note=None, min_system_ram=None,
-         decode_baseline=None):
+         decode_baseline=None, overhead=None):
     SPECS.append({
         "model": model, "engine": engine, "backend": backend,
         "class": hardware_class, "tier": tier, "stem": stem, "roles": roles,
         "args": args, "ctx": ctx, "floor": floor, "verify": list(verify),
         "tight_note": tight_note, "min_system_ram": min_system_ram,
-        "decode_baseline": decode_baseline,
+        "decode_baseline": decode_baseline, "overhead": overhead,
     })
+
+
+# Measured on hardware (beats arithmetic, docs/QUALIFY-OFFHOST.md section 4):
+# (overhead_gib, basis) for the cell it was measured on.
+MAC128_MTP_OVERHEAD = (
+    21.5,
+    "overhead measured 2026-10-11 on an M5 Max 128 GiB at the portable pin: "
+    "65.1 GiB server RSS after the G2 speed cells minus 27.96 GiB weights and "
+    "16.0 GiB f16 KV; Metal draft-mtp host growth (llama.cpp #30174) is the "
+    "largest part (results/qwen38-gates/apple-silicon-128g-b11514-2026-10-11)",
+)
 
 
 Q = "qwen3.8-27b"
@@ -123,7 +139,8 @@ spec(Q, QE, "apple-silicon", "mac", 96, "apple-silicon-96g",
      qwen_args(262144, 99, 1, True, True), 262144, 10, [METAL_MTP])
 spec(Q, QE, "apple-silicon", "mac", 128, "apple-silicon-128g",
      {"model": "q8", "mmproj": "mmproj-f16"},
-     qwen_args(262144, 99, 2, True, True), 262144, 10, [METAL_MTP])
+     qwen_args(262144, 99, 2, True, True), 262144, 10, [METAL_MTP],
+     overhead=MAC128_MTP_OVERHEAD)
 spec(Q, QE, "apple-silicon", "mac", 192, "apple-silicon-192g",
      {"model": "q8", "mmproj": "mmproj-f16"},
      qwen_args(262144, 99, 4, True, True), 262144, 10, [METAL_MTP])
@@ -187,29 +204,28 @@ spec(L, LE, "cpu", "any", 128, "cpu-128g", {"model": "udq4kxl"},
      ["cpu-throughput (8B-active MoE: usable but slow)"])
 
 D = "deepseek-v4-flash"
-DE = "llamacpp-base"
-PREFUSION = "pre-fusion"
+DE = "llamacpp-portable"
 
 spec(D, DE, "apple-silicon", "mac", 128, "apple-silicon-128g",
      {"model": "udq2kxl"}, dsv4_args(262144, 99, 1, True), 262144, 10,
      ["raised-wired-limit (fit ~95 GiB against ~96 GiB usable)"],
      tight_note="90.2 GiB weights leave almost no headroom at the default "
-                "Metal wired limit", decode_baseline=PREFUSION)
+                "Metal wired limit")
 spec(D, DE, "apple-silicon", "mac", 192, "apple-silicon-192g",
      {"model": "udq2kxl"}, dsv4_args(1048576, 99, 2, True), 1048576, 10,
-     [], decode_baseline=PREFUSION)
+     [])
 spec(D, DE, "cuda", "dgpu", 12, "cuda-dgpu-12g",
      {"model": "udq2kxl"}, dsv4_args(32768, 99, 1, False, moe_cpu=True),
      32768, 8, ["moe-on-cpu-throughput (13B active streamed from host RAM)"],
-     min_system_ram=128, decode_baseline=PREFUSION,
+     min_system_ram=128,
      tight_note="one profile covers 12-32 GiB VRAM: dense layers on GPU, "
                 "experts on CPU")
 spec(D, DE, "rocm", "strix", 128, "rocm-strix-128g",
      {"model": "udq2kxl"}, dsv4_args(65536, 99, 1, True), 65536, 8,
-     ["rocm-hip-build"], decode_baseline=PREFUSION)
+     ["rocm-hip-build"])
 spec(D, DE, "cpu", "any", 128, "cpu-128g",
      {"model": "udq2kxl"}, dsv4_args(16384, 0, 1, False), 16384, 8,
-     ["cpu-throughput (13B-active MoE)"], decode_baseline=PREFUSION)
+     ["cpu-throughput (13B-active MoE)"])
 
 
 def render(entry) -> dict:
@@ -245,10 +261,10 @@ def render(entry) -> dict:
         },
         "memory_model": {
             "kv_bytes_per_token": KV[entry["model"]],
-            "overhead_gib": 3.0,
+            "overhead_gib": entry["overhead"][0] if entry["overhead"] else 3.0,
             "extra_gib": 0,
             "floor_gib": entry["floor"],
-            "basis": BASIS,
+            "basis": entry["overhead"][1] if entry["overhead"] else BASIS,
         },
         "context_cap": entry["ctx"],
         "port_role": "production",

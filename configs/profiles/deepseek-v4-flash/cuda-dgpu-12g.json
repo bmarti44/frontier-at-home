@@ -9,7 +9,7 @@
   "state": "estimated",
   "basis": "computed 2026-08-27 from weights manifests + measured KV rates (configs/hardware-matrix.json); estimated until qualified on hardware per docs/QUALIFY-OFFHOST.md"
  },
- "engine": "llamacpp-base",
+ "engine": "llamacpp-portable",
  "artifact_roles": {
   "model": "udq2kxl"
  },
@@ -63,5 +63,5 @@
  "verify_on_hardware": [
   "moe-on-cpu-throughput (13B active streamed from host RAM)"
  ],
- "purpose": "one profile covers 12-32 GiB VRAM: dense layers on GPU, experts on CPU; decode_baseline: pre-fusion"
+ "purpose": "one profile covers 12-32 GiB VRAM: dense layers on GPU, experts on CPU"
 }

@@ -8,7 +8,11 @@ with exit status 0. Fit decisions belong to the resolver
 (scripts/92_resolve_profile.py); Spark lock-equality assertions stay in
 scripts/00_preflight.sh and apply only when the facts match the lock host.
 
-Usage: scripts/04_host_facts.py [--out FILE]
+Usage: scripts/04_host_facts.py [--out FILE] [--host-file FILE]
+
+--host-file writes a host file for the resolver (the configs/hosts/*.json
+schema) from the detected facts; save it as ~/.config/frontier/host.json
+or configs/hosts/<hostname>.json. It never overwrites an existing file.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ import json
 import platform
 import re
 import shutil
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -179,14 +184,59 @@ def collect() -> dict:
     return facts
 
 
+def host_file(facts: dict, home: str, hostname: str, repo: str) -> dict:
+    """A configs/hosts/*.json document for this host's detected class."""
+    host_class = facts.get("host_class_guess")
+    if host_class not in {"spark", "mac", "dgpu", "strix", "any"}:
+        raise ValueError(f"cannot write a host file for host class {host_class!r}")
+    # dgpu profiles carry the VRAM tier in ram_tier_gib (hardware-matrix.json
+    # tier_semantics), so the host's tier is its VRAM, not its system RAM.
+    ram_gib = facts["tier_guess_gib"] if host_class == "dgpu" else facts["ram_gib"]
+    if not ram_gib:
+        raise ValueError("cannot determine the memory tier for this host")
+    return {
+        "schema_version": 1,
+        "host_id": hostname,
+        "os": facts["os"],
+        "arch": facts["arch"],
+        "hardware_class": host_class,
+        "backends": list(facts["backends_available"]),
+        "ram_gib": ram_gib,
+        "paths": {
+            "repo": repo,
+            "model_root": f"{home}/models",
+            "cache_root": f"{home}/.cache",
+            "state_root": f"{home}/.frontier-at-home/state",
+            "inference_lock": f"{home}/.frontier-at-home/run/inference.lock",
+        },
+        "ports": {"production": 8013, "dev": {}},
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", help="write JSON here instead of stdout")
+    parser.add_argument("--host-file", help="also write a resolver host file here")
     args = parser.parse_args()
-    document = json.dumps(collect(), indent=1)
+    facts = collect()
+    if args.host_file:
+        target = Path(args.host_file)
+        if target.exists():
+            print(f"{target} exists; refusing to overwrite", file=sys.stderr)
+            return 1
+        try:
+            document = host_file(facts, str(Path.home()),
+                                 socket.gethostname().split(".")[0], str(REPO_ROOT))
+        except ValueError as error:
+            print(error, file=sys.stderr)
+            return 1
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(document, indent=1) + "\n", encoding="utf-8")
+        print(f"wrote host file {target}", file=sys.stderr)
+    document = json.dumps(facts, indent=1)
     if args.out:
         Path(args.out).write_text(document + "\n", encoding="utf-8")
-    else:
+    elif not args.host_file:
         print(document)
     return 0
 
