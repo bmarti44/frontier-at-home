@@ -271,7 +271,7 @@ def _run_start(step, plan, profiles, args, out: Path, log) -> None:
             if b.returncode != 0:
                 start["failed"] = f"bench exit {b.returncode}"
     finally:
-        with sigterm_deferred():   # a further SIGTERM waits for the stop and the scope
+        with sigterm_deferred():   # a further SIGTERM or SIGINT waits for the stop and the scope
             subprocess.run(serve[:-1] + ["stop"], stdout=open(d / "stop.log", "w"), stderr=subprocess.STDOUT)
             for _ in range(60):
                 if subprocess.run(["systemctl", "--user", "is-active", "-q", f"{unit}.scope"]).returncode != 0:
@@ -336,9 +336,10 @@ def existing_start(d: Path, resume: bool) -> dict | None:
     if not (d / "start.json").exists():
         raise SystemExit(f"{d} has no start.json: that start died; the campaign cannot resume")
     try:
-        return json.loads((d / "start.json").read_text())
+        record = json.loads((d / "start.json").read_text())
     except (OSError, ValueError):
         return {}
+    return record if isinstance(record, dict) else {}
 
 
 def run_steps(steps, run_one, floor_gib: float, log) -> None:
@@ -357,15 +358,17 @@ def run_steps(steps, run_one, floor_gib: float, log) -> None:
 
 @contextlib.contextmanager
 def sigterm_deferred():
-    """Inside, a SIGTERM is recorded instead of raised, so a start's cleanup (engine
-    stop, scope wait, log copy) runs to its end; on leaving, the previous handler
-    returns and a recorded SIGTERM exits 143."""
+    """Inside, a SIGTERM or SIGINT is recorded instead of raised, so a start's cleanup
+    (engine stop, scope wait, log copy) runs to its end; on leaving, the previous
+    handlers return and the first recorded signal exits 128 + its number."""
     got = []
-    previous = signal.signal(signal.SIGTERM, lambda signum, frame: got.append(signum))
+    previous = {sig: signal.signal(sig, lambda signum, frame: got.append(signum))
+                for sig in (signal.SIGTERM, signal.SIGINT)}
     try:
         yield
     finally:
-        signal.signal(signal.SIGTERM, previous)
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
     if got:
         sys.exit(128 + got[0])
 
