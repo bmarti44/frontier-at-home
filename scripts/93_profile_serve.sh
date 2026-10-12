@@ -311,6 +311,20 @@ PY
     die "readiness timed out; see $SERVER_LOG"
 }
 
+# Hand the armed watchdog an authenticated DISARM so a deliberate stop is not
+# logged as FAIL_CLOSED. Returns nonzero when the watchdog did not exit.
+disarm_memwatch() {  # disarm_memwatch PID PGID START_TICKS MEMWATCH_PID
+    local attempt
+    pid_alive "$4" || return 0
+    printf 'DISARM %s %s %s\n' "$1" "$2" "$3" >"$TARGET_FILE.tmp" || return 1
+    mv -- "$TARGET_FILE.tmp" "$TARGET_FILE" || return 1
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        pid_alive "$4" || return 0
+        sleep 0.1
+    done
+    return 1
+}
+
 do_stop() {
     [[ -r $STATE_FILE ]] || die "$PROFILE_ID is not running (state file absent)"
     local pid ticks memwatch_pid current
@@ -319,6 +333,7 @@ do_stop() {
     memwatch_pid=$(python3 -c "import json;print(json.load(open('$STATE_FILE'))['memwatch_pid'])")
     current=$(proc_start_ticks "$pid" 2>/dev/null || true)
     if [[ -n $current && $current == "$ticks" ]]; then
+        disarm_memwatch "$pid" "$pid" "$ticks" "$memwatch_pid" || true
         kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
         local attempt
         for ((attempt = 0; attempt < 150; attempt++)); do
