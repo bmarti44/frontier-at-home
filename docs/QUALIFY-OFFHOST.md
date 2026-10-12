@@ -11,10 +11,11 @@ numbers (docs/BACKEND-CONTRACT.md section 6).
 
 ## 0. Prerequisites
 
-- A host file: copy `configs/hosts/example-macbook-32g.json`, replace
-  `{HOME}` and the sizes with your machine's values, and save it as
-  `~/.config/frontier/host.json` (or `configs/hosts/<your-host>.json` in
-  your branch).
+- A host file: `scripts/04_host_facts.py --host-file ~/.config/frontier/host.json`
+  writes one from the detected class, backends, and memory tier. It handles
+  Mac, Strix Halo, discrete CUDA (tier = VRAM), and CPU hosts, and it never
+  overwrites an existing file. Commit it as `configs/hosts/<hostname>.json` to
+  share it. `configs/hosts/example-macbook-32g.json` shows the schema.
 - macOS: `brew install bash cmake flock` and put Homebrew's bin first in
   `PATH`. The scripts need bash 4+ (`mapfile`; `/bin/bash` is 3.2) and
   `flock(1)`. `setsid(1)` is not needed: `93_profile_serve.sh` falls back
