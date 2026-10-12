@@ -80,6 +80,27 @@ class ProfilesUseRegisteredPins(unittest.TestCase):
             with self.subTest(profile=f"{model_slug}/{profile_file}"):
                 self.assertEqual(pin, data["portable"])
 
+    def test_profiles_avoid_flags_their_pin_removed(self) -> None:
+        # b11514 rejects --no-mmap outright ("invalid argument"); a profile
+        # carrying it never starts on that pin.
+        pins = registry()["pins"]
+        for model_slug, profile_file in resolver.list_profiles():
+            profile = resolver.load_profile(model_slug, profile_file)
+            if "engine" not in profile:
+                continue
+            engine = resolver.load_model(model_slug)["engines"][profile["engine"]]
+            pin = engine_pin(engine)
+            if pin is None:
+                continue
+            removed = set(pins[pin].get("removed_args", []))
+            with self.subTest(profile=f"{model_slug}/{profile_file}"):
+                self.assertEqual(sorted(removed & set(profile["launch"]["args"])), [])
+
+    def test_portable_pin_records_the_load_mode_removals(self) -> None:
+        data = registry()
+        removed = set(data["pins"][data["portable"]].get("removed_args", []))
+        self.assertLessEqual({"--mmap", "--no-mmap", "--mlock"}, removed)
+
     def test_spark_build_manifests_match_their_pin(self) -> None:
         pins = registry()["pins"]
         for model_slug in sorted({slug for slug, _ in resolver.list_profiles()}):
