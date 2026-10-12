@@ -30,10 +30,15 @@ BASIS = (
 KV = {model: entry["f16"] for model, entry in MATRIX["kv_bytes_per_token"].items()}
 
 
+# The portable pin folded --mmap/--no-mmap into --load-mode (configs/pins/
+# llamacpp.json removed_args); the Laguna fork pin still takes --no-mmap.
+NO_MMAP_PORTABLE = ["--load-mode", "none"]
+
+
 def qwen_args(ctx, ngl, parallel, mmproj, uma, moe_cpu=False):
     args = ["--model", "{model}", "-ngl", str(ngl), "-fa", "on"]
     if uma:
-        args.append("--no-mmap")
+        args += NO_MMAP_PORTABLE
     args += ["-c", str(ctx)]
     if mmproj:
         args += ["--mmproj", "{mmproj}"]
@@ -78,7 +83,7 @@ def dsv4_args(ctx, ngl, parallel, uma, moe_cpu=False):
     # fused hyper-connection ops (CUDA) and Metal hc support.
     args = ["--model", "{model}", "-ngl", str(ngl), "-fa", "on"]
     if uma:
-        args.append("--no-mmap")
+        args += NO_MMAP_PORTABLE
     args += ["-c", str(ctx)]
     if moe_cpu:
         args += ["-ot", "exps=CPU"]

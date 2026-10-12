@@ -9,6 +9,8 @@
    "commit": "de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b",
    "chosen": "2026-10-11",
    "rationale": "docs/llamacpp-pin-choice.md#portable-pin-b11514",
+   "removed_args": ["--mmap", "--no-mmap", "--mlock", "--direct-io", "--no-direct-io", "-dio", "-ndio"],
+   "removed_args_note": "folded into --load-mode {auto,none,mmap,mlock}; --no-mmap == --load-mode none",
    "known_issues": [
     "#28748 (open): Metal tensor-API mul_mm miscomputes tiles >2 GiB from a tensor start; affects very large tensors (Flash-Next embedding), not Qwen3.8-27B",
     "#30174 (open): Metal draft-mtp allocates up to ~15 GB host memory over a long session (Qwen3.8-27B)",
