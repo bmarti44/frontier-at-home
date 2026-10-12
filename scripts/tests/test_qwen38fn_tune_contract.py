@@ -67,6 +67,9 @@ ARMS = {
     "a3": ["L1", "L2"],
     "a4": ["L1", "L2", "L3"],
     "a5": ["L1", "L2", "L3", "L4"],
+    # Amended arm: the screen dropped L3 (a4 held 1,033,876 KV tokens at a
+    # 3,216-token block, short of 1M), so L4 is screened on a3, the last kept arm.
+    "a5b": ["L1", "L2", "L4"],
 }
 
 
