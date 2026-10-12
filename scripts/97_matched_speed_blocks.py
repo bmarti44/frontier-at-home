@@ -196,14 +196,22 @@ def _stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# The 1 Hz sampler's fields (KiB) and line format; scorers parse exactly these.
+MEMINFO_KEYS = ("MemAvailable", "MemFree", "SwapFree", "Cached")
+
+
 def _meminfo() -> dict[str, int]:
     out = {}
     with open("/proc/meminfo") as fh:
         for line in fh:
             key, value = line.split(":", 1)
-            if key in ("MemAvailable", "MemFree", "SwapFree", "Cached"):
+            if key in MEMINFO_KEYS:
                 out[key] = int(value.split()[0])
     return out
+
+
+def meminfo_line(stamp: str, sample: dict[str, int]) -> str:
+    return stamp + " " + " ".join(f"{k}:={v}" for k, v in sample.items())
 
 
 def _run_start(step, plan, profiles, args, out: Path, log) -> None:
@@ -237,7 +245,7 @@ def _run_start(step, plan, profiles, args, out: Path, log) -> None:
             while not stop.is_set():
                 m = _meminfo()
                 samples.append((_stamp(), m))
-                fh.write(_stamp() + " " + " ".join(f"{k}:={v}" for k, v in m.items()) + "\n")
+                fh.write(meminfo_line(_stamp(), m) + "\n")
                 fh.flush()
                 stop.wait(1.0)
 
@@ -313,14 +321,29 @@ def unsafe_start(start: dict, floor_gib: float) -> list[str]:
     return reasons
 
 
+def existing_start(d: Path, resume: bool) -> dict | None:
+    """A start already on disk: None when there is none. With --resume, its
+    record (an unreadable one as {}, which is never safe); otherwise, or when it
+    died before writing start.json, the campaign cannot continue."""
+    if not d.exists():
+        return None
+    if not resume:
+        raise SystemExit(f"{d} exists; use a fresh --out (or --resume after a clean stop)")
+    if not (d / "start.json").exists():
+        raise SystemExit(f"{d} has no start.json: that start died; the campaign cannot resume")
+    try:
+        return json.loads((d / "start.json").read_text())
+    except (OSError, ValueError):
+        return {}
+
+
 def run_steps(steps, run_one, floor_gib: float, log) -> None:
     """Run each step; stop the campaign at the first failed or unsafe start, so
     no further large load follows an NVRM/Xid/OOM line, swap growth or a low
-    point under the floor. run_one returns None for a step it skipped (--resume)."""
+    point under the floor. run_one returns the start's record: a new start's,
+    or (--resume) the one on disk, so a resume stops at an unsafe start too."""
     for step in steps:
         start = run_one(step)
-        if start is None:
-            continue
         reasons = unsafe_start(start, floor_gib)
         if reasons:
             log(f"campaign stopped after block {start.get('block')} position {start.get('position')} "
@@ -374,12 +397,8 @@ def cmd_run(args) -> int:
             fh.write(line + "\n")
 
     def run_one(step):
-        d = out / f"block-{step[0]}" / f"{step[1]}-{step[2]}"
-        if d.exists():
-            if args.resume and (d / "start.json").exists():
-                return None
-            raise SystemExit(f"{d} exists; use a fresh --out (or --resume after a clean stop)")
-        return _run_start(step, plan, profiles, args, out, log)
+        existing = existing_start(out / f"block-{step[0]}" / f"{step[1]}-{step[2]}", args.resume)
+        return existing if existing is not None else _run_start(step, plan, profiles, args, out, log)
 
     run_steps(steps, run_one, args.abort_low_gib, log)
     log("all starts done")
