@@ -108,6 +108,42 @@ class ProfileServeSetupTests(unittest.TestCase):
         self.assertIn("is not running (state file absent)", result.stderr)
 
 
+class WatchdogDisarmTests(unittest.TestCase):
+    """93 stop hands the watchdog an authenticated DISARM before killing."""
+
+    def test_stop_disarms_the_platform_watchdog_cleanly(self):
+        import tempfile
+        memwatch = MEMWATCH_MACOS if DARWIN else ROOT / "scripts/01_memwatch.sh"
+        with tempfile.TemporaryDirectory() as scratch:
+            source = "\n".join([
+                "set -Eeuo pipefail",
+                f'TARGET_FILE={scratch}/target',
+                _shell_function(PROFILE_SERVE, "pid_alive"),
+                _shell_function(PROFILE_SERVE, "proc_start_ticks"),
+                _shell_function(PROFILE_SERVE, "disarm_memwatch"),
+                "sleep 60 & dummy=$!",
+                f'bash "{memwatch}" --target-file "$TARGET_FILE" '
+                f'--ready-file {scratch}/ready --threshold-gib 1 --interval-sec 1 '
+                f'--log {scratch}/memwatch.log 2>{scratch}/memwatch.err & wd=$!',
+                f"for i in $(seq 50); do [[ -r {scratch}/ready ]] && break; sleep 0.1; done",
+                'ticks=$(proc_start_ticks "$dummy")',
+                'printf "%s %s %s engine\\n" "$dummy" "$(ps -o pgid= -p "$dummy" | tr -d " ")" "$ticks" >"$TARGET_FILE"',
+                f'for i in $(seq 50); do grep -q ARMED {scratch}/ready && break; sleep 0.1; done',
+                'pgid=$(ps -o pgid= -p "$dummy" | tr -d " ")',
+                # Disarm names the PGID the watchdog armed on.
+                'disarm_memwatch "$dummy" "$pgid" "$ticks" "$wd"; rc=$?',
+                'kill -0 "$wd" 2>/dev/null && wd_alive=yes || wd_alive=no',
+                'kill "$dummy"; kill "$wd" 2>/dev/null || true',
+                'printf "%s %s\\n" "$rc" "$wd_alive"',
+            ])
+            rc, wd_alive = subprocess.run(["bash", "-c", source], capture_output=True,
+                                          text=True, check=True).stdout.split()
+            log = Path(scratch, "memwatch.log").read_text()
+        self.assertEqual((rc, wd_alive), ("0", "no"))
+        self.assertIn("DISARMED", log)
+        self.assertNotIn("FAIL_CLOSED", log)
+
+
 class SetsidLauncherTests(unittest.TestCase):
     def test_serve_never_calls_bare_setsid(self):
         # macOS has no setsid(1); launch sites go through the launcher
