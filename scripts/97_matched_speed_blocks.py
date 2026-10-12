@@ -12,7 +12,8 @@ with confidence intervals derived in the harness. This is the shared tool:
          relays to agree, BLS-verifies it with the bundled verifier, and keeps
          the receipt in plan.json.
   run    --plan plan.json --out DIR [--host FILE] [--port 8017] [--required-gib G]
-         [--runtime-max-sec S] [--reps 3] [--release-tree DIR ...] [--resume] [--dry-run]
+         [--runtime-max-sec S] [--reps 3] [--release-tree DIR ...] [--abort-low-gib 8]
+         [--resume] [--dry-run]
          Starts each arm fresh, in plan order, on a dev port through
          93_profile_serve.sh inside a user scope carrying the profile's
          containment (MemorySwapMax, OOMPolicy, MemoryHigh/Max). Each start is
@@ -20,6 +21,8 @@ with confidence intervals derived in the harness. This is the shared tool:
          the kernel log, measured with 30_bench_speed_blocks.py (K from the
          profile's qualification_options) at contexts 0 and 28,672, and stopped.
          Writes DIR/block-<b>/<position>-<arm>/{start.json,speed.json,...}.
+         The campaign stops at the first failed start or one with a kill
+         line, swap growth over 0.25 GiB or a low point under --abort-low-gib.
   score  --out DIR
          Reduces each block to its A and B means and gives paired log ratios
          B/A with one-sided 95% bounds (Student t, df = blocks - 1). Writes
@@ -292,6 +295,37 @@ def _run_start(step, plan, profiles, args, out: Path, log) -> None:
     (d / "start.json").write_text(json.dumps(start, indent=1) + "\n")
     log(f"block {block} position {position} arm {arm}: failed={start['failed']} "
         f"kills={len(kills)} low={start['low_mem_available_gib']:.2f}")
+    return start
+
+
+def unsafe_start(start: dict, floor_gib: float) -> list[str]:
+    """Why a finished start must stop the campaign (empty when it may continue)."""
+    reasons = []
+    if start.get("failed"):
+        reasons.append(f"failed: {start['failed']}")
+    if start.get("kill_lines"):
+        reasons.append(f"kill lines: {start['kill_lines'][:3]}")
+    swap, low = start.get("swap_growth_gib"), start.get("low_mem_available_gib")
+    if not _is_finite(swap) or swap > MAX_SWAP_GROWTH_GIB:
+        reasons.append(f"swap growth {swap!r} GiB")
+    if not _is_finite(low) or low < floor_gib:
+        reasons.append(f"low point {low!r} GiB (floor {floor_gib})")
+    return reasons
+
+
+def run_steps(steps, run_one, floor_gib: float, log) -> None:
+    """Run each step; stop the campaign at the first failed or unsafe start, so
+    no further large load follows an NVRM/Xid/OOM line, swap growth or a low
+    point under the floor. run_one returns None for a step it skipped (--resume)."""
+    for step in steps:
+        start = run_one(step)
+        if start is None:
+            continue
+        reasons = unsafe_start(start, floor_gib)
+        if reasons:
+            log(f"campaign stopped after block {start.get('block')} position {start.get('position')} "
+                f"arm {start.get('arm')}: {'; '.join(reasons)}")
+            raise SystemExit(f"campaign stopped at an unsafe or failed start: {'; '.join(reasons)}")
 
 
 def exit_on_sigterm() -> None:
@@ -339,18 +373,24 @@ def cmd_run(args) -> int:
         with open(out / "run.log", "a") as fh:
             fh.write(line + "\n")
 
-    for step in steps:
+    def run_one(step):
         d = out / f"block-{step[0]}" / f"{step[1]}-{step[2]}"
         if d.exists():
             if args.resume and (d / "start.json").exists():
-                continue
+                return None
             raise SystemExit(f"{d} exists; use a fresh --out (or --resume after a clean stop)")
-        _run_start(step, plan, profiles, args, out, log)
+        return _run_start(step, plan, profiles, args, out, log)
+
+    run_steps(steps, run_one, args.abort_low_gib, log)
     log("all starts done")
     return 0
 
 
 # --- score --------------------------------------------------------------------
+
+def _is_finite(value) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+
 
 def _finite(value, what: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
@@ -358,7 +398,7 @@ def _finite(value, what: str) -> float:
     return float(value)
 
 
-def _start_metrics(d: Path, expected_arm: str, reasons: list[str]) -> dict | None:
+def _start_metrics(d: Path, expected_arm: str, expected_profile: str, reasons: list[str]) -> dict | None:
     label = f"{d.parent.name}/{d.name}"
     try:
         start = json.loads((d / "start.json").read_text())
@@ -369,6 +409,10 @@ def _start_metrics(d: Path, expected_arm: str, reasons: list[str]) -> dict | Non
     bad = []
     if start.get("arm") != expected_arm:
         bad.append(f"arm {start.get('arm')!r} is out of plan order (want {expected_arm})")
+    if start.get("profile") != expected_profile:
+        bad.append(f"profile {start.get('profile')!r} is not the plan's {expected_profile!r}")
+    if not _is_finite(start.get("low_mem_available_gib")):
+        bad.append(f"low point {start.get('low_mem_available_gib')!r} is not finite")
     if start.get("failed"):
         bad.append(f"failed: {start['failed']}")
     if start.get("kill_lines"):
@@ -417,7 +461,8 @@ def score(out: Path) -> dict:
             reasons.append(f"{block_dir.name}: unexpected block directory")
     per_start = {}
     for key, arm in expected.items():
-        per_start[key] = _start_metrics(out / key[0] / key[1], arm, reasons)
+        per_start[key] = _start_metrics(out / key[0] / key[1], arm,
+                                        plan["a_profile" if arm == "A" else "b_profile"], reasons)
     result = {"schema_version": 1, "plan": {k: plan[k] for k in ("domain", "randomness", "blocks",
                                                                 "a_profile", "b_profile")},
               "method": "per block: arithmetic mean of each arm's two fresh starts; paired log ratio "
@@ -480,6 +525,8 @@ def main() -> int:
     r.add_argument("--required-gib", type=float, default=114.5)
     r.add_argument("--runtime-max-sec", type=int, default=3600)
     r.add_argument("--reps", type=int, default=3)
+    r.add_argument("--abort-low-gib", type=float, default=8.0,
+                   help="stop the campaign after a start whose MemAvailable low point fell below this")
     r.add_argument("--resume", action="store_true")
     r.add_argument("--inference-lock", default="/run/lock/frontier-at-home/inference.lock")
     r.add_argument("--release-tree", action="append", default=[],
