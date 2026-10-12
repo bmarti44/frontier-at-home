@@ -1,0 +1,202 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "qwen3.8-27b/apple-silicon-128g",
+  "stack_label": "qwen3.8-27b-apple-silicon-mac-128g",
+  "served_model": "qwen3.8-27b",
+  "out": "/Users/bmarti44/github/frontier-at-home/results/qwen38-gates/apple-silicon-128g-2026-10-11",
+  "start_unix": 1791767523.584369,
+  "end_unix": 1791768265.935166,
+  "start_iso": "2026-10-12T01:12:03.629155+00:00",
+  "end_iso": "2026-10-12T01:24:25.935171+00:00",
+  "targets": null,
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "OK",
+      "evidence": "speed/speed.json",
+      "start_unix": 1791767523.687171,
+      "argv": [
+        "/Users/bmarti44/.frontier-at-home/venv/bin/python",
+        "/Users/bmarti44/github/frontier-at-home/scripts/30_bench_speed.py",
+        "--base-url",
+        "http://127.0.0.1:8015",
+        "--out",
+        "/Users/bmarti44/github/frontier-at-home/results/qwen38-gates/apple-silicon-128g-2026-10-11/speed/speed.json",
+        "--stack-label",
+        "qwen3.8-27b-apple-silicon-mac-128g",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "qwen3.8-27b",
+        "--output-tokenizer-path",
+        "/Users/bmarti44/models/qwen3.8-27b/tokenizer.json",
+        "--output-tokenizer-sha256",
+        "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 605.7595889999939,
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": 22.34229436074004,
+            "median_ttft_s": 0.336620729,
+            "median_prefill_tok_s": 288.25284461449655,
+            "valid": true,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": 13.085828270035051,
+            "median_ttft_s": 159.193893521,
+            "median_prefill_tok_s": 220.7442244225012,
+            "valid": true,
+            "reps": 2
+          }
+        },
+        "suite_valid": true,
+        "stack_label": "qwen3.8-27b-apple-silicon-mac-128g"
+      },
+      "end_unix": 1791768129.4433799
+    },
+    "toolcall": {
+      "status": "OK",
+      "evidence": "toolcall/toolcall.json",
+      "start_unix": 1791768129.4437969,
+      "argv": [
+        "/Users/bmarti44/.frontier-at-home/venv/bin/python",
+        "/Users/bmarti44/github/frontier-at-home/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8015/v1",
+        "--model",
+        "qwen3.8-27b",
+        "--out",
+        "/Users/bmarti44/github/frontier-at-home/results/qwen38-gates/apple-silicon-128g-2026-10-11/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 136.49159583300934,
+      "result": {
+        "passed": 20,
+        "total": 20,
+        "score": 1.0,
+        "suite": "toolcall-v1"
+      },
+      "end_unix": 1791768265.934914
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": 22.34229436074004,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": 0.336620729,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": 288.25284461449655,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": 13.085828270035051,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": 159.193893521,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": 220.7442244225012,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 20,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "MEASURED",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}

@@ -1,0 +1,1438 @@
+{
+  "suite": "toolcall-v1",
+  "pins_sha256": "286ed4b759d68ef5fc2d2fb4f53b9b6c52a7731ec290a5ef86fa3648631165ec",
+  "model": "qwen3.8-27b",
+  "base_url": "http://127.0.0.1:8015/v1",
+  "config_digest": "da68b0b44201eb0a73c4cd3f6b0963cff18ce2fc0d66150bff944a90eccc65ac",
+  "per_case": [
+    {
+      "id": "typed-string",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Reykjavík"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Reykjavík"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants to know the weather in Reykjavík and has explicitly asked me to use the weather tool. I'll call the get_weather function with the city \"Reykjavík\".\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\":\"Reykjavík\"}"
+                  },
+                  "id": "zEz31KizIsrJs8FBgsIv7NiNIuV9ltrm"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768135,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 71,
+          "prompt_tokens": 314,
+          "total_tokens": 385,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-sr7RSmXRkoTSXcMqZYip7x4jRTcq9QXX",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 314,
+          "prompt_ms": 1687.445,
+          "prompt_per_token_ms": 5.374028662420382,
+          "prompt_per_second": 186.08013890823108,
+          "predicted_n": 71,
+          "predicted_ms": 4268.983,
+          "predicted_per_token_ms": 60.98547142857143,
+          "predicted_per_second": 16.397348033477762,
+          "draft_n": 84,
+          "draft_n_accepted": 60
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-integer",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "reserve_room",
+        "arguments": {
+          "room": "Cedar",
+          "attendees": 7
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "reserve_room",
+        "required_args": {
+          "room": "Cedar",
+          "attendees": 7
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants to reserve conference room \"Cedar\" for 7 people. I'll use the reserve_room function with the room name \"Cedar\" and attendees set to 7.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "reserve_room",
+                    "arguments": "{\"room\":\"Cedar\",\"attendees\":7}"
+                  },
+                  "id": "KJ2gUvWSh59nt9nrlg6ridMV4ddFjXWh"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768142,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 82,
+          "prompt_tokens": 324,
+          "total_tokens": 406,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-20dl1psuJmB2tng1B69OMgq2XxV30TQ7",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 324,
+          "prompt_ms": 1386.869,
+          "prompt_per_token_ms": 4.28045987654321,
+          "prompt_per_second": 233.6197578862892,
+          "predicted_n": 82,
+          "predicted_ms": 5738.04,
+          "predicted_per_token_ms": 70.84,
+          "predicted_per_second": 14.11631846414455,
+          "draft_n": 122,
+          "draft_n_accepted": 66
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-boolean",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "set_light",
+        "arguments": {
+          "light": "porch",
+          "on": true
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "set_light",
+        "required_args": {
+          "light": "porch",
+          "on": true
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants to turn on the porch light. I'll use the set_light function with the light name \"porch\" and on set to true.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "set_light",
+                    "arguments": "{\"light\":\"porch\",\"on\":true}"
+                  },
+                  "id": "kPUDhrasbryQx8w3UfndnHmQZs2gxlUl"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768147,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 73,
+          "prompt_tokens": 319,
+          "total_tokens": 392,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-NqGUaoOcow4JxSGI9lv9ra08mTTEr8mO",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 319,
+          "prompt_ms": 1375.785,
+          "prompt_per_token_ms": 4.312805642633229,
+          "prompt_per_second": 231.8676246651911,
+          "predicted_n": 73,
+          "predicted_ms": 3772.494,
+          "predicted_per_token_ms": 52.39575,
+          "predicted_per_second": 19.085517432234486,
+          "draft_n": 83,
+          "draft_n_accepted": 63
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-array",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "label_issue",
+        "arguments": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "label_issue",
+        "required_args": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants to add labels \"bug\", \"urgent\", and \"backend\" to issue 418. I'll use the label_issue function with these parameters.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "label_issue",
+                    "arguments": "{\"issue\":418,\"labels\":[\"bug\", \"urgent\", \"backend\"]}"
+                  },
+                  "id": "7URsUBAvOcE59RJ479dVoagoUHiJCLUP"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768153,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 85,
+          "prompt_tokens": 335,
+          "total_tokens": 420,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-6ZbAVTG6gaRlKHtzpjE1CkkseKRkVaLU",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 335,
+          "prompt_ms": 1438.734,
+          "prompt_per_token_ms": 4.294728358208955,
+          "prompt_per_second": 232.8435972181098,
+          "predicted_n": 85,
+          "predicted_ms": 4577.602,
+          "predicted_per_token_ms": 54.495261904761904,
+          "predicted_per_second": 18.35021917589166,
+          "draft_n": 97,
+          "draft_n_accepted": 72
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "choose-weather-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Nairobi"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Nairobi"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants to know if they'll need an umbrella in Nairobi today, so I need to check the current weather there.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\":\"Nairobi\"}"
+                  },
+                  "id": "t6aM4WlNGxIgeo3jLHitc6PBCw59Q3mm"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768158,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 55,
+          "prompt_tokens": 420,
+          "total_tokens": 475,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-62iip3IrK558VI8wJKpgo18LTYSWB9W2",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 420,
+          "prompt_ms": 1685.53,
+          "prompt_per_token_ms": 4.013166666666667,
+          "prompt_per_second": 249.17978321358862,
+          "predicted_n": 55,
+          "predicted_ms": 2909.846,
+          "predicted_per_token_ms": 53.886037037037035,
+          "predicted_per_second": 18.557683121374808,
+          "draft_n": 61,
+          "draft_n_accepted": 47
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "choose-calendar-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_calendar_event",
+        "arguments": {
+          "title": "Design Review",
+          "start": "2026-09-03T14:30:00Z"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_calendar_event",
+        "required_args": {
+          "title": "Design Review",
+          "start": "2026-09-03T14:30:00Z"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants to schedule a calendar event for a \"Design Review\" on 2026-09-03 at 14:30 UTC. I'll use the create_calendar_event function with the title \"Design Review\" and the start time \"2026-09-03T14:30:00Z\".\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "create_calendar_event",
+                    "arguments": "{\"title\":\"Design Review\",\"start\":\"2026-09-03T14:30:00Z\"}"
+                  },
+                  "id": "nwnhnNckAxre4QmA1NV1SX8Mepe9guaC"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768166,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 136,
+          "prompt_tokens": 443,
+          "total_tokens": 579,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-x78ZuJarXnSxyrAFxgCDjsTxhGTsz2fM",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 443,
+          "prompt_ms": 1643.044,
+          "prompt_per_token_ms": 3.7089029345372464,
+          "prompt_per_second": 269.6215073972456,
+          "predicted_n": 136,
+          "predicted_ms": 6090.17,
+          "predicted_per_token_ms": 45.11237037037037,
+          "predicted_per_second": 22.166868905137296,
+          "draft_n": 134,
+          "draft_n_accepted": 118
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "parallel-weather",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Oslo"
+        },
+        "tool_call_count": 2
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Oslo"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants me to check the weather in both Oslo and Lima in parallel (in the same turn), with Oslo listed first. I'll make both tool calls simultaneously.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\":\"Oslo\"}"
+                  },
+                  "id": "UsMGfCJ46uAOKEYQS695HZ98Zh9I7Fka"
+                },
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\":\"Lima\"}"
+                  },
+                  "id": "t5QYAnBI3aPu9V441y503HfsaOQMdEwM"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768171,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 91,
+          "prompt_tokens": 320,
+          "total_tokens": 411,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-x4Dv7XtyrapyEDtsufvs4odQAW0NGs48",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 320,
+          "prompt_ms": 1351.319,
+          "prompt_per_token_ms": 4.222871875,
+          "prompt_per_second": 236.80566912771891,
+          "predicted_n": 91,
+          "predicted_ms": 4032.043,
+          "predicted_per_token_ms": 44.80047777777778,
+          "predicted_per_second": 22.321190523017734,
+          "draft_n": 88,
+          "draft_n_accepted": 78
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "parallel-inventory",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "check_inventory",
+        "arguments": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        },
+        "tool_call_count": 2
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "check_inventory",
+        "required_args": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants me to check inventory for two SKUs at two different warehouses in parallel:\n1. SKU AX-10 at warehouse east\n2. SKU BQ-22 at warehouse west\n\nThey also say \"Query AX-10 first\" but since they want them in parallel, I'll make both calls in the same block. The \"first\" instruction likely just means to list AX-10 first in the order of the calls.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "check_inventory",
+                    "arguments": "{\"sku\":\"AX-10\",\"warehouse\":\"east\"}"
+                  },
+                  "id": "CQOZJo90WKJhBe2bhF1dDLiiH1z4Q3bZ"
+                },
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "check_inventory",
+                    "arguments": "{\"sku\":\"BQ-22\",\"warehouse\":\"west\"}"
+                  },
+                  "id": "k51d6VV9m5gH2rEjsDTAzfPPSMYJc5N6"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768181,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 181,
+          "prompt_tokens": 342,
+          "total_tokens": 523,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-6UU0ATSUw3F9kzyDVuy3Omx2FNfufHyo",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 342,
+          "prompt_ms": 1328.451,
+          "prompt_per_token_ms": 3.884359649122807,
+          "prompt_per_second": 257.4426907729378,
+          "predicted_n": 181,
+          "predicted_ms": 8232.237,
+          "predicted_per_token_ms": 45.734649999999995,
+          "predicted_per_second": 21.865259710088523,
+          "draft_n": 168,
+          "draft_n_accepted": 151
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "multi-turn-weather-final",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The current temperature in Kyoto is **18°C** with clear skies.",
+              "reasoning_content": "The weather tool returned the current weather for Kyoto: 18°C with clear conditions.\n"
+            }
+          }
+        ],
+        "created": 1791768184,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 37,
+          "prompt_tokens": 366,
+          "total_tokens": 403,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-j0WeiZXt2x7q2LnpBCuCR7IWkkJLRXlo",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 366,
+          "prompt_ms": 1434.421,
+          "prompt_per_token_ms": 3.91918306010929,
+          "prompt_per_second": 255.15521593730153,
+          "predicted_n": 37,
+          "predicted_ms": 1922.329,
+          "predicted_per_token_ms": 53.39802777777778,
+          "predicted_per_second": 18.727283415065788,
+          "draft_n": 47,
+          "draft_n_accepted": 28
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "multi-turn-order-final",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "Order **A-900** has a status of **Shipped**, with an estimated delivery date of **August 22, 2026**.",
+              "reasoning_content": "The order A-900 has been looked up. Its status is \"shipped\" with an ETA of 2026-08-22.\n"
+            }
+          }
+        ],
+        "created": 1791768190,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 73,
+          "prompt_tokens": 377,
+          "total_tokens": 450,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-V7H7lPsd4wOaszurtN18jus1fDALvMfc",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 377,
+          "prompt_ms": 1441.669,
+          "prompt_per_token_ms": 3.824055702917772,
+          "prompt_per_second": 261.50246693242343,
+          "predicted_n": 73,
+          "predicted_ms": 4245.744,
+          "predicted_per_token_ms": 58.968666666666664,
+          "predicted_per_second": 16.95815857008807,
+          "draft_n": 92,
+          "draft_n_accepted": 61
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "no-tool-opinion",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "**\"Hello\"** sounds friendlier. It's warm, casual, and the go-to greeting in everyday conversation. **\"Greetings\"** comes across as more formal, stiff, and slightly distant—think of it as the word a robot or a very old-fashioned letter might use.",
+              "reasoning_content": "The user is asking a simple opinion/linguistic question about which word sounds friendlier: \"Hello\" or \"Greetings.\" They've also noted that no tool applies, which is correct—this is a straightforward language question that doesn't require any function call.\n\n\"Hello\" is generally considered friendlier because it's more casual, warm, and commonly used in everyday conversation. \"Greetings\" sounds more formal, stiff, and distant.\n"
+            }
+          }
+        ],
+        "created": 1791768201,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 148,
+          "prompt_tokens": 316,
+          "total_tokens": 464,
+          "prompt_tokens_details": {
+            "cached_tokens": 284
+          }
+        },
+        "id": "chatcmpl-3dzIv7LN5wW28zjz47kiZkLCfSdO0sGl",
+        "timings": {
+          "cache_n": 284,
+          "prompt_n": 32,
+          "prompt_ms": 408.695,
+          "prompt_per_token_ms": 12.77171875,
+          "prompt_per_second": 78.29799728403822,
+          "predicted_n": 148,
+          "predicted_ms": 10311.291,
+          "predicted_per_token_ms": 70.14483673469387,
+          "predicted_per_second": 14.256216801562482,
+          "draft_n": 199,
+          "draft_n_accepted": 102
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "no-tool-translation",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "\"Good morning\" in Spanish is **\"buenos días.\"**",
+              "reasoning_content": "The user is asking me to translate \"good morning\" into Spanish. They've also noted that none of the available tools can translate, so I should just answer directly. \"Good morning\" in Spanish is \"buenos días.\"\n"
+            }
+          }
+        ],
+        "created": 1791768205,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 65,
+          "prompt_tokens": 372,
+          "total_tokens": 437,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-23KEKKFRz4Re0ASnI9txw31n0CA5gaXT",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 372,
+          "prompt_ms": 1514.261,
+          "prompt_per_token_ms": 4.070594086021505,
+          "prompt_per_second": 245.66438678669002,
+          "predicted_n": 65,
+          "predicted_ms": 2934.207,
+          "predicted_per_token_ms": 45.846984375,
+          "predicted_per_second": 21.811685405971698,
+          "draft_n": 66,
+          "draft_n_accepted": 53
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "long-context-ticket",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_ticket",
+        "arguments": {
+          "title": "Payments timeout",
+          "severity": 2,
+          "component": "checkout-api"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_ticket",
+        "required_args": {
+          "title": "Payments timeout",
+          "severity": 2,
+          "component": "checkout-api"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user is asking me to create a support ticket based on the final observation. Let me parse the instructions:\n\n- Ignore preliminary identifiers (cache churn in retired staging cluster, issue OLD-19)\n- The production service stayed healthy until the final observation\n- Final observation: create a support ticket titled 'Payments timeout' with severity 2 and component 'checkout-api'\n\nSo I need to call create_ticket with:\n- title: \"Payments timeout\"\n- severity: 2\n- component: \"checkout-api\"\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "create_ticket",
+                    "arguments": "{\"title\":\"Payments timeout\",\"severity\":2,\"component\":\"checkout-api\"}"
+                  },
+                  "id": "5wcyEpxFv5BWhAyn24ju0N5PPFNaoahO"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768215,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 162,
+          "prompt_tokens": 393,
+          "total_tokens": 555,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-uXASZzf2YSXQ2JoqN54dAGiaGFtO5D9T",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 393,
+          "prompt_ms": 1474.276,
+          "prompt_per_token_ms": 3.7513384223918576,
+          "prompt_per_second": 266.57152392089404,
+          "predicted_n": 162,
+          "predicted_ms": 8414.458,
+          "predicted_per_token_ms": 52.263714285714286,
+          "predicted_per_second": 19.133733866162263,
+          "draft_n": 174,
+          "draft_n_accepted": 136
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "long-context-reference",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "track_shipment",
+        "arguments": {
+          "reference": "ZX-8841-Q"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "track_shipment",
+        "required_args": {
+          "reference": "ZX-8841-Q"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user is asking me to track a shipment. They've provided a lot of context about a \"shipping memo\" with examples of old references (REF-1001, REF-1002) and a mention of a \"blue crate\" that is unrelated. They then explicitly state to use the authoritative line: TRACKING REFERENCE = ZX-8841-Q.\n\nThis is a straightforward request to track shipment ZX-8841-Q. Let me do that.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "track_shipment",
+                    "arguments": "{\"reference\":\"ZX-8841-Q\"}"
+                  },
+                  "id": "gijrC39uUPnw8vzj0idkdoPKyxkslje3"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768224,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 138,
+          "prompt_tokens": 368,
+          "total_tokens": 506,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-j1PJcHD20wyv4GYNTpQCj9Y1oAd86Ayr",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 368,
+          "prompt_ms": 1470.911,
+          "prompt_per_token_ms": 3.9970407608695653,
+          "prompt_per_second": 250.18508937658362,
+          "predicted_n": 138,
+          "predicted_ms": 7719.717,
+          "predicted_per_token_ms": 56.34829927007299,
+          "predicted_per_second": 17.74676455108393,
+          "draft_n": 159,
+          "draft_n_accepted": 110
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "nested-json-shipment",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_shipment",
+        "arguments": {
+          "recipient": {
+            "name": "Ada Lovelace",
+            "address": {
+              "line1": "12 St James Square",
+              "city": "London",
+              "postal_code": "SW1Y 4LB",
+              "country": "GB"
+            }
+          },
+          "package": {
+            "dimensions_cm": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            },
+            "weight_kg": 2.5
+          }
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_shipment",
+        "required_args": {
+          "recipient": {
+            "name": "Ada Lovelace",
+            "address": {
+              "line1": "12 St James Square",
+              "city": "London",
+              "postal_code": "SW1Y 4LB",
+              "country": "GB"
+            }
+          },
+          "package": {
+            "dimensions_cm": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            },
+            "weight_kg": 2.5
+          }
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants me to create a shipment with the following details:\n- Recipient: Ada Lovelace\n- Address: 12 St James Square, London, SW1Y 4LB, GB\n- Package dimensions: 30 x 20 x 10 cm\n- Weight: 2.5 kg\n\nI'll call the create_shipment function with these parameters.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "create_shipment",
+                    "arguments": "{\"recipient\":{\"name\": \"Ada Lovelace\", \"address\": {\"line1\": \"12 St James Square\", \"city\": \"London\", \"postal_code\": \"SW1Y 4LB\", \"country\": \"GB\"}},\"package\":{\"dimensions_cm\": {\"length\": 30, \"width\": 20, \"height\": 10}, \"weight_kg\": 2.5}}"
+                  },
+                  "id": "xAUBJDkW22J9jNf8UsrOPS6Rg8pTUHPx"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768235,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 204,
+          "prompt_tokens": 535,
+          "total_tokens": 739,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "id": "chatcmpl-QKbuMbkdsMNt6uA7eXcUrgUXwKj9E7e1",
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 535,
+          "prompt_ms": 1926.776,
+          "prompt_per_token_ms": 3.6014504672897196,
+          "prompt_per_second": 277.6659040801837,
+          "predicted_n": 204,
+          "predicted_ms": 8241.72,
+          "predicted_per_token_ms": 40.599605911330045,
+          "predicted_per_second": 24.630780953490294,
+          "draft_n": 194,
+          "draft_n_accepted": 176
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "nested-json-filter",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "search_products",
+        "arguments": {
+          "filter": {
+            "category": "laptops",
+            "price": {
+              "min": 800,
+              "max": 1500,
+              "currency": "USD"
+            },
+            "features": [
+              "wifi6",
+              "backlit-keyboard"
+            ]
+          }
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "search_products",
+        "required_args": {
+          "filter": {
+            "category": "laptops",
+            "price": {
+              "min": 800,
+              "max": 1500,
+              "currency": "USD"
+            },
+            "features": [
+              "wifi6",
+              "backlit-keyboard"
+            ]
+          }
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants me to search for products with the following criteria:\n- Category: laptops\n- Price range: 800 to 1500 USD\n- Features: wifi6 and backlit-keyboard\n\nLet me construct the search_products call with these parameters.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "search_products",
+                    "arguments": "{\"filter\":{\"category\": \"laptops\", \"price\": {\"min\": 800, \"max\": 1500, \"currency\": \"USD\"}, \"features\": [\"wifi6\", \"backlit-keyboard\"]}}"
+                  },
+                  "id": "8Qs7QRzJYwbQq0TKb0cDIUNcT6yxa5cd"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768241,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 131,
+          "prompt_tokens": 423,
+          "total_tokens": 554,
+          "prompt_tokens_details": {
+            "cached_tokens": 19
+          }
+        },
+        "id": "chatcmpl-aLwsdH4UPk775ZvuERoHA4JEBL6ujROW",
+        "timings": {
+          "cache_n": 19,
+          "prompt_n": 404,
+          "prompt_ms": 1429.818,
+          "prompt_per_token_ms": 3.5391534653465344,
+          "prompt_per_second": 282.5534438648835,
+          "predicted_n": 131,
+          "predicted_ms": 5291.007,
+          "predicted_per_token_ms": 40.70005384615384,
+          "predicted_per_second": 24.569992063892563,
+          "draft_n": 124,
+          "draft_n_accepted": 115
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "enum-unit",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_forecast",
+        "arguments": {
+          "city": "Toronto",
+          "unit": "fahrenheit"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_forecast",
+        "required_args": {
+          "city": "Toronto",
+          "unit": "fahrenheit"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants the temperature forecast for Toronto in Fahrenheit. I'll use the get_forecast function with city \"Toronto\" and unit \"fahrenheit\".\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "get_forecast",
+                    "arguments": "{\"city\":\"Toronto\",\"unit\":\"fahrenheit\"}"
+                  },
+                  "id": "nfWusNToZeZzBdTwLueGJQSLreoaYXco"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768246,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 73,
+          "prompt_tokens": 334,
+          "total_tokens": 407,
+          "prompt_tokens_details": {
+            "cached_tokens": 19
+          }
+        },
+        "id": "chatcmpl-hNC1XjSSJJb7mTRynpfN3D0mqwDGpRGS",
+        "timings": {
+          "cache_n": 19,
+          "prompt_n": 315,
+          "prompt_ms": 1307.677,
+          "prompt_per_token_ms": 4.151355555555555,
+          "prompt_per_second": 240.88517271466887,
+          "predicted_n": 73,
+          "predicted_ms": 3005.013,
+          "predicted_per_token_ms": 41.736291666666666,
+          "predicted_per_second": 23.959962901990774,
+          "draft_n": 70,
+          "draft_n_accepted": 63
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "enum-priority",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_task",
+        "arguments": {
+          "title": "Rotate signing key",
+          "priority": "high"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_task",
+        "required_args": {
+          "title": "Rotate signing key",
+          "priority": "high"
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants me to create a task with the title \"Rotate signing key\" and high priority.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "create_task",
+                    "arguments": "{\"title\":\"Rotate signing key\",\"priority\":\"high\"}"
+                  },
+                  "id": "BfkZYqlXNIkgOe9kO66GIYb7CKk7anOS"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768249,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 62,
+          "prompt_tokens": 333,
+          "total_tokens": 395,
+          "prompt_tokens_details": {
+            "cached_tokens": 19
+          }
+        },
+        "id": "chatcmpl-tPcXEBGjb60KBBS5ncKv80UAeIoynzVR",
+        "timings": {
+          "cache_n": 19,
+          "prompt_n": 314,
+          "prompt_ms": 1370.941,
+          "prompt_per_token_ms": 4.366054140127389,
+          "prompt_per_second": 229.03976174029373,
+          "predicted_n": 62,
+          "predicted_ms": 2332.472,
+          "predicted_per_token_ms": 38.23724590163935,
+          "predicted_per_second": 26.15251115554656,
+          "draft_n": 55,
+          "draft_n_accepted": 54
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "choose-email-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "send_email",
+        "arguments": {
+          "to": "dev@example.com",
+          "subject": "Build green",
+          "body": "Release can proceed."
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "send_email",
+        "required_args": {
+          "to": "dev@example.com",
+          "subject": "Build green",
+          "body": "Release can proceed."
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants me to send an email with specific details:\n- To: dev@example.com\n- Subject: Build green\n- Body: Release can proceed.\n\nThis is straightforward - I'll use the send_email function with these parameters.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "send_email",
+                    "arguments": "{\"to\":\"dev@example.com\",\"subject\":\"Build green\",\"body\":\"Release can proceed.\"}"
+                  },
+                  "id": "Y445VF0g2INx5EsHNT5NVSk1rWuG0YNK"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768256,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 109,
+          "prompt_tokens": 444,
+          "total_tokens": 553,
+          "prompt_tokens_details": {
+            "cached_tokens": 19
+          }
+        },
+        "id": "chatcmpl-eVp5LLWyBMlA8LK8jPuziVRd2scaowUx",
+        "timings": {
+          "cache_n": 19,
+          "prompt_n": 425,
+          "prompt_ms": 1531.146,
+          "prompt_per_token_ms": 3.6026964705882354,
+          "prompt_per_second": 277.56987250072825,
+          "predicted_n": 109,
+          "predicted_ms": 5542.206,
+          "predicted_per_token_ms": 51.316722222222225,
+          "predicted_per_second": 19.48682528220712,
+          "draft_n": 124,
+          "draft_n_accepted": 92
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-composite",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "deploy_service",
+        "arguments": {
+          "service": "ledger",
+          "version": "v4.2",
+          "replicas": 3,
+          "dry_run": true,
+          "notify": [
+            "alice",
+            "bob"
+          ]
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "deploy_service",
+        "required_args": {
+          "service": "ledger",
+          "version": "v4.2",
+          "replicas": 3,
+          "dry_run": true,
+          "notify": [
+            "alice",
+            "bob"
+          ]
+        }
+      },
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": "The user wants to deploy a service with these parameters:\n- service: \"ledger\"\n- version: \"v4.2\"\n- replicas: 3\n- dry_run: true\n- notify: [\"alice\", \"bob\"]\n\nLet me make the function call with these parameters.\n",
+              "tool_calls": [
+                {
+                  "type": "function",
+                  "function": {
+                    "name": "deploy_service",
+                    "arguments": "{\"service\":\"ledger\",\"version\":\"v4.2\",\"replicas\":3,\"dry_run\":true,\"notify\":[\"alice\", \"bob\"]}"
+                  },
+                  "id": "PSryXGPqBcNvfu5A4BZx83E9n0pX9G8m"
+                }
+              ]
+            }
+          }
+        ],
+        "created": 1791768265,
+        "model": "qwen3.8-27b",
+        "system_fingerprint": "b10488-9d77fa172",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 149,
+          "prompt_tokens": 382,
+          "total_tokens": 531,
+          "prompt_tokens_details": {
+            "cached_tokens": 19
+          }
+        },
+        "id": "chatcmpl-8IBX1QejqiIRJP3hQTe83twgjT2Rplcl",
+        "timings": {
+          "cache_n": 19,
+          "prompt_n": 363,
+          "prompt_ms": 1335.183,
+          "prompt_per_token_ms": 3.678190082644628,
+          "prompt_per_second": 271.8728443966108,
+          "predicted_n": 149,
+          "predicted_ms": 7603.209,
+          "predicted_per_token_ms": 51.37303378378378,
+          "predicted_per_second": 19.465465173981148,
+          "draft_n": 173,
+          "draft_n_accepted": 124
+        }
+      },
+      "error": null
+    }
+  ],
+  "passed": 20,
+  "total": 20,
+  "score": 1.0
+}
