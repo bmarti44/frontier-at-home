@@ -4,9 +4,13 @@
 AGENTS.md asks matched comparisons to use five fresh-server ABBA/BAAB blocks
 with confidence intervals derived in the harness. This is the shared tool:
 
-  plan   --randomness HEX --domain TEXT [--blocks 5] --a-profile M/F --b-profile M/F --out plan.json
+  plan   (--randomness HEX | --drand-after REV) --domain TEXT [--blocks 5]
+         --a-profile M/F --b-profile M/F --out plan.json
          Each block's order is ABBA when sha256(domain NUL randomness block)[0]
-         is even, else BAAB. Draw the randomness after the freeze.
+         is even, else BAAB. --drand-after takes the first drand round
+         published after commit REV (the freeze), waits for it, requires three
+         relays to agree, BLS-verifies it with the bundled verifier, and keeps
+         the receipt in plan.json.
   run    --plan plan.json --out DIR [--host FILE] [--port 8017] [--required-gib G]
          [--runtime-max-sec S] [--reps 3] [--release-tree DIR ...] [--resume] [--dry-run]
          Starts each arm fresh, in plan order, on a dev port through
@@ -37,6 +41,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -74,6 +79,50 @@ def release_trees(roots: list[str]) -> list[str]:
     """Drop the unmapped page cache of every file under each root (no privilege)."""
     from checkpoint_cache import release_tree
     return [f"page cache released under {root}: {release_tree(root)} files" for root in roots]
+
+
+DRAND_GENESIS, DRAND_PERIOD = 1595431050, 30   # drand mainnet (default chain)
+DRAND_RELAYS = ("https://api.drand.sh", "https://api2.drand.sh", "https://api3.drand.sh")
+DRAND_VERIFIER = REPO / "scripts/103_verify_drand_receipt_bundle.mjs"
+DRAND_FIELDS = ("round", "randomness", "signature", "previous_signature")
+
+
+def drand_publication_time(number: int) -> int:
+    return DRAND_GENESIS + (number - 1) * DRAND_PERIOD
+
+
+def first_drand_round_after(timestamp: int) -> int:
+    return (timestamp - DRAND_GENESIS) // DRAND_PERIOD + 2
+
+
+def fetch_drand_round(relay: str, number: int) -> dict:
+    request = urllib.request.Request(f"{relay}/public/{number}", headers={"User-Agent": "frontier-at-home"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.loads(response.read())
+
+
+def verify_drand_round(doc: dict) -> None:
+    # Run it with the interpreter its shebang names (the bundle is not executable).
+    with open(DRAND_VERIFIER) as fh:
+        node = fh.readline().removeprefix("#!").strip()
+    result = subprocess.run([node, str(DRAND_VERIFIER), *(str(doc[k]) for k in DRAND_FIELDS)],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"drand BLS verification failed: {result.stderr.strip() or result.stdout.strip()}")
+
+
+def drand_receipt(frozen_at: int, commit: str, fetch=fetch_drand_round, verify=verify_drand_round,
+                  now=time.time, sleep=time.sleep) -> dict:
+    number = first_drand_round_after(frozen_at)
+    while now() < drand_publication_time(number) + 2:
+        sleep(max(1.0, drand_publication_time(number) + 2 - now()))
+    docs = [fetch(relay, number) for relay in DRAND_RELAYS]
+    picked = [{k: d.get(k) for k in DRAND_FIELDS} for d in docs]
+    if any(p != picked[0] for p in picked) or picked[0]["round"] != number:
+        raise ValueError(f"drand relays disagree on round {number}: {picked}")
+    verify(picked[0])
+    return {**picked[0], "relays": list(DRAND_RELAYS), "frozen_commit": commit, "frozen_at_unix": frozen_at,
+            "rule": "first drand round published after the frozen commit's committer time"}
 
 
 # --- plan ---------------------------------------------------------------------
@@ -405,7 +454,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("plan")
-    p.add_argument("--randomness", required=True)
+    source = p.add_mutually_exclusive_group(required=True)
+    source.add_argument("--randomness")
+    source.add_argument("--drand-after", metavar="REV", help="frozen commit; draw the first drand round after it")
     p.add_argument("--domain", required=True)
     p.add_argument("--blocks", type=int, default=5)
     p.add_argument("--a-profile", required=True)
@@ -431,9 +482,18 @@ def main() -> int:
     if args.cmd == "plan":
         if args.blocks - 1 not in T95:
             parser.error(f"--blocks must be 2..{max(T95) + 1}")
-        plan = {"schema_version": 1, "domain": args.domain, "randomness": args.randomness,
-                "blocks": block_orders(args.randomness, args.blocks, args.domain),
-                "a_profile": args.a_profile, "b_profile": args.b_profile, "created_at": _stamp()}
+        receipt = None
+        randomness = args.randomness
+        if args.drand_after:
+            commit, frozen_at = subprocess.run(
+                ["git", "-C", str(REPO), "show", "-s", "--format=%H %ct", args.drand_after],
+                check=True, capture_output=True, text=True).stdout.split()
+            receipt = drand_receipt(int(frozen_at), commit)
+            randomness = receipt["randomness"]
+        plan = {"schema_version": 1, "domain": args.domain, "randomness": randomness,
+                "blocks": block_orders(randomness, args.blocks, args.domain),
+                "a_profile": args.a_profile, "b_profile": args.b_profile, "created_at": _stamp(),
+                **({"drand": receipt} if receipt else {})}
         Path(args.out).write_text(json.dumps(plan, indent=1) + "\n")
         print(json.dumps(plan))
         return 0

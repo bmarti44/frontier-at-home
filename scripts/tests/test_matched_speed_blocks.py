@@ -208,7 +208,7 @@ class MatchedSpeedBlocks(unittest.TestCase):
         self.assertEqual(seen[3], "verified")
         self.assertEqual((receipt["round"], receipt["randomness"]), (want, "cd" * 32))
         self.assertEqual(receipt["frozen_commit"], "f" * 40)
-        later = lambda: t.drand_publication_time(want) + 1.0
+        later = lambda: t.drand_publication_time(want) + 60.0
         docs = iter([dict(doc), dict(doc, randomness="ce" * 32), dict(doc)])
         with self.assertRaisesRegex(ValueError, "disagree"):
             t.drand_receipt(frozen, "f" * 40, fetch=lambda r, n: next(docs), verify=lambda d: None,
