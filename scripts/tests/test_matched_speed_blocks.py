@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import math
+import re
 import statistics
 import subprocess
 import sys
@@ -179,6 +180,43 @@ class MatchedSpeedBlocks(unittest.TestCase):
         ran.clear()
         self.tool.run_steps([0, 1], lambda step: ran.append(step) or clean, 8.0, lambda message: None)
         self.assertEqual(ran, [0, 1])
+
+    def test_sample_lines_are_the_format_scorers_read(self):
+        # Review round 2 (reviewer 2 H1): a scorer must parse what the sampler writes.
+        sample = self.tool._meminfo()
+        self.assertEqual(set(sample), set(self.tool.MEMINFO_KEYS))
+        line = self.tool.meminfo_line("2026-10-12T00:00:00Z", sample)
+        self.assertEqual(line.split(" ", 1)[0], "2026-10-12T00:00:00Z")
+        self.assertEqual(dict(re.findall(r"(\w+):=(\d+)", line)), {k: str(v) for k, v in sample.items()})
+        self.assertTrue({"MemAvailable", "SwapFree"} <= set(self.tool.MEMINFO_KEYS))
+
+    def test_resume_stops_at_an_unsafe_start_already_on_disk(self):
+        # Review round 2 (reviewer 2 M1): rerunning after an unsafe stop must not launch the rest.
+        clean = {"failed": None, "kill_lines": [], "swap_growth_gib": 0.0, "low_mem_available_gib": 10.0}
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp) / "block-0" / "1-B"
+            self.assertIsNone(self.tool.existing_start(d, resume=True))
+            d.mkdir(parents=True)
+            with self.assertRaises(SystemExit):
+                self.tool.existing_start(d, resume=False)
+            with self.assertRaises(SystemExit):     # a directory without start.json: a start that died
+                self.tool.existing_start(d, resume=True)
+            (d / "start.json").write_text(json.dumps({**clean, "kill_lines": ["kernel.log: Xid 13"]}))
+            existing = self.tool.existing_start(d, resume=True)
+            self.assertEqual(existing["kill_lines"], ["kernel.log: Xid 13"])
+            (d / "start.json").write_text("{not json")
+            self.assertEqual(self.tool.existing_start(d, resume=True), {})
+        launched = []
+
+        def run_one(step):
+            if step == 0:
+                return {**clean, "kill_lines": ["kernel.log: Xid 13"]}   # read back from disk on resume
+            launched.append(step)
+            return clean
+        with self.assertRaises(SystemExit):
+            self.tool.run_steps([0, 1, 2], run_one, 8.0, lambda message: None)
+        self.assertEqual(launched, [])
+        self.assertTrue(self.tool.unsafe_start({}, 8.0))   # an unreadable record is not safe to pass
 
     def test_start_out_of_plan_order_fails_closed(self):
         def wrong(block, position, arm, start, doc, d):
