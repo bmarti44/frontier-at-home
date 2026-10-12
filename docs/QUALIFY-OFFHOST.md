@@ -21,6 +21,14 @@ numbers (docs/BACKEND-CONTRACT.md section 6).
   `flock(1)`. `setsid(1)` is not needed: `93_profile_serve.sh` falls back
   to `scripts/lib/setsid.py`. Fetch weights with the `hf` CLI
   (`uv tool install huggingface_hub`).
+- HumanEval (accuracy cell) runs each sample in a pinned Docker image
+  (`configs/pins/humaneval-runtime.json`). On macOS without Docker Desktop:
+  `brew install colima docker`, then
+  `colima start --arch aarch64 --vm-type vz --cpu 2 --memory 2` (without
+  `--arch aarch64` Colima may ask for qemu to emulate x86_64), then
+  `docker pull python@sha256:<repo_digest>` and
+  `docker tag python@sha256:<repo_digest> python:3.12-slim`.
+  `colima stop` when the run ends.
 - `scripts/00_preflight.sh` reports `host_lock: not-applicable
   (community host ...)` — the versions.lock equality assertions apply only
   to the reference Spark.
@@ -84,6 +92,19 @@ scripts/93_profile_serve.sh --profile <model>/<profile-file> start
 
 On macOS the watchdog is `scripts/06_memwatch_macos.sh` (vm_stat
 availability; floors are conservative and themselves verify-on-hardware).
+The context and soak cells sample the same vm_stat availability
+(`scripts/lib/host_memory.py`), so their floors mean the same thing as the
+watchdog's. Nothing starts a model on its own: the whole bundle is one
+owner-run command, and it stops the server when it finishes:
+
+```
+scripts/94_qualify_profile.py --profile <model>/<profile-file> \
+    --accuracy-split dev --with-soak
+```
+
+Cells can run in separate sittings into the same `--out` (`--cells
+speed,toolcall,vision`, later `--cells accuracy`, ...); finished accuracy
+suites are kept, not re-run.
 All gates take `--base-url http://127.0.0.1:<port>` and are inherited
 unchanged (docs/BACKEND-CONTRACT.md section 4):
 
