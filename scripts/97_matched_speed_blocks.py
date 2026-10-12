@@ -34,6 +34,7 @@ The tool reports bounds; the thresholds belong to the gate that cites it.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import math
@@ -251,15 +252,16 @@ def _run_start(step, plan, profiles, args, out: Path, log) -> None:
 
     thread = threading.Thread(target=sampler, daemon=True)
     thread.start()
-    kernel = subprocess.Popen(["journalctl", "-k", "-f", "-o", "short-iso", "--since", "now"],
-                              stdout=open(d / "kernel.log", "w"), stderr=subprocess.STDOUT)
-    time.sleep(1.5)
-    launch_index = len(samples) - 1
-    start["launched_at"] = _stamp()
-    log(f"block {block} position {position} arm {arm}: launching {name}")
-    t0 = time.monotonic()
     serve = launch[launch.index("--") + 1:]
+    kernel = None
     try:
+        kernel = subprocess.Popen(["journalctl", "-k", "-f", "-o", "short-iso", "--since", "now"],
+                                  stdout=open(d / "kernel.log", "w"), stderr=subprocess.STDOUT)
+        time.sleep(1.5)
+        launch_index = len(samples) - 1
+        start["launched_at"] = _stamp()
+        log(f"block {block} position {position} arm {arm}: launching {name}")
+        t0 = time.monotonic()
         rc = subprocess.run(launch, stdout=open(d / "launch.log", "w"), stderr=subprocess.STDOUT).returncode
         start["ready_s"] = round(time.monotonic() - t0, 1)
         if rc != 0:
@@ -269,21 +271,23 @@ def _run_start(step, plan, profiles, args, out: Path, log) -> None:
             if b.returncode != 0:
                 start["failed"] = f"bench exit {b.returncode}"
     finally:
-        subprocess.run(serve[:-1] + ["stop"], stdout=open(d / "stop.log", "w"), stderr=subprocess.STDOUT)
-        for _ in range(60):
-            if subprocess.run(["systemctl", "--user", "is-active", "-q", f"{unit}.scope"]).returncode != 0:
-                break
-            time.sleep(1)
-        else:
-            start["failed"] = start["failed"] or "scope still active after stop"
-            subprocess.run(["systemctl", "--user", "stop", f"{unit}.scope"])
-        time.sleep(2)
-        stop.set()
-        thread.join(timeout=5)
-        kernel.terminate()
-        for path, name in ((server_log, "server.log"), (memwatch_log, "memwatch.log")):
-            text = path.read_bytes()[offsets[path]:].decode(errors="replace") if path.exists() else ""
-            (d / name).write_text(text)
+        with sigterm_deferred():   # a further SIGTERM waits for the stop and the scope
+            subprocess.run(serve[:-1] + ["stop"], stdout=open(d / "stop.log", "w"), stderr=subprocess.STDOUT)
+            for _ in range(60):
+                if subprocess.run(["systemctl", "--user", "is-active", "-q", f"{unit}.scope"]).returncode != 0:
+                    break
+                time.sleep(1)
+            else:
+                start["failed"] = start["failed"] or "scope still active after stop"
+                subprocess.run(["systemctl", "--user", "stop", f"{unit}.scope"])
+            time.sleep(2)
+            stop.set()
+            thread.join(timeout=5)
+            if kernel is not None:
+                kernel.terminate()
+            for path, name in ((server_log, "server.log"), (memwatch_log, "memwatch.log")):
+                text = path.read_bytes()[offsets[path]:].decode(errors="replace") if path.exists() else ""
+                (d / name).write_text(text)
     for fname, marker in (("server.log", "session start"), ("memwatch.log", "ARMED")):
         if marker not in (d / fname).read_text(errors="replace"):
             start["failed"] = start["failed"] or f"{fname} lacks {marker!r}"
@@ -349,6 +353,21 @@ def run_steps(steps, run_one, floor_gib: float, log) -> None:
             log(f"campaign stopped after block {start.get('block')} position {start.get('position')} "
                 f"arm {start.get('arm')}: {'; '.join(reasons)}")
             raise SystemExit(f"campaign stopped at an unsafe or failed start: {'; '.join(reasons)}")
+
+
+@contextlib.contextmanager
+def sigterm_deferred():
+    """Inside, a SIGTERM is recorded instead of raised, so a start's cleanup (engine
+    stop, scope wait, log copy) runs to its end; on leaving, the previous handler
+    returns and a recorded SIGTERM exits 143."""
+    got = []
+    previous = signal.signal(signal.SIGTERM, lambda signum, frame: got.append(signum))
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+    if got:
+        sys.exit(128 + got[0])
 
 
 def exit_on_sigterm() -> None:
