@@ -142,6 +142,44 @@ class MatchedSpeedBlocks(unittest.TestCase):
                 doc["cells"][0]["median_decode"] = float("nan")
         self.assertNoResult(self.score(mutate=nan), "finite")
 
+    def test_start_of_the_wrong_profile_or_without_a_finite_low_point_fails_closed(self):
+        def swapped(block, position, arm, start, doc, d):
+            if block == 2 and position == 0:
+                start["profile"] = "m/a" if arm == "B" else "m/b"
+        self.assertNoResult(self.score(mutate=swapped), "profile")
+        for value in (None, float("nan"), "7.2"):
+            with self.subTest(low=value):
+                def low(block, position, arm, start, doc, d, value=value):
+                    if block == 1 and position == 3:
+                        start["low_mem_available_gib"] = value
+                self.assertNoResult(self.score(mutate=low), "low point")
+
+    def test_campaign_stops_at_the_first_failed_or_unsafe_start(self):
+        # Review round 1 (reviewer 2 M4): no further 100 GiB loads after an
+        # NVRM/Xid/OOM line, swap growth, a low point under the floor or a failed start.
+        clean = {"failed": None, "kill_lines": [], "swap_growth_gib": 0.0, "low_mem_available_gib": 10.0}
+        self.assertEqual(self.tool.unsafe_start(clean, 8.0), [])
+        for change, fragment in [({"kill_lines": ["kernel.log: NVRM: Xid 79"]}, "kill"),
+                                 ({"swap_growth_gib": 0.5}, "swap"),
+                                 ({"low_mem_available_gib": 7.9}, "low point"),
+                                 ({"low_mem_available_gib": None}, "low point"),
+                                 ({"failed": "launch exit 1"}, "failed")]:
+            with self.subTest(change=change):
+                reasons = self.tool.unsafe_start({**clean, **change}, 8.0)
+                self.assertTrue(any(fragment in r for r in reasons), reasons)
+        ran = []
+
+        def run_one(step):
+            ran.append(step)
+            return {**clean, "kill_lines": ["kernel.log: Xid 13"]} if step == 1 else clean
+        with self.assertRaises(SystemExit) as stop:
+            self.tool.run_steps([0, 1, 2, 3], run_one, 8.0, lambda message: None)
+        self.assertEqual(ran, [0, 1])
+        self.assertIn("kill", str(stop.exception))
+        ran.clear()
+        self.tool.run_steps([0, 1], lambda step: ran.append(step) or clean, 8.0, lambda message: None)
+        self.assertEqual(ran, [0, 1])
+
     def test_start_out_of_plan_order_fails_closed(self):
         def wrong(block, position, arm, start, doc, d):
             if block == 0 and position == 0:
