@@ -75,6 +75,18 @@ log_runtime_trees() {
     trees=$(runtime_trees)
     while read -r line; do log "$line"; done <<<"$trees"
 }
+# Runs "$@" in the background with its output appended to $OUT/driver.log, and waits for it. A SIGTERM
+# or SIGINT to this driver is forwarded to it as SIGTERM and waited for (97 then stops its engine and
+# waits for the scope), so the EXIT trap's release comes after the last start, never during one.
+run_forwarding() {
+    CHILD=
+    trap '[[ -z $CHILD ]] || { kill -TERM "$CHILD" 2>/dev/null; wait "$CHILD" || true; }; exit 143' TERM INT
+    "$@" > >(tee -a "$OUT/driver.log") 2>&1 &
+    CHILD=$!
+    wait "$CHILD"   # set -e: a failed run stops the driver here, as a failed pipeline did
+    CHILD=
+    trap - TERM INT
+}
 # At exit, drop the page cache of every runtime under the runtime root. Candidate 9's worker releases
 # only the model root before its arena, so the production restore after this campaign must not meet
 # runtime-002's cached libraries (PREREG plan A3 item 3).
@@ -106,9 +118,8 @@ if [[ $MODE == blocks ]]; then
     log "blocks: $(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p["blocks"], p["drand"]["round"])' "$EV/plan.json")"
     # 97 holds the system inference lock itself, and --resume continues after a
     # guard timeout (the guard runs before a start's directory exists).
-    python3 "$WT/scripts/97_matched_speed_blocks.py" run --plan "$EV/plan.json" --out "$OUT" \
-        --host "$HOST" --port "$PORT" --release-tree "$RUNTIME_ROOT" --runtime-max-sec 3600 --resume \
-        2>&1 | tee -a "$OUT/driver.log"
+    run_forwarding python3 "$WT/scripts/97_matched_speed_blocks.py" run --plan "$EV/plan.json" --out "$OUT" \
+        --host "$HOST" --port "$PORT" --release-tree "$RUNTIME_ROOT" --runtime-max-sec 3600 --resume
     python3 "$WT/scripts/97_matched_speed_blocks.py" score --out "$OUT" | tee -a "$OUT/driver.log" || true
     log_runtime_trees
     log "postrun $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"

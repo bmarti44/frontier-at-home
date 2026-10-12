@@ -51,6 +51,7 @@ In single starts against candidate 9's launch, the carrier arm a3 measured:
     - the sampler's fields and line format are named (`MEMINFO_KEYS`, `meminfo_line`), so scorers and their mutation suites use exactly what it writes;
     - `--resume` reads each start already on disk and stops at a failed or unsafe one, instead of skipping it;
     - the journal follower starts inside a start's `try`, and a further SIGTERM during cleanup waits until the engine is stopped and the scope is gone.
+  - after review round 3 (RED `6672a2e7`): the cleanup defers SIGINT as well, and a `start.json` that is not a JSON object is never safe to resume past.
 
 ## Run 1: one fresh start (`run-c10.sh start1`, `RuntimeMaxSec` 5 h)
 
@@ -106,7 +107,9 @@ Both modes' preflight also refuse untracked files under `scripts`, `configs`, `p
 - three relays (api, api2, api3.drand.sh) must agree, and the bundled verifier checks its BLS signature;
 - each block's order is ABBA when `sha256(domain NUL randomness block)[0]` is even, else BAAB.
 
-**Starts.** `run-c10.sh blocks` first refuses if the inference lock is held, before reading anything. It then logs its head line and runtime-tree lines, and runs `97_matched_speed_blocks.py run --plan plan.json --out blocks --release-tree ~/.cache/qwen38-flash-next --runtime-max-sec 3600 --resume`, then logs the runtime-tree lines again. Rerunning it after a refused guard or a held lock resumes the campaign: each invocation logs its own head and runtime-tree lines, and completed starts are kept. A resume first re-checks every start already on disk and refuses to continue past a failed or unsafe one. At exit, the driver releases the page cache under `~/.cache/qwen38-flash-next` in both modes. That is 20 fresh starts on `:8017`, each:
+**Starts.** After its preflight (`git status`, `plan.json`), `run-c10.sh blocks` refuses if the inference lock is held, before reading the runtime trees. 97 must take the lock itself, so this is a probe, and a window of seconds remains before 97 locks. It then logs its head line and runtime-tree lines, and runs `97_matched_speed_blocks.py run --plan plan.json --out blocks --release-tree ~/.cache/qwen38-flash-next --runtime-max-sec 3600 --resume`, then logs the runtime-tree lines again. Rerunning it after a refused guard or a held lock resumes the campaign: each invocation logs its own head and runtime-tree lines, and completed starts are kept. A resume first re-checks every start already on disk and refuses to continue past a failed or unsafe one. A failed start, including one stopped by a signal, therefore ends run 2, and only a new candidate continues; a refused guard or a held lock creates no start directory and can still be resumed.
+
+97 runs in the background of the driver. A SIGTERM or SIGINT to the driver is forwarded to 97 and waited for. At exit, both modes release the page cache under `~/.cache/qwen38-flash-next`, in blocks mode only after 97 has exited. The post-run runtime-tree lines and the release run after 97 has dropped the lock; both only read or drop page cache. That is 20 fresh starts on `:8017`, each:
 - releasing the runtime trees' page cache;
 - passing `03_memory_guard.py --required-gib 114.5`;
 - running in a user scope with the profile's containment;
@@ -312,3 +315,23 @@ A change to any of these after a run starts is a new candidate in a new director
 | R1 L2 = R2 L1: blocks mode hashes trees before the lock check | low | `flock -n` probe first |
 | R2 L2: the M5 mitigation is manual | low | `release_runtime_root` at exit in both modes |
 | R2 L3: CJK comparison by absolute tok/s | low | Compared by ratio to English |
+
+**Round 3** (freeze `d5978d78`, the gate's third candidate; same two reviewers): **no critical, high or medium finding from either reviewer.** Both verified every round-2 closure by running it: 97's real sample lines, the resume simulation and the second signal.
+- **Blocking findings by candidate: 0, 1, 0.** Round 3 has none, so the gate does not pause.
+- **Reviewer 2's process note:** AGENTS.md's literal pause clause and continue-condition 3 ("no new finding class") could be read as pausing already at candidate 2. The owner is told this reading in the result.
+- **This candidate (4) closes only round 3's low findings,** each with a focused regression test or a recorded exercise, per AGENTS.md (lows need no full review cycle).
+
+| Finding | Severity | Closed by |
+|---|---|---|
+| R1 L1: a second Ctrl-C (SIGINT) interrupts cleanup | low | `sigterm_deferred` also defers SIGINT (test: exit 130 only after cleanup) |
+| R1 L2: a non-object `start.json` bypasses "never safe" | low | `existing_start` returns `{}` (test: `null`, `[]`, `3`, `"x"`) |
+| R2 LOW-1: a SIGTERM to the blocks driver releases the cache while 97 runs on | low | `run_forwarding`: 97 in the background, the signal forwarded and waited for (see the exercise below) |
+| R2 LOW-2: "before reading anything" overstates the lock probe | low | Wording above |
+
+**The `run_forwarding` exercise** used the function extracted verbatim from `run-c10.sh`, a stub child, and the driver's `set -Eeuo pipefail` and EXIT trap. All three cases behaved as intended:
+
+| Child | Driver exit | Order of events |
+|---|---|---|
+| exits 0 | 0 | continued, then the release |
+| exits 3 | 3 | stopped at `wait`, then the release |
+| the driver gets SIGTERM | 143 | the stub got TERM, finished its 1 s cleanup, then the release; no child left |
