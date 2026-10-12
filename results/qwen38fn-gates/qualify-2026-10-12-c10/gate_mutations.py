@@ -13,6 +13,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -32,7 +33,22 @@ GATE.loader.exec_module(_gate)
 
 
 def stamp(second: int) -> str:
-    return f"2026-10-12T00:{second // 60:02d}:{second % 60:02d}Z"
+    return datetime.fromtimestamp(1_791_763_200 + second, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# The runtime-002 manifest's vllm_tree (runtime-002) and base_vllm_tree (runtime-001).
+TREES = {"native-runtime-002": ("9e2e0f31" * 8, 5353), "native-runtime-001": ("c08e9982" * 8, 5352)}
+
+
+def tree_lines(second: int, mut: str, run: str) -> str:
+    rows = []
+    for name, (sha, files) in TREES.items():
+        if mut == f"treemissing{run}" and name.endswith("1"):
+            continue
+        if mut == f"treewrong{run}" and name.endswith("2"):
+            sha = "0" * 64
+        rows += [f"{stamp(second)} runtime-tree {name} {sha[:16]} {files}\n"] * 2   # before launch and after
+    return "".join(rows)
 
 
 def git_repo(repo: Path, mut: str) -> tuple[str, str]:
@@ -52,6 +68,11 @@ def git_repo(repo: Path, mut: str) -> tuple[str, str]:
     tool = repo / "scripts/97_matched_speed_blocks.py"
     tool.parent.mkdir(parents=True)
     tool.write_text("v1\n")
+    manifest = repo / "configs/build-manifests/qwen38-flash-next-runtime-002.json"
+    manifest.parent.mkdir(parents=True)
+    (sha2, files2), (sha1, files1) = TREES["native-runtime-002"], TREES["native-runtime-001"]
+    manifest.write_text(json.dumps({"vllm_tree": {"sha256": sha2, "files": files2},
+                                    "base_runtime": {"base_vllm_tree": {"sha256": sha1, "files": files1}}}))
     (repo / "evidence.txt").write_text("start1\n")
     git("init", "-q")
     if mut != "noprereg":
@@ -91,11 +112,32 @@ def build_run2(ev: Path, mut: str, freeze: str, head: str) -> None:
     blocks = ev / "blocks"
     blocks.mkdir()
     (blocks / "plan.json").write_text(json.dumps(plan))
-    (blocks / "driver.log").write_text(f"{stamp(0)} head {head} dirty={1 if mut == 'r2dirty' else 0}\n")
+    heads = f"{stamp(0)} head {head} dirty={1 if mut == 'r2dirty' else 0}\n"
+    if mut == "r2resume":
+        heads += heads   # a second invocation of run-c10.sh blocks (--resume) logs the same head
+    elif mut == "r2twoheads":
+        heads += f"{stamp(0)} head {freeze if freeze != head else '1' * 40} dirty=0\n"
+    (blocks / "driver.log").write_text(heads + tree_lines(0, mut, "2"))
+    run_log = []
     noisy = {0: 1.25, 1: 0.85, 2: 1.30, 3: 0.80, 4: 1.10}
-    for block, position, arm in MATCHED.schedule(plan["blocks"]):
+    for k, (block, position, arm) in enumerate(MATCHED.schedule(plan["blocks"])):
         d = blocks / f"block-{block}" / f"{position}-{arm}"
         d.mkdir(parents=True)
+        base, last = 1000 + 200 * k, (block, position) == (4, 3)
+        rows = [f"{stamp(base + i)} MemAvailable:={int((7.5 if mut == 'r2rawlow' and last and i == 60 else 10.4) * GIB_KIB)} "
+                f"SwapTotal:={16 * GIB_KIB} SwapFree:={16 * GIB_KIB}\n" for i in range(122)]
+        (d / "meminfo.log").write_text("".join(rows[:50] if mut == "r2samples" and last else rows))
+        oom = mut == "r2crash" and last
+        (d / "kernel.log").write_text("x Out of memory: Killed process 7 (python3)\n" if oom else "")
+        refusal = ("ERROR host page cache released under /home/bmarti44/models (496 files); MemFree 19.85 GiB: "
+                   "refusing to allocate the KV arena; it would leave the driver short (NVRM)\n")
+        (d / "server.log").write_text("===== p session start t =====\n"
+                                      + (refusal if mut == "r2refusal" and last else "INFO ready\n"))
+        (d / "memwatch.log").write_text("ts=1 ARMED\n")
+        run_log += [f"{stamp(base + 1)} block {block} position {position} arm {arm}: launching x\n",
+                    f"{stamp(base + 121)} block {block} position {position} arm {arm}: failed=None kills=0 low=10.40\n"]
+        if oom:
+            continue   # 97 died before writing start.json
         j = 1.0 + 0.002 * position
         if arm == "B":
             d0 = 1.05 if mut == "slow0" else 1.35
@@ -107,10 +149,15 @@ def build_run2(ev: Path, mut: str, freeze: str, head: str) -> None:
                  "profile": plan["a_profile" if arm == "A" else "b_profile"], "failed": None,
                  "kill_lines": ["kernel.log: NVRM: Xid 13"] if mut == "r2kill" and block == 2 else [],
                  "swap_growth_gib": 0.6 if mut == "r2swap" and block == 1 else 0.0,
-                 "low_mem_available_gib": 7.5 if mut == "r2low" and block == 3 else 10.4}
+                 "low_mem_available_gib": (7.5 if mut == "r2low" and block == 3 else
+                                           None if mut == "r2lownull" and last else 10.4),
+                 "launched_at": stamp(base + 1), "ready_s": 100.0}
+        if mut == "r2refusal" and last:
+            start["failed"] = "launch exit 1"
         (d / "start.json").write_text(json.dumps(start))
         if not (mut == "r2missing" and block == 4 and position == 1):
             (d / "speed.json").write_text(json.dumps(speed_doc(25.3 * d0 * j, 35.5 * d28 * j, 2675.0 * pf * j)))
+    (blocks / "run.log").write_text("".join(run_log))
 
 
 def build(ev: Path, mut: str) -> None:
@@ -160,7 +207,8 @@ def build(ev: Path, mut: str) -> None:
         f"{stamp(LAUNCH)} precondition {mmproj} GiB {_gate.GGUF[1]}\n"
         + "".join(f"{stamp(LAUNCH)} precondition {lib} GiB {p}\n"
                   for p in _gate.RUNTIME_LIBS[: 8 if mut == "fewlibs" else 9]))
-    (obs / "driver.log").write_text(f"{stamp(0)} head {head} dirty={dirty}\n" + precondition + launch
+    (obs / "driver.log").write_text(f"{stamp(0)} head {head} dirty={dirty}\n" + tree_lines(0, mut, "1")
+                                    + precondition + launch
                                     + ("FAILED_ATTEMPT survivors\n" if mut == "attempt" else "ok\n"))
     (ev / "manifest.json").write_text(json.dumps(
         {"profile": {"context_cap": 1_000_000 if mut == "cap" else 1_048_576}}))
@@ -221,7 +269,16 @@ EXPECT = {
     "slow0": "FAIL", "noisy": "FAIL", "prefill": "FAIL", "ttft": "FAIL", "nospeed": "NO_RESULT",
     "noplan": "NO_RESULT", "wronground": "NO_RESULT", "othercommit": "NO_RESULT", "orders": "NO_RESULT",
     "wrongarm": "NO_RESULT", "r2dirty": "NO_RESULT", "headtool": "NO_RESULT",
+    # review round 1: resume (M1), runtime trees (M2), run-2 raw low, coverage and crashed starts (L3, L4, L8)
+    "r2resume": "PASS", "r2twoheads": "NO_RESULT", "treemissing1": "NO_RESULT", "treewrong1": "NO_RESULT",
+    "treemissing2": "NO_RESULT", "treewrong2": "NO_RESULT", "r2lownull": "NO_RESULT", "r2rawlow": "FAIL",
+    "r2samples": "NO_RESULT", "r2crash": "FAIL", "r2refusal": "NO_RESULT",
 }
+# `gate_verdict.py --run1-check` (L5): run 2 starts only after a clean run 1. Exit 0 iff run 1 has no
+# failed clause, no FAILED_ATTEMPT and nothing missing but clause 5 (a changed text path needs the holdout,
+# not a new run 1).
+RUN1_CHECK = {"clean": 0, "identity": 0, "noplan": 0, "xid": 1, "attempt": 1, "tool": 1, "short": 1,
+              "treewrong1": 1, "dirty": 1}
 
 
 def main() -> int:
@@ -241,7 +298,18 @@ def main() -> int:
             match = got == expected and rc_ok
             ok &= match
             print(f"{'ok ' if match else 'BAD'} {mut:16s} expected={expected:9s} got={got} rc={proc.returncode}")
-    print(f"{sum(1 for _ in EXPECT)} cases")
+    for mut, expected in RUN1_CHECK.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            ev = Path(tmp)
+            build(ev, mut)
+            env = dict(os.environ, GATE_REPO=str(ev / "repo"),
+                       GATE_REFERENCE_PROBE=str(ev / "reference-probe.json"))
+            proc = subprocess.run([sys.executable, str(SCORER), "--run1-check", str(ev)],
+                                  capture_output=True, text=True, env=env)
+            match = proc.returncode == expected and not (ev / "gate-summary.json").exists()
+            ok &= match
+            print(f"{'ok ' if match else 'BAD'} run1-check {mut:12s} expected rc={expected} got rc={proc.returncode}")
+    print(f"{len(EXPECT)} cases, {len(RUN1_CHECK)} run1-check cases")
     return 0 if ok else 1
 
 
