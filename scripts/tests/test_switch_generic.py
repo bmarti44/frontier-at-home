@@ -189,7 +189,7 @@ class ProductionPlan(unittest.TestCase):
         self.assertEqual(
             plan["relpath"],
             "configs/profiles/qwen3.8-flash-next/cuda-spark-128g-1m.json")
-        runtime = "/home/bmarti44/.cache/qwen38-flash-next/native-runtime-001/runtime"
+        runtime = "/home/bmarti44/.cache/qwen38-flash-next/native-runtime-002/runtime"
         self.assertEqual(plan["binary"], f"{runtime}/bin/python3.12")
         model = "/home/bmarti44/models/qwen3.8-flash-next-nvfp4"
         self.assertEqual(plan["model"], model)
@@ -211,7 +211,7 @@ class ProductionPlan(unittest.TestCase):
             (ROOT / "configs/profiles/qwen3.8-flash-next/model.json").read_text())
         self.assertEqual(
             plan["binary_sha256"],
-            model_pin["engines"]["vllm-qwen38fn-r001"]["binary_sha256"])
+            model_pin["engines"]["vllm-qwen38fn-r002"]["binary_sha256"])
         self.assertEqual(
             [check["path"] for check in plan["digest_checks"]],
             [f"{runtime}/bin/python3.12"] + [
