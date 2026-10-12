@@ -101,11 +101,17 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   Identity records and watchdog files live at
   `<state_root>/<log_name>.{process.json,memwatch.*}`.
 
-  Every switch start, generic or legacy, first drops the kernel caches
-  (`sync`, then `drop_caches=3`). After the MemAvailable guard it also
-  requires MemFree of at least `minimum_start_gib`, because the GB10 driver
-  allocates from MemFree and does not reclaim cached files, buffers or slab.
-  A failed drop only warns; the MemFree gate decides.
+  Every switch start, generic or legacy, drops the kernel caches once the
+  previous engine has stopped and the artifacts are verified: `sync -f` on
+  the local filesystem that holds the state, then `drop_caches=3`. After the
+  MemAvailable guard it also requires MemFree of at least
+  `minimum_start_gib`. A shortfall drops the caches once more before
+  refusing. MemAvailable counts cached files, buffers and slab as free, and on
+  GB10 a load ran short at its KV arena with MemAvailable ample
+  (`results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md`). A failed
+  drop only warns; the MemFree gate decides. dsv4's delegate re-reads and
+  hashes its weights after this gate, so its own MemAvailable budget governs
+  that load.
 
 - `serving` — optional explicit topology for a multi-sequence engine (vLLM):
   `parallel_slots` and `request_context_cap` are required; `max_images`,

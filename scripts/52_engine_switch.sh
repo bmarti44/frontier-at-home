@@ -464,30 +464,49 @@ dsv4_launcher() {
 
 sha256() { sha256sum -- "$1" | awk '{print $1}'; }
 
-# GB10 allocations come from MemFree: the driver never reclaims page cache,
-# block buffers or slab, while 03_memory_guard.py admits on MemAvailable,
-# which counts them as free. After a build the qwen38fn worker refused its KV
-# arena twice at MemFree 14.6 GiB although the guard had passed
-# (results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md). Every start
-# therefore drops the kernel caches once the previous engine has stopped and
-# admits on MemFree after the guard. A failed drop only warns: the MemFree
-# gate decides.
+# GB10: on 2026-10-12, after a build window, CUDA allocations logged
+# NV_ERR_NO_MEMORY and the qwen38fn worker refused its KV arena at MemFree
+# 14.6 GiB, although 03_memory_guard.py had admitted the start on
+# MemAvailable, which counts page cache, block buffers and reclaimable slab as
+# free (results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md). Every
+# start therefore drops the kernel caches once the previous engine has
+# stopped and its artifacts are verified, and admits on MemFree after the
+# guard. A failed drop only warns: the MemFree gate decides. sync covers only
+# the local filesystem that holds the state, models and caches, so a hung
+# FUSE or network mount cannot stall a switch.
+log_host_memory() {
+    awk -v label="$1" '$1 == "MemFree:" {free = $2} $1 == "MemAvailable:" {avail = $2}
+        END {printf "%s: MemFree %.2f GiB, MemAvailable %.2f GiB\n", label,
+            free / 1048576, avail / 1048576}' "$MEMINFO" >&2 || true
+}
+
 release_host_caches() {
-    if ! { sync && printf '3\n' >"$DROP_CACHES"; } 2>/dev/null; then
+    if ! { sync -f -- "$STATE" && printf '3\n' >"$DROP_CACHES"; } 2>/dev/null; then
         printf 'WARNING: host cache release failed; the free-memory gate decides\n' >&2
     fi
+    log_host_memory "host caches released"
     return 0
 }
 
+# One read after the guard. The guard can wait up to 180 s for the stopped
+# engine's memory, and files read meanwhile refill the cache, so a shortfall
+# drops once more before refusing.
 require_free_memory() {
-    local required_gib=$1 free_kib
-    free_kib=$(awk '$1 == "MemFree:" {print $2; found=1; exit}
-        END {exit !found}' "$MEMINFO") || {
-        printf 'cannot read MemFree from %s\n' "$MEMINFO" >&2
-        return 1
-    }
-    awk -v free="$free_kib" -v required="$required_gib" \
-        'BEGIN {exit !(free >= required * 1048576)}' && return 0
+    local required_gib=$1 free_kib attempt
+    for attempt in 1 2; do
+        free_kib=$(awk '$1 == "MemFree:" {print $2; found=1; exit}
+            END {exit !found}' "$MEMINFO") || {
+            printf 'cannot read MemFree from %s\n' "$MEMINFO" >&2
+            return 1
+        }
+        if awk -v free="$free_kib" -v required="$required_gib" \
+                'BEGIN {exit !(free >= required * 1048576)}'; then
+            awk -v free="$free_kib" -v required="$required_gib" \
+                'BEGIN {printf "free-memory gate: MemFree %.2f GiB >= %s GiB\n", free / 1048576, required}' >&2
+            return 0
+        fi
+        (( attempt == 2 )) || release_host_caches
+    done
     awk -v free="$free_kib" -v required="$required_gib" \
         'BEGIN {printf "MemFree %.2f GiB < %s GiB after the host cache release\n", free / 1048576, required}' >&2
     return 1
