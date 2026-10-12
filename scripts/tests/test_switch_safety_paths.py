@@ -606,7 +606,8 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             self.assertIn("MemFree 113.99 GiB < 114 GiB", result.stderr)
             self.assertNotIn("STARTER_PROCEEDED", result.stdout)
             self.assertNotIn("CALLER_CONTINUED", result.stdout)
-            self.assertEqual(fixture.order(), ["SYNC", "GUARD drop=3"])
+            # A shortfall drops once more before refusing.
+            self.assertEqual(fixture.order(), ["SYNC", "GUARD drop=3", "SYNC"])
             self.assertEqual(fixture.systemctl_calls(), [])
             self.assertFalse((fixture.state / "qwen38fn.process.json").exists())
 
@@ -627,10 +628,41 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             # Past both gates, the start reaches the watchdog, which this
             # fixture never arms.
             self.assertNotEqual(result.returncode, 0)
-            self.assertNotIn("free-memory gate", result.stderr)
+            self.assertNotIn("free-memory gate failed", result.stderr)
+            self.assertIn("host caches released: MemFree 114.00 GiB, "
+                          "MemAvailable 114.00 GiB", result.stderr)
+            self.assertIn("free-memory gate: MemFree 114.00 GiB >= 114 GiB",
+                          result.stderr)
             self.assertIn("qwen38fn memory watchdog failed to initialize",
                           result.stderr)
             self.assertEqual(len(fixture.systemctl_calls()), 1)
+            self.assertEqual(fixture.order(), ["SYNC", "GUARD drop=3"])
+            self.assertEqual((fixture.root / "sync.args").read_text(),
+                             f"-f -- {fixture.state}\n")
+
+    def test_qwen38fn_start_drops_again_when_the_cache_refilled_during_the_guard(self):
+        # The guard can wait up to 180 s for the stopped engine's memory;
+        # files read meanwhile refill the cache (review M1).
+        with SwitchSafetyFixture() as fixture:
+            fixture.set_meminfo(free_gib=112.0, available_gib=116.0)
+            fixture.set_meminfo(free_gib=116.5, available_gib=116.0, after_sync=2)
+            fixture.set_systemctl_responses({
+                "argv_prefix": [
+                    "show", "qwen38fn-engine.service", "--property=LoadState",
+                    "--value",
+                ],
+                "stdout": "not-found\n",
+                "returncode": 0,
+            })
+            result = fixture.run_function(
+                self.qwen38fn_start(fixture, guard_exit=0), timeout=30)
+
+            self.assertNotIn("free-memory gate failed", result.stderr)
+            self.assertIn("free-memory gate: MemFree 116.50 GiB >= 114 GiB",
+                          result.stderr)
+            self.assertIn("qwen38fn memory watchdog failed to initialize",
+                          result.stderr)
+            self.assertEqual(fixture.order(), ["SYNC", "GUARD drop=3", "SYNC"])
 
     def test_a_failed_cache_drop_leaves_the_decision_to_the_free_gate(self):
         with SwitchSafetyFixture() as fixture:
@@ -644,7 +676,8 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
             self.assertIn("host cache release failed", result.stderr)
             self.assertIn("pre-load free-memory gate failed", result.stderr)
             self.assertNotIn("STARTER_PROCEEDED", result.stdout)
-            self.assertEqual(fixture.order(), ["SYNC", "GUARD drop=<missing>"])
+            self.assertEqual(fixture.order(),
+                             ["SYNC", "GUARD drop=<missing>", "SYNC"])
             self.assertEqual(fixture.systemctl_calls(), [])
 
     def test_dsv4_start_drops_host_caches_and_admits_on_memfree(self):
@@ -657,7 +690,8 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
                     "start_dsv4\n")
 
                 self.assertEqual(fixture.drop_caches.read_text().strip(), "3")
-                self.assertEqual(fixture.order(), ["SYNC"])
+                self.assertEqual(fixture.order(),
+                                 ["SYNC"] if launched else ["SYNC", "SYNC"])
                 if launched:
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertIn("LAUNCHED start", result.stdout)

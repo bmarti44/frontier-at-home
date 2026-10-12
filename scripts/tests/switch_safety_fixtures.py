@@ -157,13 +157,25 @@ raise SystemExit(int(os.environ.get("SWITCH_GUARD_EXIT", "1")))
         self._write_executable(
             self.shims / "sync",
             """#!/usr/bin/env bash
-printf 'SYNC\\n' >>"$SWITCH_FIXTURE_ROOT/order.log"
+# Records each sync; the Nth one installs proc/meminfo.after-sync-N, so a
+# test can model what a cache drop frees.
+root=$SWITCH_FIXTURE_ROOT
+printf 'SYNC\\n' >>"$root/order.log"
+printf '%s\\n' "$*" >>"$root/sync.args"
+count=$(grep -c '^SYNC$' "$root/order.log")
+next=$root/proc/meminfo.after-sync-$count
+[[ ! -e $next ]] || mv -- "$next" "$root/proc/meminfo"
 """,
         )
 
-    def set_meminfo(self, *, free_gib: float, available_gib: float) -> None:
-        kib = lambda gib: int(gib * 1048576)
-        (self.root / "proc" / "meminfo").write_text(
+    def set_meminfo(
+        self, *, free_gib: float, available_gib: float, after_sync: int = 0
+    ) -> None:
+        def kib(gib: float) -> int:
+            return int(gib * 1048576)
+
+        name = f"meminfo.after-sync-{after_sync}" if after_sync else "meminfo"
+        (self.root / "proc" / name).write_text(
             f"MemTotal:       {kib(119.67)} kB\n"
             f"MemFree:        {kib(free_gib)} kB\n"
             f"MemAvailable:   {kib(available_gib)} kB\n"

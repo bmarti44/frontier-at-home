@@ -1266,6 +1266,12 @@ class EngineSwitchTests(unittest.TestCase):
                 self.assertEqual(body.count("release_host_caches"), 1)
                 self.assertEqual(body.count("require_free_memory"), 1)
                 self.assertLess(release, admit)
+                # Hashing multi-GB artifacts after the drop would refill the
+                # cache; rollback re-verifies inside the starter.
+                for verify in ("verify_generic_hashes", "verify_laguna_profile_hashes",
+                               "verify_glm53_profile_hashes", '"$verify_function"'):
+                    if verify in body:
+                        self.assertLess(body.index(verify), release)
                 if "03_memory_guard.py" in body:
                     guard = body.index("03_memory_guard.py")
                     self.assertLess(release, guard)
