@@ -53,6 +53,7 @@ SERIES = [
     "0009-local-draft-vocab-init.diff",
 ]
 ARENA_L4 = 20_600_000_000
+C10 = "cuda-spark-128g-1m-tune-c10.json"
 LEVERS = {
     "L1": {"env": {"QWEN38FN_PLE_WILLNEED": "1"}},
     "L2": {"env": {"QWEN4EXP_DRAFT_VOCAB": "65536"},
@@ -186,6 +187,29 @@ class TuneArmContract(unittest.TestCase):
                     self.assertLess(mm["extra_gib"], ARENA_L4 / 2**30 + 0.1)
                 else:
                     self.assertEqual(mm["extra_gib"], main["extra_gib"])
+
+    def test_candidate_10_is_the_screen_carrier_plus_the_runtime_release_root(self):
+        """The screen kept L1 and L2 (carrier a3; tune-screen-2026-10-11/RESULT.md).
+
+        Candidate 10 launches a3 unchanged except QWEN38FN_HOST_RELEASE_ROOTS,
+        which makes the worker drop every Flash-Next runtime's cached libraries
+        at startup (ATTEMPTS.md, a1 attempt 1).
+        """
+        a3, c10 = self.render(arm_file("a3")), self.render(C10)
+        env = dict(a3["env"])
+        env["QWEN38FN_HOST_RELEASE_ROOTS"] = "/home/bmarti44/.cache/qwen38-flash-next"
+        self.assertEqual(c10["env"], env)
+        self.assertEqual(c10["argv"], a3["argv"])
+        self.assertEqual(c10["binary"], a3["binary"])
+        p = profile_resolver.load_profile(SLUG, C10)
+        self.assertEqual(p["profile_id"], f"{SLUG}/{C10[:-5]}")
+        self.assertEqual(p["status"]["state"], "estimated")
+        self.assertNotIn("switch_alias", p)
+        self.assertNotIn("switch", p)
+        self.assertEqual(p["engine"], "vllm-qwen38fn-r002")
+        self.assertEqual(p["qualification_options"]["speed_max_tokens_per_event"], 4)
+        self.assertEqual(p["memory_model"], profile_resolver.load_profile(SLUG, arm_file("a3"))["memory_model"])
+        self.assertEqual(p["safety"], profile_resolver.load_profile(SLUG, MAIN)["safety"])
 
     def test_main_profile_still_serves_runtime_001(self):
         main = self.render(MAIN)
