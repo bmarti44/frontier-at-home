@@ -136,6 +136,59 @@ class FeasibilityMath(unittest.TestCase):
         self.assertIsNone(resolver.usable_gib("dgpu", 64, 8))
 
 
+def mac_host() -> dict:
+    """The example Mac host with concrete paths (the resolver never expands {HOME})."""
+    host = resolver.load_host(ROOT / "configs/hosts/example-macbook-32g.json")
+    host["ram_gib"] = 192
+    host["paths"] = {
+        key: value.replace("{HOME}", "/Users/someone")
+        for key, value in host["paths"].items()
+    }
+    return host
+
+
+class AppleSiliconProfilesRender(unittest.TestCase):
+    """The Spark-host render test skips these; render them on a Mac host."""
+
+    def apple_profiles(self):
+        for model_slug, profile_file in resolver.list_profiles():
+            profile = resolver.load_profile(model_slug, profile_file)
+            if profile["backend"] == "apple-silicon":
+                yield model_slug, profile_file, profile
+
+    def test_every_apple_silicon_profile_renders_on_a_mac_host(self) -> None:
+        host = mac_host()
+        rendered = 0
+        for model_slug, profile_file, profile in self.apple_profiles():
+            with self.subTest(profile=f"{model_slug}/{profile_file}"):
+                snapshot = resolver.resolve(
+                    profile, resolver.load_model(model_slug), host
+                )
+                for value in snapshot["argv"]:
+                    self.assertNotIn("{", value.replace('{"', ""),
+                                     "placeholder survived rendering")
+                rendered += 1
+        self.assertGreater(rendered, 0)
+
+    def test_qwen38_27b_mac_weights_are_digest_checked(self) -> None:
+        # check/93 skip artifacts without a sha256 silently, so a Mac would
+        # serve an unverified Q8/Q6_K file.
+        host = mac_host()
+        model = resolver.load_model("qwen3.8-27b")
+        for model_slug, profile_file, profile in self.apple_profiles():
+            if model_slug != "qwen3.8-27b":
+                continue
+            with self.subTest(profile=profile_file):
+                snapshot = resolver.resolve(profile, model, host)
+                checked = {check["path"] for check in snapshot["digest_checks"]}
+                for role in profile["artifact_roles"]:
+                    artifact = model["artifacts"][profile["artifact_roles"][role]]
+                    path = artifact["path"].replace(
+                        "{model_root}", host["paths"]["model_root"]
+                    )
+                    self.assertIn(path, checked, f"{role} is not digest-checked")
+
+
 class HostSelection(unittest.TestCase):
     def test_explicit_path_wins(self) -> None:
         host = resolver.load_host(SPARK_HOST_PATH)
