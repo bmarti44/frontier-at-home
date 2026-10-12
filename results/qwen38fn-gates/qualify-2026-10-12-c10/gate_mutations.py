@@ -156,8 +156,13 @@ def build_run2(ev: Path, mut: str, freeze: str, head: str) -> None:
         d = blocks / f"block-{block}" / f"{position}-{arm}"
         d.mkdir(parents=True)
         base, last = 1000 + 200 * k, (block, position) == (4, 3)
-        rows = [f"{stamp(base + i)} MemAvailable:={int((7.5 if mut == 'r2rawlow' and last and i == 60 else 10.4) * GIB_KIB)} "
-                f"SwapTotal:={16 * GIB_KIB} SwapFree:={16 * GIB_KIB}\n" for i in range(122)]
+        # Run-2 samples in exactly the format 97's sampler writes (its MEMINFO_KEYS, its meminfo_line).
+        rows = []
+        for i in range(122):
+            sample = {key: 1024 for key in MATCHED.MEMINFO_KEYS}
+            sample["MemAvailable"] = int((7.5 if mut == "r2rawlow" and last and i == 60 else 10.4) * GIB_KIB)
+            sample["SwapFree"] = 16 * GIB_KIB - (GIB_KIB // 2 if mut == "r2rawswap" and last and i > 60 else 0)
+            rows.append(MATCHED.meminfo_line(stamp(base + i), sample) + "\n")
         (d / "meminfo.log").write_text("".join(rows[:50] if mut == "r2samples" and last else rows))
         oom = mut == "r2crash" and last
         (d / "kernel.log").write_text("x Out of memory: Killed process 7 (python3)\n" if oom else "")
@@ -330,6 +335,8 @@ EXPECT = {
     "r2block": "NO_RESULT", "r2kvshort": "NO_RESULT", "r2profile": "NO_RESULT", "scoringdirty": "NO_RESULT",
     "scoringuntracked": "NO_RESULT", "noplankill": "FAIL", "wrongroundkill": "FAIL", "agentdup": "NO_RESULT",
     "speedinvalid": "NO_RESULT", "samplerdied": "NO_RESULT",
+    # review round 2: run-2 samples in 97's real format (clean above PASSes on them; H1), raw swap growth
+    "r2rawswap": "FAIL",
 }
 # `gate_verdict.py --run2-preflight` (reviewer 1 L5, reviewer 2 M3): run 2 starts only after a clean run 1
 # and with a plan that is valid for the current freeze. Exit 0 iff run 1 has no failed clause, no
