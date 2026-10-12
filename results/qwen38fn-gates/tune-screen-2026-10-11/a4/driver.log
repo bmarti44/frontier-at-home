@@ -1,0 +1,21 @@
+2026-10-12T01:43:26Z arm a4 profile qwen3.8-flash-next/cuda-spark-128g-1m-tune-a4 stack qwen3.8-flash-next-cuda-spark-128g-1m-tune-a4 tokens_per_event 5
+2026-10-12T01:43:26Z head 9da69ab69fcd1bd7b98a27bff5c575a35b27b7b7 dirty=0
+2026-10-12T01:43:26Z inference lock /run/lock/frontier-at-home/inference.lock held by the driver
+2026-10-12T01:43:26Z page cache released under /home/bmarti44/.cache/qwen38-flash-next/native-runtime-001: 67355 files
+2026-10-12T01:43:26Z page cache released under /home/bmarti44/.cache/qwen38-flash-next/native-runtime-002: 67365 files
+{"pass":true,"required_gib":114.5,"mem_available_gib":114.741,"stable_samples_observed":3}
+2026-10-12T01:43:26Z preload MemAvailable:=120312868 SwapFree:=16507960 
+2026-10-12T01:43:28Z a4: launching in scope qwen38fn-tune-a4-115290
+{"pass":true,"required_gib":87.0,"mem_available_gib":114.712,"stable_samples_observed":3}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m-tune-a4","pid":115461,"port":8017}
+2026-10-12T01:54:56Z a4: ready after 688 s
+2026-10-12T01:54:56Z idle_mem_available_kib=11965968
+2026-10-12T01:54:56Z a4: attention block size 3216 tokens
+2026-10-12T01:54:56Z a4: KV capacity 1033876 tokens at 262,144 per request
+switchlog (EngineCore pid=115748) INFO 10-11 21:43:49 [gpu_worker.py:499] Using V2 Model Runner
+switchlog (EngineCore pid=115748) INFO 10-11 21:43:52 [ngram_embedding.py:86] checkpoint_mapped PLE: QWEN38FN_PLE_WILLNEED=1 (MADV_WILLNEED page advice and own-layer lookup start on)
+switchlog (EngineCore pid=115748) INFO 10-11 21:52:38 [mtp.py:439] Qwen4Exp MTP draft vocabulary: token ids [0, 65536)
+switchlog (EngineCore pid=115748) INFO 10-11 21:54:00 [mtp.py:547] QWEN38 draft head: 65536 reduced-vocabulary rows quantized to nvfp4
+2026-10-12T01:54:56Z FAILED_ATTEMPT a4: block 3216 (want 3200), KV 1033876 (want >= 1048576)
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m-tune-a4","stopped":true}
+2026-10-12T01:55:04Z driver exit

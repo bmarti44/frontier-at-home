@@ -1,0 +1,158 @@
+diff --git a/vllm/models/qwen4_exp/nvidia/mtp.py b/vllm/models/qwen4_exp/nvidia/mtp.py
+index 6129061..e476a77 100644
+--- a/vllm/models/qwen4_exp/nvidia/mtp.py
++++ b/vllm/models/qwen4_exp/nvidia/mtp.py
+@@ -1,4 +1,13 @@
+ # SPDX-License-Identifier: Apache-2.0
++# Base file: vLLM v0.30.0 vllm/models/qwen4_exp/nvidia/mtp.py (originally overlaid on nightly 8a728663), Apache-2.0, Copyright contributors to the vLLM project.
++# Addition (Kai / 2Wild, 2026-09-05): reduced-vocabulary drafting for the MTP head. The draft's lm_head matmul is
++# memory-bound (vocab x hidden x 2 bytes per draft step); computing it only for the QWEN4EXP_DRAFT_VOCAB most
++# frequent token ids and masking the rest to -inf cuts that read by (1 - K/V). Token ids are used as the frequency
++# proxy (BPE merge order) so no corpus is needed; the target model still verifies every draft over the full vocab,
++# so outputs stay exact, only the draft acceptance can change. Idea: FR-Spec (frequency-ranked speculative sampling,
++# Zhao et al. 2025); MiaAI-Lab demonstrated a corpus-built 65,536-token draft vocabulary on this model (AGPL code,
++# not used here). This is an independent implementation.
++# SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+ """Inference-only Qwen4Exp MTP (Multi-Token Predictor) model.
+ 
+@@ -357,6 +366,14 @@ class Qwen4ExpMultiTokenPredictor(nn.Module):
+         return loader.load_weights(weights, mapper=mapper)
+ 
+ 
++def _draft_vocab_size() -> int:
++    import os as _os
++    try:
++        return int(_os.environ.get("QWEN4EXP_DRAFT_VOCAB", "0"))
++    except ValueError:
++        return 0
++
++
+ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
+     packed_modules_mapping = {
+         "qkv_proj": ["q_proj", "k_proj", "v_proj"],
+@@ -425,7 +442,123 @@ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
+     def compute_logits(
+         self, hidden_states: torch.Tensor, spec_step_idx: int = 0
+     ) -> torch.Tensor | None:
+-        return self.logits_processor(self.lm_head, hidden_states)
++        # A full-vocabulary draft head this drafter quantized itself
++        # runs through the reduced-vocabulary path with k = the whole vocabulary.
++        k = getattr(self, "_draft_rows_k", None) or _draft_vocab_size()
++        if k <= 0 or not hasattr(self.lm_head, "weight"):
++            return self.logits_processor(self.lm_head, hidden_states)
++        return self._reduced_vocab_logits(hidden_states, k)
++
++    # --- Kai/2Wild: reduced-vocabulary drafting ---------------------------
++    def _draft_rows(self, k: int):
++        """(k, start, lo, hi, w): this rank's draft rows [lo, hi) as BF16."""
++        head = self.lm_head
++        cache = getattr(self, "_draft_vocab_cache", None)
++        if cache is None or cache[0] != k:
++            start = int(head.shard_indices.org_vocab_start_index)
++            end = int(head.shard_indices.org_vocab_end_index)
++            lo, hi = max(start, 0), min(end, k)
++            w = head.weight[lo - start : hi - start].contiguous() if hi > lo else None
++            # QWEN38_FP8_DENSE=...,lm_head: the speculator
++            # shares the target's head, which is then block FP8 and cannot be
++            # sliced into F.linear. Rebuild the draft rows as BF16 once, through
++            # the head's own FP8 apply on one-hot inputs, so the rows equal the
++            # dequantized FP8 weight to BF16 rounding whatever layout the kernel
++            # keeps its scales in. Draft-only: the target verifies every token.
++            if w is not None and w.dtype == torch.float8_e4m3fn:
++                cols = int(self.config.hidden_size)  # weight may be stored transposed
++                eye = torch.eye(cols, dtype=torch.bfloat16, device=w.device)
++                wt = torch.empty((cols, hi - lo), dtype=torch.bfloat16, device=w.device)
++                for c in range(0, cols, 256):
++                    out = head.quant_method.apply(head, eye[c : c + 256])
++                    wt[c : c + 256] = out[:, lo - start : hi - start]
++                w = wt.t().contiguous()
++                del eye, wt
++            cache = (k, start, lo, hi, w)
++            self._draft_vocab_cache = cache
++        return cache
++
++    # --- draft_lm_head_quantization with a reduced vocabulary
++    def wants_own_draft_rows(self, target_lm_head=None) -> bool:
++        """vllm#59973 quantizes a copy of the whole shared head; with a reduced
++        draft vocabulary only the draft rows are ever read, so quantize those.
++        With the full vocabulary, do the same when the shared head is not plain
++        BF16 (QWEN38_FP8_DENSE=...,lm_head), which the PR's copy refuses."""
++        if _draft_vocab_size() > 0:
++            return True
++        from vllm.model_executor.layers.vocab_parallel_embedding import (
++            UnquantizedEmbeddingMethod,
++        )
++
++        return target_lm_head is not None and not isinstance(
++            target_lm_head.quant_method, UnquantizedEmbeddingMethod
++        )
++
++    def quantize_draft_rows(self, quantization: str) -> None:
++        from vllm.logger import init_logger
++        from vllm.model_executor.layers.quantization.online.lm_head import (
++            quantized_lm_head_copy,
++        )
++        from vllm.model_executor.utils import replace_parameter
++
++        k = _draft_vocab_size()
++        if k <= 0:
++            k = int(self.config.vocab_size)
++            self._draft_rows_k = k
++        _, start, lo, hi, w = self._draft_rows(k)
++        if w is None:
++            return
++        rows = ParallelLMHead(
++            hi - lo,
++            int(self.config.hidden_size),
++            params_dtype=w.dtype,
++            prefix="mtp.draft_rows",
++            disable_tp=True,
++        )
++        replace_parameter(rows, "weight", w)
++        self._draft_rows_q = quantized_lm_head_copy(rows, quantization)
++        # The BF16 rows are no longer read; keep only their coordinates.
++        self._draft_vocab_cache = (k, start, lo, hi, None)
++        del rows, w
++        init_logger(__name__).info(
++            "QWEN38 draft head: %d reduced-vocabulary rows quantized to %s",
++            hi - lo,
++            quantization,
++        )
++
++    def _reduced_vocab_logits(self, hidden_states: torch.Tensor, k: int) -> torch.Tensor:
++        """Logits for token ids [0, k) only; every other id is -inf.
++
++        Each TP rank holds a vocab slice of lm_head; it multiplies the rows of
++        its slice that fall inside [0, k), writes them into a [n, k] buffer,
++        and the ranks sum (each column is owned by exactly one rank). The
++        result is scattered into a full-width [n, vocab] tensor so the
++        speculator's argmax yields global ids unchanged.
++        """
++        import torch.nn.functional as F
++        from vllm.distributed import (
++            get_tensor_model_parallel_world_size,
++            tensor_model_parallel_all_reduce,
++        )
++
++        _, start, lo, hi, w = self._draft_rows(k)
++        n = hidden_states.shape[0]
++        small = torch.zeros((n, k), dtype=hidden_states.dtype, device=hidden_states.device)
++        q = getattr(self, "_draft_rows_q", None)
++        if q is not None:
++            out = q.quant_method.apply(q, hidden_states.to(q.orig_dtype))
++            small[:, lo:hi] = out[:, : hi - lo].to(small.dtype)
++        elif w is not None:
++            small[:, lo:hi] = F.linear(hidden_states.to(w.dtype), w).to(small.dtype)
++        if get_tensor_model_parallel_world_size() > 1:
++            small = tensor_model_parallel_all_reduce(small)
++        vocab = int(self.config.vocab_size)
++        full = torch.full((n, vocab), float("-inf"), dtype=small.dtype, device=small.device)
++        full[:, :k] = small
++        scale = getattr(self.logits_processor, "scale", 1.0)
++        if scale != 1.0:
++            full.mul_(scale)
++        return full
+ 
+     def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
+         def remap_weight_names():

@@ -278,6 +278,52 @@ class HostCacheReleaseWorkerTest(WorkerHarness, unittest.TestCase):
                 worker.initialize_from_config(self.arena(1))
         self.run_worker(body, cls="HostCacheReleaseWorker")
 
+    def test_declared_release_roots_are_released_before_the_weights_and_the_arena(self):
+        """Candidate 10: another runtime's cached libraries sit outside the model root.
+
+        The lever screen's a1 (results/qwen38fn-gates/tune-screen-2026-10-11/ATTEMPTS.md)
+        met its arena at MemFree 19.85 GiB, short of 19.90, with runtime-001's
+        2.56 GiB of libraries still cached. QWEN38FN_HOST_RELEASE_ROOTS names more
+        trees to release: once at import, startup-only, empty by default.
+        """
+        gib = 2**30
+
+        def body(worker, evictor_cls):
+            self.assertEqual(self.module.RELEASE_ROOTS, ("/rt/one", "/rt/two"))
+            order = []
+            with mock.patch.object(self.module, "release_tree",
+                                   side_effect=lambda root: order.append(("release", root)) or 7):
+                evictor_cls.return_value.start.side_effect = lambda: order.append(("evictor", None))
+                worker.load_model()
+            self.assertEqual(order, [("release", "/m"), ("release", "/rt/one"), ("release", "/rt/two"),
+                                     ("evictor", None)])
+            calls, release, free = self.host(21.9)
+            with release, free, self.assertLogs("vllm.qwen38fn_worker", "INFO") as logs:
+                self.assertEqual(worker.initialize_from_config(self.arena(int(17.9 * gib))), "allocated")
+            # The extra roots go first, so the MemFree reading follows every release.
+            self.assertEqual(calls, ["/rt/one", "/rt/two", "/m"])
+            self.assertEqual(logs.output[:2], [
+                "INFO:vllm.qwen38fn_worker:host page cache released under /rt/one (7 files) before the KV arena",
+                "INFO:vllm.qwen38fn_worker:host page cache released under /rt/two (7 files) before the KV arena"])
+            # The model-root line keeps candidate 9's exact shape.
+            self.assertIn("host page cache released under /m (7 files); MemFree 21.90 GiB, "
+                          "KV arena 17.90 GiB + margin 2.00 GiB", logs.output[2])
+        with mock.patch.dict(os.environ, {"QWEN38FN_HOST_RELEASE_ROOTS": "/rt/one:/rt/two"}):
+            self.run_worker(body, cls="HostCacheReleaseWorker")
+
+    def test_release_roots_default_to_none_and_reject_relative_or_root_paths(self):
+        def body(worker, evictor_cls):
+            self.assertEqual(self.module.RELEASE_ROOTS, ())
+            parse = self.module.parse_release_roots
+            self.assertEqual(parse(""), ())
+            self.assertEqual(parse("/a:/b"), ("/a", "/b"))
+            for bad in ("rel/path", "/", "/a::/b"):
+                with self.subTest(bad=bad), self.assertRaises(ValueError):
+                    parse(bad)
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("QWEN38FN_HOST_RELEASE_ROOTS", None)
+            self.run_worker(body, cls="HostCacheReleaseWorker")
+
     def test_the_text_only_worker_is_unchanged(self):
         def body(worker, evictor_cls):
             with mock.patch.object(self.module, "release_tree") as release:

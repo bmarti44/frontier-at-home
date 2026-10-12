@@ -1,0 +1,30 @@
+{
+ "when": "2026-10-12T04:13:35Z",
+ "base": "http://127.0.0.1:8017",
+ "results": [
+  {
+   "test": "prefix-cache",
+   "pass": true,
+   "detail": "repeat cache_n=19200/22662 (>=total-6400: True); shared-prefix cache_n=19200 (checkpoint-bounded floor 13446: True)"
+  },
+  {
+   "test": "turn-continuation",
+   "pass": true,
+   "detail": "appended turn 2: prompt_n=3515 cache_n=19200 (< 7900 required; a full re-prefill means in-slot reuse broke)"
+  },
+  {
+   "test": "slot-thrash",
+   "pass": true,
+   "detail": "turn-2 after utility call: prompt_n=3485 cache_n=19200 (< 7900 required; single-slot server re-prefills ~20000)"
+  },
+  {
+   "test": "prefill-throughput",
+   "pass": true,
+   "detail": "novel prompt cache_n=0 (<100: True); prefill=2728 tok/s (>=350: True); prompt processing=8.3s (<=75: True); prompt time is client-measured TTFT; tuned ub/b=2048 profile measures ~434 tok/s \u2014 a failure here usually means the fast buffers were reverted (see docs/speed-tuning-2026-07-23.md)"
+  }
+ ],
+ "engine": "vllm",
+ "model": "default",
+ "prefix_block_tokens": 3200,
+ "spec_block_drop": true
+}

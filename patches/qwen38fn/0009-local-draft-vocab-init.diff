@@ -1,0 +1,126 @@
+diff --git a/vllm/models/qwen4_exp/nvidia/mtp.py b/vllm/models/qwen4_exp/nvidia/mtp.py
+index 3e3cfe0..e4584ec 100644
+--- a/vllm/models/qwen4_exp/nvidia/mtp.py
++++ b/vllm/models/qwen4_exp/nvidia/mtp.py
+@@ -366,12 +366,23 @@ class Qwen4ExpMultiTokenPredictor(nn.Module):
+         return loader.load_weights(weights, mapper=mapper)
+ 
+ 
+-def _draft_vocab_size() -> int:
++def _draft_vocab_size(vocab_size: int) -> int:
++    """QWEN4EXP_DRAFT_VOCAB, read once when the drafter is built (0 = off).
++
++    A local startup switch: the drafter scores only token ids [0, K) and the
++    target still verifies every draft over the full vocabulary. Anything but
++    an integer in [0, vocab_size] is refused rather than silently ignored.
++    """
+     import os as _os
++
++    raw = _os.environ.get("QWEN4EXP_DRAFT_VOCAB", "0")
+     try:
+-        return int(_os.environ.get("QWEN4EXP_DRAFT_VOCAB", "0"))
++        k = int(raw)
+     except ValueError:
+-        return 0
++        raise ValueError(f"QWEN4EXP_DRAFT_VOCAB={raw!r} is not an integer") from None
++    if not 0 <= k <= vocab_size:
++        raise ValueError(f"QWEN4EXP_DRAFT_VOCAB={k} is outside [0, {vocab_size}]")
++    return k
+ 
+ 
+ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
+@@ -417,6 +428,20 @@ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
+         )
+         self.set_moe_parameters(self.model.layers)
+         enable_qwen4_exp_low_latency_gemm(self, vllm_config.model_config.dtype)
++        # Resolved once here, never per step: with a reduced draft vocabulary
++        # compute_logits is rebound to the reduced path, so the default path
++        # carries no extra branch.
++        self._draft_logits_k = _draft_vocab_size(int(config.vocab_size))
++        if self._draft_logits_k > 0:
++            self.compute_logits = self._reduced_compute_logits
++        from vllm.logger import init_logger
++
++        init_logger(__name__).info(
++            "Qwen4Exp MTP draft vocabulary: %s",
++            f"token ids [0, {self._draft_logits_k})"
++            if self._draft_logits_k
++            else "full",
++        )
+ 
+     def embed_input_ids(self, input_ids: torch.Tensor) -> torch.Tensor:
+         return self.model.embed_input_ids(input_ids)
+@@ -442,12 +467,14 @@ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
+     def compute_logits(
+         self, hidden_states: torch.Tensor, spec_step_idx: int = 0
+     ) -> torch.Tensor | None:
+-        # A full-vocabulary draft head this drafter quantized itself
+-        # runs through the reduced-vocabulary path with k = the whole vocabulary.
+-        k = getattr(self, "_draft_rows_k", None) or _draft_vocab_size()
+-        if k <= 0 or not hasattr(self.lm_head, "weight"):
+-            return self.logits_processor(self.lm_head, hidden_states)
+-        return self._reduced_vocab_logits(hidden_states, k)
++        return self.logits_processor(self.lm_head, hidden_states)
++
++    def _reduced_compute_logits(
++        self, hidden_states: torch.Tensor, spec_step_idx: int = 0
++    ) -> torch.Tensor | None:
++        # Bound in __init__ (QWEN4EXP_DRAFT_VOCAB) or by quantize_draft_rows
++        # (a full-vocabulary head this drafter quantized itself, k = vocab).
++        return self._reduced_vocab_logits(hidden_states, self._draft_logits_k)
+ 
+     # --- Kai/2Wild: reduced-vocabulary drafting ---------------------------
+     def _draft_rows(self, k: int):
+@@ -459,21 +486,12 @@ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
+             end = int(head.shard_indices.org_vocab_end_index)
+             lo, hi = max(start, 0), min(end, k)
+             w = head.weight[lo - start : hi - start].contiguous() if hi > lo else None
+-            # QWEN38_FP8_DENSE=...,lm_head: the speculator
+-            # shares the target's head, which is then block FP8 and cannot be
+-            # sliced into F.linear. Rebuild the draft rows as BF16 once, through
+-            # the head's own FP8 apply on one-hot inputs, so the rows equal the
+-            # dequantized FP8 weight to BF16 rounding whatever layout the kernel
+-            # keeps its scales in. Draft-only: the target verifies every token.
+-            if w is not None and w.dtype == torch.float8_e4m3fn:
+-                cols = int(self.config.hidden_size)  # weight may be stored transposed
+-                eye = torch.eye(cols, dtype=torch.bfloat16, device=w.device)
+-                wt = torch.empty((cols, hi - lo), dtype=torch.bfloat16, device=w.device)
+-                for c in range(0, cols, 256):
+-                    out = head.quant_method.apply(head, eye[c : c + 256])
+-                    wt[c : c + 256] = out[:, lo - start : hi - start]
+-                w = wt.t().contiguous()
+-                del eye, wt
++            # The recipe's FP8 lm_head rebuild is dropped: the target head here
++            # is the checkpoint's BF16 head, and the FP8 dense cast is not used.
++            if w is not None and w.dtype != torch.bfloat16:
++                raise ValueError(
++                    f"reduced-vocabulary drafting needs a BF16 lm_head, got {w.dtype}"
++                )
+             cache = (k, start, lo, hi, w)
+             self._draft_vocab_cache = cache
+         return cache
+@@ -483,8 +501,8 @@ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
+         """vllm#59973 quantizes a copy of the whole shared head; with a reduced
+         draft vocabulary only the draft rows are ever read, so quantize those.
+         With the full vocabulary, do the same when the shared head is not plain
+-        BF16 (QWEN38_FP8_DENSE=...,lm_head), which the PR's copy refuses."""
+-        if _draft_vocab_size() > 0:
++        BF16, which the PR's copy refuses."""
++        if self._draft_logits_k > 0:
+             return True
+         from vllm.model_executor.layers.vocab_parallel_embedding import (
+             UnquantizedEmbeddingMethod,
+@@ -502,10 +520,11 @@ class Qwen4ExpMTP(nn.Module, SupportsPP, Qwen4ExpMixtureOfExperts):
+         )
+         from vllm.model_executor.utils import replace_parameter
+ 
+-        k = _draft_vocab_size()
++        k = self._draft_logits_k
+         if k <= 0:
+             k = int(self.config.vocab_size)
+-            self._draft_rows_k = k
++            self._draft_logits_k = k
++            self.compute_logits = self._reduced_compute_logits
+         _, start, lo, hi, w = self._draft_rows(k)
+         if w is None:
+             return

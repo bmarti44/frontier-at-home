@@ -1,0 +1,105 @@
+diff --git a/vllm/models/qwen4_exp/nvidia/ngram_embedding.py b/vllm/models/qwen4_exp/nvidia/ngram_embedding.py
+index b08d4d5..155d953 100644
+--- a/vllm/models/qwen4_exp/nvidia/ngram_embedding.py
++++ b/vllm/models/qwen4_exp/nvidia/ngram_embedding.py
+@@ -28,6 +28,7 @@ from ..common.ngram_embedding import (
+ )
+ from ..common.ops.ple import ple_ngram_ids
+ from .ple_pageable import (
++    PLE_WILLNEED,
+     MappedTable,
+     discover_table_layout,
+     require_pageable_access,
+@@ -63,8 +64,9 @@ class Qwen4ExpPLEPageableHostEmbedding(Qwen4ExpPLEPinnedHostEmbedding):
+     # On the current stream a lookup started a layer early only runs before
+     # that layer's kernels. Started at its own layer, the CPU page prefetch
+     # (which begins when the step's ids reach the host) gets the preceding
+-    # layer's time to fault the rows in before the GPU reads them.
+-    prefetch_ahead: ClassVar[bool] = False
++    # layer's time to fault the rows in before the GPU reads them. Only with
++    # QWEN38FN_PLE_WILLNEED=1; off keeps the one-layer-early start.
++    prefetch_ahead: ClassVar[bool] = not PLE_WILLNEED
+ 
+     def __init__(
+         self,
+@@ -81,6 +83,12 @@ class Qwen4ExpPLEPageableHostEmbedding(Qwen4ExpPLEPinnedHostEmbedding):
+     ) -> None:
+         device = torch.device("cuda", torch.accelerator.current_device_index())
+         require_pageable_access(device.index)
++        logger.info_once(
++            "checkpoint_mapped PLE: QWEN38FN_PLE_WILLNEED=%d (MADV_WILLNEED page "
++            "advice and own-layer lookup start %s)",
++            int(PLE_WILLNEED),
++            "on" if PLE_WILLNEED else "off",
++        )
+         if not torch.cuda.get_device_properties(device).is_integrated:
+             logger.warning_once(
+                 "Engram checkpoint_mapped has been validated only on integrated "
+diff --git a/vllm/models/qwen4_exp/nvidia/ple_pageable.py b/vllm/models/qwen4_exp/nvidia/ple_pageable.py
+index 27baa7b..108e094 100644
+--- a/vllm/models/qwen4_exp/nvidia/ple_pageable.py
++++ b/vllm/models/qwen4_exp/nvidia/ple_pageable.py
+@@ -37,6 +37,11 @@ from vllm.triton_utils import tl, triton
+ logger = init_logger(__name__)
+ 
+ _PAGE = 4096
++# QWEN38FN_PLE_WILLNEED=1 (local startup switch, default off): queue each
++# decode step's page reads with madvise(MADV_WILLNEED) before faulting them
++# and start each layer's lookup at its own layer (jschmied/vllm#4). Read once
++# at import; off keeps the #58439 behaviour.
++PLE_WILLNEED = os.environ.get("QWEN38FN_PLE_WILLNEED", "0") == "1"
+ _MADV_RANDOM = 1
+ _CU_PAGEABLE_MEMORY_ACCESS = 88
+ _CU_PAGEABLE_MEMORY_ACCESS_USES_HOST_PAGE_TABLES = 100
+@@ -234,6 +239,10 @@ def verify_shard_bytes(
+             )
+ 
+ 
++def _no_advice(shard: np.ndarray, local: np.ndarray) -> None:
++    """QWEN38FN_PLE_WILLNEED off: no page advice before the touches."""
++
++
+ class MappedTable:
+     """Read-only mappings of a layer's shards plus the GPU and CPU accessors."""
+ 
+@@ -264,6 +273,7 @@ class MappedTable:
+         ]
+         # Each view's mapping and offset in it, to madvise a shard's rows.
+         self._regions = [(self._maps[s.path][0], s.offset) for s in layout.shards]
++        self._advise_rows = self._will_need if PLE_WILLNEED else _no_advice
+         bases = [v.__array_interface__["data"][0] for v in self.views]
+         self.shard_base = torch.tensor(bases, dtype=torch.int64, device=device)
+         self._block = triton.next_power_of_2(self.row_bytes)
+@@ -294,6 +304,7 @@ class MappedTable:
+         self._maps = {"<zeros>": (mapping, array)}
+         self.views = [array[: num_rows * row_bytes].reshape(num_rows, row_bytes)]
+         self._regions = [(mapping, 0)]
++        self._advise_rows = self._will_need if PLE_WILLNEED else _no_advice
+         self.layout = None
+         self.shard_base = torch.tensor(
+             [array.__array_interface__["data"][0]], dtype=torch.int64, device=device
+@@ -325,10 +336,11 @@ class MappedTable:
+     def touch(self, rows: np.ndarray, pool: ThreadPoolExecutor | None) -> None:
+         """Fault in both ends of every row (a row may straddle a page).
+ 
+-        The rows' pages are first passed to madvise(MADV_WILLNEED), which
+-        queues all their reads at once, so the touches below mostly map pages
+-        that are already in the page cache. Without it, each cold page of a
+-        decode step (touched on one thread) is a separate synchronous read.
++        With QWEN38FN_PLE_WILLNEED=1 the rows' pages are first passed to
++        madvise(MADV_WILLNEED), which queues all their reads at once, so the
++        touches below mostly map pages that are already in the page cache.
++        Without it, each cold page of a decode step (touched on one thread) is
++        a separate synchronous read.
+         """
+         rows = np.sort(rows)
+         shard = rows // self.rows_per_shard
+@@ -352,7 +364,7 @@ class MappedTable:
+             view, index = task
+             return int(view[index, 0].sum()) + int(view[index, last].sum())
+ 
+-        self._will_need(shard, local)
++        self._advise_rows(shard, local)
+         if pool is None or rows.size <= 4096:
+             for task in groups(np.arange(rows.size)):
+                 fault(task)

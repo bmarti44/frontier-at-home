@@ -20,6 +20,14 @@ again before the arena. It then refuses the arena unless MemFree covers it
 plus ``KV_FREE_MARGIN_GIB``, so startup fails cleanly instead. Both steps run
 once at startup. Selected with ``--worker-cls
 qwen38fn_worker.HostCacheReleaseWorker``.
+
+Another runtime's libraries are cached outside the model root too: the lever
+screen's a1 met its arena at MemFree 19.85 GiB, short of 19.90, with
+runtime-001's 2.56 GiB still cached
+(results/qwen38fn-gates/tune-screen-2026-10-11/ATTEMPTS.md).
+``QWEN38FN_HOST_RELEASE_ROOTS`` (absolute paths joined by ``:``, read once at
+import, empty by default) names more trees the worker releases at both steps,
+before the model root.
 """
 import logging
 import os
@@ -29,6 +37,19 @@ from glm53_worker import ReleaseLoadCacheWorker
 
 logger = logging.getLogger("vllm.qwen38fn_worker")
 KV_FREE_MARGIN_GIB = 2.0
+
+
+def parse_release_roots(value: str) -> tuple[str, ...]:
+    if not value:
+        return ()
+    roots = tuple(value.split(":"))
+    for root in roots:
+        if not root.startswith("/") or root == "/":
+            raise ValueError(f"QWEN38FN_HOST_RELEASE_ROOTS: want absolute non-root paths, got {root!r}")
+    return roots
+
+
+RELEASE_ROOTS = parse_release_roots(os.environ.get("QWEN38FN_HOST_RELEASE_ROOTS", ""))
 
 
 class CheckpointCacheReleaseWorker(ReleaseLoadCacheWorker):
@@ -51,11 +72,16 @@ class HostCacheReleaseWorker(CheckpointCacheReleaseWorker):
         # The model root holds every engine's model files on this host.
         self._model_root = os.path.dirname(os.path.abspath(self.vllm_config.model_config.model))
         release_tree(self._model_root)
+        for root in RELEASE_ROOTS:
+            release_tree(root)
         return super().load_model(*args, **kwargs)
 
     def initialize_from_config(self, kv_cache_config):
         root = getattr(self, "_model_root", None) or os.path.dirname(
             os.path.abspath(self.vllm_config.model_config.model))
+        for extra in RELEASE_ROOTS:
+            logger.info("host page cache released under %s (%d files) before the KV arena",
+                        extra, release_tree(extra))
         files = release_tree(root)
         # Every KVCacheTensor views one shared backing allocation of ``size``
         # bytes (vllm/v1/worker/utils.py asserts a single size and allocates it once).

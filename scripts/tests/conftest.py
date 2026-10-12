@@ -110,6 +110,14 @@ SPARK_BOUND = {
         "vendored DSV4 tokenizer on the Spark",
     "test_glm_union_trace_smoke.py::UnionTraceSmokeVerdictTests::test_quality_raw_output_uses_first_reasoning_boundary":
         "vendored DSV4 tokenizer on the Spark",
+    "test_matched_speed_blocks.py::MatchedSpeedBlocks::test_the_bundled_verifier_accepts_a_real_round_and_rejects_a_tampered_one":
+        "pinned nvm node binary for the drand verifier",
+    "test_qwen38fn_tune_contract.py::Runtime002Manifest::test_runtime_002_tree_matches_the_manifest":
+        "native-runtime-002 tree under ~/.cache/qwen38-flash-next",
+    "test_qwen38fn_tune_contract.py::SwitchesResolveAtStartup::test_draft_vocab_is_read_only_while_building_the_drafter":
+        "native-runtime-002 tree under ~/.cache/qwen38-flash-next",
+    "test_qwen38fn_tune_contract.py::SwitchesResolveAtStartup::test_ple_switch_is_read_once_at_module_scope":
+        "native-runtime-002 tree under ~/.cache/qwen38-flash-next",
     "test_runtime_lock_provisioner.py::RuntimeLockProvisionerTests::test_existing_legacy_lock_is_opened_without_create":
         "dsv4 group and /run/dsv4 lock namespace",
     "test_runtime_lock_provisioner.py::RuntimeLockProvisionerTests::test_legacy_holder_blocks_before_current_lock_is_published":

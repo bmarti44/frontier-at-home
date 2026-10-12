@@ -1,0 +1,27 @@
+2026-10-12T01:27:49Z arm a3 profile qwen3.8-flash-next/cuda-spark-128g-1m-tune-a3 stack qwen3.8-flash-next-cuda-spark-128g-1m-tune-a3 tokens_per_event 4
+2026-10-12T01:27:49Z head 6164a99facd8d32a5eee5674c53e79d71aa1ccae dirty=0
+2026-10-12T01:27:49Z inference lock /run/lock/frontier-at-home/inference.lock held by the driver
+2026-10-12T01:27:49Z page cache released under /home/bmarti44/.cache/qwen38-flash-next/native-runtime-001: 67355 files
+2026-10-12T01:27:49Z page cache released under /home/bmarti44/.cache/qwen38-flash-next/native-runtime-002: 67365 files
+{"pass":true,"required_gib":114.5,"mem_available_gib":114.752,"stable_samples_observed":3}
+2026-10-12T01:27:49Z preload MemAvailable:=120323480 SwapFree:=16507612 
+2026-10-12T01:27:51Z a3: launching in scope qwen38fn-tune-a3-105111
+{"pass":true,"required_gib":87.0,"mem_available_gib":114.721,"stable_samples_observed":3}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m-tune-a3","pid":105331,"port":8017}
+2026-10-12T01:39:01Z a3: ready after 670 s
+2026-10-12T01:39:01Z idle_mem_available_kib=12071260
+2026-10-12T01:39:01Z a3: attention block size 3200 tokens
+2026-10-12T01:39:01Z a3: KV capacity 1079117 tokens at 262,144 per request
+switchlog (EngineCore pid=105625) INFO 10-11 21:28:13 [gpu_worker.py:499] Using V2 Model Runner
+switchlog (EngineCore pid=105625) INFO 10-11 21:28:15 [ngram_embedding.py:86] checkpoint_mapped PLE: QWEN38FN_PLE_WILLNEED=1 (MADV_WILLNEED page advice and own-layer lookup start on)
+switchlog (EngineCore pid=105625) INFO 10-11 21:36:58 [mtp.py:439] Qwen4Exp MTP draft vocabulary: token ids [0, 65536)
+switchlog (EngineCore pid=105625) INFO 10-11 21:38:14 [mtp.py:547] QWEN38 draft head: 65536 reduced-vocabulary rows quantized to nvfp4
+{"greedy": ["10bbe8c78923", "e54ccf0ee194", "221c11ec3fb7"], "tokens_per_chunk": [3.4047619047619047, 2.581818181818182, 3.3333333333333335]}
+[19/20] id=choose-email-among-distractors passed=True
+[20/20] id=typed-composite passed=True
+{"ok": true, "out": "/home/bmarti44/qwen38fn-tune/results/qwen38fn-gates/tune-screen-2026-10-11/a3/toolcall.json", "score": 1.0}
+{"ok":true,"profile":"qwen3.8-flash-next/cuda-spark-128g-1m-tune-a3","stopped":true}
+2026-10-12T01:42:48Z a3: scope empty after stop
+2026-10-12T01:42:48Z postrun MemAvailable:=120372820 SwapFree:=16507944 
+ERROR: qwen3.8-flash-next/cuda-spark-128g-1m-tune-a3 is not running (state file absent)
+2026-10-12T01:42:53Z driver exit

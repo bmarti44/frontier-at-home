@@ -1,0 +1,157 @@
+{
+  "partial": true,
+  "schema_version": 4,
+  "model": "qwen3.8-flash-next",
+  "backend": "cuda",
+  "hardware_class": "spark",
+  "ram_tier_gib": 128,
+  "purpose": "Lossless speed-lever screen base (owner decision 2026-10-11): the qualified cuda-spark-128g-1m launch, unchanged, on runtime-002 (runtime-001 + the Python-only patch series in patches/qwen38fn/). The tune-a* leaves add the levers cumulatively. Dev serving only: not a switch alias.",
+  "status": {
+    "state": "estimated",
+    "basis": "Diagnostic screen arm (results/qwen38fn-gates/tune-screen-*); never acceptance evidence. The qualified launch is cuda-spark-128g-1m.json."
+  },
+  "engine": "vllm-qwen38fn-r002",
+  "artifact_roles": {
+    "model": "nvfp4-fc694b54"
+  },
+  "launch": {
+    "mechanism": "systemd-run",
+    "user": "bmarti44",
+    "log_name": "qwen38fn-tune",
+    "env": {
+      "HOME": "{cache_root}/qwen38-flash-next/home",
+      "LANG": "C.UTF-8",
+      "PATH": "{cache_root}/qwen38-flash-next/native-runtime-002/runtime/bin:{cache_root}/glm53-flash/tools/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+      "PYTHONPATH": "{repo}/scripts/lib",
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "CUDA_HOME": "/usr/local/cuda-13.0",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+      "NVIDIA_TF32_OVERRIDE": "0",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1",
+      "VLLM_NO_USAGE_STATS": "1",
+      "DO_NOT_TRACK": "1",
+      "MAX_JOBS": "2",
+      "NVCC_THREADS": "1",
+      "FLASHINFER_NVCC_THREADS": "1",
+      "FLASHINFER_DISABLE_JIT": "1",
+      "VLLM_MOE_USE_DEEP_GEMM": "0"
+    },
+    "diagnostics_unset": [
+      "VLLM_LOGGING_LEVEL",
+      "VLLM_TRACE_FUNCTION",
+      "CUDA_LAUNCH_BLOCKING"
+    ],
+    "args": [
+      "-B",
+      "-m",
+      "vllm.entrypoints.openai.api_server",
+      "--model",
+      "{model}",
+      "--served-model-name",
+      "qwen3.8-flash-next",
+      "default",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "{port}",
+      "--quantization",
+      "modelopt",
+      "--max-model-len",
+      "262144",
+      "--max-num-seqs",
+      "4",
+      "--kv-cache-dtype",
+      "fp8",
+      "--gpu-memory-utilization",
+      "0.85",
+      "--kv-cache-memory-bytes",
+      "19220000000",
+      "--enable-prefix-caching",
+      "--enable-chunked-prefill",
+      "--max-num-batched-tokens",
+      "4096",
+      "--enable-auto-tool-choice",
+      "--enable-prompt-tokens-details",
+      "--tool-call-parser",
+      "qwen3_coder",
+      "--reasoning-parser",
+      "qwen3",
+      "--speculative-config",
+      "{\"method\":\"mtp\",\"num_speculative_tokens\":3}",
+      "--engram-config",
+      "{\"checkpoint_mapped\":true}",
+      "--limit-mm-per-prompt",
+      "{\"image\":4,\"video\":0}",
+      "--mm-processor-cache-gb",
+      "0",
+      "--default-chat-template-kwargs",
+      "{\"reasoning_effort\":\"low\"}",
+      "--worker-cls",
+      "qwen38fn_worker.HostCacheReleaseWorker",
+      "--middleware",
+      "vllm_reasoning_compat.ReasoningContentMiddleware",
+      "--middleware",
+      "glm53_runtime_policy.SplitTerminalSseMiddleware",
+      "--no-enable-flashinfer-autotune",
+      "--logprobs-mode",
+      "raw_logprobs",
+      "--shutdown-timeout",
+      "10",
+      "--compilation-config",
+      "{\"mode\":0,\"cudagraph_mode\":\"FULL_DECODE_ONLY\"}"
+    ]
+  },
+  "containment": {
+    "unit": "qwen38fn-tune-engine",
+    "memory_high": "92G",
+    "memory_max": "96G",
+    "memory_swap_max": "0",
+    "oom_policy": "kill",
+    "kill_mode": "control-group"
+  },
+  "safety": {
+    "kill_floor_gib": 8,
+    "minimum_start_gib": 114,
+    "sample_hz": 1,
+    "startup_timeout_seconds": 1800,
+    "note": "8 GiB whole-host floor: owner decision 2026-10-11 to keep 1M with images on (DeepSeek's 1M-fast profile set the 8 GiB precedent); AGENTS.md's 1M gate asks 10. minimum_start_gib is the switch's only admission: candidate 9 (images on) peaked at 105.67 GiB used (results/qwen38fn-gates/qualify-2026-10-11-c9), so 114 = ceil(peak + 8), within the quiet host's 115.2-115.6 GiB. cgroup MemoryCurrent is blind to CUDA unified memory on GB10; the external memwatch is the real guard. The PLE table's page cache is clean and file-backed (reclaimable). MemAvailable admission cannot see another engine's cached model files; HostCacheReleaseWorker drops the model root's page cache before the weights load and again before the KV arena, and refuses the arena unless MemFree covers it plus 2 GiB (candidate 7 met the arena at MemFree 10.2 GiB without it; candidate 9 at 22.75 GiB with it)."
+  },
+  "memory_model": {
+    "kv_bytes_per_token": 0,
+    "resident_weights_gib": 77,
+    "overhead_gib": 10.7,
+    "extra_gib": 18.0,
+    "floor_gib": 8,
+    "basis": "Sized from the 2026-10-11 diagnostic smoke (results/qwen38fn-gates/smoke-2026-10-11). Every logged KV usage reading is a whole number of blocks over 91, so its 4,200,000,000-byte arena held 92 blocks (<= 45,652,174 bytes each), and 194,493 tokens at --max-model-len 131,072 means a request reserves 62 blocks: one group grows by cdiv(L, 3200) (41) and 21 are GDN state (4 groups x 5) plus the QSA ring (1). A 262,144-token slot reserves 103 blocks; four need 412, plus the BlockPool null block and 2 x 4 transient prefill blocks (the smoke held 36 blocks for a 32-block reservation): 421 blocks <= 19,219,565,254 bytes. The fixed 19.22 GB arena (--kv-cache-memory-bytes, 17.90 GiB) is extra_gib. resident_weights_gib + overhead_gib = 84.2 GiB is the measured non-KV footprint (MemAvailable 112.38 -> 25.73 GiB plus 1.44 GiB pushed to swap, less the 3.91 GiB arena; vLLM reported 75.67 GiB of weights). The smoke projected ~11.9 GiB idle on a quiet 114 GiB host against its then 10 GiB floor; the direct 1M fill needs a quiet host (candidate 9's low point was 9.63 GiB against the 8 GiB floor). vLLM's startup log must show >= 1,048,576 tokens at 262,144. Measured 2026-10-11 (results/qwen38fn-gates/diag-drafter-2026-10-11, arm C: drafter FP8 MoE off DeepGEMM, checkpoint page cache evicted during startup): vLLM reported 1,079,117 tokens at 262,144; idle 13.9 GiB from a 115.2 GiB quiet start (101.3 GiB used vs 102.2 GiB modeled); 0 NVRM lines. Images on (candidate 7): vLLM reported 76.49 GiB of weights (vision tower 897,862,112 BF16 bytes), and the diagnostic (results/qwen38fn-gates/diag-vision-2026-10-11) measured 1.2-1.5 GiB more CPU anon and about 1.0 GiB of GPU allocator growth over 100 images. That run had --mm-processor-cache-gb 0, and so does this profile: vLLM's default 4 GiB cache, held in both the API server and the engine core, would add up to 8 GiB this model does not count. Candidate 9 (images on, results/qwen38fn-gates/qualify-2026-10-11-c9) peaked at 105.67 GiB used (launch 115.30 - low 9.63), so overhead_gib = 105.67 - 77 - 18.0 rounded up to 0.1 = 10.7 and weights + overhead + extra = 105.7 GiB."
+  },
+  "serving": {
+    "parallel_slots": 4,
+    "request_context_cap": 262144,
+    "max_images": 4
+  },
+  "context_cap": 1048576,
+  "port_role": "production",
+  "qualification_options": {
+    "speed_max_tokens_per_event": 4
+  },
+  "qualification_targets": {
+    "note": "qwen38-1m README row (results/qwen38-gates/speed-2026-08-18, accuracy-2026-08-18); Flash-Next must match or beat these to replace or complement the default. Speed targets are general, misses are reported.",
+    "decode_tok_s_min": {
+      "0": 17.46,
+      "28672": 26.71
+    },
+    "prefill_tok_s_min": {
+      "28672": 698.7
+    },
+    "ttft_s_max": {
+      "0": 0.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "delta_nll_max": 0.01
+  }
+}
