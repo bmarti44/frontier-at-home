@@ -1,0 +1,60 @@
+{
+  "backend": "cuda",
+  "binaries": {
+    "llama-cli": {
+      "path": "/home/bmarti44/.cache/llamacpp-b11514-de7fa0a3/src/build/bin/llama-cli",
+      "sha256": "e44b27c2353e11b2b77c2fb46fdac3a66690b94d75397216e620be5472cca193"
+    },
+    "llama-server": {
+      "path": "/home/bmarti44/.cache/llamacpp-b11514-de7fa0a3/src/build/bin/llama-server",
+      "sha256": "99444f843788a369b86eedb1fd4fc612a937c638b5036a26813b3c2dbcddb812"
+    }
+  },
+  "branch": null,
+  "build_directory": "/home/bmarti44/.cache/llamacpp-b11514-de7fa0a3/src/build",
+  "cmake_build_command": "cmake --build /home/bmarti44/.cache/llamacpp-b11514-de7fa0a3/src/build --config Release -j2 --target llama-server llama-cli",
+  "cmake_configure_command": "cmake -S /home/bmarti44/.cache/llamacpp-b11514-de7fa0a3/src -B /home/bmarti44/.cache/llamacpp-b11514-de7fa0a3/src/build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=121 -DCMAKE_BUILD_TYPE=Release",
+  "cmake_flags": [
+    "-DGGML_CUDA=ON",
+    "-DCMAKE_CUDA_ARCHITECTURES=121",
+    "-DCMAKE_BUILD_TYPE=Release"
+  ],
+  "commit": "de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b",
+  "host_class": "cuda-spark",
+  "jobs": 2,
+  "observed_arch": "sm_121",
+  "pin": "llamacpp-b11514-de7fa0a3",
+  "repository": "https://github.com/ggml-org/llama.cpp",
+  "schema_version": 1,
+  "shared_libraries": {
+    "libggml-base.so": {
+      "sha256": "42eeeb6cb78200dad0159603fc12afce68f9dfe8d5cc309553ce15303bcf6e30"
+    },
+    "libggml-cpu.so": {
+      "sha256": "312fbb84f52f720ef0ab6a4dc84c5edb852a04d419b25d29082b9eee25d9133c"
+    },
+    "libggml-cuda.so": {
+      "sha256": "128a4f0b884298784b9cb48118e8b809d98f1709163577cf1a5df83c8d12f1d9"
+    },
+    "libggml.so": {
+      "sha256": "faeb7611a032ad73c8e8065013d55354f61e0c6acf3ecc240477bfc3e195c571"
+    },
+    "libllama-cli-impl.so": {
+      "sha256": "d68bfd47f453df2124f62a5dc509d0720158f7d3714217400cd925fdfaa2fe4f"
+    },
+    "libllama-common.so": {
+      "sha256": "a7d9e4756ed5985de966d0b7748588741c0040d31f646326a26f3564119deef1"
+    },
+    "libllama-server-impl.so": {
+      "sha256": "bb0b0668376155efd9e723839b0672f2c69e561214d76c7df047f239784e385e"
+    },
+    "libllama.so": {
+      "sha256": "cb6500906b6d217251b41da1764fd99d574cb8ffd7e042ecd66cebe8af44158e"
+    },
+    "libmtmd.so": {
+      "sha256": "8978aeea9b79d1d4329a191de046e73a56cec04e4d1b28c717e062e24ab44c80"
+    }
+  },
+  "source_directory": "/home/bmarti44/.cache/llamacpp-b11514-de7fa0a3/src",
+  "tag": "b11514"
+}
