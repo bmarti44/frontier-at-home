@@ -164,11 +164,18 @@ def raw_kill_lines(d):
     return hits
 
 
-def meminfo_rows(path):
+# Run 1's bash sampler writes SwapTotal; 97's sampler (run 2) writes its MEMINFO_KEYS, which do not
+# include it, and run 2's swap growth uses SwapFree alone.
+RUN1_SAMPLE_KEYS, RUN2_SAMPLE_KEYS = {"MemAvailable", "SwapTotal", "SwapFree"}, {"MemAvailable", "SwapFree"}
+if not RUN2_SAMPLE_KEYS <= set(MATCHED.MEMINFO_KEYS):
+    raise SystemExit(f"97 samples {MATCHED.MEMINFO_KEYS}, not {sorted(RUN2_SAMPLE_KEYS)}")
+
+
+def meminfo_rows(path, keys):
     rows = []
     for line in path.read_text().splitlines() if path.is_file() else []:
         kv = dict(re.findall(r"(\w+):=(\d+)", line))
-        if {"MemAvailable", "SwapTotal", "SwapFree"} <= kv.keys():
+        if keys <= kv.keys():
             rows.append((line.split(" ", 1)[0], kv))
     return rows
 
@@ -276,7 +283,7 @@ def run1(ev, freeze, missing, fail, checks):
     if set(primed) != set(GGUF) | set(RUNTIME_LIBS) or gguf < GGUF_MIN_GIB or runtime < RUNTIME_MIN_GIB:
         missing.append(f"clause 11: primed files not resident at launch (gguf {gguf:.2f}, runtime {runtime:.2f} "
                        f"GiB, {len(primed)} files); the fix was not tested")
-    rows = meminfo_rows(obs / "meminfo.log")
+    rows = meminfo_rows(obs / "meminfo.log", RUN1_SAMPLE_KEYS)
     if len(rows) < 600:
         missing.append("observe/start1/meminfo.log (fewer than 600 samples)")
     else:
@@ -450,7 +457,7 @@ def run2(ev, freeze, missing, fail, checks):
         if REFUSED in text and d.name.endswith("-B"):
             fail.append(f"clause 12 (run 2): candidate 10's worker refused the KV arena at {label}")
         identity += [f"{label}: {p}" for p in start_identity(text, d.name.endswith("-B"))]
-        rows = meminfo_rows(d / "meminfo.log")
+        rows = meminfo_rows(d / "meminfo.log", RUN2_SAMPLE_KEYS)
         available = [int(r["MemAvailable"]) / 2**20 for _, r in rows]
         free = [int(r["SwapFree"]) / 2**20 for _, r in rows]
         if rows and min(available) < FLOOR_GIB:

@@ -75,15 +75,31 @@ log_runtime_trees() {
     trees=$(runtime_trees)
     while read -r line; do log "$line"; done <<<"$trees"
 }
+# At exit, drop the page cache of every runtime under the runtime root. Candidate 9's worker releases
+# only the model root before its arena, so the production restore after this campaign must not meet
+# runtime-002's cached libraries (PREREG plan A3 item 3).
+release_runtime_root() {
+    local line
+    line=$(python3 -I - "$WT" "$RUNTIME_ROOT" <<'PY'
+import sys
+sys.path.insert(0, sys.argv[1] + "/scripts/lib")
+from checkpoint_cache import release_tree
+print(f"page cache released under {sys.argv[2]}: {release_tree(sys.argv[2])} files")
+PY
+) && log "$line"
+}
 
 if [[ $MODE == blocks ]]; then
     OUT=$EV/blocks
     [[ -f $EV/plan.json ]] || { echo "no $EV/plan.json: draw it with 97 plan --drand-after <freeze>" >&2; exit 2; }
     preflight
+    # 97 takes the lock itself; refuse here first, before reading the runtime trees beside a live engine.
+    flock -n "$INFERENCE_LOCK" true || { echo "$INFERENCE_LOCK is held: an engine is serving; stop it first" >&2; exit 2; }
     python3 "$EV/gate_verdict.py" --run2-preflight "$EV" \
         || { echo "run 1 is not clean or plan.json is not valid for the freeze (gate_verdict.py --run2-preflight): run 2 is not run" >&2; exit 2; }
     mkdir -p "$OUT"
     log() { printf '%s %s\n' "$(stamp)" "$*" | tee -a "$OUT/driver.log"; }
+    trap 'release_runtime_root || true' EXIT
     # Each invocation logs its head; the gate requires one clean commit across all of them.
     log "head $(git -C "$WT" rev-parse HEAD) dirty=0"
     log_runtime_trees
@@ -153,6 +169,7 @@ cleanup() {
         systemctl --user stop "$UNIT.scope" || true
     fi
     nvidia-smi >"$OBS/nvidia-smi-end.txt" 2>&1 || true
+    release_runtime_root || true
     log "driver exit"
 }
 trap cleanup EXIT

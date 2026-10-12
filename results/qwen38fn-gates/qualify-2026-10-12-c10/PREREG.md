@@ -47,6 +47,10 @@ In single starts against candidate 9's launch, the carrier arm a3 measured:
     - SIGTERM unwinds a start through its cleanup (engine stopped, scope waited for) instead of orphaning it;
     - `run` stops the campaign at the first start that failed or has a kill line, swap growth over 0.25 GiB or a low point under `--abort-low-gib` (8);
     - `score` rejects a start whose `profile` is not the plan's for its arm, or whose low point is not finite.
+  - after review round 2 (RED `deeaf8c7`, `17f45895`):
+    - the sampler's fields and line format are named (`MEMINFO_KEYS`, `meminfo_line`), so scorers and their mutation suites use exactly what it writes;
+    - `--resume` reads each start already on disk and stops at a failed or unsafe one, instead of skipping it;
+    - the journal follower starts inside a start's `try`, and a further SIGTERM during cleanup waits until the engine is stopped and the scope is gone.
 
 ## Run 1: one fresh start (`run-c10.sh start1`, `RuntimeMaxSec` 5 h)
 
@@ -102,7 +106,7 @@ Both modes' preflight also refuse untracked files under `scripts`, `configs`, `p
 - three relays (api, api2, api3.drand.sh) must agree, and the bundled verifier checks its BLS signature;
 - each block's order is ABBA when `sha256(domain NUL randomness block)[0]` is even, else BAAB.
 
-**Starts.** `run-c10.sh blocks` logs its head line and runtime-tree lines, then runs `97_matched_speed_blocks.py run --plan plan.json --out blocks --release-tree ~/.cache/qwen38-flash-next --runtime-max-sec 3600 --resume`, then logs the runtime-tree lines again. Rerunning it after a refused guard or a held lock resumes the campaign: each invocation logs its own head and runtime-tree lines, and completed starts are kept. That is 20 fresh starts on `:8017`, each:
+**Starts.** `run-c10.sh blocks` first refuses if the inference lock is held, before reading anything. It then logs its head line and runtime-tree lines, and runs `97_matched_speed_blocks.py run --plan plan.json --out blocks --release-tree ~/.cache/qwen38-flash-next --runtime-max-sec 3600 --resume`, then logs the runtime-tree lines again. Rerunning it after a refused guard or a held lock resumes the campaign: each invocation logs its own head and runtime-tree lines, and completed starts are kept. A resume first re-checks every start already on disk and refuses to continue past a failed or unsafe one. At exit, the driver releases the page cache under `~/.cache/qwen38-flash-next` in both modes. That is 20 fresh starts on `:8017`, each:
 - releasing the runtime trees' page cache;
 - passing `03_memory_guard.py --required-gib 114.5`;
 - running in a user scope with the profile's containment;
@@ -142,7 +146,7 @@ Run 2's ratios are fresh-start ratios with the PLE pages cold (both workers evic
 
    Samples must cover each run, otherwise `NO_RESULT`:
    - Run 1 needs at least 600 samples, from at or before the launch line to within 15 s of the driver's `start1: scope empty after stop` line, with no gap over 5 s.
-   - In run 2, each start's `start.json` must hold finite `swap_growth_gib`, `low_mem_available_gib` and `ready_s`. Its samples must number at least 0.9 × `ready_s`, run from at or before `launched_at` to within 15 s of the start's result line in `run.log`, and have no gap over 5 s.
+   - In run 2, samples are 97's format (`MemAvailable` and `SwapFree` used; no `SwapTotal`). Each start's `start.json` must hold finite `swap_growth_gib`, `low_mem_available_gib` and `ready_s`. Its samples must number at least 0.9 × `ready_s`, run from at or before `launched_at` to within 15 s of the start's result line in `run.log`, and have no gap over 5 s.
 4. **Direct 1M:**
    - KV capacity ≥ 1,048,576 at 262,144;
    - the context cell is `PASS`;
@@ -184,7 +188,7 @@ Run 2's ratios are fresh-start ratios with the PLE pages cold (both workers evic
     Any threshold missed is `FAIL`. Any other defect is `NO_RESULT`.
 14. **TTFT at depth 0 ≤ 0.5 s** in run 1's kit speed cell. The suite and its depth-0 cell must be valid; otherwise `NO_RESULT`.
 
-`gate_mutations.py` runs 90 synthetic cases and 12 `--run2-preflight` cases, and all must match before scoring:
+`gate_mutations.py` runs 91 synthetic cases and 12 `--run2-preflight` cases, and all must match before scoring. Run-2 samples are built with 97's own `MEMINFO_KEYS` and `meminfo_line`:
 - every candidate-9 case;
 - one per new clause (runtime precondition cold, runtime release missing, zero files or wrong root, run-2 kill line, swap and low point, run-2 `NO_RESULT`, each speed threshold, TTFT, a wrong drand round, a receipt for another commit, orders that disagree with the receipt, a wrong arm profile, a dirty run-2 head, a probe mismatch scoring `NO_RESULT`);
 - review round 1, reviewer 1: a resumed run 2 (same head twice) `PASS`, two heads, missing or wrong runtime trees in either run, a null run-2 low point, a raw run-2 sample below 8 GiB, short sample coverage, and a crashed start's kernel OOM line;
@@ -195,7 +199,8 @@ Run 2's ratios are fresh-start ratios with the PLE pages cold (both workers evic
   - run-2 kill lines with plan.json missing or with a wrong round (`FAIL`);
   - a duplicate agent-gate row, an invalid kit speed suite, run-1 samples ending early;
   - an A refusal (`NO_RESULT`) and a B refusal (`FAIL`) in run 2;
-  - preflight refusals for a missing, wrong-round, wrong-commit or wrong-order plan.
+  - preflight refusals for a missing, wrong-round, wrong-commit or wrong-order plan;
+- review round 2: raw run-2 swap growth in 97's sample format (`FAIL`).
 
 The drand cases use a real published round, so the bundled verifier runs for real.
 
@@ -209,7 +214,7 @@ The drand cases use a real published round, so the bundled verifier runs for rea
 2. **After merge,** `sudo -n scripts/52_engine_switch.sh qwen38fn` runs with `journalctl -k` captured over the switch window. Any NVRM or Xid line means switching back to the candidate 9 revision and reporting.
 3. **The reverse direction must be safe as well** (reviewer 2, M5). Candidate 9's launch has no release root, so after a runtime-002 start its worker meets runtime-002's cached libraries: the mirror of the screen's a1 refusal. This affects a switch back to candidate 9, and the switch's own restore after a failed validation.
    - The promotion commit covers that path test-first, and its review checks it.
-   - Until then, every start of candidate 9's launch after a runtime-002 start is preceded by an unprivileged `release_tree` of `~/.cache/qwen38-flash-next`. This includes restoring production after this campaign.
+   - Until then, every start of candidate 9's launch after a runtime-002 start is preceded by an unprivileged `release_tree` of `~/.cache/qwen38-flash-next`. For this campaign, `run-c10.sh` does that at exit in both modes, and the operator checks it before restoring production.
 4. **Before promotion, the owner gets the CJK decode diagnostic** (below) next to run 2's ratios.
 
 If the verdict is `FAIL` or `NO_RESULT`, nothing changes: `qwen38fn` stays on candidate 9's launch.
@@ -243,6 +248,7 @@ If the verdict is `FAIL` or `NO_RESULT`, nothing changes: `qwen38fn` stays on ca
     | Japanese | 19.56 tok/s | 0.76 | 69% |
 
   - **Candidate 10:** measured by run 1 into `cjk-decode-start1.json`.
+  - **The comparison is by each engine's ratio to its own English decode,** not by absolute tok/s. Candidate 9 was measured on live production (warm PLE, possible concurrent traffic), and candidate 10 at the end of run 1.
   - These are single-start diagnostic numbers, never headline ones.
 - fidelity: `NO_RESULT`, because there is no BF16 teacher on this host.
   - L1 is I/O only. L2 acts on the draft side, and the target verifies every token with its untouched BF16 head.
@@ -291,3 +297,18 @@ A change to any of these after a run starts is a new candidate in a new director
 | R2 L7: a B-arm refusal in run 2 is only `NO_RESULT` | low | `FAIL` (clause 12) |
 | R2 L8: losslessness reasoning omits L0 | low | "Reported, not gating" names L0's target-path code and its evidence |
 | R2 L9: hygiene | low | Untracked check in preflight; overrides recorded; fresh-start, cold-PLE label |
+
+**Round 2** (freeze `b1a1d85e`, the gate's second candidate; same two reviewers):
+- **Both reviewers found the same new HIGH,** introduced by round 1's coverage fix: the gate read run-2 samples requiring `SwapTotal`, which 97's sampler never writes. Every real run-2 start would have scored `NO_RESULT`. It failed closed; it could not produce a false PASS. The mutation fixtures had used the scorer's format, not the producer's.
+- **Convergence: blocking findings went from 0 (round 1) to 1 (round 2).** That is not a strict decrease. The owner pause rule's "across two consecutive candidates" can be read as either one non-decrease or two in a row; this candidate is published under the second reading.
+  - Candidate 3 changes only what round 2 named.
+  - **If round 3 has any critical or high finding, the gate pauses and the open findings go to the owner.**
+
+| Finding | Severity | Closed by |
+|---|---|---|
+| R1 H1 = R2 H1: run-2 samples unparseable (`SwapTotal`) | high | Run 2 needs `MemAvailable` and `SwapFree` only; 97 names its format, and the mutation suite builds run-2 samples with it (RED: every PASS case turned `NO_RESULT`) |
+| R1 M1 = R2 M1: resume skips an unsafe start | medium | `existing_start` returns the record on disk; `run_steps` stops at it |
+| R1 L1: SIGTERM windows (journal follower, second signal during cleanup) | low | Follower inside the `try`; `sigterm_deferred` around cleanup |
+| R1 L2 = R2 L1: blocks mode hashes trees before the lock check | low | `flock -n` probe first |
+| R2 L2: the M5 mitigation is manual | low | `release_runtime_root` at exit in both modes |
+| R2 L3: CJK comparison by absolute tok/s | low | Compared by ratio to English |
