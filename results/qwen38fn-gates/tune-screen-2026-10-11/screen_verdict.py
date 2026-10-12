@@ -21,6 +21,9 @@ KERNEL_KILL = re.compile(r"out of memory|oom-kill|oom_reaper|NVRM|Xid")
 SERVER_KILL = re.compile(r"CUDA out of memory|OutOfMemoryError|NVRM|Xid")
 MEMWATCH_KILL = re.compile(r"BREACH|EMERGENCY_STOP")
 MARKERS = {"server.log": "session start", "memwatch.log": "ARMED"}
+# The engine's arena guard refuses cleanly and names NVRM as what it prevents;
+# its refusal is a FAILED_ATTEMPT, not a driver kill line (ATTEMPTS.md).
+GUARD_REFUSAL = "refusing to allocate the KV arena"
 ARGS_LINE = re.compile(r"non-default args: (.*)")
 MEMINFO = re.compile(r"(\w+):=(\d+)")
 KIB_PER_GIB = 1024 * 1024
@@ -147,7 +150,7 @@ def measure(arm_dir: Path, levers: list[str]) -> dict:
     for name, pattern in (("kernel.log", KERNEL_KILL), ("server.log", SERVER_KILL),
                           ("memwatch.log", MEMWATCH_KILL)):
         kills += [f"{name}: {line[:200]}" for line in _read(arm_dir / name).splitlines()
-                  if pattern.search(line)]
+                  if pattern.search(line) and not (name == "server.log" and GUARD_REFUSAL in line)]
     server = _read(arm_dir / "server.log")
     base = {
         "failed_attempt": failed, "kv_capacity": kv, "kills": kills,
@@ -202,6 +205,29 @@ def measure(arm_dir: Path, levers: list[str]) -> dict:
     }
 
 
+def void_check(screen: Path, arms: dict, name: str) -> tuple[bool, str]:
+    """May this arm's attempt be voided and retried? (ATTEMPTS.md, five conditions)"""
+    spec, arm_dir = arms[name], screen / name
+    retry = spec.get("voided_by")
+    if "retry_of" in spec:
+        return False, "a retry arm cannot itself be voided"
+    other = arms.get(retry)
+    if other is None or other.get("retry_of") != name or "voided_by" in other or any(
+            other.get(k) != spec.get(k) for k in ("profile", "base", "lever")):
+        return False, f"no matching retry arm {retry!r}"
+    if (arm_dir / "speed.json").exists():
+        return False, "the attempt reached measurement"
+    try:
+        m = measure(arm_dir, [])
+    except Missing as error:
+        return False, f"attempt evidence unreadable: {error}"
+    if not m["failed_attempt"]:
+        return False, "no FAILED_ATTEMPT line"
+    if m["kills"]:
+        return False, f"kill lines: {m['kills'][:3]}"
+    return True, f"readiness failure without kill lines; retried as {retry}"
+
+
 def safety_failures(m: dict, a0_peak: float | None) -> list[str]:
     out = []
     if m["failed_attempt"]:
@@ -235,7 +261,7 @@ def score(screen: Path) -> dict:
     def finish(verdict: str | None, reason: str | None = None) -> dict:
         kept = [n for n, e in results.items() if e.get("decision") == "KEPT"]
         decided = {e["lever"] for e in results.values()
-                   if e.get("decision") not in (None, "SUPERSEDED")}
+                   if e.get("decision") not in (None, "SUPERSEDED", "VOID")}
         untested = sorted({e["lever"] for e in arms.values() if e["lever"] is not None} - decided)
         if verdict is None:
             if any(e.get("decision") == "NO_RESULT" for e in results.values()):
@@ -257,6 +283,12 @@ def score(screen: Path) -> dict:
         ran = arm_dir.is_dir()
         entry: dict = {"profile": spec["profile"], "base": spec["base"], "lever": spec["lever"]}
         results[name] = entry
+        if "voided_by" in spec:
+            ok, why = void_check(screen, arms, name)
+            if ok:
+                entry.update(decision="VOID", reason=why)
+                continue
+            entry["void_refused"] = why
         if spec["base"] != state["last_kept"]:
             if ran:
                 entry["decision"] = "INVALID_BASE"
@@ -497,6 +529,30 @@ def self_test() -> int:
         and r["verdict"] == "COMPLETE")
     run("unrun arm leaves the screen incomplete", ARMS, {k: all_runs[k] for k in ("a0", "a1", "a2")},
         lambda r: r["verdict"] == "INCOMPLETE")
+
+    retry_arms = {"a0": ARMS["a0"], "a1": {**ARMS["a1"], "voided_by": "a1r"},
+                  "a1r": {**ARMS["a1"], "retry_of": "a1"}, "a2": {**ARMS["a2"], "base": "a1r"},
+                  "a3": ARMS["a3"], "a4": ARMS["a4"], "a5": ARMS["a5"]}
+    refusal = _server_log(["L0"]) + ("RuntimeError: host page cache released under /m; MemFree 19.85 GiB: "
+                                     f"{GUARD_REFUSAL}; page cache outside /m would leave the driver "
+                                     "short of free memory (NVRM)\n")
+    guard_fail = dict(failed=True, drop=UNRUN, server=refusal)
+    retried = {"a0": FAST[0], "a1": guard_fail, **{f"a{i}": dict(FAST[i]) for i in range(2, 6)},
+               "a1r": dict(FAST[1])}
+    run("guard refusal voided and retried", retry_arms, retried,
+        lambda r: r["verdict"] == "COMPLETE" and r["arms"]["a1"]["decision"] == "VOID"
+        and r["arms"]["a1r"]["decision"] == "PASS" and r["kept_levers"] == ["L1", "L2", "L3", "L4"])
+    nvrm = {**retried, "a1": {**guard_fail, "kernel": "NVRM: Xid 31\n"}}
+    run("void refused for a kernel NVRM line", retry_arms, nvrm,
+        lambda r: r["verdict"] == "NO_GO (runtime-002)" and "kill lines" in r["arms"]["a1"]["void_refused"])
+    done = {**retried, "a1": dict(FAST[1])}
+    run("void refused for a completed arm", retry_arms, done,
+        lambda r: r["verdict"] == "NO_RESULT" and "measurement" in r["arms"]["a1"]["void_refused"])
+    orphan = {"a0": ARMS["a0"], "a1": {**ARMS["a1"], "voided_by": "a1x"}, "a2": ARMS["a2"]}
+    run("void refused without a retry arm", orphan, {"a0": FAST[0], "a1": guard_fail},
+        lambda r: r["verdict"] == "NO_GO (runtime-002)" and "retry arm" in r["arms"]["a1"]["void_refused"])
+    run("guard refusal alone is not a kill line", ARMS, {"a0": FAST[0], "a1": guard_fail},
+        lambda r: r["arms"]["a1"]["measured"]["kills"] == [] and r["verdict"] == "NO_GO (runtime-002)")
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "s"

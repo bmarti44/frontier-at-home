@@ -89,7 +89,7 @@ The result is the kept set and the arm that carries it. That arm's profile becom
 
 **Missing or malformed evidence for an arm makes it `NO_RESULT`.** Its lever counts as not kept, and the screen reports it.
 
-`screen_verdict.py --self-test` runs synthetic cases before scoring, and all 28 must match:
+`screen_verdict.py --self-test` runs synthetic cases before scoring, and all 33 must match:
 - a clean screen keeps every lever;
 - each safety clause dropping a lever, including the projected 1M peak, a readiness failure with no later files, and a null prefill rep;
 - a1 regressing or failing readiness (`NO_GO`), and an unsafe baseline (`NO_RESULT`);
@@ -98,6 +98,7 @@ The result is the kept set and the arm that carries it. That arm's profile becom
 - an `arms.json` base that disagrees with the decisions;
 - a dropped lever without amended arms (`INCOMPLETE`);
 - `--may-run` admitting only the next due arm.
+- the execution-defect void rule (`ATTEMPTS.md`): a guard refusal voided and retried; a void refused for a kernel NVRM line, for a completed arm, or without a matching retry arm; the arena guard's refusal text alone is not a kill line.
 
 **Amended before any load (2026-10-11).** One focused review found one HIGH issue and seven MEDIUM issues. Each was fixed with a self-test case before the first arm loaded:
 - a dropped lever scored `COMPLETE`;

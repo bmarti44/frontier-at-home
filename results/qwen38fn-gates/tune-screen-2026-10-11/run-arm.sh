@@ -50,6 +50,17 @@ python3 "$EV/screen_verdict.py" --may-run "$EV" "$ARM" || { echo "$ARM is not th
 # closed, so nothing that outlives an arm can block production's restore.
 exec 8>"$INFERENCE_LOCK"
 flock -n 8 || { echo "$INFERENCE_LOCK is held: an engine is serving; stop it first" >&2; exit 2; }
+# Release every Flash-Next runtime tree's unmapped page cache: the engine's arena
+# guard releases only the model root, and a previous arm on the other runtime
+# leaves ~2.5 GiB of its libraries cached (ATTEMPTS.md, a1 attempt 1).
+RELEASED=$(python3 - "$WT/scripts/lib" "$HOME/.cache/qwen38-flash-next" <<'PY2'
+import glob, sys
+sys.path.insert(0, sys.argv[1])
+from checkpoint_cache import release_tree
+for root in sorted(glob.glob(sys.argv[2] + "/native-runtime-*")):
+    print(f"page cache released under {root}: {release_tree(root)} files")
+PY2
+) || { echo "runtime page-cache release failed" >&2; exit 2; }
 GUARD=$(python3 "$WT/scripts/03_memory_guard.py" --required-gib 114.5 --stable-samples 3 --timeout-seconds 600 2>&1) \
     || { printf '%s\n' "$GUARD" >&2; echo "memory guard did not pass; no arm directory was created" >&2; exit 2; }
 mkdir -p "$OBS"
@@ -98,6 +109,7 @@ trap cleanup EXIT
 log "arm $ARM profile $PROFILE stack $STACK tokens_per_event $K"
 log "head $(git -C "$WT" rev-parse HEAD) dirty=$DIRTY"
 log "inference lock $INFERENCE_LOCK held by the driver"
+printf '%s\n' "$RELEASED" | sed "s/^/$(stamp) /" | tee -a "$OBS/driver.log"
 printf '%s\n' "$GUARD" | tee -a "$OBS/driver.log"
 log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
 sleep 2   # at least one meminfo sample precedes the launching line

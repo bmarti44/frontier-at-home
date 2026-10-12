@@ -9,11 +9,20 @@
   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a1",
   "base": "a0",
   "lever": "L0",
-  "note": "runtime-002 with no lever switch set (L0 patches always on)"
+  "note": "runtime-002 with no lever switch set (L0 patches always on)",
+  "voided_by": "a1r",
+  "void_note": "attempt 1 refused by the engine's arena guard (stale runtime-001 page cache); ATTEMPTS.md"
+ },
+ "a1r": {
+  "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a1",
+  "base": "a0",
+  "lever": "L0",
+  "retry_of": "a1",
+  "note": "retry of a1 with the runtime trees' page cache released in the preflight"
  },
  "a2": {
   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a2",
-  "base": "a1",
+  "base": "a1r",
   "lever": "L1"
  },
  "a3": {
