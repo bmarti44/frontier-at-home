@@ -1,0 +1,103 @@
+{
+ "schema_version": 1,
+ "candidate": "mimo-v26-flash native-runtime-001",
+ "status": "built_and_import_verified_unqualified",
+ "purpose": "MiMo-V2.6-Flash plan B0 criterion 3: an exllamav3 >= 1.5.4 runtime that builds on GB10. No MiMo weights were downloaded and no model was loaded.",
+ "host": {
+  "machine": "DGX Spark GB10 (aarch64, sm_121, CUDA 13.0 at /usr/local/cuda-13.0)",
+  "gcc": "13.3.0",
+  "nvcc": "Build cuda_13.0.r13.0/compiler.36424714_0",
+  "uv": "uv 0.11.7 (aarch64-unknown-linux-gnu)"
+ },
+ "runtime": {
+  "path": "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime",
+  "copied_from": "/home/bmarti44/.cache/glm53-flash/native-runtime-003/runtime",
+  "copied_from_manifest": "/home/bmarti44/.cache/glm53-flash/native-runtime-003/manifest.json",
+  "python_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+  "package_delta_vs_copied_from": {
+   "added": {
+    "aiofiles": "25.1.0",
+    "async-lru": "2.3.0",
+    "exllamav3 @ file:///home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/wheels/exllamav3-1.6.1-cp312-cp312-linux_aarch64.whl": null,
+    "ruamel-yaml": "0.19.1"
+   },
+   "removed": {
+    "exllamav3 @ file:///home/bmarti44/.cache/glm53-flash/native-runtime-003/wheels/exllamav3-1.4.9-cp312-cp312-linux_aarch64.whl": null,
+    "vllm-exl3 @ file:///home/bmarti44/.cache/glm53-flash/native-runtime-003/wheels/vllm_exl3-0.4.2-cp312-cp312-linux_aarch64.whl": null
+   },
+   "changed": {}
+  },
+  "delta_note": "exllamav3 1.4.9 -> 1.6.1; vllm-exl3 removed (compiled against the 1.4.9 extension, no MiMo support); ruamel.yaml, aiofiles and async_lru added for TabbyAPI. The GLM fork of vLLM stays installed but unused."
+ },
+ "sources": {
+  "exllamav3": {
+   "url": "https://github.com/turboderp-org/exllamav3",
+   "tag": "v1.6.1",
+   "revision": "f45b84512ba65bca77f7d394399d4b68821fc71b",
+   "tree": "e272949487e45ac37165d4cab8e9f081a8c1e444",
+   "patches": [],
+   "note": "v1.6.1 builds unpatched on aarch64 (upstream 181eea1 guards the x86 AVX code)."
+  },
+  "tabbyAPI": {
+   "url": "https://github.com/theroyallab/tabbyAPI",
+   "revision": "2636ef602b55b5343cf3740dd55a77f21e0a8003",
+   "tree": "a5a97dfca985a5f0cff36c8c5b6d127a965a1b3b",
+   "note": "Run from source (python main.py); not installed as a package. Its pyproject has no aarch64 exllamav3 wheel, so the locally built wheel is used."
+  }
+ },
+ "build": {
+  "tool": "uv build --wheel --no-build-isolation --no-cache --python <runtime>/bin/python3 --out-dir wheels <src>/exllamav3",
+  "containment": "systemd-run --user --scope -p MemoryMax=64G -p MemorySwapMax=0, production stopped (>= 110 GiB MemAvailable)",
+  "env": {
+   "CUDA_HOME": "/usr/local/cuda-13.0",
+   "PATH": "<runtime>/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+   "MAX_JOBS": "2",
+   "CMAKE_BUILD_PARALLEL_LEVEL": "2",
+   "NVCC_THREADS": "1",
+   "MAKEFLAGS": "-j2",
+   "TORCH_CUDA_ARCH_LIST": "12.1a",
+   "PYTHONNOUSERSITE": "1"
+  },
+  "wall_times_seconds": {
+   "wheel_build_seconds": 738
+  },
+  "window_log": [
+   "2026-10-12T14:23:55Z exllamav3 runtime start",
+   "2026-10-12T14:36:36Z exllamav3 runtime rc=0 (761 s)",
+   "2026-10-12T14:36:37Z exllamav3 verify rc=0",
+   "2026-10-12T14:36:39Z tabby verify rc=0"
+  ]
+ },
+ "wheels": [
+  {
+   "file": "wheels/exllamav3-1.6.1-cp312-cp312-linux_aarch64.whl",
+   "sha256": "d768082b2068baac9d4d866becb8e54f3226034b34b6986296980faa9ab1dfb9",
+   "size_bytes": 51214504
+  }
+ ],
+ "install": {
+  "commands": [
+   "uv pip uninstall --python <runtime>/bin/python3 --break-system-packages vllm-exl3",
+   "uv pip install --python <runtime>/bin/python3 --break-system-packages --no-deps <exllamav3 wheel>",
+   "uv pip install --python <runtime>/bin/python3 --break-system-packages ruamel.yaml aiofiles async_lru"
+  ],
+  "uv_pip_check": "Using Python 3.12.13 environment at: /home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime\nChecked 209 packages in 1ms\nAll installed packages are compatible"
+ },
+ "verification": {
+  "import_and_gpu_self_test": [
+   "VERSIONS exllamav3 1.6.1 torch 2.13.0+cu130 cuda True NVIDIA GB10 (12, 1)",
+   "EXT /home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime/lib/python3.12/site-packages/exllamav3_ext.cpython-312-aarch64-linux-gnu.so",
+   "ARCH MiMoV2ForCausalLM MiMoV2Model",
+   "GPU self-test matmul mean 25.53514862060547 peak MiB 44"
+  ],
+  "tabbyapi": [
+   "TABBY backend import ok; disk cache supported: False",
+   "usage: main.py [-h] [--config CONFIG] [--host HOST] [--port PORT]",
+   "               [--disable-auth DISABLE_AUTH]",
+   "               [--allowed-origins ALLOWED_ORIGINS [ALLOWED_ORIGINS ...]]",
+   "               [--disable-fetch-requests DISABLE_FETCH_REQUESTS]",
+   "               [--send-tracebacks SEND_TRACEBACKS]"
+  ],
+  "note": "PYTHONNOUSERSITE=1 is required: ~/.local site-packages otherwise shadows the runtime's torch."
+ }
+}
