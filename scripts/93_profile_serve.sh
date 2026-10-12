@@ -96,10 +96,21 @@ proc_start_ticks() {
     if [[ -r /proc/$1/stat ]]; then
         awk '{print $22}' "/proc/$1/stat" 2>/dev/null
     else
-        # macOS: process start time string stands in for start ticks.
-        ps -p "$1" -o lstart= 2>/dev/null | tr -s ' ' '_'
+        # macOS: start time as epoch seconds, exactly as 06_memwatch_macos.sh
+        # derives it when verifying the published target before arming.
+        local lstart
+        lstart=$(LC_ALL=C ps -p "$1" -o lstart= 2>/dev/null) && [[ -n $lstart ]] \
+            || return 1
+        LC_ALL=C date -j -f '%a %b %d %T %Y' "$lstart" +%s 2>/dev/null
     fi
 }
+
+# setsid(1) where util-linux provides it; macOS uses the exec-only shim.
+if command -v setsid >/dev/null 2>&1; then
+    SETSID=(setsid)
+else
+    SETSID=(python3 "$SCRIPT_DIR/lib/setsid.py")
+fi
 
 delegated() {
     # The delegate owns the full lifecycle; hand it the rendered env and verb.
@@ -209,7 +220,7 @@ arm_memwatch() {
         [[ -r $memwatch ]] || die 'macOS memory watchdog is missing'
     fi
     rm -f -- "$TARGET_FILE" "$WATCHDOG_READY"
-    setsid bash "$memwatch" --target-file "$TARGET_FILE" \
+    "${SETSID[@]}" bash "$memwatch" --target-file "$TARGET_FILE" \
         --ready-file "$WATCHDOG_READY" --threshold-gib "$threshold" \
         --interval-sec 1 --log "$MEMWATCH_LOG" 9>&- >/dev/null 2>&1 &
     MEMWATCH_PID=$!
@@ -242,16 +253,16 @@ launch_server() {
     printf '\n===== %s session start %s =====\n' "$PROFILE_ID" \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$SERVER_LOG"
     if [[ ${#env_pairs[@]} -gt 0 ]]; then
-        setsid env -i "${env_pairs[@]}" "$binary" "${argv[@]}" \
+        "${SETSID[@]}" env -i "${env_pairs[@]}" "$binary" "${argv[@]}" \
             >>"$SERVER_LOG" 2>&1 9>&- &
     else
-        setsid "$binary" "${argv[@]}" >>"$SERVER_LOG" 2>&1 9>&- &
+        "${SETSID[@]}" "$binary" "${argv[@]}" >>"$SERVER_LOG" 2>&1 9>&- &
     fi
     SERVER_PID=$!
 }
 
 do_start() {
-    for command_name in curl date flock setsid; do need_command "$command_name"; done
+    for command_name in curl date flock; do need_command "$command_name"; done
     [[ ! -e $STATE_FILE ]] || die "$PROFILE_ID appears to be running (state file exists); run stop or status first"
 
     verify_digests >/dev/null || die 'artifact digest verification failed'
