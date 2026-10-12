@@ -236,6 +236,30 @@ class MatchedSpeedBlocks(unittest.TestCase):
         self.assertEqual(len(self.tool.kill_lines("server.log", "NVRM: Xid 79\n")), 1)
         self.assertEqual(len(self.tool.kill_lines("kernel.log", refusal + "\n")), 1)
 
+    def test_kernel_kill_pattern_ignores_case_like_the_gate_scorers(self):
+        # The kernel's global OOM line is capitalized; the smoke and gate scorers match with re.I.
+        self.assertEqual(len(self.tool.kill_lines("kernel.log", "Out of memory: Killed process 7 (python3)\n")), 1)
+        self.assertEqual(len(self.tool.kill_lines("kernel.log", "nvrm: xid 79\n")), 1)
+
+    def test_sigterm_runs_the_start_cleanup(self):
+        # A SIGTERM to `run` must unwind through _run_start's finally (stop the
+        # engine, wait for the scope) instead of orphaning it until RuntimeMaxSec.
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp) / "cleanup"
+            script = (
+                "import importlib.util, os, signal, sys, time\n"
+                f"spec = importlib.util.spec_from_file_location('m', {str(TOOL)!r})\n"
+                "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n"
+                "m.exit_on_sigterm()\n"
+                "try:\n"
+                "    os.kill(os.getpid(), signal.SIGTERM)\n"
+                "    time.sleep(10)\n"
+                "finally:\n"
+                f"    open({str(marker)!r}, 'w').write('ran')\n")
+            proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30)
+            self.assertEqual(proc.returncode, 143, proc.stderr)
+            self.assertEqual(marker.read_text(), "ran")
+
 
 if __name__ == "__main__":
     unittest.main()
