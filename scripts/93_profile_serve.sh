@@ -105,6 +105,18 @@ proc_start_ticks() {
     fi
 }
 
+# The launcher's setsid() lands after bash records $! (tens of ms for the
+# Python shim); the watchdog verifies PGID == PID, so wait for it.
+await_group_leader() {
+    local attempt
+    for ((attempt = 0; attempt < 100; attempt++)); do
+        [[ $(ps -o pgid= -p "$1" 2>/dev/null | tr -d ' ') == "$1" ]] && return 0
+        pid_alive "$1" || return 1
+        sleep 0.05
+    done
+    return 1
+}
+
 # setsid(1) where util-linux provides it; macOS uses the exec-only shim.
 if command -v setsid >/dev/null 2>&1; then
     SETSID=(setsid)
@@ -272,6 +284,10 @@ do_start() {
     release_gate
     arm_memwatch
     launch_server
+    await_group_leader "$SERVER_PID" || {
+        kill -KILL "$SERVER_PID" 2>/dev/null
+        die 'server did not become its own process group leader'
+    }
 
     local ticks identity
     ticks=$(proc_start_ticks "$SERVER_PID") || die 'cannot identify server process'

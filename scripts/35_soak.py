@@ -50,6 +50,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+import host_memory  # noqa: E402
 
 DURATION = 1800
 MAX_TOKENS = 256
@@ -156,12 +158,7 @@ def load_api_key(path: Path | None) -> str | None:
 
 
 def mem_available_gib() -> float:
-    with open("/proc/meminfo", encoding="utf-8") as handle:
-        for line in handle:
-            if line.startswith("MemAvailable:"):
-                kib = float(line.split()[1])
-                return kib / (1024.0 * 1024.0)
-    raise RuntimeError("MemAvailable not found in /proc/meminfo")
+    return host_memory.available_kib() / (1024.0 * 1024.0)
 
 
 class MemorySampler(threading.Thread):
