@@ -36,6 +36,20 @@ def stamp(second: int) -> str:
     return datetime.fromtimestamp(1_791_763_200 + second, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# Candidate 10's lever startup lines (screen arm a3's server.log) and the readiness lines of every start.
+LEVERS = ("(EngineCore pid=1) INFO [ngram_embedding.py:86] checkpoint_mapped PLE: QWEN38FN_PLE_WILLNEED=1 (x)\n"
+          "(EngineCore pid=1) INFO [mtp.py:439] Qwen4Exp MTP draft vocabulary: token ids [0, 65536)\n"
+          "(EngineCore pid=1) INFO [mtp.py:540] Quantized a nvfp4 copy of the lm_head\n"
+          "(APIServer pid=1) INFO non-default args: {'speculative_config': {'method': 'mtp', "
+          "'num_speculative_tokens': 3, 'draft_lm_head_quantization': 'nvfp4'}}\n")
+READY = ("(EngineCore pid=1) INFO [interface.py:1099] Setting attention block size to 3200 tokens to ensure that "
+         "attention page size is >= mamba page size.\n")
+
+
+def kv_line(tokens: str = "1,079,117") -> str:
+    return f"INFO GPU KV cache size: {tokens} tokens, Maximum concurrency for 262,144 tokens per request: 4.12x\n"
+
+
 # The runtime-002 manifest's vllm_tree (runtime-002) and base_vllm_tree (runtime-001).
 TREES = {"native-runtime-002": ("9e2e0f31" * 8, 5353), "native-runtime-001": ("c08e9982" * 8, 5352)}
 
@@ -82,6 +96,11 @@ def git_repo(repo: Path, mut: str) -> tuple[str, str]:
     git("add", "-A")
     git("commit", "-qm", "freeze")
     freeze = git("rev-parse", "HEAD")
+    if mut == "scoringdirty":     # a frozen file edited after the runs, not committed
+        profile.write_text("edited at scoring time\n")
+    if mut == "scoringuntracked":
+        (repo / "scripts/lib").mkdir(parents=True)
+        (repo / "scripts/lib/sitecustomize.py").write_text("x = 1\n")
     if mut in ("headevidence", "headfrozen", "headtoolcall", "headtool"):
         changed = {"headfrozen": profile, "headtoolcall": toolcall, "headtool": tool}.get(mut, repo / "evidence.txt")
         changed.write_text("changed\n")
@@ -99,6 +118,17 @@ def speed_doc(decode0, decode28, prefill, ttft0=0.21):
 
 def build_run2(ev: Path, mut: str, freeze: str, head: str) -> None:
     if mut == "noplan":
+        return
+    if mut == "noplankill":   # blocks ran, plan.json lost: the safety scan still runs (reviewer 2 M3)
+        build_run2(ev, "r2kill", freeze, head)
+        (ev / "plan.json").unlink()
+        return
+    if mut == "wrongroundkill":
+        build_run2(ev, "r2kill", freeze, head)
+        plan = json.loads((ev / "plan.json").read_text())
+        plan["drand"]["round"] += 1
+        (ev / "plan.json").write_text(json.dumps(plan))
+        (ev / "blocks" / "plan.json").write_text(json.dumps(plan))
         return
     receipt = {"round": ROUND + (1 if mut == "wronground" else 0), "randomness": FIXTURE["randomness"],
                "signature": FIXTURE["signature"], "previous_signature": FIXTURE["previous_signature"],
@@ -120,7 +150,9 @@ def build_run2(ev: Path, mut: str, freeze: str, head: str) -> None:
     (blocks / "driver.log").write_text(heads + tree_lines(0, mut, "2"))
     run_log = []
     noisy = {0: 1.25, 1: 0.85, 2: 1.30, 3: 0.80, 4: 1.10}
-    for k, (block, position, arm) in enumerate(MATCHED.schedule(plan["blocks"])):
+    steps = MATCHED.schedule(plan["blocks"])
+    first = {arm: next(i for i, s in enumerate(steps) if s[2] == arm) for arm in "AB"}
+    for k, (block, position, arm) in enumerate(steps):
         d = blocks / f"block-{block}" / f"{position}-{arm}"
         d.mkdir(parents=True)
         base, last = 1000 + 200 * k, (block, position) == (4, 3)
@@ -131,8 +163,16 @@ def build_run2(ev: Path, mut: str, freeze: str, head: str) -> None:
         (d / "kernel.log").write_text("x Out of memory: Killed process 7 (python3)\n" if oom else "")
         refusal = ("ERROR host page cache released under /home/bmarti44/models (496 files); MemFree 19.85 GiB: "
                    "refusing to allocate the KV arena; it would leave the driver short (NVRM)\n")
-        (d / "server.log").write_text("===== p session start t =====\n"
-                                      + (refusal if mut == "r2refusal" and last else "INFO ready\n"))
+        levers = LEVERS if arm == "B" else ""
+        if mut == "r2levermissing" and k == first["B"]:
+            levers = levers.replace("draft vocabulary", "draft vocab")
+        if mut == "r2leverA" and k == first["A"]:
+            levers = LEVERS
+        refused = (mut == "r2refusalA" and k == first["A"]) or (mut == "r2refusalB" and k == first["B"])
+        ready = "" if mut == "r2block" and last else READY
+        kv = kv_line("1,033,876" if mut == "r2kvshort" and last else "1,079,117")
+        (d / "server.log").write_text("===== p session start t =====\n" + levers
+                                      + (refusal if refused else ready + kv + "INFO ready\n"))
         (d / "memwatch.log").write_text("ts=1 ARMED\n")
         run_log += [f"{stamp(base + 1)} block {block} position {position} arm {arm}: launching x\n",
                     f"{stamp(base + 121)} block {block} position {position} arm {arm}: failed=None kills=0 low=10.40\n"]
@@ -145,14 +185,16 @@ def build_run2(ev: Path, mut: str, freeze: str, head: str) -> None:
             pf = 0.90 if mut == "prefill" else 1.01
         else:
             d0 = d28 = pf = 1.0
-        start = {"block": block, "position": position, "arm": arm,
-                 "profile": plan["a_profile" if arm == "A" else "b_profile"], "failed": None,
+        profile = plan["a_profile" if arm == "A" else "b_profile"]
+        if mut == "r2profile" and k == first["A"]:
+            profile = plan["b_profile"]
+        start = {"block": block, "position": position, "arm": arm, "profile": profile, "failed": None,
                  "kill_lines": ["kernel.log: NVRM: Xid 13"] if mut == "r2kill" and block == 2 else [],
                  "swap_growth_gib": 0.6 if mut == "r2swap" and block == 1 else 0.0,
                  "low_mem_available_gib": (7.5 if mut == "r2low" and block == 3 else
                                            None if mut == "r2lownull" and last else 10.4),
                  "launched_at": stamp(base + 1), "ready_s": 100.0}
-        if mut == "r2refusal" and last:
+        if refused:
             start["failed"] = "launch exit 1"
         (d / "start.json").write_text(json.dumps(start))
         if not (mut == "r2missing" and block == 4 and position == 1):
@@ -177,6 +219,8 @@ def build(ev: Path, mut: str) -> None:
         lines.append(f"{stamp(i)} MemAvailable:={avail} SwapTotal:={16 * GIB_KIB} SwapFree:={swap_free} \n")
     if mut == "short":
         lines = lines[:100]
+    if mut == "samplerdied":    # still over 600 samples, but none for the last 49 s of the run
+        lines = lines[:651]
     (obs / "meminfo.log").write_text("".join(lines))
     (obs / "kernel.log").write_text("x NVRM: Xid 13\n" if mut == "xid" else "")
     memwatch = "ts=1 ARMED\nts=2 BREACH\n" if mut == "breach" else "ts=1 ARMED\n"
@@ -192,9 +236,10 @@ def build(ev: Path, mut: str) -> None:
     runtime_release = "" if mut == "noruntimerelease" else (
         f"(EngineCore pid=1) INFO 10-12 13:09:02 [qwen38fn_worker.py:83] host page cache released under {rroot} "
         f"({0 if mut == 'runtimezero' else 134720} files) before the KV arena\n")
+    levers = LEVERS.replace("Quantized a nvfp4", "Quantized a bf16") if mut == "levermissing1" else LEVERS
     server = "" if mut == "emptyserver" else (
-        f"===== p session start t =====\n{runtime_release}{release}INFO GPU KV cache size: {tokens} tokens, "
-        "Maximum concurrency for 262,144 tokens per request: 4.12x\n"
+        f"===== p session start t =====\n{levers}{runtime_release}{release}"
+        + ("" if mut == "block1" else READY) + kv_line(tokens)
         + ("torch.OutOfMemoryError\n" if mut == "oom" else "INFO ready\n"))
     if mut != "noserverlog":
         (obs / "server.log").write_text(server)
@@ -209,7 +254,8 @@ def build(ev: Path, mut: str) -> None:
                   for p in _gate.RUNTIME_LIBS[: 8 if mut == "fewlibs" else 9]))
     (obs / "driver.log").write_text(f"{stamp(0)} head {head} dirty={dirty}\n" + tree_lines(0, mut, "1")
                                     + precondition + launch
-                                    + ("FAILED_ATTEMPT survivors\n" if mut == "attempt" else "ok\n"))
+                                    + ("FAILED_ATTEMPT survivors\n" if mut == "attempt" else "ok\n")
+                                    + f"{stamp(699)} start1: scope empty after stop\n")
     (ev / "manifest.json").write_text(json.dumps(
         {"profile": {"context_cap": 1_000_000 if mut == "cap" else 1_048_576}}))
     (ev / "context").mkdir()
@@ -228,8 +274,10 @@ def build(ev: Path, mut: str) -> None:
     tests = ["prefix-cache", "turn-continuation", "slot-thrash", "prefill-throughput"]
     if mut == "agentmissing":
         tests = tests[:3]
-    (ev / "agent-gate.json").write_text(json.dumps({"results": [
-        {"test": t, "pass": not (mut == "agent" and t == "turn-continuation")} for t in tests]}))
+    rows = [{"test": t, "pass": not (mut == "agent" and t == "turn-continuation")} for t in tests]
+    if mut == "agentdup":   # a later pass must not hide an earlier failure of the same test
+        rows = [{"test": "slot-thrash", "pass": False}] + rows
+    (ev / "agent-gate.json").write_text(json.dumps({"results": rows}))
     (ev / "soak").mkdir()
     floor = {"mem_floor_gib": 12.0, "mem_floor_source": "default"} if mut == "soakfloor" else \
         {"mem_floor_gib": 5.0, "mem_floor_source": "default"}
@@ -243,8 +291,11 @@ def build(ev: Path, mut: str) -> None:
              "error_count": 1 if mut == "visionerror" else 0}))
     if mut != "nospeed":
         (ev / "speed").mkdir()
-        (ev / "speed" / "speed.json").write_text(json.dumps(
-            speed_doc(34.2, 41.1, 2709.0, ttft0=0.6 if mut == "ttft" else 0.21)))
+        doc = speed_doc(34.2, 41.1, 2709.0, ttft0=0.6 if mut == "ttft" else 0.21)
+        if mut == "speedinvalid":
+            doc["suite_valid"] = False
+            doc["cells"][0]["valid"] = False
+        (ev / "speed" / "speed.json").write_text(json.dumps(doc))
     build_run2(ev, mut, freeze, head)
 
 
@@ -272,13 +323,20 @@ EXPECT = {
     # review round 1: resume (M1), runtime trees (M2), run-2 raw low, coverage and crashed starts (L3, L4, L8)
     "r2resume": "PASS", "r2twoheads": "NO_RESULT", "treemissing1": "NO_RESULT", "treewrong1": "NO_RESULT",
     "treemissing2": "NO_RESULT", "treewrong2": "NO_RESULT", "r2lownull": "NO_RESULT", "r2rawlow": "FAIL",
-    "r2samples": "NO_RESULT", "r2crash": "FAIL", "r2refusal": "NO_RESULT",
+    "r2samples": "NO_RESULT", "r2crash": "FAIL", "r2refusalA": "NO_RESULT", "r2refusalB": "FAIL",
+    # review round 1, reviewer 2: identity of levers, readiness and profile per start (M1), scoring-time tree
+    # (M2), run-2 safety despite a plan defect (M3), agent duplicates, invalid speed, run-1 coverage
+    "levermissing1": "NO_RESULT", "block1": "NO_RESULT", "r2levermissing": "NO_RESULT", "r2leverA": "NO_RESULT",
+    "r2block": "NO_RESULT", "r2kvshort": "NO_RESULT", "r2profile": "NO_RESULT", "scoringdirty": "NO_RESULT",
+    "scoringuntracked": "NO_RESULT", "noplankill": "FAIL", "wrongroundkill": "FAIL", "agentdup": "NO_RESULT",
+    "speedinvalid": "NO_RESULT", "samplerdied": "NO_RESULT",
 }
-# `gate_verdict.py --run1-check` (L5): run 2 starts only after a clean run 1. Exit 0 iff run 1 has no
-# failed clause, no FAILED_ATTEMPT and nothing missing but clause 5 (a changed text path needs the holdout,
-# not a new run 1).
-RUN1_CHECK = {"clean": 0, "identity": 0, "noplan": 0, "xid": 1, "attempt": 1, "tool": 1, "short": 1,
-              "treewrong1": 1, "dirty": 1}
+# `gate_verdict.py --run2-preflight` (reviewer 1 L5, reviewer 2 M3): run 2 starts only after a clean run 1
+# and with a plan that is valid for the current freeze. Exit 0 iff run 1 has no failed clause, no
+# FAILED_ATTEMPT and nothing missing but clause 5 (a changed text path needs the holdout, not a new run 1),
+# and plan.json passes clause 13's plan checks.
+RUN1_CHECK = {"clean": 0, "identity": 0, "noplan": 1, "wronground": 1, "othercommit": 1, "orders": 1,
+              "xid": 1, "attempt": 1, "tool": 1, "short": 1, "treewrong1": 1, "dirty": 1}
 
 
 def main() -> int:
@@ -304,12 +362,12 @@ def main() -> int:
             build(ev, mut)
             env = dict(os.environ, GATE_REPO=str(ev / "repo"),
                        GATE_REFERENCE_PROBE=str(ev / "reference-probe.json"))
-            proc = subprocess.run([sys.executable, str(SCORER), "--run1-check", str(ev)],
+            proc = subprocess.run([sys.executable, str(SCORER), "--run2-preflight", str(ev)],
                                   capture_output=True, text=True, env=env)
             match = proc.returncode == expected and not (ev / "gate-summary.json").exists()
             ok &= match
-            print(f"{'ok ' if match else 'BAD'} run1-check {mut:12s} expected rc={expected} got rc={proc.returncode}")
-    print(f"{len(EXPECT)} cases, {len(RUN1_CHECK)} run1-check cases")
+            print(f"{'ok ' if match else 'BAD'} run2-preflight {mut:12s} expected rc={expected} got rc={proc.returncode}")
+    print(f"{len(EXPECT)} cases, {len(RUN1_CHECK)} run2-preflight cases")
     return 0 if ok else 1
 
 
