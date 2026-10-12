@@ -35,17 +35,32 @@ Facts must satisfy the profile's `backend`, `hardware_class`, and
 
 ## 2. Build the engine for your host class
 
+Every llama.cpp engine is built from a pin in `configs/pins/llamacpp.json`.
+Off-Spark profiles on upstream llama.cpp (Qwen3.8-27B, DeepSeek-V4-Flash)
+use the registry's `portable` pin. Laguna keeps the poolside fork pin.
+
 ```
-scripts/12_build_qwen38_llamacpp.sh --host-class metal      # example
-scripts/13_build_llamacpp.sh --host-class cpu               # DSV4 base pin
-scripts/13_build_laguna_llamacpp.sh --host-class metal      # verify-on-hardware
-scripts/11_build_ds4.sh --host-class metal                  # ds4 Makefile default
+P=$(python3 -c 'import json;print(json.load(open("configs/pins/llamacpp.json"))["portable"])')
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class metal                    # Apple Silicon
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class rocm --rocm-arch gfx1151 # Strix Halo (HIP)
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class vulkan                   # Strix Halo / other GPUs (Vulkan)
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class cuda-generic --cuda-arch 89
+scripts/14_build_llamacpp_pin.sh --pin "$P" --host-class cpu
+scripts/14_build_llamacpp_pin.sh --pin llamacpp-laguna-06f8cebd --host-class metal  # verify-on-hardware
+scripts/11_build_ds4.sh --host-class metal                                          # ds4 Makefile default
 ```
 
-Classes: `cuda-generic | metal | rocm | cpu` (`--cuda-arch N`,
-`--rocm-arch gfxNNNN` where applicable). Off-Spark builds write a
-class-suffixed build manifest and never overwrite the committed Spark one.
-The manifest records the toolchain and the observed architecture assertion.
+Add `--dry-run` to print the resolved repository, commit, paths, and cmake
+flags without building. Classes: `cuda-spark | cuda-generic | metal | rocm |
+vulkan | cpu`. Off-Spark builds write a class-suffixed build manifest
+(`configs/build-manifests/<pin>-<class>.json`) and never overwrite the
+committed Spark one. The manifest records the toolchain flags and the
+observed architecture assertion.
+
+To try a newer llama.cpp, register a pin, point `portable` at it, rebuild,
+and re-run the gates on the same fixtures. Spark-qualified engines
+(`llamacpp-qwen38`, `llamacpp-laguna`, `llamacpp-fusion`) keep their pin
+until the Spark itself requalifies on the new one.
 
 ## 3. Fetch weights and check fit
 
