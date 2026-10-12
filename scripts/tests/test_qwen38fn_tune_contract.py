@@ -15,9 +15,12 @@ sets it:
   L4  BF16 KV for the MTP layer (--kv-cache-dtype-skip-layers 48, in the
       nightly as #60023), with a larger arena to keep 1M tokens.
 
-The arm profiles extend _tune.json and each differs from the qualified main
-profile by exactly its declared levers. None is a switch alias: the switch keeps
-serving the main profile on runtime-001 throughout the screen.
+The arm profiles extend _tune.json and each differs from candidate 9's
+qualified launch by exactly its declared levers. None is a switch alias: the
+switch kept serving candidate 9's launch on runtime-001 throughout the screen.
+Candidate 10 (a3 plus the runtime release root) passed its gate and the main
+profile now serves it, so the arms are pinned to candidate 9's launch as its
+run recorded it (results/qwen38fn-gates/qualify-2026-10-11-c9/manifest.json).
 """
 from __future__ import annotations
 
@@ -54,6 +57,10 @@ SERIES = [
 ]
 ARENA_L4 = 20_600_000_000
 C10 = "cuda-spark-128g-1m-tune-c10.json"
+C9_EVIDENCE = ROOT / "results/qwen38fn-gates/qualify-2026-10-11-c9"
+# Candidate 9's memory model (its RESULT.md "Admission derived from this run").
+C9_MEMORY_MODEL = {"kv_bytes_per_token": 0, "resident_weights_gib": 77,
+                   "overhead_gib": 10.7, "extra_gib": 18.0, "floor_gib": 8}
 LEVERS = {
     "L1": {"env": {"QWEN38FN_PLE_WILLNEED": "1"}},
     "L2": {"env": {"QWEN4EXP_DRAFT_VOCAB": "65536"},
@@ -120,12 +127,21 @@ class TuneArmContract(unittest.TestCase):
             profile, profile_resolver.load_model(SLUG),
             profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json"))
 
-    def test_every_arm_is_the_main_launch_plus_exactly_its_levers(self):
-        main = self.render(MAIN)
+    def c9_launch(self) -> dict:
+        return json.loads((C9_EVIDENCE / "manifest.json").read_text())["profile"]
+
+    def render_on_c9_host(self, profile_file: str) -> dict:
+        profile = profile_resolver.load_profile(SLUG, profile_file)
+        return profile_resolver.resolve(
+            profile, profile_resolver.load_model(SLUG),
+            profile_resolver.load_host(C9_EVIDENCE / "host-worktree.json"))
+
+    def test_every_arm_is_candidate_9s_launch_plus_exactly_its_levers(self):
+        main = self.c9_launch()
         main_spec = json.loads(flag_value(main["argv"], "--speculative-config"))
         for arm, levers in ARMS.items():
             with self.subTest(arm=arm):
-                got = self.render(arm_file(arm))
+                got = self.render_on_c9_host(arm_file(arm))
                 self.assertEqual(
                     got["binary"], RUNTIME_002 + "/runtime/bin/python3.12")
 
@@ -153,7 +169,7 @@ class TuneArmContract(unittest.TestCase):
                         flag_value(got["argv"], extra_args[0]), extra_args[1])
                 else:
                     self.assertNotIn("--kv-cache-dtype-skip-layers", got["argv"])
-                self.assertEqual(got["diagnostics_unset"], main["diagnostics_unset"])
+                self.assertEqual(got["diagnostics_unset"], self.render(MAIN)["diagnostics_unset"])
 
     def test_arms_are_estimated_dev_profiles_the_switch_cannot_serve(self):
         for arm in ARMS:
@@ -175,7 +191,7 @@ class TuneArmContract(unittest.TestCase):
                     p["qualification_options"]["speed_max_tokens_per_event"], want)
 
     def test_memory_model_counts_the_larger_l4_arena(self):
-        main = profile_resolver.load_profile(SLUG, MAIN)["memory_model"]
+        main = C9_MEMORY_MODEL
         for arm, levers in ARMS.items():
             with self.subTest(arm=arm):
                 mm = profile_resolver.load_profile(SLUG, arm_file(arm))["memory_model"]
@@ -209,12 +225,13 @@ class TuneArmContract(unittest.TestCase):
         self.assertEqual(p["engine"], "vllm-qwen38fn-r002")
         self.assertEqual(p["qualification_options"]["speed_max_tokens_per_event"], 4)
         self.assertEqual(p["memory_model"], profile_resolver.load_profile(SLUG, arm_file("a3"))["memory_model"])
-        self.assertEqual(p["safety"], profile_resolver.load_profile(SLUG, MAIN)["safety"])
+        self.assertEqual(p["safety"], profile_resolver.load_profile(SLUG, arm_file("a3"))["safety"])
 
-    def test_main_profile_still_serves_runtime_001(self):
-        main = self.render(MAIN)
-        self.assertIn("native-runtime-001", main["binary"])
-        self.assertEqual(main["status"], "qualified")
+    def test_candidate_9s_recorded_launch_served_runtime_001(self):
+        c9 = self.c9_launch()
+        self.assertEqual(c9["profile_id"], f"{SLUG}/{MAIN[:-5]}")
+        self.assertIn("native-runtime-001", c9["binary"])
+        self.assertNotIn("QWEN38FN_HOST_RELEASE_ROOTS", c9["env"])
 
     def test_model_json_pins_the_r002_engine(self):
         model = profile_resolver.load_model(SLUG)

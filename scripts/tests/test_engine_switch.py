@@ -1489,7 +1489,7 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(snapshot["mechanism"], "systemd-run")
         self.assertEqual(
             snapshot["binary"],
-            "/home/bmarti44/.cache/qwen38-flash-next/native-runtime-001/"
+            "/home/bmarti44/.cache/qwen38-flash-next/native-runtime-002/"
             "runtime/bin/python3.12",
         )
         argv = snapshot["argv"]
@@ -1517,6 +1517,14 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(snapshot["env"]["PYTHONPATH"],
                          f"{PRODUCTION_REPO}/scripts/lib")
         self.assertEqual(snapshot["env"]["VLLM_MOE_USE_DEEP_GEMM"], "0")
+        # Candidate 10's levers and the release of every Flash-Next runtime.
+        self.assertEqual(snapshot["env"]["QWEN38FN_PLE_WILLNEED"], "1")
+        self.assertEqual(snapshot["env"]["QWEN4EXP_DRAFT_VOCAB"], "65536")
+        self.assertEqual(snapshot["env"]["QWEN38FN_HOST_RELEASE_ROOTS"],
+                         "/home/bmarti44/.cache/qwen38-flash-next")
+        self.assertEqual(argv[argv.index("--speculative-config") + 1],
+                         '{"method":"mtp","num_speculative_tokens":3,'
+                         '"draft_lm_head_quantization":"nvfp4"}')
 
     def test_qwen38fn_switches_from_the_default_without_a_test_marker(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1536,7 +1544,7 @@ class EngineSwitchTests(unittest.TestCase):
             launch = next(line for line in actions
                           if line.startswith("SYSTEMD_RUN --unit=qwen38fn-engine"))
             self.assertIn(
-                f"{root}/cache/qwen38-flash-next/native-runtime-001/runtime/bin/"
+                f"{root}/cache/qwen38-flash-next/native-runtime-002/runtime/bin/"
                 "python3.12 -B -m vllm.entrypoints.openai.api_server --model "
                 f"{root}/models/qwen3.8-flash-next-nvfp4 --served-model-name "
                 "qwen3.8-flash-next default --host 127.0.0.1 --port 8013",
@@ -1544,6 +1552,10 @@ class EngineSwitchTests(unittest.TestCase):
             )
             self.assertIn("--property MemorySwapMax=0", launch)
             self.assertIn(f"--setenv PYTHONPATH={ROOT}/scripts/lib", launch)
+            # The worker drops every Flash-Next runtime's cached libraries.
+            self.assertIn(
+                f"--setenv QWEN38FN_HOST_RELEASE_ROOTS={root}/cache/qwen38-flash-next",
+                launch)
             self.assertIn("/run/lock/frontier-at-home/inference.lock", launch)
             self.assertIn(
                 f"--property StandardOutput=append:{root}/qwen38fn.server.log",
@@ -1673,6 +1685,46 @@ class EngineSwitchTests(unittest.TestCase):
             for step in ("HASHES qwen38fn", "START qwen38fn", "VERIFY qwen38fn"):
                 self.assertIn(step, actions)
             self.assertNotIn("DSV4 start", actions)
+            # Boot restore renders the profile too, so its worker drops every
+            # Flash-Next runtime's cached libraries before the KV arena.
+            launch = next(line for line in actions
+                          if line.startswith("SYSTEMD_RUN --unit=qwen38fn-engine"))
+            self.assertIn(
+                f"--setenv QWEN38FN_HOST_RELEASE_ROOTS={root}/cache/qwen38-flash-next",
+                launch)
+
+    def test_qwen38_1m_startup_death_rolls_back_to_qwen38fn_releasing_every_runtime(self):
+        # Reverse direction (qualify-2026-10-12-c10 PREREG item 3): the
+        # rollback starts the recorded qwen38fn profile again, rendered from
+        # the same file, with the release root that covers runtime-001 and
+        # runtime-002.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "qwen38fn"})
+            )
+            (root / "qwen38fn-running").touch()
+            (root / "qwen-hashes-valid").touch()
+            (root / "qwen38fn-hashes-valid").touch()
+            (root / "fail-qwen-start").touch()
+            result = self.run_switch(root, "qwen38-1m")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            launch = next(line for line in actions
+                          if line.startswith("SYSTEMD_RUN --unit=qwen38fn-engine"))
+            self.assertLess(actions.index("STOP qwen38fn"), actions.index(launch))
+            self.assertIn(
+                f"--setenv QWEN38FN_HOST_RELEASE_ROOTS={root}/cache/qwen38-flash-next",
+                launch)
+            self.assertIn(
+                f"{root}/cache/qwen38-flash-next/native-runtime-002/runtime/bin/python3.12",
+                launch)
+            self.assertIn("VERIFY qwen38fn", actions)
+            self.assertTrue((root / "qwen38fn-running").exists())
 
     def test_restore_qwen38fn_start_failure_falls_back_to_dsv4(self):
         with tempfile.TemporaryDirectory() as tmp:
