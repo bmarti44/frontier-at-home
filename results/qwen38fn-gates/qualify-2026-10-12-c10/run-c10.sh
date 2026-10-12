@@ -6,8 +6,9 @@
 #           runtime-001's largest libraries into page cache; then probes, the
 #           kit and the agent gate.
 #   blocks  run 2: the five matched ABBA/BAAB blocks of plan.json through
-#           scripts/97_matched_speed_blocks.py, only after a clean run 1
-#           (gate_verdict.py --run1-check). Rerunning it resumes the campaign.
+#           scripts/97_matched_speed_blocks.py, only after a clean run 1 and with
+#           a plan valid for the freeze (gate_verdict.py --run2-preflight).
+#           Rerunning it resumes the campaign.
 # Production must already be stopped (52_engine_switch.sh stop).
 set -Eeuo pipefail
 MODE=${1:?usage: run-c10.sh start1 | blocks}
@@ -43,9 +44,12 @@ cd "$WT"
 
 stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 preflight() {
-    local dirty
+    local dirty stray
     dirty=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)
     [[ $dirty -eq 0 ]] || { echo "$WT has $dirty tracked changes" >&2; exit 2; }
+    # scripts/lib is the engine's PYTHONPATH: no untracked code beside the frozen tree.
+    stray=$(git -C "$WT" status --porcelain -- scripts configs patches fixtures evalsets | wc -l)
+    [[ $stray -eq 0 ]] || { echo "$WT has $stray untracked files under the frozen paths" >&2; exit 2; }
 }
 # One "runtime-tree <name> <first 16 hex> <files>" line per runtime: its site-packages/vllm digest by
 # the runtime-002 manifest's vllm_tree method (the contract test's tree_sha256). The gate compares
@@ -76,8 +80,8 @@ if [[ $MODE == blocks ]]; then
     OUT=$EV/blocks
     [[ -f $EV/plan.json ]] || { echo "no $EV/plan.json: draw it with 97 plan --drand-after <freeze>" >&2; exit 2; }
     preflight
-    python3 "$EV/gate_verdict.py" --run1-check "$EV" \
-        || { echo "run 1 is not clean (gate_verdict.py --run1-check): run 2 is not run" >&2; exit 2; }
+    python3 "$EV/gate_verdict.py" --run2-preflight "$EV" \
+        || { echo "run 1 is not clean or plan.json is not valid for the freeze (gate_verdict.py --run2-preflight): run 2 is not run" >&2; exit 2; }
     mkdir -p "$OUT"
     log() { printf '%s %s\n' "$(stamp)" "$*" | tee -a "$OUT/driver.log"; }
     # Each invocation logs its head; the gate requires one clean commit across all of them.
@@ -204,6 +208,10 @@ python3 "$SMOKE/probe.py" --base-url "http://127.0.0.1:$PORT" --out "$EV/probe-$
 python3 "$WT/scripts/dev/regression-suite.py" agent-gate --base "http://127.0.0.1:$PORT" \
     --engine vllm --model default --prefix-block-tokens "$BLOCK_TOKENS" --spec-block-drop --json "$EV/agent-gate.json" \
     2>&1 | tee -a "$OBS/driver.log" || log "agent-gate exit nonzero"
+# Reported, not gating: decode on English, Chinese and Japanese output (PREREG "Reported, not gating").
+python3 "$EV/cjk_decode.py" --base-url "http://127.0.0.1:$PORT" \
+    --tokenizer /home/bmarti44/models/qwen3.8-flash-next-nvfp4/tokenizer.json --k 4 \
+    --out "$EV/cjk-decode-$MODE.json" 2>&1 | tee -a "$OBS/driver.log" || log "cjk-decode exit nonzero"
 "${SERVE[@]}" stop | tee -a "$OBS/driver.log"
 check_no_survivors
 log_runtime_trees

@@ -2,7 +2,7 @@
 """Fixed candidate-10 gate verdict per PREREG.md in this directory.
 
 Usage: gate_verdict.py <bundle dir>  -> writes <dir>/gate-summary.json, prints the verdict.
-       gate_verdict.py --run1-check <bundle dir>  -> exit 0 iff run 2 may start (no file written).
+       gate_verdict.py --run2-preflight <bundle dir>  -> exit 0 iff run 2 may start (no file written).
 Fails closed: missing or malformed evidence is NO_RESULT, never PASS.
 Candidate 9's clauses 1-12 (run 1), extended to run 2's starts and to the
 runtime-root release, plus clause 13 (matched speed through the shared
@@ -11,6 +11,7 @@ kill-line patterns are imported from the smoke scorer, and this scorer applies
 them to the raw logs of run 1 and of every run-2 start, so both runs use
 exactly the same ones (97's own start.json kill lines are checked as well).
 """
+import hashlib
 import importlib.util
 import json
 import math
@@ -33,6 +34,12 @@ HEAD = re.compile(r"^\S+ head ([0-9a-f]{40}) dirty=(\d+)$")
 # run, by the runtime-002 manifest's vllm_tree method.
 RUNTIME_TREE = re.compile(r"^\S+ runtime-tree (native-runtime-00[12]) ([0-9a-f]{16}) (\d+)$")
 RUNTIME_MANIFEST = "configs/build-manifests/qwen38-flash-next-runtime-002.json"
+# Candidate 10's levers as its startup lines show them (screen arm a3's server.log): run 1 and every
+# B start must show all of them, and no A start may show any. Every start shows the 3,200-token block.
+LEVER_LINES = ("checkpoint_mapped PLE: QWEN38FN_PLE_WILLNEED=1",
+               "Qwen4Exp MTP draft vocabulary: token ids [0, 65536)",
+               "Quantized a nvfp4 copy of the lm_head", "'draft_lm_head_quantization': 'nvfp4'")
+BLOCK_LINE = "Setting attention block size to 3200 tokens"
 LAUNCH = re.compile(r"^(\S+) start1: launching in scope ")
 PRECONDITION = re.compile(r"^\S+ precondition ([0-9.]+) GiB (\S+)$")
 GGUF = ("/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
@@ -76,7 +83,7 @@ FROZEN = (
     "results/qwen38fn-gates/qualify-2026-10-11-c4/probe-start1.json",
     "results/qwen38fn-gates/qualify-2026-10-11-c7/pagecache_residency.py",
     f"{CANDIDATE}/PREREG.md", f"{CANDIDATE}/run-c10.sh", f"{CANDIDATE}/gate_verdict.py",
-    f"{CANDIDATE}/host-worktree.json",
+    f"{CANDIDATE}/host-worktree.json", f"{CANDIDATE}/gate_mutations.py", f"{CANDIDATE}/cjk_decode.py",
 )
 REFERENCE_PROBE = Path(os.environ.get("GATE_REFERENCE_PROBE")
                        or HERE.parent / "qualify-2026-10-11-c4" / "probe-start1.json")
@@ -170,6 +177,44 @@ def seconds(stamp):
     return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").timestamp()
 
 
+def covered(stamps, first_by, last_by):
+    """Samples from at or before first_by to within 15 s of last_by, never more than 5 s apart."""
+    try:
+        t = [seconds(x) for x in stamps]
+        return (t[0] <= seconds(first_by) and t[-1] >= seconds(last_by) - 15
+                and max(b - a for a, b in zip(t, t[1:])) <= 5)
+    except (TypeError, ValueError, IndexError):
+        return False
+
+
+def start_identity(text, want_levers):
+    """Lever and readiness lines a start's server log must (or, for an A start, must not) show."""
+    problems = [f"{'missing' if want_levers else 'unexpected'} lever line {line!r}"
+                for line in LEVER_LINES if (line in text) != want_levers]
+    capacity = [int(m.replace(",", "")) for m in KV_CAPACITY.findall(text)]
+    if BLOCK_LINE not in text:
+        problems.append("no 3,200-token attention block line")
+    if not capacity or capacity[-1] < CONTEXT_CAP:
+        problems.append(f"KV capacity {capacity[-1:] or None} at 262,144 (want >= {CONTEXT_CAP})")
+    return problems
+
+
+def scoring_identity(freeze, missing, checks):
+    """The scorer and every frozen path, as they are while scoring, are the freeze's."""
+    checks["scorer"] = {"sha256_16": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()[:16],
+                        "scoring_head": git("rev-parse", "HEAD"),
+                        "overrides": {k: os.environ[k] for k in ("GATE_REPO", "GATE_REFERENCE_PROBE")
+                                      if k in os.environ}}
+    if not freeze:
+        return
+    diff = subprocess.run(["git", "-C", str(REPO), "diff", "--quiet", freeze, "--", *FROZEN], capture_output=True)
+    untracked = git("ls-files", "--others", "--exclude-standard", "--", *FROZEN)
+    checks["scorer"].update(frozen_worktree_diff_rc=diff.returncode, untracked_frozen=untracked.splitlines())
+    if diff.returncode != 0 or untracked:
+        missing.append(f"scoring identity: the working tree differs from the freeze {freeze} under FROZEN "
+                       f"(diff rc {diff.returncode}, untracked {untracked.splitlines()[:5]})")
+
+
 def run1(ev, freeze, missing, fail, checks):
     obs = ev / "observe" / START
     server = obs / "server.log"
@@ -181,6 +226,10 @@ def run1(ev, freeze, missing, fail, checks):
             missing.append("observe/start1/server.log: no KV capacity line at 262,144")
         elif capacity[-1] < CONTEXT_CAP:
             fail.append(f"clause 4: KV capacity {capacity[-1]} < {CONTEXT_CAP}")
+        checks["run1_identity_problems"] = identity = [p for p in start_identity(text, True)
+                                                       if not p.startswith("KV capacity")]
+        if identity:
+            missing.append(f"run 1 identity: {identity}")
         releases = RELEASE.findall(text)
         runtime_releases = RUNTIME_RELEASE.findall(text)
         checks["host_cache_release"] = [
@@ -239,6 +288,10 @@ def run1(ev, freeze, missing, fail, checks):
             fail.append("clause 2: swap growth (run 1)")
         if low < FLOOR_GIB:
             fail.append("clause 3: external low point below 8 GiB (run 1)")
+        ends = [l.split(" ", 1)[0] for l in lines if l.endswith(f"{START}: scope empty after stop")]
+        if len(launches) != 1 or len(ends) != 1 or not covered([t for t, _ in rows], launches[0], ends[0]):
+            missing.append("observe/start1/meminfo.log: samples do not cover launch to the empty scope, "
+                           "at most 5 s apart")
         before = [a for (t, _), a in zip(rows, available) if len(launches) == 1 and t <= launches[0]]
         if not before:
             missing.append(f"clause 10: no meminfo sample at or before one launch line (launches {launches})")
@@ -291,10 +344,11 @@ def run1(ev, freeze, missing, fail, checks):
 
     agent = load(ev / "agent-gate.json", missing)
     if agent is not None:
-        results = {r.get("test"): r.get("pass") for r in agent.get("results") or []}
+        rows = agent.get("results") or []
+        results = {r.get("test"): r.get("pass") for r in rows}
         checks["agent_gate"] = results
-        if set(results) != AGENT_GATE_TESTS:
-            missing.append(f"agent-gate tests {sorted(results)}")
+        if sorted(r.get("test") for r in rows) != sorted(AGENT_GATE_TESTS):
+            missing.append(f"agent-gate tests {[r.get('test') for r in rows]} (each of the four exactly once)")
         elif not all(v is True for v in results.values()):
             fail.append("clause 7: agent gate")
 
@@ -328,17 +382,19 @@ def run1(ev, freeze, missing, fail, checks):
         cells = [c for c in speed.get("cells") or [] if c.get("ctx_tokens") == 0]
         ttft = cells[0].get("median_ttft") if len(cells) == 1 else None
         checks["ttft_0_s"] = ttft
-        if not isinstance(ttft, (int, float)) or isinstance(ttft, bool) or not math.isfinite(ttft):
+        if speed.get("suite_valid") is not True or len(cells) != 1 or cells[0].get("valid") is not True:
+            missing.append("clause 14: speed/speed.json suite or depth-0 cell is not valid")
+        elif not isinstance(ttft, (int, float)) or isinstance(ttft, bool) or not math.isfinite(ttft):
             missing.append("clause 14: no finite TTFT at depth 0 in speed/speed.json")
         elif ttft > TTFT0_MAX_S:
             fail.append(f"clause 14: TTFT at depth 0 {ttft:.3f} s > {TTFT0_MAX_S}")
 
 
-def run2(ev, freeze, missing, fail, checks):
+def plan_problems(ev, freeze, missing, checks):
+    """Clause 13's plan checks: arms, domain, the freeze's drand round, BLS, block orders."""
     plan = load(ev / "plan.json", missing)
-    blocks = ev / "blocks"
     if plan is None:
-        return
+        return None, ["no plan.json"]
     receipt = plan.get("drand") or {}
     try:
         frozen_at = int(git("show", "-s", "--format=%ct", freeze)) if freeze else None
@@ -365,9 +421,15 @@ def run2(ev, freeze, missing, fail, checks):
             MATCHED.verify_drand_round({k: receipt.get(k) for k in MATCHED.DRAND_FIELDS})
         except (RuntimeError, OSError, KeyError) as error:
             problems.append(f"drand BLS verification: {error}")
-    if problems:
+    return plan, problems
+
+
+def run2(ev, freeze, missing, fail, checks):
+    blocks = ev / "blocks"
+    plan, problems = plan_problems(ev, freeze, missing, checks)
+    if problems and plan is not None:
         missing.append("clause 13: " + "; ".join(problems))
-        return
+    # The safety scan below runs whatever the plan's state: a defective plan must not mask a kill line.
     driver = blocks / "driver.log"
     if not driver.is_file():
         missing.append("blocks/driver.log")
@@ -377,13 +439,17 @@ def run2(ev, freeze, missing, fail, checks):
         runtime_trees(lines, "run2", freeze, missing, checks)
     run_log = (blocks / "run.log").read_text().splitlines() if (blocks / "run.log").is_file() else []
     unsafe = {"kill": [], "swap": [], "low": []}
-    gaps = []
+    gaps, identity = [], []
     # Every start directory, with or without start.json: a start whose driver died still has its
     # kernel log and samples, and an OOM there is a FAIL, not only a NO_RESULT.
     for d in sorted(p for p in blocks.glob("block-*/*") if p.is_dir()):
         label = f"{d.parent.name}/{d.name}"
         if raw_kill_lines(d):
             unsafe["kill"].append(label)
+        text = (d / "server.log").read_text(errors="replace") if (d / "server.log").is_file() else ""
+        if REFUSED in text and d.name.endswith("-B"):
+            fail.append(f"clause 12 (run 2): candidate 10's worker refused the KV arena at {label}")
+        identity += [f"{label}: {p}" for p in start_identity(text, d.name.endswith("-B"))]
         rows = meminfo_rows(d / "meminfo.log")
         available = [int(r["MemAvailable"]) / 2**20 for _, r in rows]
         free = [int(r["SwapFree"]) / 2**20 for _, r in rows]
@@ -409,23 +475,22 @@ def run2(ev, freeze, missing, fail, checks):
         # The sampler covered the start: from launch to its result line in run.log, at most 5 s apart.
         done = [l.split(" ", 1)[0] for l in run_log
                 if re.match(rf"^\S+ block {s.get('block')} position {s.get('position')} arm {s.get('arm')}: failed=", l)]
-        try:
-            stamps = [seconds(t) for t, _ in rows]
-            covered = (len(rows) >= 0.9 * ready and stamps[0] <= seconds(s["launched_at"])
-                       and len(done) == 1 and stamps[-1] >= seconds(done[0]) - 15
-                       and max(b - a for a, b in zip(stamps, stamps[1:])) <= 5)
-        except (KeyError, TypeError, ValueError, IndexError):
-            covered = False
-        if not covered:
+        if not (len(rows) >= 0.9 * ready and len(done) == 1
+                and covered([t for t, _ in rows], s.get("launched_at"), done[0])):
             gaps.append(f"{label}: meminfo samples do not cover the start ({len(rows)} rows, ready_s {ready})")
     checks["run2_unsafe_starts"] = unsafe = {k: sorted(set(v)) for k, v in unsafe.items()}
     checks["run2_coverage_gaps"] = gaps
+    checks["run2_identity_problems"] = identity
     if gaps:
         missing.append(f"clauses 2-3 (run 2): {gaps[:3]}")
+    if identity:
+        missing.append(f"run 2 identity: {identity[:3]}")
     for key, clause in (("kill", "clause 1: kill line (run 2)"), ("swap", "clause 2: swap growth (run 2)"),
                         ("low", "clause 3: low point below 8 GiB (run 2)")):
         if unsafe[key]:
             fail.append(f"{clause} at {unsafe[key]}")
+    if problems:
+        return
     if not (blocks / "plan.json").is_file() or load(blocks / "plan.json", missing) != plan:
         missing.append("clause 13: blocks/plan.json is not plan.json")
         return
@@ -445,12 +510,16 @@ def run2(ev, freeze, missing, fail, checks):
             fail.append(f"clause 13: {key} lower-95 {m[key]['lower_95']:.4f} < {floor}")
 
 
-def run1_check(ev):
-    """Run 2 starts only after a clean run 1: no failed clause, no FAILED_ATTEMPT, and nothing missing
-    except clause 5 (a changed text path sends accuracy to the holdout, not to a new run 1)."""
+def run2_preflight(ev):
+    """Run 2 starts only after a clean run 1 (no failed clause, no FAILED_ATTEMPT, nothing missing except
+    clause 5: a changed text path sends accuracy to the holdout, not to a new run 1), with a plan that is
+    valid for the current freeze, from a working tree that is the freeze's."""
     missing, fail, checks = [], [], {}
-    run1(ev, git("log", "-1", "--format=%H", "--", f"{CANDIDATE}/PREREG.md"), missing, fail, checks)
-    blocking = [m for m in missing if not m.startswith("clause 5:")]
+    freeze = git("log", "-1", "--format=%H", "--", f"{CANDIDATE}/PREREG.md")
+    run1(ev, freeze, missing, fail, checks)
+    _, problems = plan_problems(ev, freeze, [], checks)
+    scoring_identity(freeze, missing, checks)
+    blocking = [m for m in missing if not m.startswith("clause 5:")] + [f"plan: {p}" for p in problems]
     print(json.dumps({"fail": fail, "missing": blocking, "failed_attempt_lines": checks.get("failed_attempt_lines")}))
     return 0 if not fail and not blocking and not checks.get("failed_attempt_lines") else 1
 
@@ -459,6 +528,7 @@ def main(ev):
     missing, fail, checks = [], [], {}
     freeze = git("log", "-1", "--format=%H", "--", f"{CANDIDATE}/PREREG.md")
     checks["freeze"] = freeze
+    scoring_identity(freeze, missing, checks)
     run1(ev, freeze, missing, fail, checks)
     run2(ev, freeze, missing, fail, checks)
     verdict = "FAIL" if fail else ("NO_RESULT" if missing or checks["failed_attempt_lines"] else "PASS")
@@ -471,6 +541,6 @@ def main(ev):
 
 
 if __name__ == "__main__":
-    if sys.argv[1:2] == ["--run1-check"]:
-        sys.exit(run1_check(Path(sys.argv[2])))
+    if sys.argv[1:2] == ["--run2-preflight"]:
+        sys.exit(run2_preflight(Path(sys.argv[2])))
     sys.exit(main(Path(sys.argv[1])))
