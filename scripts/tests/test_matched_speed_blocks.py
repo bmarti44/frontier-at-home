@@ -183,6 +183,52 @@ class MatchedSpeedBlocks(unittest.TestCase):
             # start on another runtime leaves its libraries cached).
             self.assertEqual(line["release_trees"], ["/r/one", "/r/two"])
 
+    def test_drand_round_is_the_first_after_the_freeze_and_relays_must_agree(self):
+        t = self.tool
+        frozen = 1_760_000_000
+        want = (frozen - 1595431050) // 30 + 2
+        self.assertEqual(t.first_drand_round_after(frozen), want)
+        self.assertGreater(t.drand_publication_time(want), frozen)
+        doc = {"round": want, "randomness": "cd" * 32, "signature": "ef" * 96, "previous_signature": "01" * 96}
+        seen = []
+
+        def fetch(relay, number):
+            seen.append((relay, number))
+            return dict(doc)
+
+        clock, sleeps = [t.drand_publication_time(want) - 40.0], []
+
+        def sleep(seconds):
+            sleeps.append(seconds)
+            clock[0] += seconds
+        receipt = t.drand_receipt(frozen, "f" * 40, fetch=fetch, verify=lambda d: seen.append("verified"),
+                                  now=lambda: clock[0], sleep=sleep)
+        self.assertTrue(sleeps, "waits until the round is published")
+        self.assertEqual([r for r, _ in seen[:3]], list(t.DRAND_RELAYS))
+        self.assertEqual(seen[3], "verified")
+        self.assertEqual((receipt["round"], receipt["randomness"]), (want, "cd" * 32))
+        self.assertEqual(receipt["frozen_commit"], "f" * 40)
+        later = lambda: t.drand_publication_time(want) + 1.0
+        docs = iter([dict(doc), dict(doc, randomness="ce" * 32), dict(doc)])
+        with self.assertRaisesRegex(ValueError, "disagree"):
+            t.drand_receipt(frozen, "f" * 40, fetch=lambda r, n: next(docs), verify=lambda d: None,
+                            now=later, sleep=lambda s: None)
+
+        def reject(d):
+            raise RuntimeError("BLS verification failed")
+        with self.assertRaisesRegex(RuntimeError, "BLS"):
+            t.drand_receipt(frozen, "f" * 40, fetch=lambda r, n: dict(doc), verify=reject,
+                            now=later, sleep=lambda s: None)
+
+    def test_the_bundled_verifier_accepts_a_real_round_and_rejects_a_tampered_one(self):
+        fixture = json.loads((ROOT / "results/glm52-gates/W7-resume-production-drand-verifier-fixture.json")
+                             .read_text())
+        doc = {**fixture, "round": int(fixture["round"])}
+        self.tool.verify_drand_round(doc)
+        tampered = dict(doc, randomness=("0" if doc["randomness"][0] != "0" else "1") + doc["randomness"][1:])
+        with self.assertRaises(RuntimeError):
+            self.tool.verify_drand_round(tampered)
+
     def test_arena_guard_refusal_is_not_a_kill_line(self):
         refusal = ("RuntimeError: host page cache released under /m; MemFree 19.85 GiB: refusing to "
                    "allocate the KV arena; page cache outside /m would leave the driver short (NVRM)")
