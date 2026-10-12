@@ -36,6 +36,7 @@ import json
 import math
 import os
 import re
+import signal
 import statistics
 import subprocess
 import sys
@@ -60,7 +61,9 @@ T95 = {1: 6.313751514675043, 2: 2.919985580355516, 3: 2.3533634348018264,
        4: 2.131846786326649, 5: 2.015048372669157, 6: 1.9431802803927816,
        7: 1.894578605061305, 8: 1.8595480375228421, 9: 1.8331129326536335}
 MAX_SWAP_GROWTH_GIB = 0.25
-KERNEL_KILL = re.compile(r"out of memory|oom-kill|oom_reaper|NVRM|Xid")
+# re.I: the kernel's global OOM line is "Out of memory: Killed process ..." (as
+# the smoke and gate scorers match it).
+KERNEL_KILL = re.compile(r"out of memory|oom-kill|oom_reaper|NVRM|Xid", re.I)
 SERVER_KILL = re.compile(r"CUDA out of memory|OutOfMemoryError|NVRM|Xid")
 MEMWATCH_KILL = re.compile(r"BREACH|EMERGENCY_STOP")
 # The engine's arena guard refuses cleanly and names NVRM as what it prevents;
@@ -291,6 +294,12 @@ def _run_start(step, plan, profiles, args, out: Path, log) -> None:
         f"kills={len(kills)} low={start['low_mem_available_gib']:.2f}")
 
 
+def exit_on_sigterm() -> None:
+    """SIGTERM raises SystemExit(143), so a start unwinds through its finally:
+    the engine is stopped and its scope waited for, not orphaned until RuntimeMaxSec."""
+    signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
+
+
 def cmd_run(args) -> int:
     plan = json.loads(Path(args.plan).read_text())
     out = Path(args.out)
@@ -316,6 +325,7 @@ def cmd_run(args) -> int:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         raise SystemExit(f"{args.inference_lock} is held: an engine is serving; stop it first") from None
+    exit_on_sigterm()
     out.mkdir(parents=True, exist_ok=True)
     if (out / "plan.json").exists():
         if json.loads((out / "plan.json").read_text()) != plan:
