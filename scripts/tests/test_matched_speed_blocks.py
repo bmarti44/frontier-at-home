@@ -312,6 +312,25 @@ class MatchedSpeedBlocks(unittest.TestCase):
         self.assertEqual(len(self.tool.kill_lines("server.log", "NVRM: Xid 79\n")), 1)
         self.assertEqual(len(self.tool.kill_lines("kernel.log", refusal + "\n")), 1)
 
+    def test_a_sigterm_during_cleanup_waits_for_the_cleanup(self):
+        # Review round 2 (reviewer 1 L1): a second SIGTERM must not cut the stop/scope wait short;
+        # it takes effect once cleanup is done.
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp) / "cleanup"
+            script = (
+                "import importlib.util, os, signal, time\n"
+                f"spec = importlib.util.spec_from_file_location('m', {str(TOOL)!r})\n"
+                "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n"
+                "m.exit_on_sigterm()\n"
+                "with m.sigterm_deferred():\n"
+                "    os.kill(os.getpid(), signal.SIGTERM)\n"
+                "    time.sleep(0.2)\n"
+                f"    open({str(marker)!r}, 'w').write('done')\n"
+                f"open({str(marker)!r}, 'a').write(' after')\n")
+            proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30)
+            self.assertEqual(proc.returncode, 143, proc.stderr)
+            self.assertEqual(marker.read_text(), "done")
+
     def test_kernel_kill_pattern_ignores_case_like_the_gate_scorers(self):
         # The kernel's global OOM line is capitalized; the smoke and gate scorers match with re.I.
         self.assertEqual(len(self.tool.kill_lines("kernel.log", "Out of memory: Killed process 7 (python3)\n")), 1)
