@@ -6,7 +6,7 @@
 # fail-closed assertion byte-identical), plus --cuda-arch N for cuda-generic
 # and --rocm-arch gfxNNNN for rocm.
 #
-# Classes: cuda-spark | cuda-generic | metal | rocm | cpu
+# Classes: cuda-spark | cuda-generic | metal | rocm | vulkan | cpu
 # (configs/hardware-matrix.json records which engine pins apply per class.)
 #
 # The caller is expected to provide die_env() and die_build().
@@ -45,8 +45,8 @@ build_host_class_parse() {
         esac
     done
     case $BUILD_HOST_CLASS in
-        cuda-spark|cuda-generic|metal|rocm|cpu) ;;
-        *) die_env "unknown --host-class $BUILD_HOST_CLASS (cuda-spark|cuda-generic|metal|rocm|cpu)" ;;
+        cuda-spark|cuda-generic|metal|rocm|vulkan|cpu) ;;
+        *) die_env "unknown --host-class $BUILD_HOST_CLASS (cuda-spark|cuda-generic|metal|rocm|vulkan|cpu)" ;;
     esac
 }
 
@@ -84,6 +84,10 @@ build_host_class_require_platform() {
         rocm)
             command -v hipcc >/dev/null 2>&1 || die_env 'hipcc is required for rocm'
             ;;
+        vulkan)
+            command -v glslc >/dev/null 2>&1 \
+                || die_env 'glslc (Vulkan SDK / shaderc) is required for vulkan'
+            ;;
         cpu)
             ;;
     esac
@@ -103,6 +107,9 @@ build_host_class_cmake_flags() {
             ;;
         rocm)
             printf '%s\n' -DGGML_HIP=ON "-DAMDGPU_TARGETS=$BUILD_ROCM_ARCH" -DGGML_CUDA=OFF
+            ;;
+        vulkan)
+            printf '%s\n' -DGGML_VULKAN=ON -DGGML_CUDA=OFF -DGGML_METAL=OFF
             ;;
         cpu)
             printf '%s\n' -DGGML_CUDA=OFF -DGGML_METAL=OFF
@@ -151,6 +158,11 @@ build_host_class_assert_artifacts() {
                 || die_build 'build produced no ROCm ggml library'
             observed=$BUILD_ROCM_ARCH
             ;;
+        vulkan)
+            [[ -e $bin_dir/libggml-vulkan.so || -e $bin_dir/libggml-vulkan.dylib ]] \
+                || die_build 'build produced no Vulkan ggml library'
+            observed=vulkan
+            ;;
         cpu)
             observed=cpu
             ;;
@@ -164,6 +176,7 @@ build_host_class_backend() {
         cuda-spark|cuda-generic) printf 'cuda\n' ;;
         metal) printf 'apple-silicon\n' ;;
         rocm) printf 'rocm\n' ;;
+        vulkan) printf 'vulkan\n' ;;
         cpu) printf 'cpu\n' ;;
     esac
 }

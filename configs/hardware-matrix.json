@@ -48,9 +48,10 @@
   "glm-5.2": {"f16": 179712, "basis": "175.5 KiB/token (results/glm52-gates/source-audit-2026-08-15.md)"}
  },
  "engine_pins": {
-  "llamacpp-base-32e789fd": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"], "note": "DSV4 baseline pin; the portable DSV4 engine"},
-  "llamacpp-fusion-0dc74e33": {"backends": ["cuda"], "note": "fused DSV4 hyper-connection ops are CUDA-only ggml ops; Metal/ROCm use the base pin and record decode_baseline: pre-fusion"},
-  "llamacpp-qwen38-9d77fa17": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"]},
+  "llamacpp-b11514-de7fa0a3": {"backends": ["cuda", "apple-silicon", "rocm", "vulkan", "cpu"], "note": "portable pin (configs/pins/llamacpp.json): every off-Spark profile on upstream llama.cpp; build with scripts/14_build_llamacpp_pin.sh"},
+  "llamacpp-base-32e789fd": {"backends": ["cuda"], "note": "Spark DSV4 baseline build (configs/versions.lock, scripts/13_build_llamacpp.sh); off-Spark DSV4 profiles use the portable pin"},
+  "llamacpp-fusion-0dc74e33": {"backends": ["cuda"], "note": "Spark-qualified DSV4 fusion build; the fused ops are upstream since #25585, so off-Spark profiles get them through the portable pin"},
+  "llamacpp-qwen38-9d77fa17": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"], "note": "Spark-qualified Qwen3.8-27B pin; buildable everywhere for A/B, but off-Spark profiles use the portable pin"},
   "llamacpp-laguna-06f8cebd": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"], "note": "poolside fork; Metal/HIP builds have no known fork CI - verify on hardware"},
   "ds4-baa88902": {"backends": ["cuda", "apple-silicon", "rocm", "cpu"], "note": "Makefile already multi-target (Darwin default = Metal, strix-halo, cpu). Pin predates upstream dd157bd (native sm_121 for cuda-spark); a pin bump is a separate owner evaluation"},
   "sglang-image": {"backends": ["cuda"], "note": "Docker/CUDA only"},

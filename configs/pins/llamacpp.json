@@ -1,0 +1,33 @@
+{
+ "schema_version": 1,
+ "purpose": "Every llama.cpp pin a profile engine launches from {cache_root}/<pin>/src/build/bin/llama-server. Build any pin for any host class with scripts/14_build_llamacpp_pin.sh --pin <id> --host-class <class>. Spark-qualified engines keep the pin their evidence was measured on; moving one is a requalification (AGENTS.md). Off-Spark profiles on upstream llama.cpp use `portable`.",
+ "portable": "llamacpp-b11514-de7fa0a3",
+ "pins": {
+  "llamacpp-b11514-de7fa0a3": {
+   "repository": "https://github.com/ggml-org/llama.cpp",
+   "tag": "b11514",
+   "commit": "de7fa0a3c6a2e1b4cd9f22eb8d6bf5b12dbdb63b",
+   "chosen": "2026-10-11",
+   "rationale": "docs/llamacpp-pin-choice.md#portable-pin-b11514",
+   "known_issues": [
+    "#28748 (open): Metal tensor-API mul_mm miscomputes tiles >2 GiB from a tensor start; affects very large tensors (Flash-Next embedding), not Qwen3.8-27B",
+    "#30174 (open): Metal draft-mtp allocates up to ~15 GB host memory over a long session (Qwen3.8-27B)",
+    "#30175 (open): nondeterministic FA prefill on RDNA3 ROCm with multimodal requests since b10905"
+   ]
+  },
+  "llamacpp-qwen38-9d77fa17": {
+   "repository": "https://github.com/ggml-org/llama.cpp",
+   "tag": "b10488",
+   "commit": "9d77fa17254e1dee4b9e92504c91611a60b1359f",
+   "chosen": "2026-08-18",
+   "rationale": "Spark-qualified Qwen3.8-27B pin; builds before b10450 carry the Gated-DeltaNet CUDA corruption bug (scripts/12_build_qwen38_llamacpp.sh)"
+  },
+  "llamacpp-laguna-06f8cebd": {
+   "repository": "https://github.com/poolsideai/llama.cpp",
+   "branch": "laguna",
+   "commit": "06f8cebd7fe728687be3d19f8bdedb70d75883af",
+   "chosen": "2026-08-20",
+   "rationale": "Spark-qualified Laguna-S-2.1 pin; upstream lacks the DFlash draft tensors (poolside fork, scripts/13_build_laguna_llamacpp.sh)"
+  }
+ }
+}

@@ -74,8 +74,8 @@ def laguna_args(ctx, parallel, draft, uma, moe_cpu=False):
 
 
 def dsv4_args(ctx, ngl, parallel, uma, moe_cpu=False):
-    # llamacpp-base pin: the fused hyper-connection ops are CUDA-only, so
-    # every off-Spark profile runs the pre-fusion decode baseline.
+    # Portable pin (configs/pins/llamacpp.json): upstream carries the DSV4
+    # fused hyper-connection ops (CUDA) and Metal hc support.
     args = ["--model", "{model}", "-ngl", str(ngl), "-fa", "on"]
     if uma:
         args.append("--no-mmap")
@@ -187,29 +187,28 @@ spec(L, LE, "cpu", "any", 128, "cpu-128g", {"model": "udq4kxl"},
      ["cpu-throughput (8B-active MoE: usable but slow)"])
 
 D = "deepseek-v4-flash"
-DE = "llamacpp-base"
-PREFUSION = "pre-fusion"
+DE = "llamacpp-portable"
 
 spec(D, DE, "apple-silicon", "mac", 128, "apple-silicon-128g",
      {"model": "udq2kxl"}, dsv4_args(262144, 99, 1, True), 262144, 10,
      ["raised-wired-limit (fit ~95 GiB against ~96 GiB usable)"],
      tight_note="90.2 GiB weights leave almost no headroom at the default "
-                "Metal wired limit", decode_baseline=PREFUSION)
+                "Metal wired limit")
 spec(D, DE, "apple-silicon", "mac", 192, "apple-silicon-192g",
      {"model": "udq2kxl"}, dsv4_args(1048576, 99, 2, True), 1048576, 10,
-     [], decode_baseline=PREFUSION)
+     [])
 spec(D, DE, "cuda", "dgpu", 12, "cuda-dgpu-12g",
      {"model": "udq2kxl"}, dsv4_args(32768, 99, 1, False, moe_cpu=True),
      32768, 8, ["moe-on-cpu-throughput (13B active streamed from host RAM)"],
-     min_system_ram=128, decode_baseline=PREFUSION,
+     min_system_ram=128,
      tight_note="one profile covers 12-32 GiB VRAM: dense layers on GPU, "
                 "experts on CPU")
 spec(D, DE, "rocm", "strix", 128, "rocm-strix-128g",
      {"model": "udq2kxl"}, dsv4_args(65536, 99, 1, True), 65536, 8,
-     ["rocm-hip-build"], decode_baseline=PREFUSION)
+     ["rocm-hip-build"])
 spec(D, DE, "cpu", "any", 128, "cpu-128g",
      {"model": "udq2kxl"}, dsv4_args(16384, 0, 1, False), 16384, 8,
-     ["cpu-throughput (13B-active MoE)"], decode_baseline=PREFUSION)
+     ["cpu-throughput (13B-active MoE)"])
 
 
 def render(entry) -> dict:
