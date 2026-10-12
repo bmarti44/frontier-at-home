@@ -1,0 +1,234 @@
+{
+ "verdict": "COMPLETE",
+ "carrier_arm": "a3",
+ "kept_levers": [
+  "L1",
+  "L2"
+ ],
+ "untested_levers": [],
+ "arms": {
+  "a0": {
+   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m",
+   "base": null,
+   "lever": null,
+   "measured": {
+    "failed_attempt": [],
+    "kv_capacity": 1079117,
+    "kills": [],
+    "baseline_gib": 115.65564346313477,
+    "low_gib": 10.703426361083984,
+    "peak_gib": 104.95221710205078,
+    "swap_growth_gib": 0.0,
+    "fused_draft_fallback_logged": true,
+    "decode_0": 25.262946557997697,
+    "decode_28672": 35.50359484941337,
+    "prefill_28672": 2674.687730301911,
+    "ttft_0": 0.273587199,
+    "speed_valid": true,
+    "toolcall": 20,
+    "acceptance_length": 2.7302573203194322,
+    "probe_hashes": [
+     "10bbe8c78923",
+     "e54ccf0ee194",
+     "221c11ec3fb7"
+    ],
+    "probe_hashes_equal_c5": true
+   },
+   "safety_failures": [],
+   "decision": "BASELINE"
+  },
+  "a1": {
+   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a1",
+   "base": "a0",
+   "lever": "L0",
+   "decision": "VOID",
+   "reason": "readiness failure without kill lines; retried as a1r"
+  },
+  "a1r": {
+   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a1",
+   "base": "a0",
+   "lever": "L0",
+   "measured": {
+    "failed_attempt": [],
+    "kv_capacity": 1079117,
+    "kills": [],
+    "baseline_gib": 115.43154525756836,
+    "low_gib": 10.421257019042969,
+    "peak_gib": 105.01028823852539,
+    "swap_growth_gib": 0.0,
+    "fused_draft_fallback_logged": false,
+    "decode_0": 25.081076721327104,
+    "decode_28672": 36.38446536285469,
+    "prefill_28672": 2682.2583782644974,
+    "ttft_0": 0.274062564,
+    "speed_valid": true,
+    "toolcall": 20,
+    "acceptance_length": 2.727192205491585,
+    "probe_hashes": [
+     "10bbe8c78923",
+     "e54ccf0ee194",
+     "221c11ec3fb7"
+    ],
+    "probe_hashes_equal_c5": true
+   },
+   "safety_failures": [],
+   "projected_1m_peak_gib": 105.73212051391602,
+   "probe_hashes_equal_base": true,
+   "ratios": {
+    "decode_0": 0.9928009254085598,
+    "decode_28672": 1.024810741480616,
+    "prefill_28672": 1.0028304791908296,
+    "decode_geomean": 1.0086788649072547
+   },
+   "decision": "PASS"
+  },
+  "a2": {
+   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a2",
+   "base": "a1r",
+   "lever": "L1",
+   "measured": {
+    "failed_attempt": [],
+    "kv_capacity": 1079117,
+    "kills": [],
+    "baseline_gib": 114.74251937866211,
+    "low_gib": 10.41796875,
+    "peak_gib": 104.32455062866211,
+    "swap_growth_gib": 0.0,
+    "fused_draft_fallback_logged": false,
+    "decode_0": 28.760560198625615,
+    "decode_28672": 37.97884467073825,
+    "prefill_28672": 2688.638870858851,
+    "ttft_0": 0.2122855,
+    "speed_valid": true,
+    "toolcall": 20,
+    "acceptance_length": 2.7513416815742398,
+    "probe_hashes": [
+     "10bbe8c78923",
+     "e54ccf0ee194",
+     "221c11ec3fb7"
+    ],
+    "probe_hashes_equal_c5": true
+   },
+   "safety_failures": [],
+   "projected_1m_peak_gib": 105.04638290405273,
+   "probe_hashes_equal_base": true,
+   "ratios": {
+    "decode_0": 1.1467035693156566,
+    "decode_28672": 1.043820330791813,
+    "prefill_28672": 1.0023787762752676,
+    "decode_geomean": 1.0940532432396612
+   },
+   "decision": "KEPT"
+  },
+  "a3": {
+   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a3",
+   "base": "a2",
+   "lever": "L2",
+   "measured": {
+    "failed_attempt": [],
+    "kv_capacity": 1079117,
+    "kills": [],
+    "baseline_gib": 114.75483703613281,
+    "low_gib": 10.359424591064453,
+    "peak_gib": 104.39541244506836,
+    "swap_growth_gib": 0.0,
+    "fused_draft_fallback_logged": false,
+    "decode_0": 34.20880080245196,
+    "decode_28672": 41.09653245682568,
+    "prefill_28672": 2709.54941203044,
+    "ttft_0": 0.212111106,
+    "speed_valid": true,
+    "toolcall": 20,
+    "acceptance_length": 2.5748953974895397,
+    "probe_hashes": [
+     "10bbe8c78923",
+     "e54ccf0ee194",
+     "221c11ec3fb7"
+    ],
+    "probe_hashes_equal_c5": true
+   },
+   "safety_failures": [],
+   "projected_1m_peak_gib": 105.11724472045898,
+   "probe_hashes_equal_base": true,
+   "ratios": {
+    "decode_0": 1.1894344396006133,
+    "decode_28672": 1.0820901165666457,
+    "prefill_28672": 1.0077773706979507,
+    "decode_geomean": 1.1344933897541274
+   },
+   "decision": "KEPT"
+  },
+  "a4": {
+   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a4",
+   "base": "a3",
+   "lever": "L3",
+   "measured": {
+    "failed_attempt": [
+     "2026-10-12T01:54:56Z FAILED_ATTEMPT a4: block 3216 (want 3200), KV 1033876 (want >= 1048576)"
+    ],
+    "kv_capacity": 1033876,
+    "kills": [],
+    "baseline_gib": 114.74299621582031,
+    "low_gib": 11.004112243652344,
+    "peak_gib": 103.73888397216797,
+    "swap_growth_gib": 0.0,
+    "fused_draft_fallback_logged": false,
+    "decode_0": null,
+    "decode_28672": null,
+    "prefill_28672": null,
+    "ttft_0": null,
+    "speed_valid": false,
+    "toolcall": null,
+    "acceptance_length": null,
+    "probe_hashes": null,
+    "probe_hashes_equal_c5": null
+   },
+   "safety_failures": [
+    "FAILED_ATTEMPT",
+    "KV capacity 1033876"
+   ],
+   "projected_1m_peak_gib": 104.4607162475586,
+   "probe_hashes_equal_base": false,
+   "decision": "DROPPED"
+  },
+  "a5": {
+   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a5",
+   "base": "a4",
+   "lever": "L4",
+   "decision": "SUPERSEDED"
+  },
+  "a5b": {
+   "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a5b",
+   "base": "a3",
+   "lever": "L4",
+   "measured": {
+    "failed_attempt": [
+     "2026-10-12T01:56:13Z FAILED_ATTEMPT a5b: launch did not reach ready"
+    ],
+    "kv_capacity": null,
+    "kills": [],
+    "baseline_gib": 114.67008972167969,
+    "low_gib": 114.64716339111328,
+    "peak_gib": 0.02292633056640625,
+    "swap_growth_gib": 0.0,
+    "fused_draft_fallback_logged": false,
+    "decode_0": null,
+    "decode_28672": null,
+    "prefill_28672": null,
+    "ttft_0": null,
+    "speed_valid": false,
+    "toolcall": null,
+    "acceptance_length": null,
+    "probe_hashes": null,
+    "probe_hashes_equal_c5": null
+   },
+   "safety_failures": [
+    "FAILED_ATTEMPT",
+    "KV capacity None"
+   ],
+   "projected_1m_peak_gib": 0.7447586059570312,
+   "probe_hashes_equal_base": false,
+   "decision": "DROPPED"
+  }
+ }
+}

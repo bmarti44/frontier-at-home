@@ -585,6 +585,12 @@ def main(argv: list[str]) -> int:
         return 2
     screen = Path(argv[1])
     result = score(screen)
+    # The summary reports probe identity, not digests: 12-character prefixes
+    # keep 64-hex values out of the evidence (secret lint).
+    for entry in result["arms"].values():
+        hashes = (entry.get("measured") or {}).get("probe_hashes")
+        if hashes is not None:
+            entry["measured"]["probe_hashes"] = [h[:12] if isinstance(h, str) else h for h in hashes]
     (screen / "summary.json").write_text(json.dumps(result, indent=1) + "\n")
     print(json.dumps({k: v for k, v in result.items() if k != "arms"}))
     return 0
