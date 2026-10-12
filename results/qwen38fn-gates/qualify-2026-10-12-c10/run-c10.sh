@@ -6,7 +6,8 @@
 #           runtime-001's largest libraries into page cache; then probes, the
 #           kit and the agent gate.
 #   blocks  run 2: the five matched ABBA/BAAB blocks of plan.json through
-#           scripts/97_matched_speed_blocks.py.
+#           scripts/97_matched_speed_blocks.py, only after a clean run 1
+#           (gate_verdict.py --run1-check). Rerunning it resumes the campaign.
 # Production must already be stopped (52_engine_switch.sh stop).
 set -Eeuo pipefail
 MODE=${1:?usage: run-c10.sh start1 | blocks}
@@ -23,6 +24,7 @@ HOST=$EV/host-worktree.json
 INFERENCE_LOCK=/run/lock/frontier-at-home/inference.lock
 RUNTIME_ROOT=$HOME/.cache/qwen38-flash-next
 R1=$RUNTIME_ROOT/native-runtime-001/runtime/lib/python3.12/site-packages
+R2=$RUNTIME_ROOT/native-runtime-002/runtime/lib/python3.12/site-packages
 # What a switch from qwen38-1m leaves (candidate 9), and what a production
 # qwen38fn start on runtime-001 leaves: its nine largest libraries (2.98 GiB).
 PRIME=(/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf
@@ -45,14 +47,42 @@ preflight() {
     dirty=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)
     [[ $dirty -eq 0 ]] || { echo "$WT has $dirty tracked changes" >&2; exit 2; }
 }
+# One "runtime-tree <name> <first 16 hex> <files>" line per runtime: its site-packages/vllm digest by
+# the runtime-002 manifest's vllm_tree method (the contract test's tree_sha256). The gate compares
+# them with the frozen manifest. Reading a tree fills page cache, so each is released afterwards.
+runtime_trees() {
+    python3 -I - "$WT" "$R1" "$R2" <<'PY'
+import importlib.util
+import sys
+from pathlib import Path
+wt = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("contract", wt / "scripts/tests/test_qwen38fn_tune_contract.py")
+contract = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(contract)   # puts scripts/lib on sys.path
+from checkpoint_cache import release_tree
+for site in map(Path, sys.argv[2:]):
+    digest, files = contract.tree_sha256(site)
+    release_tree(str(site / "vllm"))
+    print(f"runtime-tree {site.parents[3].name} {digest[:16]} {files}")
+PY
+}
+log_runtime_trees() {
+    local trees line
+    trees=$(runtime_trees)
+    while read -r line; do log "$line"; done <<<"$trees"
+}
 
 if [[ $MODE == blocks ]]; then
     OUT=$EV/blocks
     [[ -f $EV/plan.json ]] || { echo "no $EV/plan.json: draw it with 97 plan --drand-after <freeze>" >&2; exit 2; }
     preflight
+    python3 "$EV/gate_verdict.py" --run1-check "$EV" \
+        || { echo "run 1 is not clean (gate_verdict.py --run1-check): run 2 is not run" >&2; exit 2; }
     mkdir -p "$OUT"
     log() { printf '%s %s\n' "$(stamp)" "$*" | tee -a "$OUT/driver.log"; }
+    # Each invocation logs its head; the gate requires one clean commit across all of them.
     log "head $(git -C "$WT" rev-parse HEAD) dirty=0"
+    log_runtime_trees
     log "blocks: $(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p["blocks"], p["drand"]["round"])' "$EV/plan.json")"
     # 97 holds the system inference lock itself, and --resume continues after a
     # guard timeout (the guard runs before a start's directory exists).
@@ -60,6 +90,7 @@ if [[ $MODE == blocks ]]; then
         --host "$HOST" --port "$PORT" --release-tree "$RUNTIME_ROOT" --runtime-max-sec 3600 --resume \
         2>&1 | tee -a "$OUT/driver.log"
     python3 "$WT/scripts/97_matched_speed_blocks.py" score --out "$OUT" | tee -a "$OUT/driver.log" || true
+    log_runtime_trees
     log "postrun $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
     exit 0
 fi
@@ -78,6 +109,9 @@ preflight
 # Only this shell holds the lock: the engine and memwatch start with fd 8 closed.
 exec 8>"$INFERENCE_LOCK"
 flock -n 8 || { echo "$INFERENCE_LOCK is held: an engine is serving; stop it first" >&2; exit 2; }
+# The guard runs before $OBS exists: a timeout leaves nothing behind, and the start can be retried.
+GUARD=$(python3 "$WT/scripts/03_memory_guard.py" --required-gib 114.5 --stable-samples 3 --timeout-seconds 600 2>&1) \
+    || { printf '%s\n' "$GUARD" >&2; echo "memory guard did not pass; nothing was started" >&2; exit 2; }
 mkdir -p "$OBS"
 
 log() { printf '%s %s\n' "$(stamp)" "$*" | tee -a "$OBS/driver.log"; }
@@ -130,12 +164,12 @@ check_no_survivors() {
     return 1
 }
 
+printf '%s\n' "$GUARD" | tee -a "$OBS/driver.log"
 log "preload $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
 log "head $(git -C "$WT" rev-parse HEAD) dirty=0"
+log_runtime_trees
 cat -- "${PRIME[@]}" >/dev/null
 log "primed $(awk '/^(MemFree|MemAvailable|Cached):/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
-python3 "$WT/scripts/03_memory_guard.py" --required-gib 114.5 --stable-samples 3 --timeout-seconds 600 \
-    | tee -a "$OBS/driver.log"
 while read -r gib unit path; do
     log "precondition $gib $unit $path"
 done < <(python3 -I "$RESIDENCY" "${PRIME[@]}")
@@ -172,4 +206,5 @@ python3 "$WT/scripts/dev/regression-suite.py" agent-gate --base "http://127.0.0.
     2>&1 | tee -a "$OBS/driver.log" || log "agent-gate exit nonzero"
 "${SERVE[@]}" stop | tee -a "$OBS/driver.log"
 check_no_survivors
+log_runtime_trees
 log "postrun $(awk '/MemAvailable|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"

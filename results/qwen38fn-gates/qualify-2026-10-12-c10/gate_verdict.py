@@ -2,12 +2,14 @@
 """Fixed candidate-10 gate verdict per PREREG.md in this directory.
 
 Usage: gate_verdict.py <bundle dir>  -> writes <dir>/gate-summary.json, prints the verdict.
+       gate_verdict.py --run1-check <bundle dir>  -> exit 0 iff run 2 may start (no file written).
 Fails closed: missing or malformed evidence is NO_RESULT, never PASS.
 Candidate 9's clauses 1-12 (run 1), extended to run 2's starts and to the
 runtime-root release, plus clause 13 (matched speed through the shared
 97_matched_speed_blocks.py scorer) and clause 14 (TTFT at depth 0). The
-kill-line patterns are imported from the smoke scorer so every run uses
-exactly the same ones.
+kill-line patterns are imported from the smoke scorer, and this scorer applies
+them to the raw logs of run 1 and of every run-2 start, so both runs use
+exactly the same ones (97's own start.json kill lines are checked as well).
 """
 import importlib.util
 import json
@@ -16,6 +18,7 @@ import os
 import re
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 SOAK_FLOOR_GIB = 5.0
@@ -26,6 +29,10 @@ DEFAULT_VISION_CORRECT, VISION_N, WORSE_Z = 64, 100, -1.645
 MIN_CONTEXT_TOKENS, CONTEXT_CAP = 1_000_000, 1_048_576
 KV_CAPACITY = re.compile(r"GPU KV cache size: ([0-9,]+) tokens, Maximum concurrency for 262,144 tokens per request")
 HEAD = re.compile(r"^\S+ head ([0-9a-f]{40}) dirty=(\d+)$")
+# run-c10.sh logs both runtimes' site-packages/vllm digests (16 hex) before launch and after the
+# run, by the runtime-002 manifest's vllm_tree method.
+RUNTIME_TREE = re.compile(r"^\S+ runtime-tree (native-runtime-00[12]) ([0-9a-f]{16}) (\d+)$")
+RUNTIME_MANIFEST = "configs/build-manifests/qwen38-flash-next-runtime-002.json"
 LAUNCH = re.compile(r"^(\S+) start1: launching in scope ")
 PRECONDITION = re.compile(r"^\S+ precondition ([0-9.]+) GiB (\S+)$")
 GGUF = ("/home/bmarti44/models/qwen3.8-27b/Qwen3.8-27B-Q4_K_M.gguf",
@@ -63,6 +70,7 @@ FROZEN = (
     "scripts/35_soak.py", "scripts/38_bench_vision.py", "scripts/39_bench_toolcall.py",
     "scripts/50_probe_context.py", "scripts/92_resolve_profile.py", "scripts/93_profile_serve.sh",
     "scripts/94_qualify_profile.py", "scripts/97_matched_speed_blocks.py",
+    "scripts/tests/test_qwen38fn_tune_contract.py",
     "scripts/103_verify_drand_receipt_bundle.mjs", "fixtures", "evalsets/mmmu-val-100", "evalsets/toolcall",
     "results/qwen38fn-gates/smoke-2026-10-11/probe.py", "results/qwen38fn-gates/smoke-2026-10-11/verdict.py",
     "results/qwen38fn-gates/qualify-2026-10-11-c4/probe-start1.json",
@@ -105,7 +113,8 @@ def git(*args) -> str:
 
 
 def code_identity(lines, label, freeze, missing, checks):
-    heads = [m.groups() for m in map(HEAD.match, lines) if m]
+    # Every invocation logs its head (a resumed run 2 logs it again); all must be one clean commit.
+    heads = sorted({m.groups() for m in map(HEAD.match, lines) if m})
     checks[f"{label}_heads"] = heads
     if len(heads) != 1 or heads[0][1] != "0" or not freeze:
         missing.append(f"{label} code identity: heads {heads}, freeze {freeze or None}")
@@ -115,6 +124,50 @@ def code_identity(lines, label, freeze, missing, checks):
     checks[f"{label}_frozen_diff_rc"] = diff.returncode
     if diff.returncode != 0:
         missing.append(f"{label} code identity: frozen files differ between {freeze} and {heads[0][0]}")
+
+
+def runtime_trees(lines, label, freeze, missing, checks):
+    """Both runtimes' vllm trees, as logged, equal the frozen runtime-002 manifest's digests."""
+    try:
+        manifest = json.loads(git("show", f"{freeze}:{RUNTIME_MANIFEST}")) if freeze else {}
+        want = {"native-runtime-002": (manifest["vllm_tree"]["sha256"][:16], manifest["vllm_tree"]["files"]),
+                "native-runtime-001": (manifest["base_runtime"]["base_vllm_tree"]["sha256"][:16],
+                                       manifest["base_runtime"]["base_vllm_tree"]["files"])}
+    except (ValueError, KeyError, TypeError):
+        missing.append(f"{label} runtime trees: no {RUNTIME_MANIFEST} digests at the freeze")
+        return
+    seen = [(name, sha, int(files)) for name, sha, files in (m.groups() for m in map(RUNTIME_TREE.match, lines) if m)]
+    checks[f"{label}_runtime_trees"] = seen
+    for name, (sha, files) in want.items():
+        got = {(s, f) for n, s, f in seen if n == name}
+        if got != {(sha, files)}:
+            missing.append(f"{label} runtime trees: {name} logged {sorted(got)}, frozen {(sha, files)}")
+
+
+def raw_kill_lines(d):
+    """Kill lines in a directory's kernel/server/memwatch logs, by the smoke scorer's patterns.
+    The engine's arena-guard refusal names NVRM as what it prevents: not a kill line here (run 1
+    scores a refusal by clause 12)."""
+    hits = []
+    for name, rx in KILL.items():
+        f = d / ("server.log" if name == "server" else name)
+        if f.is_file():
+            hits += [f"{f.name}: {l.strip()}" for l in f.read_text(errors="replace").splitlines()
+                     if rx.search(l) and REFUSED not in l]
+    return hits
+
+
+def meminfo_rows(path):
+    rows = []
+    for line in path.read_text().splitlines() if path.is_file() else []:
+        kv = dict(re.findall(r"(\w+):=(\d+)", line))
+        if {"MemAvailable", "SwapTotal", "SwapFree"} <= kv.keys():
+            rows.append((line.split(" ", 1)[0], kv))
+    return rows
+
+
+def seconds(stamp):
+    return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").timestamp()
 
 
 def run1(ev, freeze, missing, fail, checks):
@@ -174,12 +227,7 @@ def run1(ev, freeze, missing, fail, checks):
     if set(primed) != set(GGUF) | set(RUNTIME_LIBS) or gguf < GGUF_MIN_GIB or runtime < RUNTIME_MIN_GIB:
         missing.append(f"clause 11: primed files not resident at launch (gguf {gguf:.2f}, runtime {runtime:.2f} "
                        f"GiB, {len(primed)} files); the fix was not tested")
-    rows = []
-    meminfo = obs / "meminfo.log"
-    for line in meminfo.read_text().splitlines() if meminfo.is_file() else []:
-        kv = dict(re.findall(r"(\w+):=(\d+)", line))
-        if {"MemAvailable", "SwapTotal", "SwapFree"} <= kv.keys():
-            rows.append((line.split(" ", 1)[0], kv))
+    rows = meminfo_rows(obs / "meminfo.log")
     if len(rows) < 600:
         missing.append("observe/start1/meminfo.log (fewer than 600 samples)")
     else:
@@ -202,6 +250,7 @@ def run1(ev, freeze, missing, fail, checks):
     checks["failed_attempt_lines"] = [l for l in lines if "FAILED_ATTEMPT" in l]
     if driver.is_file():
         code_identity(lines, "run1", freeze, missing, checks)
+        runtime_trees(lines, "run1", freeze, missing, checks)
 
     manifest = load(ev / "manifest.json", missing)
     context = load(ev / "context" / "summary.json", missing)
@@ -323,22 +372,56 @@ def run2(ev, freeze, missing, fail, checks):
     if not driver.is_file():
         missing.append("blocks/driver.log")
     else:
-        code_identity(driver.read_text().splitlines(), "run2", freeze, missing, checks)
+        lines = driver.read_text().splitlines()
+        code_identity(lines, "run2", freeze, missing, checks)
+        runtime_trees(lines, "run2", freeze, missing, checks)
+    run_log = (blocks / "run.log").read_text().splitlines() if (blocks / "run.log").is_file() else []
     unsafe = {"kill": [], "swap": [], "low": []}
-    for start in sorted(blocks.glob("block-*/*/start.json")):
+    gaps = []
+    # Every start directory, with or without start.json: a start whose driver died still has its
+    # kernel log and samples, and an OOM there is a FAIL, not only a NO_RESULT.
+    for d in sorted(p for p in blocks.glob("block-*/*") if p.is_dir()):
+        label = f"{d.parent.name}/{d.name}"
+        if raw_kill_lines(d):
+            unsafe["kill"].append(label)
+        rows = meminfo_rows(d / "meminfo.log")
+        available = [int(r["MemAvailable"]) / 2**20 for _, r in rows]
+        free = [int(r["SwapFree"]) / 2**20 for _, r in rows]
+        if rows and min(available) < FLOOR_GIB:
+            unsafe["low"].append(label)
+        if rows and free[0] - min(free) > SWAP_MAX_GIB:
+            unsafe["swap"].append(label)
         try:
-            s = json.loads(start.read_text())
+            s = json.loads((d / "start.json").read_text())
         except (OSError, ValueError):
             continue   # the shared scorer below reports it as NO_RESULT
-        label = f"{start.parent.parent.name}/{start.parent.name}"
         if s.get("kill_lines"):
             unsafe["kill"].append(label)
-        swap, low = s.get("swap_growth_gib"), s.get("low_mem_available_gib")
-        if isinstance(swap, (int, float)) and swap > SWAP_MAX_GIB:
+        swap, low, ready = s.get("swap_growth_gib"), s.get("low_mem_available_gib"), s.get("ready_s")
+        if not all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+                   for v in (swap, low, ready)):
+            gaps.append(f"{label}: swap, low point or ready_s not finite")
+            continue
+        if swap > SWAP_MAX_GIB:
             unsafe["swap"].append(label)
-        if isinstance(low, (int, float)) and low < FLOOR_GIB:
+        if low < FLOOR_GIB:
             unsafe["low"].append(label)
-    checks["run2_unsafe_starts"] = unsafe
+        # The sampler covered the start: from launch to its result line in run.log, at most 5 s apart.
+        done = [l.split(" ", 1)[0] for l in run_log
+                if re.match(rf"^\S+ block {s.get('block')} position {s.get('position')} arm {s.get('arm')}: failed=", l)]
+        try:
+            stamps = [seconds(t) for t, _ in rows]
+            covered = (len(rows) >= 0.9 * ready and stamps[0] <= seconds(s["launched_at"])
+                       and len(done) == 1 and stamps[-1] >= seconds(done[0]) - 15
+                       and max(b - a for a, b in zip(stamps, stamps[1:])) <= 5)
+        except (KeyError, TypeError, ValueError, IndexError):
+            covered = False
+        if not covered:
+            gaps.append(f"{label}: meminfo samples do not cover the start ({len(rows)} rows, ready_s {ready})")
+    checks["run2_unsafe_starts"] = unsafe = {k: sorted(set(v)) for k, v in unsafe.items()}
+    checks["run2_coverage_gaps"] = gaps
+    if gaps:
+        missing.append(f"clauses 2-3 (run 2): {gaps[:3]}")
     for key, clause in (("kill", "clause 1: kill line (run 2)"), ("swap", "clause 2: swap growth (run 2)"),
                         ("low", "clause 3: low point below 8 GiB (run 2)")):
         if unsafe[key]:
@@ -362,6 +445,16 @@ def run2(ev, freeze, missing, fail, checks):
             fail.append(f"clause 13: {key} lower-95 {m[key]['lower_95']:.4f} < {floor}")
 
 
+def run1_check(ev):
+    """Run 2 starts only after a clean run 1: no failed clause, no FAILED_ATTEMPT, and nothing missing
+    except clause 5 (a changed text path sends accuracy to the holdout, not to a new run 1)."""
+    missing, fail, checks = [], [], {}
+    run1(ev, git("log", "-1", "--format=%H", "--", f"{CANDIDATE}/PREREG.md"), missing, fail, checks)
+    blocking = [m for m in missing if not m.startswith("clause 5:")]
+    print(json.dumps({"fail": fail, "missing": blocking, "failed_attempt_lines": checks.get("failed_attempt_lines")}))
+    return 0 if not fail and not blocking and not checks.get("failed_attempt_lines") else 1
+
+
 def main(ev):
     missing, fail, checks = [], [], {}
     freeze = git("log", "-1", "--format=%H", "--", f"{CANDIDATE}/PREREG.md")
@@ -378,4 +471,6 @@ def main(ev):
 
 
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["--run1-check"]:
+        sys.exit(run1_check(Path(sys.argv[2])))
     sys.exit(main(Path(sys.argv[1])))
