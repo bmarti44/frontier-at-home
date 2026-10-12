@@ -40,5 +40,12 @@
   "base": "a4",
   "lever": "L4",
   "requires": "the base arm's peak <= 104.7 GiB"
+ },
+ "a5b": {
+  "profile": "qwen3.8-flash-next/cuda-spark-128g-1m-tune-a5b",
+  "base": "a3",
+  "lever": "L4",
+  "requires": "the base arm's peak <= 104.7 GiB",
+  "note": "amended: L3 dropped at a4 (KV 1,033,876 < 1,048,576, block 3,216), so L4 builds on a3"
  }
 }
