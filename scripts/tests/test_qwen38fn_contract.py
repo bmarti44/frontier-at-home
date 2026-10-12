@@ -321,6 +321,33 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(arg(self.profile()["launch"]["args"], "--worker-cls"),
                          "qwen38fn_worker.HostCacheReleaseWorker")
 
+    def test_rollback_to_candidate_9_keeps_the_release_root(self):
+        # The README's rollback recipe (review of the promotion, M1): engine
+        # vllm-qwen38fn-r001 with runtime-001's PATH, without the two lever
+        # variables and the draft head quantization, keeping
+        # QWEN38FN_HOST_RELEASE_ROOTS. Reverting the profile to candidate 9's
+        # revision instead would drop the root, and candidate 9's worker would
+        # meet runtime-002's cached libraries. The recipe must render candidate
+        # 9's recorded launch plus exactly that variable.
+        rollback = json.loads(json.dumps(self.profile()))
+        rollback["engine"] = "vllm-qwen38fn-r001"
+        env = rollback["launch"]["env"]
+        env["PATH"] = env["PATH"].replace("native-runtime-002", "native-runtime-001")
+        del env["QWEN38FN_PLE_WILLNEED"], env["QWEN4EXP_DRAFT_VOCAB"]
+        args = rollback["launch"]["args"]
+        spec = json.loads(arg(args, "--speculative-config"))
+        del spec["draft_lm_head_quantization"]
+        args[args.index("--speculative-config") + 1] = json.dumps(spec, separators=(",", ":"))
+        recorded = json.loads((C9 / "manifest.json").read_text())["profile"]
+        out = profile_resolver.resolve(rollback, profile_resolver.load_model(SLUG),
+                                       profile_resolver.load_host(C9 / "host-worktree.json"))
+        self.assertEqual(out["argv"], recorded["argv"])
+        self.assertEqual(out["binary"], recorded["binary"])
+        self.assertEqual(out["env"], {**recorded["env"],
+                                      "QWEN38FN_HOST_RELEASE_ROOTS": "/home/bmarti44/.cache/qwen38-flash-next"})
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("keep `QWEN38FN_HOST_RELEASE_ROOTS`", readme)
+
     def test_render_carries_safety_containment_and_runtime_pin(self):
         p = self.profile()
         out = self.render(p)

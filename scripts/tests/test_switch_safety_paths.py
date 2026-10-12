@@ -306,6 +306,47 @@ class SwitchProductionSafetyPathTests(unittest.TestCase):
         plan.update(overrides)
         return cls.generic_plan_lines(fixture, **plan)
 
+    def test_qwen38fn_process_on_another_runtime_path_is_not_ready(self):
+        # Promoting candidate 10 keeps the alias and changes only the runtime
+        # path: runtime-001 and runtime-002 hold byte-identical interpreters.
+        # `switch qwen38fn` restarts only if the serving check rejects the
+        # running engine, so a live process whose executable sits at another
+        # path must fail it even with identical bytes; at the plan's path the
+        # same process passes.
+        with SwitchSafetyFixture() as fixture:
+            engine = fixture.spawn_sleep()
+            pgid, ticks = proc_identity(engine.pid)
+            (fixture.state / "qwen38fn.process.json").write_text(json.dumps({
+                "pid": engine.pid, "pgid": pgid, "start_ticks": ticks,
+                "unit": "qwen38fn-engine.service",
+            }))
+            live = Path(f"/proc/{engine.pid}/exe").resolve()
+            other = fixture.artifacts / "bin" / "python3.12"
+            shutil.copyfile(live, other)
+            other.chmod(0o755)
+            response = {
+                "argv_prefix": ["show", "qwen38fn-engine.service",
+                                "--property=MainPID", "--value"],
+                "stdout": f"{engine.pid}\n",
+                "returncode": 0,
+            }
+            listener = (
+                "ss() { printf 'LISTEN 0 4096 127.0.0.1:%s 0.0.0.0:* "
+                f"users:((\\\"python3.12\\\",pid={engine.pid},fd=43))\\n' \"$PORT\"; }}\n"
+            )
+            check = ("if verify_generic_process_ready qwen38fn; "
+                     "then echo READY; else echo NOT_READY; fi\n")
+            outcomes = {}
+            for label, binary in (("same path", live), ("other path", other)):
+                fixture.set_systemctl_responses(response)
+                result = fixture.run_function(
+                    self.qwen38fn_plan_lines(fixture, binary=str(binary))
+                    + listener + check)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                outcomes[label] = result.stdout.strip()
+            self.assertEqual(outcomes, {"same path": "READY", "other path": "NOT_READY"})
+            self.assertIsNone(engine.poll())
+
     def test_generic_guard_failure_under_if_caller_cannot_proceed(self):
         with SwitchSafetyFixture() as fixture:
             result = fixture.run_function(
