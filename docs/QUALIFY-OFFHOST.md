@@ -15,6 +15,11 @@ numbers (docs/BACKEND-CONTRACT.md section 6).
   `{HOME}` and the sizes with your machine's values, and save it as
   `~/.config/frontier/host.json` (or `configs/hosts/<your-host>.json` in
   your branch).
+- macOS: `brew install bash cmake flock` and put Homebrew's bin first in
+  `PATH`. The scripts need bash 4+ (`mapfile`; `/bin/bash` is 3.2) and
+  `flock(1)`. `setsid(1)` is not needed: `93_profile_serve.sh` falls back
+  to `scripts/lib/setsid.py`. Fetch weights with the `hf` CLI
+  (`uv tool install huggingface_hub`).
 - `scripts/00_preflight.sh` reports `host_lock: not-applicable
   (community host ...)` — the versions.lock equality assertions apply only
   to the reference Spark.
