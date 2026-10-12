@@ -100,14 +100,25 @@ SPECS = []
 
 def spec(model, engine, backend, hardware_class, tier, stem, roles, args, ctx,
          floor, verify=(), tight_note=None, min_system_ram=None,
-         decode_baseline=None):
+         decode_baseline=None, overhead=None):
     SPECS.append({
         "model": model, "engine": engine, "backend": backend,
         "class": hardware_class, "tier": tier, "stem": stem, "roles": roles,
         "args": args, "ctx": ctx, "floor": floor, "verify": list(verify),
         "tight_note": tight_note, "min_system_ram": min_system_ram,
-        "decode_baseline": decode_baseline,
+        "decode_baseline": decode_baseline, "overhead": overhead,
     })
+
+
+# Measured on hardware (beats arithmetic, docs/QUALIFY-OFFHOST.md section 4):
+# (overhead_gib, basis) for the cell it was measured on.
+MAC128_MTP_OVERHEAD = (
+    21.5,
+    "overhead measured 2026-10-11 on an M5 Max 128 GiB at the portable pin: "
+    "65.1 GiB server RSS after the G2 speed cells minus 27.96 GiB weights and "
+    "16.0 GiB f16 KV; Metal draft-mtp host growth (llama.cpp #30174) is the "
+    "largest part (results/qwen38-gates/apple-silicon-128g-b11514-2026-10-11)",
+)
 
 
 Q = "qwen3.8-27b"
@@ -128,7 +139,8 @@ spec(Q, QE, "apple-silicon", "mac", 96, "apple-silicon-96g",
      qwen_args(262144, 99, 1, True, True), 262144, 10, [METAL_MTP])
 spec(Q, QE, "apple-silicon", "mac", 128, "apple-silicon-128g",
      {"model": "q8", "mmproj": "mmproj-f16"},
-     qwen_args(262144, 99, 2, True, True), 262144, 10, [METAL_MTP])
+     qwen_args(262144, 99, 2, True, True), 262144, 10, [METAL_MTP],
+     overhead=MAC128_MTP_OVERHEAD)
 spec(Q, QE, "apple-silicon", "mac", 192, "apple-silicon-192g",
      {"model": "q8", "mmproj": "mmproj-f16"},
      qwen_args(262144, 99, 4, True, True), 262144, 10, [METAL_MTP])
@@ -249,10 +261,10 @@ def render(entry) -> dict:
         },
         "memory_model": {
             "kv_bytes_per_token": KV[entry["model"]],
-            "overhead_gib": 3.0,
+            "overhead_gib": entry["overhead"][0] if entry["overhead"] else 3.0,
             "extra_gib": 0,
             "floor_gib": entry["floor"],
-            "basis": BASIS,
+            "basis": entry["overhead"][1] if entry["overhead"] else BASIS,
         },
         "context_cap": entry["ctx"],
         "port_role": "production",
