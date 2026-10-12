@@ -46,7 +46,8 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
     `memwatch.threshold_gib` = `safety.kill_floor_gib`.
   - `delegated-launcher`: `runuser` + `env -i <env> <delegate> {verb}`;
     the delegate owns admission and safety (dsv4 via
-    `scripts/21_serve_llamacpp.sh`).
+    `scripts/21_serve_llamacpp.sh`) after the switch's cache release and
+    free-memory gate (below).
   - `setsid-watchdog-portable`: non-Linux hosts; setsid + recorded PGID +
     the platform watchdog (macOS: `scripts/06_memwatch_macos.sh`).
 - `launch.args` / `launch.env` accept placeholders
@@ -99,6 +100,18 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   `estimated` profile can be committed and rendered but never served.
   Identity records and watchdog files live at
   `<state_root>/<log_name>.{process.json,memwatch.*}`.
+
+  Every switch start, generic or legacy, drops the kernel caches once the
+  previous engine has stopped and the artifacts are verified: `sync -f` on
+  the local filesystem that holds the state, then `drop_caches=3`. After the
+  MemAvailable guard it also requires MemFree of at least
+  `minimum_start_gib`. A shortfall drops the caches once more before
+  refusing. MemAvailable counts cached files, buffers and slab as free, and on
+  GB10 a load ran short at its KV arena with MemAvailable ample
+  (`results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md`). A failed
+  drop only warns; the MemFree gate decides. dsv4's delegate re-reads and
+  hashes its weights after this gate, so its own MemAvailable budget governs
+  that load.
 
 - `serving` — optional explicit topology for a multi-sequence engine (vLLM):
   `parallel_slots` and `request_context_cap` are required; `max_images`,
