@@ -8,7 +8,7 @@ with confidence intervals derived in the harness. This is the shared tool:
          Each block's order is ABBA when sha256(domain NUL randomness block)[0]
          is even, else BAAB. Draw the randomness after the freeze.
   run    --plan plan.json --out DIR [--host FILE] [--port 8017] [--required-gib G]
-         [--runtime-max-sec S] [--reps 3] [--resume] [--dry-run]
+         [--runtime-max-sec S] [--reps 3] [--release-tree DIR ...] [--resume] [--dry-run]
          Starts each arm fresh, in plan order, on a dev port through
          93_profile_serve.sh inside a user scope carrying the profile's
          containment (MemorySwapMax, OOMPolicy, MemoryHigh/Max). Each start is
@@ -58,7 +58,22 @@ MAX_SWAP_GROWTH_GIB = 0.25
 KERNEL_KILL = re.compile(r"out of memory|oom-kill|oom_reaper|NVRM|Xid")
 SERVER_KILL = re.compile(r"CUDA out of memory|OutOfMemoryError|NVRM|Xid")
 MEMWATCH_KILL = re.compile(r"BREACH|EMERGENCY_STOP")
+# The engine's arena guard refuses cleanly and names NVRM as what it prevents;
+# a refusal fails the start, but it is not a driver kill line.
+GUARD_REFUSAL = "refusing to allocate the KV arena"
 KIB_PER_GIB = 1024 * 1024
+
+
+def kill_lines(fname: str, text: str) -> list[str]:
+    pattern = {"kernel.log": KERNEL_KILL, "server.log": SERVER_KILL, "memwatch.log": MEMWATCH_KILL}[fname]
+    return [f"{fname}: {line[:200]}" for line in text.splitlines()
+            if pattern.search(line) and not (fname == "server.log" and GUARD_REFUSAL in line)]
+
+
+def release_trees(roots: list[str]) -> list[str]:
+    """Drop the unmapped page cache of every file under each root (no privilege)."""
+    from checkpoint_cache import release_tree
+    return [f"page cache released under {root}: {release_tree(root)} files" for root in roots]
 
 
 # --- plan ---------------------------------------------------------------------
@@ -143,13 +158,14 @@ def _run_start(step, plan, profiles, args, out: Path, log) -> None:
     d = out / f"block-{block}" / f"{position}-{arm}"
     # The guard runs before the start directory exists: a guard timeout leaves
     # nothing behind and --resume retries the same start.
+    released = release_trees(args.release_tree)
     guard = subprocess.run([sys.executable, str(REPO / "scripts/03_memory_guard.py"), "--required-gib",
                             str(args.required_gib), "--stable-samples", "3", "--timeout-seconds", "600"],
                            capture_output=True, text=True)
     if guard.returncode != 0:
         raise SystemExit(f"{d}: memory guard did not pass; nothing was started\n{guard.stdout}{guard.stderr}")
     d.mkdir(parents=True)
-    (d / "guard.txt").write_text(guard.stdout + guard.stderr)
+    (d / "guard.txt").write_text("".join(r + "\n" for r in released) + guard.stdout + guard.stderr)
     unit = f"matched-{block}-{position}-{arm}-{os.getpid()}"
     launch, bench = _commands(profile, name, unit, args)
     bench = [x.replace("{out}", str(d)) for x in bench]
@@ -211,12 +227,10 @@ def _run_start(step, plan, profiles, args, out: Path, log) -> None:
     base = samples[launch_index][1]
     after = [m for _, m in samples[launch_index:]]
     kills = []
-    for fname, pattern in (("kernel.log", KERNEL_KILL), ("server.log", SERVER_KILL),
-                           ("memwatch.log", MEMWATCH_KILL)):
+    for fname in ("kernel.log", "server.log", "memwatch.log"):
         path = d / fname
         if path.exists():
-            kills += [f"{fname}: {line[:200]}" for line in path.read_text(errors="replace").splitlines()
-                      if pattern.search(line)]
+            kills += kill_lines(fname, path.read_text(errors="replace"))
     start.update({
         "kill_lines": kills,
         "launch_mem_available_gib": base["MemAvailable"] / KIB_PER_GIB,
@@ -242,7 +256,7 @@ def cmd_run(args) -> int:
             name = plan["a_profile" if arm == "A" else "b_profile"]
             launch, bench = _commands(profiles[name], name, f"matched-{block}-{position}-{arm}", args)
             print(json.dumps({"block": block, "position": position, "arm": arm, "profile": name,
-                              "launch": launch, "bench": bench}))
+                              "release_trees": args.release_tree, "launch": launch, "bench": bench}))
         return 0
     # Hold the system inference lock a serving engine holds: no start beside a
     # live engine, and no switch start beside a campaign. os.open is
@@ -407,6 +421,9 @@ def main() -> int:
     r.add_argument("--reps", type=int, default=3)
     r.add_argument("--resume", action="store_true")
     r.add_argument("--inference-lock", default="/run/lock/frontier-at-home/inference.lock")
+    r.add_argument("--release-tree", action="append", default=[],
+                   help="before each start, drop this tree's unmapped page cache (repeatable); "
+                        "name every runtime tree the compared profiles use")
     r.add_argument("--dry-run", action="store_true")
     s = sub.add_parser("score")
     s.add_argument("--out", required=True)
