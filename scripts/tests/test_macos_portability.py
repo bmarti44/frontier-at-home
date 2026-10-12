@@ -162,6 +162,25 @@ class SetsidLauncherTests(unittest.TestCase):
                                    text=True, check=True).stdout.split()
         self.assertEqual(pid, pgid)
 
+    def test_start_publishes_the_target_only_after_the_group_exists(self):
+        # The shim calls setsid() tens of milliseconds after bash records $!.
+        # A target published before then names a PGID the watchdog cannot
+        # verify, so it fails closed and the server runs unguarded.
+        source = "\n".join([
+            "set -Eeuo pipefail",
+            _shell_function(PROFILE_SERVE, "pid_alive"),
+            _shell_function(PROFILE_SERVE, "await_group_leader"),
+            f'python3 "{SETSID_SHIM}" sleep 30 & child=$!',
+            'await_group_leader "$child"',
+            'printf "%s %s\\n" "$child" "$(ps -o pgid= -p "$child" | tr -d " ")"',
+            'kill "$child"',
+        ])
+        pid, pgid = subprocess.run(["bash", "-c", source], capture_output=True,
+                                   text=True, check=True).stdout.split()
+        self.assertEqual(pid, pgid)
+        start = _shell_function(PROFILE_SERVE, "do_start")
+        self.assertLess(start.index("await_group_leader"), start.index("$TARGET_FILE.tmp"))
+
 
 if __name__ == "__main__":
     unittest.main()
