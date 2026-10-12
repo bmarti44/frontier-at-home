@@ -296,8 +296,11 @@ class Qwen38FlashNextProfileContract(unittest.TestCase):
         self.assertEqual(profile_resolver.load_model(SLUG)["engines"][self.profile()["engine"]]["binary_sha256"],
                          recorded["binary_sha256"])
         candidate = profile_resolver.load_profile(SLUG, "cuda-spark-128g-1m-tune-c10.json")
-        for key in ("containment", "serving", "context_cap", "qualification_options"):
+        for key in ("serving", "context_cap", "qualification_options"):
             self.assertEqual(self.profile()[key], candidate[key], key)
+        # Containment differs only in the unit's name.
+        self.assertEqual({**self.profile()["containment"], "unit": None},
+                         {**candidate["containment"], "unit": None})
 
     def test_every_flash_next_runtime_is_released_at_startup(self):
         # Reverse direction (candidate 10 PREREG item 3, reviewer 2 M5): a
