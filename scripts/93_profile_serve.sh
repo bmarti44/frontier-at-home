@@ -88,7 +88,7 @@ LOCK_FILE=$RUN_DIR/inference.lock
 SERVER_LOG=$LOG_DIR/$SLUG.server.log
 MEMWATCH_LOG=$LOG_DIR/$SLUG.memwatch.log
 mkdir -p -- "$RUN_DIR" "$LOG_DIR"
-chmod 700 -- "$RUN_DIR" "$LOG_DIR"
+chmod 700 "$RUN_DIR" "$LOG_DIR"
 
 pid_alive() { kill -0 "$1" 2>/dev/null; }
 
