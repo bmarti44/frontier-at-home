@@ -1,0 +1,69 @@
+{
+  "index": 944,
+  "task_id": 944,
+  "rendered_prompt_sha256": "fd9a2915a8a4e2b43fbd51833da14ee5251eff83e426a10c6d8d710ef141f9e4",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>6 × 1.5 = 9\n10 × 2 = 20\n4 × 1.25 = 5\nTotal = 34</think>6 yams × $1.5 = $9\n10 sweet potatoes × $2 = $20\n4 carrots × $1.25 = $5\n\nTotal = $9 + $20 + $5 = $34\n\nAnswer: 34",
+  "finish_reason": "stop",
+  "expected": "34",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.8884229710092768
+  },
+  "response": {
+    "id": "cmpl-d5bcc559601e44faacd2ed42e5808e07",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>6 × 1.5 = 9\n10 × 2 = 20\n4 × 1.25 = 5\nTotal = 34</think>6 yams × $1.5 = $9\n10 sweet potatoes × $2 = $20\n4 carrots × $1.25 = $5\n\nTotal = $9 + $20 + $5 = $34\n\nAnswer: 34"
+      }
+    ],
+    "created": 1791920136,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 94,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 241.03,
+      "completion_tokens": 96,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 80,
+        "rejected_prediction_tokens": 32
+      },
+      "completion_time": 1.49,
+      "completion_tokens_per_sec": 64.22,
+      "total_tokens": 190,
+      "total_time": 1.89
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 94,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 4.148936170212766,
+      "prompt_per_second": 241.02564102564105,
+      "predicted_n": 96,
+      "predicted_ms": 1490.0,
+      "predicted_per_token_ms": 15.520833333333334,
+      "predicted_per_second": 64.42953020134229,
+      "draft_n": 112,
+      "draft_n_accepted": 80
+    }
+  },
+  "used_fallback": false
+}

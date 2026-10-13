@@ -1,0 +1,69 @@
+{
+  "index": 892,
+  "task_id": 892,
+  "rendered_prompt_sha256": "11e2d67bee71851f7c03cf1728962c336a06b938463fbdbb6b9ff20c66460f24",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Salad = $6, yogurt = half = $3. Two carrots + salad + yogurt = $11. Two carrots = 11 - 6 - 3 = 2. One carrot = 1.</think>Salad costs $6, yogurt costs half of that = $3. Total for salad and yogurt = $6 + $3 = $9. Two carrots cost $11 - $9 = $2, so one carrot costs $1.\n\nAnswer: 1",
+  "finish_reason": "stop",
+  "expected": "1",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.482138022023719
+  },
+  "response": {
+    "id": "cmpl-4259e10aa9824fc083ab7b051ccb8342",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Salad = $6, yogurt = half = $3. Two carrots + salad + yogurt = $11. Two carrots = 11 - 6 - 3 = 2. One carrot = 1.</think>Salad costs $6, yogurt costs half of that = $3. Total for salad and yogurt = $6 + $3 = $9. Two carrots cost $11 - $9 = $2, so one carrot costs $1.\n\nAnswer: 1"
+      }
+    ],
+    "created": 1791920128,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 90,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 236.84,
+      "completion_tokens": 103,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 81,
+        "rejected_prediction_tokens": 73
+      },
+      "completion_time": 2.1,
+      "completion_tokens_per_sec": 49.14,
+      "total_tokens": 193,
+      "total_time": 2.48
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 90,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 4.222222222222222,
+      "prompt_per_second": 236.84210526315792,
+      "predicted_n": 103,
+      "predicted_ms": 2100.0,
+      "predicted_per_token_ms": 20.388349514563107,
+      "predicted_per_second": 49.047619047619044,
+      "draft_n": 154,
+      "draft_n_accepted": 81
+    }
+  },
+  "used_fallback": false
+}

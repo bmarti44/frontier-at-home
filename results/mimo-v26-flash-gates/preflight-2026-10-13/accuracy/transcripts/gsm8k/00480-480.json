@@ -1,0 +1,70 @@
+{
+  "index": 480,
+  "task_id": 480,
+  "rendered_prompt_sha256": "b0e661d3cf66ab771b79b46f6b7e7684e0ab7299744c3aff353062ecc8032fc2",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Ben: 4 blue, 3 yellow.\nJasper: half as many blue = 4/2 = 2, three times as many yellow = 3×3 = 9.\nJasper total = 2 + 9 = 11.</think>Ben has 4 blue and 3 yellow tubes.\n\nJasper's blue: 4 ÷ 2 = 2 tubes\nJasper's yellow: 3 × 3 = 9 tubes\n\nJasper's total: 2 + 9 = 11 tubes\n\nAnswer: 11",
+  "finish_reason": "stop",
+  "expected": "11",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7153471010387875
+  },
+  "response": {
+    "id": "cmpl-30c1b1598ad340cea31b316587bd8417",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Ben: 4 blue, 3 yellow.\nJasper: half as many blue = 4/2 = 2, three times as many yellow = 3×3 = 9.\nJasper total = 2 + 9 = 11.</think>Ben has 4 blue and 3 yellow tubes.\n\nJasper's blue: 4 ÷ 2 = 2 tubes\nJasper's yellow: 3 × 3 = 9 tubes\n\nJasper's total: 2 + 9 = 11 tubes\n\nAnswer: 11"
+      }
+    ],
+    "created": 1791919945,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 81,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 225.0,
+      "completion_tokens": 120,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 96,
+        "rejected_prediction_tokens": 72
+      },
+      "completion_time": 2.35,
+      "completion_tokens_per_sec": 51.09,
+      "total_tokens": 201,
+      "total_time": 2.71
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 81,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.444444444444445,
+      "prompt_per_second": 225.0,
+      "predicted_n": 120,
+      "predicted_ms": 2350.0,
+      "predicted_per_token_ms": 19.583333333333332,
+      "predicted_per_second": 51.06382978723404,
+      "draft_n": 168,
+      "draft_n_accepted": 96
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nBen has 4 tubes of blue paint and 3 tubes of yellow paint. Jasper has half as many tubes of blue paint as Ben, and three times as many tubes of yellow paint as Ben. How many tubes of paint does Jasper have?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

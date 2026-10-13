@@ -1,0 +1,69 @@
+{
+  "index": 55,
+  "task_id": 55,
+  "rendered_prompt_sha256": "4acda64cd5c26fb2fc61c4676f411664308cad4a92a7feb0b66bae0913a8253e",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>30 - 2 = 28 remaining lollipops. 28 / 2 = 14 bags.</think>Jean starts with 30 lollipops and eats 2, leaving 30 - 2 = 28 lollipops.\n\nEach bag holds 2 lollipops, so 28 ÷ 2 = 14 bags.\n\nAnswer: 14",
+  "finish_reason": "stop",
+  "expected": "14",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.1047309169662185
+  },
+  "response": {
+    "id": "cmpl-a5b7d1daa8644594a3abbb678fe4ab98",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>30 - 2 = 28 remaining lollipops. 28 / 2 = 14 bags.</think>Jean starts with 30 lollipops and eats 2, leaving 30 - 2 = 28 lollipops.\n\nEach bag holds 2 lollipops, so 28 ÷ 2 = 14 bags.\n\nAnswer: 14"
+      }
+    ],
+    "created": 1791919919,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 82,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 227.78,
+      "completion_tokens": 90,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 72,
+        "rejected_prediction_tokens": 54
+      },
+      "completion_time": 1.73,
+      "completion_tokens_per_sec": 51.95,
+      "total_tokens": 172,
+      "total_time": 2.09
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 82,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.390243902439025,
+      "prompt_per_second": 227.77777777777777,
+      "predicted_n": 90,
+      "predicted_ms": 1730.0,
+      "predicted_per_token_ms": 19.22222222222222,
+      "predicted_per_second": 52.02312138728324,
+      "draft_n": 126,
+      "draft_n_accepted": 72
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,69 @@
+{
+  "index": 479,
+  "task_id": 479,
+  "rendered_prompt_sha256": "1b4e8d76cf3c8cf7050538e795930320c20f725091918cbb9df08ed6e74fbb36",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Plane tickets: 2 × $5000 = $10,000\nHotel: $1500 × 1.20 = $1800 per day × 3 days = $5400\nTotal: $10,000 + $5400 = $15,400</think>Plane tickets: 2 × $5000 = $10,000\nHotel price: $1500 × 1.20 = $1800 per day\nHotel for 3 days: $1800 × 3 = $5400\nTotal: $10,000 + $5400 = $15,400\n\nAnswer: 15400",
+  "finish_reason": "stop",
+  "expected": "15400",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8448765450157225
+  },
+  "response": {
+    "id": "cmpl-d8998d1135f64148bc1b6c4669cc85e5",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Plane tickets: 2 × $5000 = $10,000\nHotel: $1500 × 1.20 = $1800 per day × 3 days = $5400\nTotal: $10,000 + $5400 = $15,400</think>Plane tickets: 2 × $5000 = $10,000\nHotel price: $1500 × 1.20 = $1800 per day\nHotel for 3 days: $1800 × 3 = $5400\nTotal: $10,000 + $5400 = $15,400\n\nAnswer: 15400"
+      }
+    ],
+    "created": 1791919931,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 102,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.4,
+      "prompt_tokens_per_sec": 255.0,
+      "completion_tokens": 174,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 148,
+        "rejected_prediction_tokens": 34
+      },
+      "completion_time": 2.44,
+      "completion_tokens_per_sec": 71.41,
+      "total_tokens": 276,
+      "total_time": 2.84
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 102,
+      "prompt_ms": 400.0,
+      "prompt_per_token_ms": 3.9215686274509802,
+      "prompt_per_second": 255.0,
+      "predicted_n": 174,
+      "predicted_ms": 2440.0,
+      "predicted_per_token_ms": 14.022988505747126,
+      "predicted_per_second": 71.31147540983606,
+      "draft_n": 182,
+      "draft_n_accepted": 148
+    }
+  },
+  "used_fallback": false
+}

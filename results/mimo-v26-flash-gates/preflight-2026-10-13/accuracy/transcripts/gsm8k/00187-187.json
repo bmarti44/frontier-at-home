@@ -1,0 +1,69 @@
+{
+  "index": 187,
+  "task_id": 187,
+  "rendered_prompt_sha256": "a4776c5f243e40e6047eeb533808ea5de3f2eb00c0255bb48f90925f0d2aa890",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Simple compound interest: 100 * (1.02)^3 = 100 * 1.061208 = 106.1208 ≈ 106.12</think>Using compound interest: $100 × (1.02)^3 = $100 × 1.061208 = $106.12\n\nAnswer: 106.12",
+  "finish_reason": "stop",
+  "expected": "106",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='106.12' expected='106'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.353901244001463
+  },
+  "response": {
+    "id": "cmpl-11d46e950798499688381c87f7552fcb",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Simple compound interest: 100 * (1.02)^3 = 100 * 1.061208 = 106.1208 ≈ 106.12</think>Using compound interest: $100 × (1.02)^3 = $100 × 1.061208 = $106.12\n\nAnswer: 106.12"
+      }
+    ],
+    "created": 1791919947,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 72,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 205.71,
+      "completion_tokens": 102,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 80,
+        "rejected_prediction_tokens": 74
+      },
+      "completion_time": 2.0,
+      "completion_tokens_per_sec": 51.0,
+      "total_tokens": 174,
+      "total_time": 2.35
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 72,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.861111111111111,
+      "prompt_per_second": 205.71428571428572,
+      "predicted_n": 102,
+      "predicted_ms": 2000.0,
+      "predicted_per_token_ms": 19.607843137254903,
+      "predicted_per_second": 51.0,
+      "draft_n": 154,
+      "draft_n_accepted": 80
+    }
+  },
+  "used_fallback": false
+}

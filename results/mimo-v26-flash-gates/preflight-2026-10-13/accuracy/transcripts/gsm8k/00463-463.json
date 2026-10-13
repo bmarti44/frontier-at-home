@@ -1,0 +1,70 @@
+{
+  "index": 463,
+  "task_id": 463,
+  "rendered_prompt_sha256": "39ff4e4e98af24cca862c2dc3fb487ac854e72e5dc28ced9b1af840be606993d",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Tip = 1/5 × 15 = 3. Total = 15 + 3 = 18.</think>Tip = 1/5 × $15 = $3\n\nTotal = $15 + $3 = $18\n\nAnswer: 18",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.4953945130109787
+  },
+  "response": {
+    "id": "cmpl-91771e73998f436480908df9421f6c34",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Tip = 1/5 × 15 = 3. Total = 15 + 3 = 18.</think>Tip = 1/5 × $15 = $3\n\nTotal = $15 + $3 = $18\n\nAnswer: 18"
+      }
+    ],
+    "created": 1791919906,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 75,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 208.33,
+      "completion_tokens": 62,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 50,
+        "rejected_prediction_tokens": 34
+      },
+      "completion_time": 1.13,
+      "completion_tokens_per_sec": 54.89,
+      "total_tokens": 137,
+      "total_time": 1.49
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 75,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.8,
+      "prompt_per_second": 208.33333333333331,
+      "predicted_n": 62,
+      "predicted_ms": 1130.0,
+      "predicted_per_token_ms": 18.225806451612904,
+      "predicted_per_second": 54.86725663716815,
+      "draft_n": 84,
+      "draft_n_accepted": 50
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nAshley's pizza delivery costs $15. What is the total amount that Ashley should give the delivery man if she wants to give a tip that is equal to 1/5 of the amount she ordered?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

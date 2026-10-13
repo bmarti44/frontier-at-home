@@ -1,0 +1,69 @@
+{
+  "index": 1141,
+  "task_id": 1141,
+  "rendered_prompt_sha256": "53c133f93f85082de334a2938d4b2d098cf6ff6d90d1b12add91e98d7a0f1ab5",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>First 30 days: 3 × 30 = 90 eggs\nNext 30 days: 5 × 30 = 150 eggs\nTotal: 240 eggs\nDozens: 240 ÷ 12 = 20</think>First 30 days: 3 × 30 = 90 eggs\nNext 30 days: 5 × 30 = 150 eggs\nTotal: 90 + 150 = 240 eggs\nDozens: 240 ÷ 12 = 20\n\nAnswer: 20",
+  "finish_reason": "stop",
+  "expected": "20",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.357401432003826
+  },
+  "response": {
+    "id": "cmpl-f41dd2846ca64054870375f30b52eb68",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>First 30 days: 3 × 30 = 90 eggs\nNext 30 days: 5 × 30 = 150 eggs\nTotal: 240 eggs\nDozens: 240 ÷ 12 = 20</think>First 30 days: 3 × 30 = 90 eggs\nNext 30 days: 5 × 30 = 150 eggs\nTotal: 90 + 150 = 240 eggs\nDozens: 240 ÷ 12 = 20\n\nAnswer: 20"
+      }
+    ],
+    "created": 1791920080,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 75,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 214.29,
+      "completion_tokens": 140,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 119,
+        "rejected_prediction_tokens": 28
+      },
+      "completion_time": 2.0,
+      "completion_tokens_per_sec": 69.96,
+      "total_tokens": 215,
+      "total_time": 2.35
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 75,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.666666666666667,
+      "prompt_per_second": 214.28571428571428,
+      "predicted_n": 140,
+      "predicted_ms": 2000.0,
+      "predicted_per_token_ms": 14.285714285714286,
+      "predicted_per_second": 70.0,
+      "draft_n": 147,
+      "draft_n_accepted": 119
+    }
+  },
+  "used_fallback": false
+}

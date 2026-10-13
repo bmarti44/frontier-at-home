@@ -1,0 +1,69 @@
+{
+  "index": 932,
+  "task_id": 932,
+  "rendered_prompt_sha256": "86780dcf05aaec3e4e23dae6c72ae92a6c4e85e61c99a9748b395d7dd2e26409",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>People: Maria + 4 friends = 5 people.\n\nStart: each friend gets 2 balloons → 4 × 2 = 8, Maria has 1 → total 9.\n\nMom gives each person 3 more → 5 × 3 = 15.\n\nTotal = 9 + 15 = 24.</think>There are 5 people total (Maria + 4 friends).\n\n**Start:** Each friend gets 2 balloons → 4 × 2 = 8, plus Maria's 1 → 9 balloons.\n\n**Mom's addition:** Each of the 5 people gets 3 more → 5 × 3 = 15 balloons.\n\n**Total:** 9 + 15 = 24 balloons.\n\nAnswer: 24",
+  "finish_reason": "stop",
+  "expected": "24",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.501070317986887
+  },
+  "response": {
+    "id": "cmpl-a34990935c9d403ea268f6b46387d2ef",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>People: Maria + 4 friends = 5 people.\n\nStart: each friend gets 2 balloons → 4 × 2 = 8, Maria has 1 → total 9.\n\nMom gives each person 3 more → 5 × 3 = 15.\n\nTotal = 9 + 15 = 24.</think>There are 5 people total (Maria + 4 friends).\n\n**Start:** Each friend gets 2 balloons → 4 × 2 = 8, plus Maria's 1 → 9 balloons.\n\n**Mom's addition:** Each of the 5 people gets 3 more → 5 × 3 = 15 balloons.\n\n**Total:** 9 + 15 = 24 balloons.\n\nAnswer: 24"
+      }
+    ],
+    "created": 1791920156,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 100,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 256.41,
+      "completion_tokens": 162,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 130,
+        "rejected_prediction_tokens": 94
+      },
+      "completion_time": 3.11,
+      "completion_tokens_per_sec": 52.09,
+      "total_tokens": 262,
+      "total_time": 3.5
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 100,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.9,
+      "prompt_per_second": 256.4102564102564,
+      "predicted_n": 162,
+      "predicted_ms": 3110.0,
+      "predicted_per_token_ms": 19.19753086419753,
+      "predicted_per_second": 52.09003215434084,
+      "draft_n": 224,
+      "draft_n_accepted": 130
+    }
+  },
+  "used_fallback": false
+}
