@@ -1,0 +1,69 @@
+{
+  "index": 923,
+  "task_id": 923,
+  "rendered_prompt_sha256": "71c95f46478aafeedce9af9159a26daded91f54e499a414e227b885a1d00eb8c",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Total cups: 27\nCinnamon tea: 15\nRemaining cups: 27 - 15 = 12\nThese 12 cups are divided into 3 rows: 12 / 3 = 4 cups per row\nIn each row, equal amounts of chamomile and mint: 4 / 2 = 2 cups of mint per row</think>27 total cups - 15 cinnamon cups = 12 cups for chamomile and mint.\n\n12 cups ÷ 3 rows = 4 cups per row.\n\nEach row has equal chamomile and mint: 4 ÷ 2 = 2 cups of mint per row.\n\nAnswer: 2",
+  "finish_reason": "stop",
+  "expected": "2",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.618258082016837
+  },
+  "response": {
+    "id": "cmpl-c412de7696c548bda6bddd03e8aa9881",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Total cups: 27\nCinnamon tea: 15\nRemaining cups: 27 - 15 = 12\nThese 12 cups are divided into 3 rows: 12 / 3 = 4 cups per row\nIn each row, equal amounts of chamomile and mint: 4 / 2 = 2 cups of mint per row</think>27 total cups - 15 cinnamon cups = 12 cups for chamomile and mint.\n\n12 cups ÷ 3 rows = 4 cups per row.\n\nEach row has equal chamomile and mint: 4 ÷ 2 = 2 cups of mint per row.\n\nAnswer: 2"
+      }
+    ],
+    "created": 1791926168,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 106,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 258.54,
+      "completion_tokens": 150,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 117,
+        "rejected_prediction_tokens": 114
+      },
+      "completion_time": 3.2,
+      "completion_tokens_per_sec": 46.9,
+      "total_tokens": 256,
+      "total_time": 3.61
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 106,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.8679245283018866,
+      "prompt_per_second": 258.5365853658536,
+      "predicted_n": 150,
+      "predicted_ms": 3200.0,
+      "predicted_per_token_ms": 21.333333333333332,
+      "predicted_per_second": 46.875,
+      "draft_n": 231,
+      "draft_n_accepted": 117
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,69 @@
+{
+  "index": 454,
+  "task_id": 454,
+  "rendered_prompt_sha256": "aa52d9754a3e60e9579c752017db589382dc4b0ad9fb377a09ef0f11745c2c45",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Each eats 4 apples a day, so together they eat 8 apples a day. In 30 days: 8 × 30 = 240.</think>Together they eat 4 + 4 = 8 apples per day.\n\nIn 30 days: 8 × 30 = 240 apples.\n\nAnswer: 240",
+  "finish_reason": "stop",
+  "expected": "150",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='240' expected='150'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.8460526450071484
+  },
+  "response": {
+    "id": "cmpl-8df5ec231edb43ad96daccd3599cc46a",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Each eats 4 apples a day, so together they eat 8 apples a day. In 30 days: 8 × 30 = 240.</think>Together they eat 4 + 4 = 8 apples per day.\n\nIn 30 days: 8 × 30 = 240 apples.\n\nAnswer: 240"
+      }
+    ],
+    "created": 1791926158,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 58,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.31,
+      "prompt_tokens_per_sec": 187.1,
+      "completion_tokens": 79,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 63,
+        "rejected_prediction_tokens": 49
+      },
+      "completion_time": 1.53,
+      "completion_tokens_per_sec": 51.57,
+      "total_tokens": 137,
+      "total_time": 1.84
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 58,
+      "prompt_ms": 310.0,
+      "prompt_per_token_ms": 5.344827586206897,
+      "prompt_per_second": 187.09677419354838,
+      "predicted_n": 79,
+      "predicted_ms": 1530.0,
+      "predicted_per_token_ms": 19.367088607594937,
+      "predicted_per_second": 51.63398692810458,
+      "draft_n": 112,
+      "draft_n_accepted": 63
+    }
+  },
+  "used_fallback": false
+}

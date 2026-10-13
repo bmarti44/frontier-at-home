@@ -1,0 +1,69 @@
+{
+  "index": 314,
+  "task_id": 314,
+  "rendered_prompt_sha256": "7c15841e2545d15d25ee84a2dbb32ea15e217576ac9073d8487187d3a6524291",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Let defense = D, offense = 2D, special teams = D/2.\n\nD + 2D + D/2 = 105\n3.5D = 105\nD = 30</think>Let the number of defense players be D.\n\n- Offense = 2D\n- Special teams = D/2\n\nTotal: D + 2D + D/2 = 105 → 3.5D = 105 → D = 30\n\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.6941556739620864
+  },
+  "response": {
+    "id": "cmpl-92b64e553a4245849d1b1187769a4f8a",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Let defense = D, offense = 2D, special teams = D/2.\n\nD + 2D + D/2 = 105\n3.5D = 105\nD = 30</think>Let the number of defense players be D.\n\n- Offense = 2D\n- Special teams = D/2\n\nTotal: D + 2D + D/2 = 105 → 3.5D = 105 → D = 30\n\nAnswer: 30"
+      }
+    ],
+    "created": 1791926305,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 86,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 232.43,
+      "completion_tokens": 115,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 91,
+        "rejected_prediction_tokens": 77
+      },
+      "completion_time": 2.32,
+      "completion_tokens_per_sec": 49.67,
+      "total_tokens": 201,
+      "total_time": 2.69
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 86,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.3023255813953485,
+      "prompt_per_second": 232.43243243243242,
+      "predicted_n": 115,
+      "predicted_ms": 2320.0,
+      "predicted_per_token_ms": 20.17391304347826,
+      "predicted_per_second": 49.568965517241374,
+      "draft_n": 168,
+      "draft_n_accepted": 91
+    }
+  },
+  "used_fallback": false
+}
