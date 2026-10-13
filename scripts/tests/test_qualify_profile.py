@@ -151,6 +151,13 @@ class DryRunGlmProfile(unittest.TestCase):
         speed = manifest["cells"]["speed"]["argv"]
         self.assertTrue(speed[1].endswith("/30_bench_speed_blocks.py"))
         self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "8")
+        # The TabbyAPI argv starts `-B -m tabby_launch`: the model is
+        # --model-name, never Python's -m module (smoke 2026-10-13 read
+        # `tabby_launch` as the model and passed a bare tokenizer.json).
+        model_root = json.loads(self.host.read_text())["paths"]["model_root"]
+        tokenizer = f"{model_root}/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json"
+        self.assertEqual(speed[speed.index("--output-tokenizer-path") + 1], tokenizer)
+        self.assertEqual(manifest["profile"]["tokenizer_path"], tokenizer)
         suites = manifest["cells"]["accuracy"]["argv"]
         self.assertEqual(sorted(suites), ["gsm8k", "humaneval", "mmlu-pro"])
         for suite, suite_argv in suites.items():
