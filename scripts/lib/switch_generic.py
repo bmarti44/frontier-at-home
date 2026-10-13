@@ -57,6 +57,8 @@ SWITCH_KEYS = frozenset({"mode", "served_model_id", "health_path", "context_chec
 CONTEXT_KINDS = {
     "slots": ({"kind", "slots", "n_ctx"}, "/slots"),
     "model_card": ({"kind", "max_model_len"}, "/v1/models"),
+    # TabbyAPI: total_slots is max_batch_size, n_ctx is max_seq_len.
+    "props": ({"kind", "total_slots", "n_ctx"}, "/props"),
 }
 ARTIFACT_ROLES = ("model", "mmproj", "draft_model")
 # Placeholders the bash launcher substitutes (launch_systemd_profile).
@@ -444,6 +446,15 @@ def check_context(spec_raw: str, raw: str) -> None:
             if len(cards) != 1:
                 raise SwitchError("model card is missing")
             if cards[0].get("max_model_len") != spec["max_model_len"]:
+                raise SwitchError("per-request context is not the profile's")
+        elif spec["kind"] == "props":
+            if not isinstance(value, dict):
+                raise SwitchError("/props body is not an object")
+            slots = value["total_slots"]
+            n_ctx = value["default_generation_settings"]["n_ctx"]
+            if type(slots) is not int or slots != spec["total_slots"]:
+                raise SwitchError("slot topology is not the profile's")
+            if type(n_ctx) is not int or n_ctx != spec["n_ctx"]:
                 raise SwitchError("per-request context is not the profile's")
         else:
             raise SwitchError(f"unknown context check kind {spec['kind']!r}")

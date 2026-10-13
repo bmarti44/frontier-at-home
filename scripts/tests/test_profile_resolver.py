@@ -293,7 +293,7 @@ class TabbyServingTopology(unittest.TestCase):
                         self.profile(args=self.mutated("--max-batch-size", value)))
 
     def test_cache_size_must_be_explicit_cover_all_slots_and_page_aligned(self) -> None:
-        for value in (None, "131072", "262400", "262145"):
+        for value in (None, "131072", "262300", "262145", "2e5"):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):
                     resolver.validate_serving_topology(
