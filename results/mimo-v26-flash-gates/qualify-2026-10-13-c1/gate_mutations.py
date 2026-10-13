@@ -74,9 +74,12 @@ def build(tmp: Path, mut: str) -> Path:
     n = 100 if mut == "short" else 800
     rows = []
     for i in range(n):
-        if (mut == "gap" and 300 <= i < 310) or (mut == "gapend" and 776 <= i < 790) or (mut == "gatesecond" and i == 12):
+        if ((mut == "gap" and 300 <= i < 310) or (mut == "gapend" and 776 <= i < 790)
+                or (mut == "gatesecond" and i == 12) or (mut == "stalebase" and 3 <= i <= 12)):
             continue
         avail = (112.0 if mut == "lowonly" else 115.4) if i < 13 else 10.0
+        if mut == "stalebase" and i < 3:  # production still loaded, then the sampler is silent to the launch
+            avail = 12.0
         if i == 400:
             avail = {"lowmem": 7.9, "lowonly": 7.9, "peak": 9.2}.get(mut, 9.6)
         swap_used = GIB_KIB // 2 if mut == "swap" and i > 200 else 0
@@ -172,6 +175,7 @@ EXPECT = {
     "speed": "NO_RESULT", "attempt": "NO_RESULT", "dirty": "NO_RESULT", "twoheads": "NO_RESULT",
     "headdiff": "NO_RESULT", "headfrozen": "NO_RESULT", "runtime": "NO_RESULT", "wheel": "NO_RESULT",
     "weights": "NO_RESULT", "weightcount": "NO_RESULT", "noserverlog": "NO_RESULT", "unarmed": "NO_RESULT",
+    "emptyserver": "NO_RESULT", "gap": "NO_RESULT",  # dropped by mistake in candidate 2 (A2-L2)
     "short": "NO_RESULT", "kithead": "NO_RESULT", "nojournal": "NO_RESULT",
     # Each of these breaks one check alone (review round 1, A-M1 and the A lows).
     "lowonly": "FAIL", "failmissing": "FAIL", "swapbase": "FAIL", "gatesecond": "PASS",
@@ -179,6 +183,7 @@ EXPECT = {
     "soaksource": "NO_RESULT", "gapend": "NO_RESULT", "disarmedonly": "NO_RESULT", "toptype": "NO_RESULT",
     "nestedtype": "NO_RESULT", "fixture": "NO_RESULT", "nomutationflag": "NO_RESULT",
     "gatelow": "NO_RESULT",  # review round 1, B3: MemAvailable 113.4 GiB at the gate
+    "stalebase": "NO_RESULT",  # review round 2, A2-L1: the last sample before the launch is 10 s old
 }
 # The reason a case must give (a substring of one fail or missing entry), where a
 # different check could otherwise produce the same verdict.
@@ -188,7 +193,8 @@ REASON = {
     "soaksource": "clause 9", "gapend": "clauses 2-4", "disarmedonly": "memwatch.log", "toptype": "toolcall.json",
     "nestedtype": "malformed", "fixture": "agent-gate fixture", "nomutationflag": "outside --mutation",
     "headdiff": "code identity", "headfrozen": "scoring identity", "kithead": "kit manifest head",
-    "gatelow": "start gate", "nojournal": "kernel journal alive",
+    "gatelow": "start gate", "nojournal": "kernel journal alive", "emptyserver": "server.log",
+    "gap": "clauses 2-4", "stalebase": "clauses 2-4",
 }
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# M3 candidate-2 driver (acceptance; PREREG.md here; candidate 1 never started). One fresh start of
+# M3 candidate-3 driver (acceptance; PREREG.md here; candidates 1 and 2 never started). One fresh start of
 # mimo-v2.6-flash/cuda-spark-128g-262k on :8019, contained like the preflights
 # (scope MemoryHigh 8G / MemoryMax 16G, as the profile's unit; a load-time
 # page-cache release every 1 s; MemFree >= 108 GiB and MemAvailable >= 114 GiB
@@ -84,7 +84,10 @@ restore_production() {
         done
         log "restore attempt $attempt: MemAvailable=$(meminfo MemAvailable) MemFree=$(meminfo MemFree)"
         # Its own session: production's memwatch must not join this driver's process group.
-        if setsid -w sudo -n "$PROD/scripts/52_engine_switch.sh" qwen38fn >>"$RESTORE_LOG" 2>&1 </dev/null; then
+        # Default signal handling: cleanup ignores INT/TERM/HUP, and ignored signals are
+        # inherited, which would disarm the memwatch's TERM trap (review round 2, C2-1).
+        if ( trap - INT TERM HUP; exec setsid -w sudo -n "$PROD/scripts/52_engine_switch.sh" qwen38fn ) \
+            >>"$RESTORE_LOG" 2>&1 </dev/null; then
             log "restore rc=0"
             return 0
         fi
@@ -105,7 +108,7 @@ close_kernel_journal() {
     fi
     kill "$JOURNAL" 2>/dev/null || true
     JOURNAL=
-    journalctl -k -f -o short-iso --since now >"$OBS/kernel-restore.log" 2>&1 8>&- &
+    ( trap - INT TERM HUP; exec journalctl -k -f -o short-iso --since now ) >"$OBS/kernel-restore.log" 2>&1 8>&- &
     RESTORE_JOURNAL=$!
 }
 cleanup() {
@@ -120,6 +123,8 @@ cleanup() {
     tail -n +"$((SERVER_OFFSET + 1))" "$SERVER_LOG" >"$OBS/server.log" 2>/dev/null
     tail -n +"$((MEMWATCH_OFFSET + 1))" "$MEMWATCH_LOG" >"$OBS/memwatch.log" 2>/dev/null
     exec 8>&-   # the switch's engine takes the inference lock itself
+    # Clause 1's kernel log closes 5 s after the engine stop on this path too (C2-2).
+    [[ -n ${JOURNAL:-} ]] && sleep 5
     close_kernel_journal
     restore_production || rc=1
     cp "$RESTORE_LOG" "$OBS/restore.log" 2>/dev/null

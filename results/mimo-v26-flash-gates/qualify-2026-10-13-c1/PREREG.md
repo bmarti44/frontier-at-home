@@ -1,9 +1,9 @@
-# MiMo-V2.6-Flash M3: acceptance qualification, candidate 2 (preregistered)
+# MiMo-V2.6-Flash M3: acceptance qualification, candidate 3 (preregistered)
 
 This is the acceptance run of profile `mimo-v2.6-flash/cuda-spark-128g-262k`,
 switch alias `mimo26flash`, at the commit that last changes this file (the
-freeze). It was committed before any weights were loaded for it. Candidate 1
-never started; see "Candidate history" below.
+freeze). It was committed before any weights were loaded for it. Candidates 1
+and 2 never started; see "Candidate history" below.
 
 - **Verdict:** `gate_verdict.py` in this directory writes `gate-summary.json`.
 - **Kit bundle:** the qualification kit writes `manifest.json`,
@@ -104,7 +104,8 @@ Otherwise, any of the following gives `NO_RESULT`:
   overrides used outside `--mutation`;
 - a kit manifest whose git head is not the driver's;
 - samples that do not cover the launch to the empty scope at most 5 s apart,
-  counting the launch and the empty scope as the edges;
+  counting the launch and the empty scope as the edges, or whose last sample
+  at or before the launch is more than 5 s before it;
 - an invalid speed suite or level (clause 11): its numbers are unmeasured,
   not failed.
 
@@ -119,8 +120,9 @@ Otherwise, any of the following gives `NO_RESULT`:
    scope.
 4. **Peak use ≤ 106 GiB, and the switch admission `ceil(peak + 8)` ≤ 115.**
    Peak use is the largest MemAvailable between the MemFree gate and the
-   launch, minus the low point. When the sampler skipped that second, the last
-   sample before the launch stands in.
+   launch, minus the low point. The gate line's own logged MemAvailable
+   counts. When the sampler skipped that second, the last sample before the
+   launch also stands in.
 5. **Direct 262K:** the context verdict is `PASS`, with ≥ 250,000 server
    prompt tokens and the kit's resolved cap exactly 262,144.
 6. **Text identity:** all three greedy hashes equal preflight r2's
@@ -139,10 +141,11 @@ Otherwise, any of the following gives `NO_RESULT`:
     what makes the reported numbers publishable; the values themselves do not
     gate. An invalid suite gives `NO_RESULT`, not `FAIL`.
 
-`gate_mutations.py` builds a clean synthetic bundle and 55 broken, failing or
-isolating variants. Each variant breaks one check alone. Where another check
-could give the same verdict, the variant must also give its named reason. The
-scorer must give each its expected verdict (56/56 before the freeze).
+`gate_mutations.py` builds a clean synthetic bundle and 58 broken, failing or
+isolating variants. The variants added in review break one check alone. Where
+another check could give the same verdict, a variant must also give its named
+reason. The scorer must give each its expected verdict (59/59 before the
+freeze).
 
 ## Reported, not gating
 
@@ -208,3 +211,24 @@ finding is open. The convergence rule is AGENTS.md's.
   B4 (the lock lives with the driver), B5 (signal latency in long cells) and
   B6 (site-packages beyond the wheel are not hashed) are attested low and left
   as they are.
+- **Candidate 2** was frozen at `d7cca682` and never started.
+- **Review round 2** of candidate 2:
+  - **Reviewer A:** every round-1 finding closed; 2 new lows.
+  - **Reviewer B:** every round-1 finding closed except a regression from
+    the B2 fix, **C2-1 (high)**: the restore inherited cleanup's ignored
+    INT/TERM/HUP. That would disarm production memwatch's TERM trap, and on
+    an early restore abort the switch would wait forever on that memwatch
+    holding the switch lock. One more low, C2-2.
+- **Candidate 3**, this file, changes only what closes round 2:
+  - **C2-1:** the restore and the restore journal start with default signal
+    handling.
+  - **C2-2:** the failure path also closes the scored kernel log 5 s after
+    the engine stop.
+  - **A2-L1:** the launch baseline counts the gate line's MemAvailable, and
+    the last sample before the launch must be at most 5 s old.
+  - **A2-L2:** the two mutations candidate 2 dropped by mistake are back, and
+    the "breaks one check alone" claim is narrowed to the review variants.
+
+  Under AGENTS.md's convergence rule, candidate 2 raised blocking findings
+  from 0 to 1. That is one candidate without a decrease, not two, and C2-1
+  is high, in scope new in candidate 2. Candidate 3 continues autonomously.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixed M3 candidate-2 gate verdict (in the c1 directory) per PREREG.md in this directory.
+"""Fixed M3 candidate-3 gate verdict (in the c1 directory) per PREREG.md in this directory.
 
 Usage: gate_verdict.py <bundle dir>  -> writes <dir>/gate-summary.json, prints the verdict.
        (gate_mutations.py adds --mutation, which alone lets GATE_REPO / GATE_REFERENCE_PROBE apply.)
@@ -209,22 +209,25 @@ def memory(obs, lines, missing, fail, checks):
         return
     try:
         window = [kv for t, kv in rows if launches[0] <= t <= ends[0]]
-        # The launch and the empty scope are the coverage edges: no gap, edges included, over 5 s.
+        # The launch and the empty scope are the coverage edges: no gap, edges included, over 5 s;
+    # the last sample at or before the launch is at most 5 s before it (review round 2, A2-L1).
+        upto_t = [t for t, _ in rows if t <= launches[0]]
         edges = [seconds(launches[0]), *(seconds(t) for t, _ in rows if launches[0] <= t <= ends[0]), seconds(ends[0])]
-        covered = bool(window) and max(b - a for a, b in zip(edges, edges[1:])) <= 5
+        covered = (bool(window) and bool(upto_t) and seconds(launches[0]) - seconds(upto_t[-1]) <= 5
+                   and max(b - a for a, b in zip(edges, edges[1:])) <= 5)
     except ValueError:
         covered = False
-    # The launch baseline: the samples from the MemFree gate to the launch, or, when the
-    # sampler skipped that second, the last sample before the launch.
+    # The launch baseline: the gate line's own MemAvailable and the samples from the MemFree
+    # gate to the launch, or, when the sampler skipped that second, the last sample before it.
     upto = [kv for t, kv in rows if t <= launches[0]]
     before = [kv for t, kv in rows if gates[0] <= t <= launches[0]] or upto[-1:]
     if not covered or not before:
         missing.append("clauses 2-4: samples do not cover the launch to the empty scope at most 5 s apart, "
-                       "or none at or before the launch")
+                       "or none within 5 s before the launch")
         return
     swap = lambda kv: (int(kv["SwapTotal"]) - int(kv["SwapFree"])) / 2**20
     low = min(int(kv["MemAvailable"]) for kv in window) / 2**20
-    launch = max(int(kv["MemAvailable"]) for kv in before) / 2**20
+    launch = max([int(kv["MemAvailable"]) / 2**20 for kv in before] + [g[1] for g in gate[:1]])
     peak = launch - low
     checks.update(swap_growth_gib=max(map(swap, window)) - swap(upto[-1]), mem_available_low_gib=low,
                   launch_mem_available_gib=launch, peak_used_gib=peak, admission_gib=math.ceil(peak + FLOOR_GIB),
