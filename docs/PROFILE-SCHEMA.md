@@ -143,6 +143,9 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   (`chat`, the README default, or `thinking`) selects the template mode of
   the MMMU cell; a `note` explains why. The kit records the mode in the
   cell's argv, and `--vision-thinking-mode` overrides it.
+  `vision_max_tokens` (an integer in [1, 32768]; absent → the bench's 256)
+  is the MMMU answer budget, for a model whose chat-mode answers run out
+  of 256 tokens before the letter; the kit passes it as `--max-tokens`.
   `speed_max_tokens_per_event` (1 + the speculative draft length, for
   servers that stream several tokens per SSE event, such as vLLM MTP) makes
   the speed cell run `scripts/30_bench_speed_blocks.py`.
