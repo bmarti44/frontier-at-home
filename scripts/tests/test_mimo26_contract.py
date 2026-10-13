@@ -2,8 +2,10 @@
 """MiMo-V2.6-Flash on exllamav3 + TabbyAPI: profile, artifact and runtime contract.
 
 Owner direction 2026-10-12: integrate MiMo-V2.6-Flash (MOPD checkpoint) as the
-switchable alias ``mimo26flash``; qwen38fn stays the default. The profile is
-``estimated`` until its qualification passes, so the switch refuses it.
+switchable alias ``mimo26flash``; qwen38fn stays the default. M3 candidate 3
+(results/mimo-v26-flash-gates/qualify-2026-10-13-c1) qualified it: the frozen
+scorer returned PASS on every preregistered clause. Admission is derived from
+that run.
 
 * Engine: TabbyAPI 2636ef60 on exllamav3 1.6.1 in native-runtime-001
   (configs/build-manifests/mimo-v26-flash-exl3-runtime-001.json), started
@@ -21,7 +23,9 @@ from __future__ import annotations
 import fnmatch
 import hashlib
 import json
+import math
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -47,6 +51,7 @@ MODEL_DIR = "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash"
 DRAFT_DIR = "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash"
 CONTEXT = 262144
 HOST_BOUND = os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0"
+C3 = ROOT / "results/mimo-v26-flash-gates/qualify-2026-10-13-c1"
 
 ARGV = [
     "-B", "-m", "tabby_launch",
@@ -101,11 +106,14 @@ class Profile(unittest.TestCase):
         cls.model = profile_resolver.load_model(SLUG)
         cls.snapshot = rendered()
 
-    def test_profile_is_an_estimated_generic_alias(self) -> None:
+    def test_profile_is_a_generic_alias_qualified_by_candidate_3(self) -> None:
         profile = self.profile
         self.assertEqual(profile["profile_id"], f"{SLUG}/cuda-spark-128g-262k")
         self.assertEqual(profile["switch_alias"], ALIAS)
-        self.assertEqual(profile["status"]["state"], "estimated")
+        self.assertEqual(profile["status"]["state"], "qualified")
+        self.assertIn("results/mimo-v26-flash-gates/qualify-2026-10-13-c1/", profile["status"]["basis"])
+        verdict = json.loads((C3 / "gate-summary.json").read_text())
+        self.assertEqual((verdict["verdict"], verdict["fail"], verdict["missing"]), ("PASS", [], []))
         self.assertEqual(profile["port_role"], "production")
         self.assertEqual(profile["context_cap"], CONTEXT)
         self.assertEqual(profile["serving"],
@@ -165,6 +173,34 @@ class Profile(unittest.TestCase):
         self.assertEqual(safety["kill_floor_gib"], 8)
         self.assertLessEqual(safety["minimum_start_gib"], 115)
         self.assertGreaterEqual(safety["startup_timeout_seconds"], 1800)
+
+    def test_admission_is_derived_from_candidate_3(self) -> None:
+        # The scorer's clause 4 (PREREG): peak = the launch baseline (the gate line's
+        # MemAvailable and the samples from the MemFree gate to the launch) minus the low
+        # from the launch to the empty scope. overhead_gib = peak - weights - K/V at the
+        # cap - extra, rounded up to 0.1 GiB; minimum_start_gib = ceil(peak + kill floor).
+        driver = (C3 / "observe/driver.log").read_text().splitlines()
+        stamp = lambda marker: [line.split()[0] for line in driver if marker in line]
+        gate, launch, empty = stamp("MemFree gate pass"), stamp("launching in scope"), stamp("scope empty after stop")
+        self.assertEqual((len(gate), len(launch), len(empty)), (1, 1, 1))
+        gate_kib = [int(re.search(r"MemAvailable (\d+) kB", line).group(1))
+                    for line in driver if "MemFree gate pass" in line]
+        samples = []
+        for line in (C3 / "observe/meminfo.log").read_text().splitlines():
+            found = re.search(r"MemAvailable:=(\d+)", line)
+            if found:
+                samples.append((line.split()[0], int(found.group(1)) / 1048576))
+        baseline = max([gib for at, gib in samples if gate[0] <= at <= launch[0]] + [gate_kib[0] / 1048576])
+        peak = baseline - min(gib for at, gib in samples if launch[0] <= at <= empty[0])
+        self.assertAlmostEqual(peak, 105.708, places=2)
+        budget, safety = self.snapshot["membudget"], self.profile["safety"]
+        kv_gib = CONTEXT * budget["kv_bytes_per_token"] / 2**30
+        self.assertEqual(budget["overhead_gib"], math.ceil(round(
+            (peak - budget["weights_gib"] - kv_gib - budget["extra_gib"]) * 10, 6)) / 10)
+        self.assertEqual(safety["minimum_start_gib"], math.ceil(peak + safety["kill_floor_gib"]))
+        # The resolver's admission (weights + K/V + overhead + extra + floor) fits under it.
+        self.assertLessEqual(budget["weights_gib"] + kv_gib + budget["overhead_gib"]
+                             + budget["extra_gib"] + budget["floor_gib"], safety["minimum_start_gib"])
 
     def test_engine_pin_matches_the_build_manifest(self) -> None:
         build = json.loads(BUILD.read_text())

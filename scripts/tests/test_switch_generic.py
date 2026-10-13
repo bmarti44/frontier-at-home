@@ -225,10 +225,10 @@ class ProductionPlan(unittest.TestCase):
                     "hf_quant_config.json", "tokenizer.json",
                     "chat_template.jinja")])
 
-    def test_mimo26flash_plan_carries_the_estimated_tabby_contract(self) -> None:
+    def test_mimo26flash_plan_carries_the_qualified_tabby_contract(self) -> None:
         plan = production_plan("mimo26flash")
         self.assertEqual(plan["alias"], "mimo26flash")
-        self.assertEqual(plan["status"], "estimated")
+        self.assertEqual(plan["status"], "qualified")
         self.assertEqual(
             plan["relpath"],
             "configs/profiles/mimo-v2.6-flash/cuda-spark-128g-262k.json")
@@ -250,8 +250,18 @@ class ProductionPlan(unittest.TestCase):
         self.assertEqual(paths[0], f"{runtime}/bin/python3.12")
         self.assertTrue(any(os.path.dirname(path) == model for path in paths))
         self.assertTrue(any(os.path.dirname(path) == draft for path in paths))
-        with self.assertRaisesRegex(generic.SwitchError, "not qualified"):
-            generic.verify_artifacts(plan)
+
+    @unittest.skipUnless(
+        os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0",
+        "host-bound: hashes the local runtime interpreter and model metadata")
+    def test_mimo26flash_artifacts_verify_on_this_host(self) -> None:
+        plan = production_plan("mimo26flash")
+        if not os.path.isfile(plan["binary"]):
+            self.skipTest("runtime not present on this host")
+        identities = generic.verify_artifacts(plan)
+        self.assertEqual(sorted(identities),
+                         sorted(check["path"] for check in plan["digest_checks"]))
+        generic.revalidate(plan, identities)
 
     @unittest.skipUnless(
         os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0",

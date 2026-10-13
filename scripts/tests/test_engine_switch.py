@@ -1793,19 +1793,17 @@ class EngineSwitchTests(unittest.TestCase):
             self.assertFalse((root / "qwen38fn-running").exists())
 
     # -- mimo26flash: MiMo-V2.6-Flash on TabbyAPI (exllamav3), the first
-    # generic alias whose launch goes through scripts/lib/tabby_launch.py. Its
-    # profile is `estimated`, so only the test marker lets it switch. Cases
-    # switch from the default, qwen38fn.
+    # generic alias whose launch goes through scripts/lib/tabby_launch.py. It
+    # needs no `-qualified-for-test` marker: the committed profile is qualified
+    # (M3 candidate 3, results/mimo-v26-flash-gates/qualify-2026-10-13-c1).
+    # Cases switch from the default, qwen38fn.
 
-    def mimo26flash_root(self, root: Path, *, qualified: bool = True,
-                         hashes: bool = True) -> None:
+    def mimo26flash_root(self, root: Path, *, hashes: bool = True) -> None:
         (root / "active.json").write_text(
             json.dumps({"schema_version": 1, "profile": "qwen38fn"})
         )
         (root / "qwen38fn-running").touch()
         (root / "qwen38fn-hashes-valid").touch()
-        if qualified:
-            (root / "mimo26flash-qualified-for-test").touch()
         if hashes:
             (root / "mimo26flash-hashes-valid").touch()
 
@@ -1838,20 +1836,6 @@ class EngineSwitchTests(unittest.TestCase):
         self.assertEqual(snapshot["env"]["TABBY_ROOT"], f"{runtime}/src/tabbyAPI")
         self.assertEqual(snapshot["env"]["PYTHONPATH"],
                          f"{PRODUCTION_REPO}/scripts/lib")
-
-    def test_mimo26flash_estimated_profile_is_refused_before_any_stop(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self.mimo26flash_root(root, qualified=False)
-            result = self.run_switch(root, "mimo26flash")
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("estimated", result.stderr)
-            self.assertTrue((root / "qwen38fn-running").exists())
-            self.assertFalse((root / "actions.log").exists())
-            self.assertEqual(
-                json.loads((root / "active.json").read_text())["profile"],
-                "qwen38fn",
-            )
 
     def test_mimo26flash_hash_failure_is_rejected_before_the_default_is_stopped(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1960,7 +1944,6 @@ class EngineSwitchTests(unittest.TestCase):
                 json.dumps({"schema_version": 1, "profile": "mimo26flash"})
             )
             (root / "mimo26flash-running").touch()
-            (root / "mimo26flash-qualified-for-test").touch()
             (root / "mimo26flash-hashes-valid").touch()
             (root / "qwen38fn-hashes-valid").touch()
             result = self.run_switch(root, "qwen38fn")
@@ -1999,31 +1982,12 @@ class EngineSwitchTests(unittest.TestCase):
                 "mimo26flash",
             )
 
-    def test_restore_mimo26flash_estimated_falls_back_to_dsv4(self):
+    def test_restore_mimo26flash_restarts_the_recorded_profile_without_a_marker(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "active.json").write_text(
                 json.dumps({"schema_version": 1, "profile": "mimo26flash"})
             )
-            (root / "mimo26flash-hashes-valid").touch()
-            result = self.run_switch(root, "restore")
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn(
-                "RESTORE FAILED for recorded profile mimo26flash; falling back to dsv4",
-                result.stderr,
-            )
-            self.assertEqual(
-                json.loads((root / "active.json").read_text())["profile"], "dsv4"
-            )
-            self.assertNotIn("START mimo26flash", (root / "actions.log").read_text())
-
-    def test_restore_mimo26flash_restarts_the_recorded_profile(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "active.json").write_text(
-                json.dumps({"schema_version": 1, "profile": "mimo26flash"})
-            )
-            (root / "mimo26flash-qualified-for-test").touch()
             (root / "mimo26flash-hashes-valid").touch()
             result = self.run_switch(root, "restore")
             self.assertEqual(result.returncode, 0, result.stderr)
