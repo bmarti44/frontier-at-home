@@ -136,6 +136,7 @@ class SwitchBlock(unittest.TestCase):
         good = (
             {"kind": "slots", "slots": 4, "n_ctx": 262144},
             {"kind": "model_card", "max_model_len": 262144},
+            {"kind": "props", "total_slots": 1, "n_ctx": 262144},
         )
         for spec in good:
             generic.validate_switch_block(
@@ -145,6 +146,10 @@ class SwitchBlock(unittest.TestCase):
                      {"kind": "model_card", "max_model_len": "1"},
                      {"kind": "mystery"},
                      {"kind": "slots", "slots": 1, "n_ctx": 1, "extra": 1},
+                     {"kind": "props", "total_slots": 1},
+                     {"kind": "props", "total_slots": 0, "n_ctx": 1},
+                     {"kind": "props", "total_slots": True, "n_ctx": 1},
+                     {"kind": "props", "slots": 1, "n_ctx": 1},
                      "slots"):
             with self.subTest(spec=spec):
                 with self.assertRaises(generic.SwitchError):
@@ -450,6 +455,31 @@ class ServingChecks(unittest.TestCase):
         bad = json.dumps({"data": [{"id": "glm-5.3-flash", "max_model_len": 4096}]})
         with self.assertRaises(generic.SwitchError):
             generic.check_context(spec, bad)
+
+    def test_props_context_check(self) -> None:
+        # TabbyAPI /props: total_slots is max_batch_size, n_ctx max_seq_len.
+        spec = json.dumps({"kind": "props", "total_slots": 1, "n_ctx": 262144})
+        good = {"total_slots": 1, "model_path": "/m/x", "chat_template": "t",
+                "default_generation_settings": {"n_ctx": 262144},
+                "modalities": {"vision": True}}
+        generic.check_context(spec, json.dumps(good))
+        for broken in (
+            {**good, "total_slots": 2},
+            {**good, "default_generation_settings": {"n_ctx": 131072}},
+            {**good, "default_generation_settings": {"n_ctx": "262144"}},
+            {**good, "total_slots": True},
+            {key: value for key, value in good.items() if key != "total_slots"},
+            {key: value for key, value in good.items()
+             if key != "default_generation_settings"},
+            [good],
+        ):
+            with self.subTest(body=broken):
+                with self.assertRaises(generic.SwitchError):
+                    generic.check_context(spec, json.dumps(broken))
+
+    def test_props_kind_reads_the_props_path(self) -> None:
+        self.assertEqual(generic.CONTEXT_KINDS["props"],
+                         ({"kind", "total_slots", "n_ctx"}, "/props"))
 
 
 if __name__ == "__main__":
