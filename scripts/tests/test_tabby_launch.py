@@ -233,6 +233,14 @@ class TabbySse(unittest.TestCase):
         self.assertEqual([e["choices"][0]["delta"] for e in events],
                          [{"content": "Hi"}, {"content": "!"}, {}])
         self.assertEqual([e["choices"][0]["finish_reason"] for e in events], [None, None, "stop"])
+        # Compact LF-framed events split the same way; quoted text never does.
+        compact = b'data: {"id":"c","choices":[{"index":0,"delta":{"content":"!"},"finish_reason":"stop"}]}\n\n'
+        quoted = tabby_event(tabby_chunk({"content": '{"finish_reason": "stop"}'}))
+        body, _ = guarded_stream([quoted, compact])
+        self.assertTrue(body.startswith(quoted))
+        events = [json.loads(d) for d in sse_data(body)]
+        self.assertEqual([e["choices"][0]["finish_reason"] for e in events], [None, None, "stop"])
+        self.assertEqual(events[2]["choices"][0]["delta"], {})
 
     def test_pings_lf_framing_and_partial_events_pass_through(self) -> None:
         ping = b": ping - 2026-10-13 04:43:00\r\n\r\n"

@@ -21,20 +21,26 @@ Profiles run ``<runtime python> -B -m tabby_launch <TabbyAPI CLI flags>`` with
 * serves only the readiness and inference routes. With authentication off
   every caller is an admin, and TabbyAPI always mounts admin routes (model
   load/unload, downloads, lora, template and sampler switching);
-* splits vLLM-style terminal SSE events like the other engines
-  (``glm53_runtime_policy.SplitTerminalSseMiddleware``);
+* forwards each SSE event as TabbyAPI produces it, in the shape every
+  repository harness expects: content events carry no finish_reason, the
+  terminal event has an empty delta, and the usage follows alone with
+  ``choices: []`` (``TabbySseMiddleware``);
 * runs from ``TABBY_ROOT``, which TabbyAPI needs for its templates, sampler
   presets and logs.
 
-The allowlist is one set lookup per request, outside the token path.
+The allowlist is one set lookup per request, outside the token path. The SSE
+pass looks at each streamed event once and parses only terminal candidates.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
+
+from glm53_runtime_policy import split_terminal_event
 
 ALLOWED_ROUTES = frozenset({
     ("GET", "/health"),
@@ -95,6 +101,97 @@ class RouteAllowlistMiddleware:
             await send({"type": "websocket.close", "code": 1008})
             return None
         return await self.app(scope, receive, send)
+
+
+# sse_starlette ends an event with CRLF CRLF; LF LF is the other framing in use.
+SSE_BOUNDARY = re.compile(rb"\r\n\r\n|\n\n")
+
+
+def _encode_event(event: dict) -> bytes:
+    return b"data: " + json.dumps(event, separators=(",", ":"), ensure_ascii=False).encode()
+
+
+def split_usage_event(raw: bytes) -> bytes:
+    """Return ``raw`` unchanged, or a terminal event and a usage event.
+
+    With ``stream_options.include_usage`` TabbyAPI withholds finish_reason from
+    the content events and sends it on the usage chunk, ``choices: [{delta: {},
+    finish_reason}]`` plus ``usage``. OpenAI and vLLM end with the terminal
+    event and then the usage alone with ``choices: []``, which the speed bench
+    requires. The timings ride with the usage, as llama-server's do.
+    """
+    if not raw.startswith(b"data:") or b'"usage"' not in raw:
+        return raw
+    try:
+        event = json.loads(raw[5:])
+    except ValueError:
+        return raw
+    if not isinstance(event, dict) or not isinstance(event.get("usage"), dict):
+        return raw
+    choices = event.get("choices")
+    if not (isinstance(choices, list) and len(choices) == 1 and isinstance(choices[0], dict)
+            and choices[0].get("finish_reason") is not None and not choices[0].get("delta")):
+        return raw
+    terminal = {key: value for key, value in event.items() if key not in ("usage", "timings")}
+    return _encode_event(terminal) + b"\n\n" + _encode_event({**event, "choices": []})
+
+
+def harness_events(raw: bytes) -> list:
+    """One TabbyAPI SSE event (without its separator) as harness-shaped events."""
+    if b'"finish_reason":' not in raw or b'"finish_reason": null' in raw:
+        return [raw]
+    events = []
+    for part in split_terminal_event(raw).split(b"\n\n"):
+        events.extend(split_usage_event(part).split(b"\n\n"))
+    return events
+
+
+class TabbySseMiddleware:
+    """Forward TabbyAPI's SSE events as they arrive, harness-shaped.
+
+    Events pass byte-for-byte with their own separator unless they are terminal
+    (a finish_reason with a delta, or the usage chunk), which split as
+    ``harness_events`` describes. Non-SSE responses pass untouched.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        streaming = False
+        buffer = bytearray()
+
+        async def wrapped_send(event):
+            nonlocal streaming
+            if event["type"] == "http.response.start":
+                streaming = any(name.lower() == b"content-type"
+                                and value.lower().startswith(b"text/event-stream")
+                                for name, value in event.get("headers", []))
+                return await send(event)
+            if event["type"] != "http.response.body" or not streaming:
+                return await send(event)
+            buffer.extend(event.get("body", b""))
+            more = event.get("more_body", False)
+            out = bytearray()
+            while (match := SSE_BOUNDARY.search(buffer)) is not None:
+                separator = match.group()
+                for part in harness_events(bytes(buffer[:match.start()])):
+                    out += part + separator
+                del buffer[:match.end()]
+            if not more:
+                out += buffer
+                buffer.clear()
+            if out or not more:
+                await send({"type": "http.response.body", "body": bytes(out), "more_body": more})
+
+        return await self.app(scope, receive, wrapped_send)
+
+
+def guard_app(app):
+    """TabbyAPI's ASGI app as the profile serves it."""
+    return RouteAllowlistMiddleware(TabbySseMiddleware(app))
 
 
 def _values(argv: list, flag: str) -> list:
@@ -189,13 +286,11 @@ def main() -> None:
     sys.argv = [os.path.join(root, "main.py"), *argv]
 
     import endpoints.server as server
-    from glm53_runtime_policy import SplitTerminalSseMiddleware
 
     setup_app = server.setup_app
 
     def guarded_setup_app(host=None, port=None):
-        return RouteAllowlistMiddleware(
-            SplitTerminalSseMiddleware(setup_app(host, port)))
+        return guard_app(setup_app(host, port))
 
     server.setup_app = guarded_setup_app
     import main as tabby_main
