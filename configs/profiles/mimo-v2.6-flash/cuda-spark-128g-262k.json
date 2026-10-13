@@ -1,0 +1,143 @@
+{
+ "schema_version": 4,
+ "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+ "purpose": "MiMo-V2.6-Flash (MOPD checkpoint) on TabbyAPI 2636ef60 + exllamav3 1.6.1: the post-out-scales-fix 2.52 bpw EXL3 pack, one 262,144-token slot with Q8 K/V, DFlash drafting (4-bit EXL3 drafter, 7 draft tokens), images on. Launched through scripts/lib/tabby_launch.py, which serves only the readiness and inference routes. Switch alias mimo26flash (owner direction 2026-10-12); qwen38fn stays the default. 1M does not fit beside 94 GiB of weights.",
+ "model": "mimo-v2.6-flash",
+ "backend": "cuda",
+ "hardware_class": "spark",
+ "ram_tier_gib": 128,
+ "status": {
+  "state": "estimated",
+  "basis": "Not yet servable: the switch refuses estimated profiles. Memory is estimated from the architecture (48 layers, 9 global-attention layers at 27,648 B/token FP16 K/V, 39 SWA-128 layers in fixed rings) and the pack size; the runtime builds and imports on GB10 (results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md). Plan B0 recorded NO_GO (readiness); the owner directed the integration on 2026-10-12 with fidelity measured and reported. The smoke, fidelity and qualification gates have not run."
+ },
+ "engine": "tabby-exl3-mimo-r001",
+ "artifact_roles": {
+  "model": "exl3-2.52-mikeroz",
+  "draft_model": "dflash-exl3-4.0"
+ },
+ "launch": {
+  "mechanism": "systemd-run",
+  "user": "bmarti44",
+  "log_name": "mimo26flash",
+  "env": {
+   "HOME": "{cache_root}/mimo-v26-flash/home",
+   "LANG": "C.UTF-8",
+   "PATH": "{cache_root}/mimo-v26-flash/native-runtime-001/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+   "PYTHONPATH": "{repo}/scripts/lib",
+   "PYTHONNOUSERSITE": "1",
+   "PYTHONDONTWRITEBYTECODE": "1",
+   "CUDA_HOME": "/usr/local/cuda-13.0",
+   "CUDA_VISIBLE_DEVICES": "0",
+   "TOKENIZERS_PARALLELISM": "false",
+   "HF_HUB_OFFLINE": "1",
+   "TRANSFORMERS_OFFLINE": "1",
+   "DO_NOT_TRACK": "1",
+   "MAX_JOBS": "2",
+   "NVCC_THREADS": "1",
+   "TABBY_ROOT": "{cache_root}/mimo-v26-flash/native-runtime-001/src/tabbyAPI"
+  },
+  "diagnostics_unset": [
+   "CUDA_LAUNCH_BLOCKING",
+   "TABBY_LOGGING_LOG_PROMPT",
+   "TABBY_LOGGING_LOG_REQUESTS",
+   "TABBY_LOGGING_LOG_CHAT_COMPLETION_REQUESTS"
+  ],
+  "args": [
+   "-B",
+   "-m",
+   "tabby_launch",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--disable-auth",
+   "true",
+   "--disable-fetch-requests",
+   "true",
+   "--model-name",
+   "{model}",
+   "--backend",
+   "exllamav3",
+   "--inline-model-loading",
+   "false",
+   "--max-seq-len",
+   "262144",
+   "--cache-size",
+   "262144",
+   "--max-batch-size",
+   "1",
+   "--cache-mode",
+   "8,8",
+   "--chunk-size",
+   "2048",
+   "--vision",
+   "true",
+   "--reasoning",
+   "true",
+   "--tool-format",
+   "qwen3_coder",
+   "--draft-model-name",
+   "{draft_model}",
+   "--draft-mode",
+   "model",
+   "--log-prompt",
+   "false",
+   "--log-generation-params",
+   "false",
+   "--log-requests",
+   "false",
+   "--log-chat-completion-requests",
+   "false"
+  ]
+ },
+ "containment": {
+  "unit": "mimo26flash-engine",
+  "memory_high": "100G",
+  "memory_max": "104G",
+  "memory_swap_max": "0",
+  "oom_policy": "kill",
+  "kill_mode": "control-group",
+  "extra_properties": {
+   "NoNewPrivileges": "yes"
+  }
+ },
+ "safety": {
+  "kill_floor_gib": 8,
+  "minimum_start_gib": 114,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800,
+  "note": "8 GiB whole-host floor, the production precedent (qwen38fn). minimum_start_gib is a placeholder at the quiet host's ceiling until the smoke measures the peak; promotion sets it to ceil(peak + 8). CUDA allocations on GB10 are not charged to the memory cgroup, so MemoryHigh/MemoryMax bound only host-side pages (page cache of the 94 GiB pack read, the Python heap); the external memwatch floor is the binding control."
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 14688,
+  "overhead_gib": 5.5,
+  "extra_gib": 0,
+  "floor_gib": 8,
+  "basis": "Estimate, replaced by the smoke measurement. K/V: exllamav3 caches only the 9 global-attention layers per token (4 K/V heads, head_dim 192, V padded to 192: 27,648 B/token FP16); at 8,8 that is 14,688 B/token with scales, 3.59 GiB at 262,144. The 39 SWA-128 layers and the drafter's 5 SWA-1024 layers keep fixed per-slot rings. overhead_gib: about 0.75 GiB of Q8 staging scratch plus about 4.75 GiB for the CUDA context, torch allocator slack, the vision tower and the TabbyAPI process."
+ },
+ "serving": {
+  "parallel_slots": 1,
+  "request_context_cap": 262144
+ },
+ "context_cap": 262144,
+ "port_role": "production",
+ "switch_alias": "mimo26flash",
+ "switch": {
+  "mode": "generic",
+  "served_model_id": "mimo-v2.6-flash",
+  "health_path": "/health",
+  "context_check": {
+   "kind": "props",
+   "total_slots": 1,
+   "n_ctx": 262144
+  }
+ },
+ "bench": {
+  "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k"
+ },
+ "qualification_options": {
+  "speed_max_tokens_per_event": 8
+ },
+ "qualification_targets": null,
+ "verify_on_hardware": null
+}

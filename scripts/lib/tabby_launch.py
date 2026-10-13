@@ -11,7 +11,13 @@ Profiles run ``<runtime python> -B -m tabby_launch <TabbyAPI CLI flags>`` with
   ``model_dir`` as a model;
 * refuses a launch that binds beyond loopback, keeps authentication on (the
   auth helper strips the client's Bearer token, so TabbyAPI's own keys could
-  never match), keeps runtime model loading on, or selects another backend;
+  never match), keeps runtime model loading on, lets the server fetch remote
+  image URLs, or selects another backend;
+* accepts only exact, listed flags (argparse would expand an abbreviation such
+  as ``--hos`` over a checked flag) and refuses the three sources TabbyAPI
+  merges over its command line: ``config.yml`` in its working directory,
+  ``TABBY_<SECTION>_<FIELD>`` environment variables, and a model folder's
+  ``tabby_config.yml``, which always wins;
 * serves only the readiness and inference routes. With authentication off
   every caller is an admin, and TabbyAPI always mounts admin routes (model
   load/unload, downloads, lora, template and sampler switching);
@@ -43,9 +49,24 @@ REQUIRED_VALUES = {
     "--disable-auth": "true",
     "--inline-model-loading": "false",
     "--backend": "exllamav3",
+    # Vision is on; the server never fetches image URLs on a client's behalf.
+    "--disable-fetch-requests": "true",
 }
 PATH_FLAGS = (("--model-name", "--model-dir", True),
               ("--draft-model-name", "--draft-model-dir", False))
+# Every flag a profile may pass. Each takes exactly one value.
+ALLOWED_FLAGS = frozenset({
+    *REQUIRED_VALUES, "--port",
+    "--model-name", "--draft-model-name",
+    "--max-seq-len", "--cache-size", "--max-batch-size", "--cache-mode",
+    "--chunk-size", "--vision", "--reasoning", "--tool-format",
+    "--draft-mode", "--draft-cache-mode", "--draft-num-tokens",
+    "--sysmem-multimodal-cache", "--warmup",
+    "--log-prompt", "--log-generation-params", "--log-requests",
+    "--log-chat-completion-requests",
+})
+CONFIG_FILE = "config.yml"
+MODEL_OVERRIDE_FILE = "tabby_config.yml"
 
 
 class LaunchError(ValueError):
@@ -85,9 +106,24 @@ def _values(argv: list, flag: str) -> list:
     return [argv[i + 1] for i in hits]
 
 
+def _check_flags(argv: list) -> None:
+    """Flags and values alternate, and every flag is exact and listed."""
+    if len(argv) % 2:
+        raise LaunchError("every flag takes exactly one value")
+    for flag, value in zip(argv[0::2], argv[1::2]):
+        if flag not in ALLOWED_FLAGS:
+            raise LaunchError(f"{flag!r} is not a flag the launcher accepts")
+        if value.startswith("-"):
+            raise LaunchError(f"{flag} has no value")
+
+
 def tabby_argv(argv: list) -> list:
     """Validate the profile argv and return TabbyAPI's."""
     argv = list(argv)
+    for arg in argv:
+        if arg.startswith("-") and "=" in arg:
+            raise LaunchError(f"{arg.split('=', 1)[0]}=... is ambiguous; "
+                              "pass the value separately")
     for flag, wanted in REQUIRED_VALUES.items():
         values = _values(argv, flag)
         if values != [wanted]:
@@ -105,7 +141,22 @@ def tabby_argv(argv: list) -> list:
         index = out.index(name_flag)
         del out[index:index + 2]
         out += [dir_flag, str(path.parent), name_flag, path.name]
+    _check_flags(argv)
     return out
+
+
+def check_environment(root: Path, model_dirs: list, environ) -> None:
+    """Refuse every TabbyAPI configuration source besides the command line."""
+    if (Path(root) / CONFIG_FILE).exists():
+        raise LaunchError(f"{Path(root) / CONFIG_FILE} would override the profile")
+    for directory in model_dirs:
+        if (Path(directory) / MODEL_OVERRIDE_FILE).exists():
+            raise LaunchError(
+                f"{Path(directory) / MODEL_OVERRIDE_FILE} would override the profile")
+    stray = sorted(key for key in environ
+                   if key.upper().startswith("TABBY_") and key != "TABBY_ROOT")
+    if stray:
+        raise LaunchError(f"TabbyAPI configuration variables are set: {stray}")
 
 
 def check_model_parent(model: Path) -> None:
@@ -127,7 +178,10 @@ def main() -> None:
         raise SystemExit("tabby_launch: TABBY_ROOT must name the TabbyAPI source tree")
     try:
         argv = tabby_argv(sys.argv[1:])
-        check_model_parent(Path(_values(sys.argv[1:], "--model-name")[0]))
+        model = Path(_values(sys.argv[1:], "--model-name")[0])
+        check_model_parent(model)
+        dirs = [model] + [Path(v) for v in _values(sys.argv[1:], "--draft-model-name")]
+        check_environment(Path(root), dirs, os.environ)
     except LaunchError as error:
         raise SystemExit(f"tabby_launch: {error}") from None
     os.chdir(root)
