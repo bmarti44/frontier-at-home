@@ -64,7 +64,8 @@ ARGV = [
     "--chunk-size", "2048",
     # Host-RAM caches bounded below TabbyAPI's defaults (4096 / 1024 MB): sliding-window
     # checkpoints are 49.25 MiB each with the drafter's, and the smoke left 2 GiB above the floor.
-    "--sysmem-recurrent-cache", "1024",
+    # 512 MB (about 10 checkpoints) after the M3 preflight peaked at 106.09 GiB with 1024 (owner).
+    "--sysmem-recurrent-cache", "512",
     "--sysmem-multimodal-cache", "256",
     "--vision", "true",
     "--reasoning", "true",
