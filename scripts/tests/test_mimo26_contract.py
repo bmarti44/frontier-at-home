@@ -145,6 +145,12 @@ class Profile(unittest.TestCase):
         systemd = self.snapshot["systemd"]
         self.assertEqual(systemd["unit"], "mimo26flash-engine")
         properties = systemd["properties"]
+        # exllamav3's CUDA memory is not charged to the unit; it holds about
+        # 3-4 GB anon plus the pack's page cache. A low MemoryHigh bounds that
+        # cache while the weights stream in: at 16G it reached 12-14 GiB and
+        # took MemFree to 1.2 GiB, and the kernel refused a GPU allocation
+        # (NVRM, smoke-2026-10-13-r2).
+        self.assertEqual((properties["MemoryHigh"], properties["MemoryMax"]), ("8G", "16G"))
         self.assertEqual((properties["MemorySwapMax"], properties["OOMPolicy"],
                           properties["KillMode"], properties["User"]),
                          ("0", "kill", "control-group", "bmarti44"))
