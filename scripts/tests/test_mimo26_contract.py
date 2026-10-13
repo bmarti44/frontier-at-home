@@ -205,7 +205,7 @@ class Profile(unittest.TestCase):
         # config (every EXL3 pack ships the stale pre-Oct-9 file).
         served = {f["name"]: f for f in weights["artifacts"][
             self.profile["artifact_roles"]["model"]]["files"]}
-        official = {f["name"]: f for f in weights["artifacts"]["mopd-bf16"]["files"]}
+        official = {f["name"]: f for f in weights["artifacts"]["mopd-release"]["files"]}
         self.assertEqual(served["preprocessor_config.json"]["sha256"],
                          official["preprocessor_config.json"]["sha256"])
         self.assertEqual(served["preprocessor_config.json"]["source_repo"],

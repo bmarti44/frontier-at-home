@@ -27,7 +27,7 @@ import tabby_launch  # noqa: E402
 
 BASE = ["--host", "127.0.0.1", "--port", "8013", "--disable-auth", "true",
         "--inline-model-loading", "false", "--backend", "exllamav3",
-        "--max-seq-len", "262144"]
+        "--max-seq-len", "262144", "--disable-fetch-requests", "true"]
 
 
 def run_asgi(app, scope: dict) -> list:
@@ -145,6 +145,10 @@ class LaunchArgv(unittest.TestCase):
             "short flag": BASE + model + ["-h"],
             "equals on another flag": BASE + model + ["--max-seq-len=1"],
             "config file flag": BASE + model + ["--config", "/tmp/x.yml"],
+            # Vision is on: the server must never fetch image URLs itself.
+            "remote fetches on": [a if a != "--disable-fetch-requests" else "--vision"
+                                  for a in BASE] + model,
+            "remote fetches off flag false": BASE[:-1] + ["false"] + model,
         }
         for label, argv in cases.items():
             with self.subTest(case=label):
