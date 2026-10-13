@@ -63,7 +63,7 @@ ARGV = [
     "--cache-mode", "8,8",
     "--chunk-size", "2048",
     # Host-RAM caches bounded below TabbyAPI's defaults (4096 / 1024 MB): sliding-window
-    # checkpoints are 29.25 MiB each, and the smoke left 2 GiB above the 8 GiB floor.
+    # checkpoints are 49.25 MiB each with the drafter's, and the smoke left 2 GiB above the floor.
     "--sysmem-recurrent-cache", "1024",
     "--sysmem-multimodal-cache", "256",
     "--vision", "true",
