@@ -1,0 +1,119 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+  "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k",
+  "served_model": "mimo-v2.6-flash",
+  "out": "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/smoke-2026-10-13/kit",
+  "start_unix": 1791866580.1825764,
+  "end_unix": 1791866618.5869222,
+  "start_iso": "2026-10-13T04:43:00.287660+00:00",
+  "end_iso": "2026-10-13T04:43:38.586926+00:00",
+  "targets": null,
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "FAIL",
+      "evidence": "speed/speed.json",
+      "start_unix": 1791866580.3355632,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/30_bench_speed_blocks.py",
+        "--base-url",
+        "http://127.0.0.1:8019",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/smoke-2026-10-13/kit/speed/speed.json",
+        "--stack-label",
+        "mimo-v2.6-flash-cuda-spark-128g-262k",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "mimo-v2.6-flash",
+        "--max-tokens-per-event",
+        "8",
+        "--output-tokenizer-path",
+        "tokenizer.json",
+        "--output-tokenizer-sha256",
+        "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e"
+      ],
+      "skip_reason": null,
+      "exit_code": 1,
+      "wall_s": 0.20632167599978857,
+      "result": {
+        "levels": {},
+        "suite_valid": false,
+        "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k"
+      },
+      "end_unix": 1791866580.542048,
+      "status_reason": "script exit 1",
+      "log_tail": "$ /usr/bin/python3 /home/bmarti44/mimo26/scripts/30_bench_speed_blocks.py --base-url http://127.0.0.1:8019 --out /home/bmarti44/mimo26/results/mimo-v26-flash-gates/smoke-2026-10-13/kit/speed/speed.json --stack-label mimo-v2.6-flash-cuda-spark-128g-262k --reps 2 --warmup 1 --max-tokens 384 --min-completion-tokens 200 --seed 42 --context-levels 0,28672 --ignore-eos-supported --request-timeout 900 --extra-body {\"min_tokens\":320} --model-id mimo-v2.6-flash --max-tokens-per-event 8 --output-tokenizer-path tokenizer.json --output-tokenizer-sha256 ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e"
+    },
+    "toolcall": {
+      "status": "OK",
+      "evidence": "toolcall/toolcall.json",
+      "start_unix": 1791866580.5424137,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8019/v1",
+        "--model",
+        "mimo-v2.6-flash",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/smoke-2026-10-13/kit/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 38.043813349999255,
+      "result": {
+        "passed": 20,
+        "total": 20,
+        "score": 1.0,
+        "suite": "toolcall-v1"
+      },
+      "end_unix": 1791866618.586649
+    }
+  },
+  "rows": [
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 20,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "FAIL",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}
