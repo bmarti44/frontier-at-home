@@ -1,0 +1,384 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+  "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k",
+  "served_model": "mimo-v2.6-flash",
+  "out": "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/qualify-2026-10-13-c1",
+  "start_unix": 1791929164.4713864,
+  "end_unix": 1791932764.701187,
+  "start_iso": "2026-10-13T22:06:04.572277+00:00",
+  "end_iso": "2026-10-13T23:06:04.701190+00:00",
+  "targets": null,
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "OK",
+      "evidence": "speed/speed.json",
+      "start_unix": 1791929164.6181052,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/30_bench_speed_blocks.py",
+        "--base-url",
+        "http://127.0.0.1:8019",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/qualify-2026-10-13-c1/speed/speed.json",
+        "--stack-label",
+        "mimo-v2.6-flash-cuda-spark-128g-262k",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "mimo-v2.6-flash",
+        "--max-tokens-per-event",
+        "8",
+        "--output-tokenizer-path",
+        "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json",
+        "--output-tokenizer-sha256",
+        "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 215.7334648509859,
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": 21.837412068716777,
+            "median_ttft_s": 0.6510648004999999,
+            "median_prefill_tok_s": 98.28895180838009,
+            "valid": true,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": 37.37059603550432,
+            "median_ttft_s": 44.2271099245,
+            "median_prefill_tok_s": 779.6575534400187,
+            "valid": true,
+            "reps": 2
+          }
+        },
+        "suite_valid": true,
+        "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k"
+      },
+      "end_unix": 1791929380.3518848
+    },
+    "toolcall": {
+      "status": "OK",
+      "evidence": "toolcall/toolcall.json",
+      "start_unix": 1791929380.3522406,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8019/v1",
+        "--model",
+        "mimo-v2.6-flash",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/qualify-2026-10-13-c1/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 34.38452049496118,
+      "result": {
+        "passed": 20,
+        "total": 20,
+        "score": 1.0,
+        "suite": "toolcall-v1"
+      },
+      "end_unix": 1791929414.7371974
+    },
+    "vision": {
+      "status": "OK",
+      "evidence": "vision/summary.json",
+      "start_unix": 1791929414.7375472,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/38_bench_vision.py",
+        "--base-url",
+        "http://127.0.0.1:8019",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/qualify-2026-10-13-c1/vision",
+        "--thinking-mode",
+        "chat",
+        "--max-tokens",
+        "4096",
+        "--model-id",
+        "mimo-v2.6-flash"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 846.9208920000237,
+      "result": {
+        "accuracy": 0.68,
+        "n": 100,
+        "correct": 68,
+        "invalid_count": 4,
+        "error_count": 0,
+        "ok": true,
+        "suite": "mmmu-val-100"
+      },
+      "end_unix": 1791930261.6585906
+    },
+    "context": {
+      "status": "OK",
+      "evidence": "context/summary.json",
+      "start_unix": 1791930261.6589484,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/50_probe_context.py",
+        "--base-url",
+        "http://127.0.0.1:8019",
+        "--model",
+        "mimo-v2.6-flash",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/qualify-2026-10-13-c1/context",
+        "--stack-label",
+        "mimo-v2.6-flash-cuda-spark-128g-262k",
+        "--slots",
+        "1",
+        "--tokens-per-slot",
+        "250128",
+        "--tokenizer-path",
+        "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json",
+        "--tokenizer-sha256",
+        "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e",
+        "--phase",
+        "both",
+        "--profile-id",
+        "mimo-v2.6-flash/cuda-spark-128g-262k",
+        "--mem-floor-gib",
+        "8"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 694.7146584219881,
+      "result": {
+        "verdict": "PASS",
+        "total_tokens": 250135,
+        "min_mem_available_gib": 9.561332702636719,
+        "memory_floor_gib": 8.0,
+        "needles_correct": 1,
+        "needles_total": 1,
+        "max_ttft_s": 683.928982847,
+        "checks": {
+          "short_phase_ok": true,
+          "full_phase_ran": true,
+          "all_slots_ok": true,
+          "needles_all_correct": true,
+          "controls_ok": true,
+          "memory_floor_pass": true,
+          "total_tokens_ok": true
+        }
+      },
+      "end_unix": 1791930956.373842
+    },
+    "soak": {
+      "status": "OK",
+      "evidence": "soak/soak.json",
+      "start_unix": 1791930956.3742254,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/35_soak.py",
+        "--base-url",
+        "http://127.0.0.1:8019",
+        "--stack-label",
+        "mimo-v2.6-flash-cuda-spark-128g-262k",
+        "--config-hash",
+        "mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/qualify-2026-10-13-c1/soak/soak.json",
+        "--model",
+        "mimo-v2.6-flash"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 1808.3253482989967,
+      "result": {
+        "pass": true,
+        "failed_gates": [],
+        "n_requests": 195,
+        "n_errors": 0,
+        "decode_overall_median_tok_s": 29.722108717631247,
+        "mem_available_min_gib": 10.004196166992188,
+        "duration_seconds_actual": 1808.280510753044
+      },
+      "end_unix": 1791932764.7009
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": 21.837412068716777,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": 0.6510648004999999,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": 98.28895180838009,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": 37.37059603550432,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": 44.2271099245,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": 779.6575534400187,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 20,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "accuracy",
+      "measured": 0.68,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "n",
+      "measured": 100,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "verdict",
+      "measured": "PASS",
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "total_tokens",
+      "measured": 250135,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "min_mem_available_gib",
+      "measured": 9.561332702636719,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "pass",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "decode_overall_median_tok_s",
+      "measured": 29.722108717631247,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "MEASURED",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}
