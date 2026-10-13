@@ -215,7 +215,9 @@ def resolve_profile(args: argparse.Namespace) -> dict:
     if served is None:
         # Generic switch profiles declare the id their server reports.
         served = (raw_profile.get("switch") or {}).get("served_model_id")
-    model_path = argv_value(argv, "--model") or argv_value(argv, "-m")
+    # TabbyAPI names the model --model-name; its argv's -m is Python's module flag.
+    model_path = (argv_value(argv, "--model") or argv_value(argv, "--model-name")
+                  or argv_value(argv, "-m"))
     tokenizer_path = None
     tokenizer_sha = None
     if model_path:
