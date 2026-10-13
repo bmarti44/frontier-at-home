@@ -116,9 +116,10 @@ def split_usage_event(raw: bytes) -> bytes:
 
     With ``stream_options.include_usage`` TabbyAPI withholds finish_reason from
     the content events and sends it on the usage chunk, ``choices: [{delta: {},
-    finish_reason}]`` plus ``usage``. OpenAI and vLLM end with the terminal
-    event and then the usage alone with ``choices: []``, which the speed bench
-    requires. The timings ride with the usage, as llama-server's do.
+    finish_reason}]`` plus ``usage`` (``/v1/completions`` sends ``text: ""`` in
+    place of the delta and splits the same way). OpenAI and vLLM end with the
+    terminal event and then the usage alone with ``choices: []``, which the
+    speed bench requires. The timings ride with the usage, as llama-server's do.
     """
     if not raw.startswith(b"data:") or b'"usage"' not in raw:
         return raw
@@ -136,12 +137,26 @@ def split_usage_event(raw: bytes) -> bytes:
     return _encode_event(terminal) + b"\n\n" + _encode_event({**event, "choices": []})
 
 
+def _keep_terminal_fields_once(content: bytes, terminal: bytes) -> list:
+    """split_terminal_event copies every field to both halves. The content
+    half keeps the tokens' logprobs; the terminal half keeps eos_reason and
+    the timings."""
+    first, second = json.loads(content[5:]), json.loads(terminal[5:])
+    first.pop("timings", None)
+    first["choices"][0].pop("eos_reason", None)
+    second["choices"][0].pop("logprobs", None)
+    return [_encode_event(first), _encode_event(second)]
+
+
 def harness_events(raw: bytes) -> list:
     """One TabbyAPI SSE event (without its separator) as harness-shaped events."""
     if b'"finish_reason":' not in raw or b'"finish_reason": null' in raw:
         return [raw]
+    parts = split_terminal_event(raw).split(b"\n\n")
+    if len(parts) == 2:
+        parts = _keep_terminal_fields_once(*parts)
     events = []
-    for part in split_terminal_event(raw).split(b"\n\n"):
+    for part in parts:
         events.extend(split_usage_event(part).split(b"\n\n"))
     return events
 
