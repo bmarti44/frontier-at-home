@@ -18,6 +18,7 @@ import json
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -102,6 +103,169 @@ class RouteAllowlist(unittest.TestCase):
         app = RecordingApp()
         run_asgi(tabby_launch.RouteAllowlistMiddleware(app), {"type": "lifespan"})
         self.assertEqual(app.calls, [("lifespan", None, None)])
+
+
+def tabby_event(obj) -> bytes:
+    """One event as TabbyAPI emits it: json.dumps defaults, sse_starlette CRLF framing."""
+    data = obj if isinstance(obj, str) else json.dumps(obj, ensure_ascii=False)
+    return ("data: " + data + "\r\n\r\n").encode()
+
+
+def tabby_chunk(delta: dict, finish_reason=None, **extra) -> dict:
+    return {"id": "chatcmpl-r1", "object": "chat.completion.chunk", "created": 1,
+            "choices": [{"index": 0, "delta": delta, "finish_reason": finish_reason}],
+            "model": "mimo-v2.6-flash", **extra}
+
+
+# A stream_options.include_usage stream as endpoints/OAI/utils/chat_completion.py
+# writes it: finish_reason is suppressed on content and rides on the usage chunk.
+USAGE = {"prompt_tokens": 20, "completion_tokens": 4, "total_tokens": 24}
+TABBY_USAGE_STREAM = [
+    tabby_event(tabby_chunk({"role": "assistant", "reasoning_content": "think"})),
+    tabby_event(tabby_chunk({"reasoning_content": " more"})),
+    tabby_event(tabby_chunk({"content": "Hello"})),
+    tabby_event(tabby_chunk({"content": " world"})),
+    tabby_event(tabby_chunk({}, "length", usage=USAGE, timings={"predicted_n": 4})),
+    tabby_event("[DONE]"),
+]
+
+
+class SseApp:
+    """Sends `events` one body message at a time and logs each send."""
+
+    def __init__(self, events: list, log: list) -> None:
+        self.events, self.log = events, log
+
+    async def __call__(self, scope, receive, send):
+        await send({"type": "http.response.start", "status": 200,
+                    "headers": [(b"content-type", b"text/event-stream; charset=utf-8")]})
+        for index, body in enumerate(self.events):
+            self.log.append(("app", index))
+            await send({"type": "http.response.body", "body": body, "more_body": True})
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+
+def guarded_stream(events: list) -> tuple[bytes, list]:
+    log: list = []
+    sent = []
+
+    async def receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(event):
+        if event["type"] == "http.response.body" and event.get("body"):
+            log.append(("client", event["body"]))
+        sent.append(event)
+
+    app = tabby_launch.guard_app(SseApp(events, log))
+    asyncio.run(app(http("POST", "/v1/chat/completions"), receive, send))
+    return b"".join(e.get("body", b"") for e in sent if e["type"] == "http.response.body"), log
+
+
+def sse_data(body: bytes) -> list:
+    return [line[5:].strip().decode() for line in body.splitlines() if line.startswith(b"data:")]
+
+
+def load_bench():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("bench_speed_tabby", ROOT / "scripts/30_bench_speed.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+class StreamResponse:
+    status = 200
+
+    def __init__(self, body: bytes) -> None:
+        self.lines = body.splitlines(keepends=True)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def __iter__(self):
+        return iter(self.lines)
+
+
+class TabbySse(unittest.TestCase):
+    """The shim streams TabbyAPI's SSE events as they arrive, framed the way
+    every repository harness and the vLLM profiles do. M1 smoke 2026-10-13: the
+    shared vLLM splitter cut only on LF LF, so sse_starlette's CRLF CRLF events
+    were held until the response ended (probe stream_seconds 0.0001 s for 22
+    events), and the usage chunk carried finish_reason, which the speed bench
+    rejects."""
+
+    def test_events_reach_the_client_as_they_are_produced(self) -> None:
+        _, log = guarded_stream(TABBY_USAGE_STREAM)
+        order = [entry if entry[0] == "app" else ("client",) for entry in log]
+        # Every content event is forwarded before the app produces the next one.
+        for index in range(4):
+            app_at = order.index(("app", index))
+            self.assertEqual(order[app_at + 1], ("client",), log)
+
+    def test_usage_chunk_becomes_a_terminal_event_then_a_usage_event(self) -> None:
+        body, _ = guarded_stream(TABBY_USAGE_STREAM)
+        data = sse_data(body)
+        self.assertEqual(data[-1], "[DONE]")
+        events = [json.loads(d) for d in data[:-1]]
+        self.assertEqual(len(events), 6)
+        terminal, usage = events[-2], events[-1]
+        self.assertEqual(terminal["choices"], [{"index": 0, "delta": {}, "finish_reason": "length"}])
+        self.assertNotIn("usage", terminal)
+        self.assertEqual(usage["choices"], [])
+        self.assertEqual(usage["usage"], USAGE)
+        self.assertEqual(usage["timings"], {"predicted_n": 4})
+        self.assertEqual({e["id"] for e in events}, {"chatcmpl-r1"})
+        for event in events[:-2]:
+            self.assertIsNone(event["choices"][0]["finish_reason"])
+        # Unchanged events keep TabbyAPI's bytes and CRLF framing.
+        self.assertTrue(body.startswith(b"".join(TABBY_USAGE_STREAM[:4])))
+
+    def test_terminal_content_without_usage_is_split(self) -> None:
+        body, _ = guarded_stream([tabby_event(tabby_chunk({"content": "Hi"})),
+                                  tabby_event(tabby_chunk({"content": "!"}, "stop")),
+                                  tabby_event("[DONE]")])
+        events = [json.loads(d) for d in sse_data(body)[:-1]]
+        self.assertEqual([e["choices"][0]["delta"] for e in events],
+                         [{"content": "Hi"}, {"content": "!"}, {}])
+        self.assertEqual([e["choices"][0]["finish_reason"] for e in events], [None, None, "stop"])
+
+    def test_pings_lf_framing_and_partial_events_pass_through(self) -> None:
+        ping = b": ping - 2026-10-13 04:43:00\r\n\r\n"
+        content = tabby_event(tabby_chunk({"content": "a"}))
+        body, _ = guarded_stream([ping, content[:10], content[10:],
+                                  b'data: {"choices":[]}\n\n', tabby_event("[DONE]")])
+        self.assertEqual(body, ping + content + b'data: {"choices":[]}\n\n' + tabby_event("[DONE]"))
+
+    def test_the_speed_bench_accepts_the_guarded_stream_only(self) -> None:
+        bench = load_bench()
+        client = bench.Client("http://127.0.0.1:1", None)
+        raw = b"".join(TABBY_USAGE_STREAM)
+        with unittest.mock.patch.object(bench.urllib.request, "urlopen",
+                                        return_value=StreamResponse(raw)):
+            with self.assertRaisesRegex(RuntimeError, "usage precedes finish_reason"):
+                client.stream_chat({"max_tokens": 4, "ignore_eos": True})
+        body, _ = guarded_stream(TABBY_USAGE_STREAM)
+        with unittest.mock.patch.object(bench.urllib.request, "urlopen",
+                                        return_value=StreamResponse(body)):
+            result = client.stream_chat({"max_tokens": 4, "ignore_eos": True})
+        self.assertTrue(result["done"])
+        self.assertEqual(result["finish_reason"], "length")
+        self.assertEqual(result["usage"], USAGE)
+        self.assertEqual(result["generated_reasoning"], "think more")
+        self.assertEqual(result["generated_content"], "Hello world")
+        self.assertEqual(len(result["token_timestamps_ns"]), 4)
+
+    def test_non_streaming_responses_pass_unchanged(self) -> None:
+        app = tabby_launch.guard_app(RecordingApp())
+        sent = run_asgi(app, http("GET", "/health"))
+        self.assertEqual([e.get("body") for e in sent], [None, b"ok"])
+        sent = run_asgi(app, http("GET", "/v1/model/list"))
+        self.assertEqual(sent[0]["status"], 404)
 
 
 class LaunchArgv(unittest.TestCase):
