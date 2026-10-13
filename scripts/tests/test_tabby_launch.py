@@ -242,6 +242,37 @@ class TabbySse(unittest.TestCase):
         self.assertEqual([e["choices"][0]["finish_reason"] for e in events], [None, None, "stop"])
         self.assertEqual(events[2]["choices"][0]["delta"], {})
 
+    def test_split_terminal_fields_go_to_one_half_each(self) -> None:
+        # Review low (2026-10-13): the content half kept eos_reason and
+        # timings, and both halves kept logprobs, so a streaming-logprobs
+        # client would count the last chunk's logprobs twice.
+        logprobs = {"content": [{"token": "!", "logprob": -0.1}]}
+        last = tabby_chunk({"content": "!"}, "stop", timings={"predicted_n": 2})
+        last["choices"][0].update(logprobs=logprobs, eos_reason="stop_string")
+        body, _ = guarded_stream([tabby_event(tabby_chunk({"content": "Hi"})),
+                                  tabby_event(last), tabby_event("[DONE]")])
+        content, terminal = [json.loads(d) for d in sse_data(body)[1:3]]
+        self.assertEqual(content["choices"], [{"index": 0, "delta": {"content": "!"},
+                                               "finish_reason": None, "logprobs": logprobs}])
+        self.assertNotIn("timings", content)
+        self.assertEqual(terminal["choices"], [{"index": 0, "delta": {}, "finish_reason": "stop",
+                                                "eos_reason": "stop_string"}])
+        self.assertEqual(terminal["timings"], {"predicted_n": 2})
+
+    def test_completions_usage_chunk_splits_like_chat(self) -> None:
+        # /v1/completions' usage chunk (endpoints/OAI/utils/completion.py)
+        # has `text: ""` instead of a delta; it splits the same way.
+        usage_chunk = {"id": "cmpl-r1", "object": "text_completion", "created": 1,
+                       "choices": [{"index": 0, "text": "", "finish_reason": "length"}],
+                       "model": "mimo-v2.6-flash", "usage": USAGE}
+        body, _ = guarded_stream([tabby_event({"id": "cmpl-r1", "choices": [
+            {"index": 0, "text": "a", "finish_reason": None}]}), tabby_event(usage_chunk),
+            tabby_event("[DONE]")])
+        terminal, usage = [json.loads(d) for d in sse_data(body)[1:3]]
+        self.assertEqual(terminal["choices"], usage_chunk["choices"])
+        self.assertNotIn("usage", terminal)
+        self.assertEqual((usage["choices"], usage["usage"]), ([], USAGE))
+
     def test_pings_lf_framing_and_partial_events_pass_through(self) -> None:
         ping = b": ping - 2026-10-13 04:43:00\r\n\r\n"
         content = tabby_event(tabby_chunk({"content": "a"}))
