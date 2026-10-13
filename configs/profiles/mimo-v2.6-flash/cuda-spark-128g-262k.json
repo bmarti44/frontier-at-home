@@ -8,7 +8,7 @@
  "ram_tier_gib": 128,
  "status": {
   "state": "estimated",
-  "basis": "Not yet servable: the switch refuses estimated profiles. Memory is estimated from the architecture (48 layers, 9 global-attention layers at 27,648 B/token FP16 K/V, 39 SWA-128 layers in fixed rings) and the pack size; the runtime builds and imports on GB10 (results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md). Plan B0 recorded NO_GO (readiness); the owner directed the integration on 2026-10-12 with fidelity measured and reported. The smoke, fidelity and qualification gates have not run."
+  "basis": "Not yet servable: the switch refuses estimated profiles. Memory is estimated from the architecture (48 layers, 9 global-attention layers at 27,648 B/token FP16 K/V, 39 SWA-128 layers in fixed rings) and the pack size; the runtime builds and imports on GB10 (results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md). Plan B0 recorded NO_GO (readiness); the owner directed the integration on 2026-10-12 with fidelity measured and reported. Smoke (DIAGNOSTIC, results/mimo-v26-flash-gates/smoke-2026-10-13*): fidelity measured (dNLL 0.050 vs the release weights); the rerun's run peak was 104.76 GiB, but the kernel refused a GPU allocation while page cache crowded MemFree during the weight load, so the unit now bounds page cache (MemoryHigh 8G; the CUDA memory is not charged to it, anon is 3-4 GB). Qualification has not run."
  },
  "engine": "tabby-exl3-mimo-r001",
  "artifact_roles": {
@@ -92,8 +92,8 @@
  },
  "containment": {
   "unit": "mimo26flash-engine",
-  "memory_high": "100G",
-  "memory_max": "104G",
+  "memory_high": "8G",
+  "memory_max": "16G",
   "memory_swap_max": "0",
   "oom_policy": "kill",
   "kill_mode": "control-group",
