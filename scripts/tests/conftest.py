@@ -112,6 +112,12 @@ SPARK_BOUND = {
         "vendored DSV4 tokenizer on the Spark",
     "test_matched_speed_blocks.py::MatchedSpeedBlocks::test_the_bundled_verifier_accepts_a_real_round_and_rejects_a_tampered_one":
         "pinned nvm node binary for the drand verifier",
+    "test_mimo26_contract.py::OnThisHost::test_runtime_sources_match_the_build_manifest":
+        "native-runtime-001 sources under ~/.cache/mimo-v26-flash",
+    "test_mimo26_contract.py::OnThisHost::test_served_directories_hold_exactly_the_manifest_files":
+        "MiMo-V2.6-Flash weights under ~/models",
+    "test_mimo26_contract.py::OnThisHost::test_pinned_files_verify_and_the_shim_environment_is_clean":
+        "MiMo-V2.6-Flash weights and runtime on the Spark",
     "test_qwen38fn_tune_contract.py::Runtime002Manifest::test_runtime_002_tree_matches_the_manifest":
         "native-runtime-002 tree under ~/.cache/qwen38-flash-next",
     "test_qwen38fn_tune_contract.py::SwitchesResolveAtStartup::test_draft_vocab_is_read_only_while_building_the_drafter":

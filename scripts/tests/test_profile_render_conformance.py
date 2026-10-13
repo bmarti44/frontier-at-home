@@ -34,6 +34,7 @@ ALIAS_TO_PROFILE = {
     "glm53-1m": ("glm-5.3-flash", "cuda-spark-128g-1m.json"),
     "dsv41flash": ("deepseek-v4.1-flash", "cuda-spark-128g-1m.json"),
     "qwen38fn": ("qwen3.8-flash-next", "cuda-spark-128g-1m.json"),
+    "mimo26flash": ("mimo-v2.6-flash", "cuda-spark-128g-262k.json"),
 }
 
 # Fixture keys that are launch truth; anything else in the fixture is
@@ -82,8 +83,8 @@ class RenderedProfilesMatchFixtures(unittest.TestCase):
             seen[alias] = f"{model_slug}/{profile_file}"
         self.assertEqual(
             sorted(seen),
-            ["dsv4", "dsv41flash", "glm52", "glm53-1m", "laguna", "qwen38",
-             "qwen38-1m", "qwen38fn"],
+            ["dsv4", "dsv41flash", "glm52", "glm53-1m", "laguna", "mimo26flash",
+             "qwen38", "qwen38-1m", "qwen38fn"],
         )
 
 

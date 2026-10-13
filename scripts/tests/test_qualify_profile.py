@@ -134,6 +134,30 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "4")
         self.assertEqual(manifest["profile"]["speed_max_tokens_per_event"], 4)
 
+    def test_mimo_dflash_profile_plans_block_speed_and_effortless_accuracy(self) -> None:
+        # DFlash drafts block_size - 1 = 7 tokens, so one SSE event can carry
+        # eight. MiMo's template has no effort levels: the operator passes
+        # --reasoning-effort '' and every suite runs the mimo26 encoder.
+        out = self.tmp / "bundle-mimo"
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "--profile", "mimo-v2.6-flash/cuda-spark-128g-262k",
+             "--host", str(self.host), "--dry-run", "--out", str(out),
+             "--cells", "speed,accuracy", "--reasoning-effort", ""],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        manifest = json.loads((out / "manifest.json").read_text())
+        self.assertEqual(manifest["profile"]["served_model"], "mimo-v2.6-flash")
+        speed = manifest["cells"]["speed"]["argv"]
+        self.assertTrue(speed[1].endswith("/30_bench_speed_blocks.py"))
+        self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "8")
+        suites = manifest["cells"]["accuracy"]["argv"]
+        self.assertEqual(sorted(suites), ["gsm8k", "humaneval", "mmlu-pro"])
+        for suite, suite_argv in suites.items():
+            with self.subTest(suite=suite):
+                self.assertEqual(suite_argv[suite_argv.index("--encoder") + 1], "mimo26")
+                self.assertNotIn("--reasoning-effort", suite_argv)
+
     def test_every_profile_soaks_at_the_repository_floor(self) -> None:
         # One soak floor for every profile (owner, 2026-10-11): 35_soak.py's
         # 5 GiB default. The kit passes no per-profile floor to the soak.

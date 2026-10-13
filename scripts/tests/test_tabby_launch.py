@@ -137,11 +137,61 @@ class LaunchArgv(unittest.TestCase):
             "no backend": BASE[:8] + BASE[10:] + model,
             "other backend": BASE[:9] + ["exllamav2"] + BASE[10:] + model,
             "dangling flag": BASE + ["--model-name"],
+            # argparse expands unambiguous prefixes, so an abbreviation would
+            # override a checked flag; only exact, listed flags are accepted.
+            "abbreviated host": BASE + model + ["--hos", "0.0.0.0"],
+            "abbreviated auth": BASE + model + ["--disable-au", "false"],
+            "unlisted flag": BASE + model + ["--api-servers", "kobold"],
+            "short flag": BASE + model + ["-h"],
+            "equals on another flag": BASE + model + ["--max-seq-len=1"],
+            "config file flag": BASE + model + ["--config", "/tmp/x.yml"],
         }
         for label, argv in cases.items():
             with self.subTest(case=label):
                 with self.assertRaises(tabby_launch.LaunchError):
                     tabby_launch.tabby_argv(argv)
+
+
+class LaunchEnvironment(unittest.TestCase):
+    """TabbyAPI merges config.yml from its working directory, TABBY_<SECTION>_
+    <FIELD> environment variables and the model folder's tabby_config.yml
+    (which always wins) over the command line's view; any of them could undo
+    the checked flags, so the shim refuses all three."""
+
+    def tree(self, tmp: str) -> tuple[Path, Path]:
+        root = Path(tmp) / "tabbyAPI"
+        root.mkdir()
+        (root / "main.py").write_text("")
+        model = Path(tmp) / "serve" / "pack"
+        model.mkdir(parents=True)
+        return root, model
+
+    def test_clean_tree_and_environment_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root, model = self.tree(tmp)
+            tabby_launch.check_environment(
+                root, [model], {"TABBY_ROOT": str(root), "PATH": "/bin"})
+
+    def test_config_overrides_are_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root, model = self.tree(tmp)
+            draft = Path(tmp) / "draft" / "d"
+            draft.mkdir(parents=True)
+            env = {"TABBY_ROOT": str(root)}
+            for label, path in (("server config", root / "config.yml"),
+                                ("model override", model / "tabby_config.yml"),
+                                ("draft override", draft / "tabby_config.yml")):
+                with self.subTest(case=label):
+                    path.write_text("network:\n  host: 0.0.0.0\n")
+                    with self.assertRaises(tabby_launch.LaunchError):
+                        tabby_launch.check_environment(root, [model, draft], env)
+                    path.unlink()
+            for name in ("TABBY_NETWORK_HOST", "TABBY_MODEL_MAX_SEQ_LEN",
+                         "tabby_network_disable_auth"):
+                with self.subTest(env=name):
+                    with self.assertRaises(tabby_launch.LaunchError):
+                        tabby_launch.check_environment(
+                            root, [model], {**env, name: "x"})
 
 
 class ServedDirectory(unittest.TestCase):

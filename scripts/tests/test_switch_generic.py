@@ -225,6 +225,34 @@ class ProductionPlan(unittest.TestCase):
                     "hf_quant_config.json", "tokenizer.json",
                     "chat_template.jinja")])
 
+    def test_mimo26flash_plan_carries_the_estimated_tabby_contract(self) -> None:
+        plan = production_plan("mimo26flash")
+        self.assertEqual(plan["alias"], "mimo26flash")
+        self.assertEqual(plan["status"], "estimated")
+        self.assertEqual(
+            plan["relpath"],
+            "configs/profiles/mimo-v2.6-flash/cuda-spark-128g-262k.json")
+        runtime = "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime"
+        self.assertEqual(plan["binary"], f"{runtime}/bin/python3.12")
+        model = "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash"
+        draft = "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash"
+        self.assertEqual((plan["model"], plan["mmproj"], plan["draft_model"]),
+                         (model, "", draft))
+        self.assertEqual(plan["unit"], "mimo26flash-engine.service")
+        self.assertEqual(plan["log_name"], "mimo26flash")
+        self.assertEqual(plan["floor_gib"], "8")
+        self.assertEqual(plan["served_model_id"], "mimo-v2.6-flash")
+        self.assertEqual(plan["health_path"], "/health")
+        self.assertEqual(json.loads(plan["context_check"]), {
+            "kind": "props", "total_slots": 1, "n_ctx": 262144})
+        self.assertEqual(plan["context_path"], "/props")
+        paths = [check["path"] for check in plan["digest_checks"]]
+        self.assertEqual(paths[0], f"{runtime}/bin/python3.12")
+        self.assertTrue(any(os.path.dirname(path) == model for path in paths))
+        self.assertTrue(any(os.path.dirname(path) == draft for path in paths))
+        with self.assertRaisesRegex(generic.SwitchError, "not qualified"):
+            generic.verify_artifacts(plan)
+
     @unittest.skipUnless(
         os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0",
         "host-bound: hashes the local runtime interpreter and model metadata")
