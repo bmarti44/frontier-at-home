@@ -67,7 +67,7 @@ ALLOWED_FLAGS = frozenset({
     "--max-seq-len", "--cache-size", "--max-batch-size", "--cache-mode",
     "--chunk-size", "--vision", "--reasoning", "--tool-format",
     "--draft-mode", "--draft-cache-mode", "--draft-num-tokens",
-    "--sysmem-multimodal-cache", "--warmup",
+    "--sysmem-recurrent-cache", "--sysmem-multimodal-cache", "--warmup",
     "--log-prompt", "--log-generation-params", "--log-requests",
     "--log-chat-completion-requests",
 })
