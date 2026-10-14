@@ -7,8 +7,8 @@
  "hardware_class": "spark",
  "ram_tier_gib": 128,
  "status": {
-  "state": "estimated",
-  "basis": "Not yet servable: the switch refuses estimated profiles. Memory is estimated from the architecture (48 layers, 9 global-attention layers at 27,648 B/token FP16 K/V, 39 SWA-128 layers in fixed rings) and the pack size; the runtime builds and imports on GB10 (results/mimo-v26-flash-gates/runtimes-2026-10-12/RESULT.md). Plan B0 recorded NO_GO (readiness); the owner directed the integration on 2026-10-12 with fidelity measured and reported. Smoke (DIAGNOSTIC, results/mimo-v26-flash-gates/smoke-2026-10-13*): fidelity measured (dNLL 0.050 vs the release weights); the rerun's run peak was 104.76 GiB, but the kernel refused a GPU allocation while page cache crowded MemFree during the weight load, so the unit now bounds page cache (MemoryHigh 8G; the CUDA memory is not charged to it, anon is 3-4 GB). Qualification has not run."
+  "state": "qualified",
+  "basis": "M3 candidate 3 (results/mimo-v26-flash-gates/qualify-2026-10-13-c1/RESULT.md) qualified this launch: the frozen scorer returned PASS on every preregistered clause (no NVRM/Xid/OOM, swap 0, low 9.56 GiB against the 8 GiB floor, peak 105.71 GiB, direct 262K fill of 250,135 tokens, text probes identical to preflight r2, tool-call 20/20, agent gate 4/4, 30-minute soak at the repository's 5 GiB floor, MMMU-val-100 68/100 against the default's 64). Fidelity against the release weights is lossy and reported, not waived: dNLL 0.0503, KLD 0.0836, top-1 -0.94 pp (results/mimo-v26-flash-gates/smoke-2026-10-13). The owner directed the integration on 2026-10-12 as a switchable alias; qwen38fn stays the default. Candidates 1 and 2 were frozen and reviewed but never started; the preflights (results/mimo-v26-flash-gates/preflight-2026-10-13*) are diagnostic history."
  },
  "engine": "tabby-exl3-mimo-r001",
  "artifact_roles": {
@@ -110,14 +110,14 @@
   "minimum_start_gib": 114,
   "sample_hz": 1,
   "startup_timeout_seconds": 1800,
-  "note": "8 GiB whole-host floor, the production precedent (qwen38fn). minimum_start_gib is a placeholder at the quiet host's ceiling until the smoke measures the peak; promotion sets it to ceil(peak + 8). CUDA allocations on GB10 are not charged to the memory cgroup, so MemoryHigh/MemoryMax bound only host-side pages (page cache of the 94 GiB pack read, the Python heap); the external memwatch floor is the binding control."
+  "note": "8 GiB whole-host floor, the production precedent (qwen38fn). minimum_start_gib = ceil(peak + 8) from candidate 3's run (peak 105.71 GiB). CUDA allocations on GB10 are not charged to the memory cgroup, so MemoryHigh/MemoryMax bound only host-side pages (page cache of the 94 GiB pack read, the Python heap); the external memwatch floor is the binding control."
  },
  "memory_model": {
   "kv_bytes_per_token": 14688,
-  "overhead_gib": 5.5,
+  "overhead_gib": 7.2,
   "extra_gib": 0,
   "floor_gib": 8,
-  "basis": "Estimate, replaced by the smoke measurement. K/V: exllamav3 caches only the 9 global-attention layers per token (4 K/V heads, head_dim 192, V padded to 192: 27,648 B/token FP16); at 8,8 that is 14,688 B/token with scales, 3.59 GiB at 262,144. The 39 SWA-128 layers and the drafter's 5 SWA-1024 layers keep fixed per-slot rings. overhead_gib: about 0.75 GiB of Q8 staging scratch plus about 4.75 GiB for the CUDA context, torch allocator slack, the vision tower and the TabbyAPI process."
+  "basis": "Measured by M3 candidate 3 (results/mimo-v26-flash-gates/qualify-2026-10-13-c1): peak use 105.71 GiB = 94.98 GiB of pack and drafter + 3.59 GiB of Q8 K/V at 262,144 (14,688 B/token: exllamav3 caches only the 9 global-attention layers; the 39 SWA-128 layers and the drafter's 5 SWA-1024 layers keep fixed per-slot rings) + overhead_gib, rounded up to 0.1 GiB. The overhead is the CUDA context, Q8 staging scratch, torch allocator slack, the vision tower and the TabbyAPI process, including the host-RAM caches capped at 512 MB of sliding-window checkpoints and 256 MB of image embeddings (scope anon peak 4.28 GB)."
  },
  "serving": {
   "parallel_slots": 1,
