@@ -63,13 +63,50 @@ RENDER_LINE=$(python3 - "$RENDER/manifest.json" "$C3/manifest.json" 2>&1 <<'PY'
 import json, sys
 a, b = (json.load(open(p))["profile"] for p in sys.argv[1:3])
 keys = ("config_hash", "argv", "env", "containment", "served_model", "model_path", "tokenizer_sha256",
-        "slots", "tokens_per_slot", "context_cap", "minimum_start_gib", "kill_floor_gib", "encoder")
+        "slots", "tokens_per_slot", "context_cap", "minimum_start_gib", "kill_floor_gib", "encoder",
+        "binary", "binary_sha256", "digest_checks")
 diff = [k for k in keys if a.get(k) != b.get(k)]
 if diff:
     sys.exit("differs from candidate 3 in " + ", ".join(diff))
 print(f"render identical to candidate 3: config_hash {a['config_hash']} (status {a['profile_status']})")
 PY
 ) || { echo "REFUSED the launch render: $RENDER_LINE" >&2; exit 2; }
+# The render compares strings; the code behind them must be candidate 3's too
+# (review A, M1). Every path candidate 3 froze except its profile, plus the
+# accuracy path, must equal the freeze; the two reference files must equal
+# candidate 3's evidence commit.
+FREEZE=2a75f1fe
+C3_EVIDENCE=6c695c6a
+CODE_PATHS=(configs/profiles/mimo-v2.6-flash/model.json
+    configs/build-manifests/mimo-v26-flash-exl3-runtime-001.json weights/mimo-v2.6-flash/manifest.json
+    configs/hosts/spark-aba1.json scripts/lib scripts/dev/regression-suite.py scripts/01_memwatch.sh
+    scripts/02_membudget.py scripts/03_memory_guard.py scripts/30_bench_speed.py scripts/30_bench_speed_blocks.py
+    scripts/35_soak.py scripts/38_bench_vision.py scripts/39_bench_toolcall.py scripts/50_probe_context.py
+    scripts/92_resolve_profile.py scripts/93_profile_serve.sh scripts/94_qualify_profile.py fixtures
+    evalsets/mmmu-val-100 evalsets/toolcall
+    results/mimo-v26-flash-gates/smoke-2026-10-13/probe.py results/mimo-v26-flash-gates/smoke-2026-10-13/verdict.py
+    results/mimo-v26-flash-gates/smoke-2026-10-13/host-worktree.json
+    results/mimo-v26-flash-gates/preflight-2026-10-13-r2/probe.json
+    "${C3#$WT/}/PREREG.md" "${C3#$WT/}/run-c1.sh" "${C3#$WT/}/gate_verdict.py" "${C3#$WT/}/gate_mutations.py"
+    "${C3#$WT/}/verify_identity.py"
+    scripts/31_bench_accuracy.py vendor/official-encoding/encoding/encoding_mimo26.py evalsets/pins.json
+    evalsets/gsm8k-test.jsonl evalsets/gsm8k.parquet evalsets/mmlu-pro-test.jsonl evalsets/mmlu-pro.parquet
+    evalsets/humaneval.jsonl evalsets/humaneval.parquet verification/MANIFEST.sha256
+    configs/pins/humaneval-runtime.json)
+git -C "$WT" diff --quiet "$FREEZE" HEAD -- "${CODE_PATHS[@]}" \
+    || { echo "REFUSED code differs from candidate 3's freeze $FREEZE: $(git -C "$WT" diff --name-only "$FREEZE" HEAD -- "${CODE_PATHS[@]}" | tr '\n' ' ')" >&2; exit 2; }
+git -C "$WT" diff --quiet "$C3_EVIDENCE" HEAD -- "${C3#$WT/}/probe-c1.json" "${C3#$WT/}/manifest.json" \
+    || { echo "REFUSED candidate 3's probe-c1.json or manifest.json changed after $C3_EVIDENCE" >&2; exit 2; }
+# M4 may change only the profile's status, its safety note and its memory model.
+python3 - "$WT" "$FREEZE" <<'PY' || { echo "REFUSED the profile differs from the freeze beyond M4's fields" >&2; exit 2; }
+import json, subprocess, sys
+path = "configs/profiles/mimo-v2.6-flash/cuda-spark-128g-262k.json"
+old = json.loads(subprocess.check_output(["git", "-C", sys.argv[1], "show", f"{sys.argv[2]}:{path}"]))
+new = json.loads(subprocess.check_output(["git", "-C", sys.argv[1], "show", f"HEAD:{path}"]))
+for doc in (old, new):
+    del doc["status"], doc["memory_model"], doc["safety"]["note"]
+sys.exit(0 if old == new else 1)
+PY
 cd "$WT"
 
 stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -231,7 +268,7 @@ log "ready after $((SECONDS - t0)) s; idle MemAvailable=$(meminfo MemAvailable) 
 cgroup_snapshot "ready"
 
 timeout 1800 python3 "$R1/probe.py" --base-url "$BASE" --out "$EV/probe-holdout.json" 8>&- 2>&1 \
-    | tee -a "$OBS/driver.log" || log "probe exit nonzero"
+    | tee -a "$OBS/driver.log" || log "probe exit nonzero rc=${PIPESTATUS[0]}"
 # The holdout is drawn only on the configuration candidate 3 qualified: the
 # three greedy hashes must equal candidate 3's (restart identity).
 if python3 - "$EV/probe-holdout.json" "$C3/probe-c1.json" <<'PY'
@@ -242,7 +279,7 @@ PY
 then
     log "probe identical to candidate 3; drawing the holdout"
     timeout 41400 "${KIT[@]}" --cells accuracy --accuracy-split holdout --reasoning-effort '' 8>&- 2>&1 \
-        | tee -a "$OBS/driver.log" || log "kit exit nonzero"
+        | tee -a "$OBS/driver.log" || log "kit exit nonzero rc=${PIPESTATUS[0]} (124: the 11.5 h cut)"
 else
     log "FAILED_ATTEMPT probe differs from candidate 3; holdout not drawn"
 fi
