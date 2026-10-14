@@ -1,0 +1,68 @@
+{
+  "index": 7693,
+  "task_id": 7876,
+  "rendered_prompt_sha256": "9e8ccba56ff3391556ef7dde644cdc039439fbf5ba5c47ce55b0093316e7df67",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Let me set up the problem. The mine shaft is 500 ft deep. Let x be the distance from the bottom of the shaft (so x = 0 at the bottom, x = 500 at the top).\n\nAt position x (measured from the bottom), the amount of cable still hanging below is x feet, so the weight of the cable is 2x lb. The coal weighs 800 lb.\n\nTotal force at position x: F(x) = 800 + 2x\n\nWork to lift a small segment dx: dW = (800 + 2x) dx\n\nRiemann sum: W ≈ Σ(800 + 2xᵢ) Δx where xᵢ ranges from 0 to 500.\n\nIntegral: W = ∫₀⁵⁰⁰ (800 + 2x) dx\n\nEvaluating: [800x + x²]₀⁵⁰⁰ = 800(500) + (500)² = 400000 + 250000 = 650000 ft-lb\n\nAnswer: F</think># Work Done Lifting Coal and Cable\n\n## Setting Up the Problem\n\nLet **x** measure distance from the bottom of the shaft (x = 0 at bottom, x = 500 at top).\n\nAt position **x**, the force needed to lift is:\n- **Coal:** 800 lb (constant)\n- **Cable:** 2x lb (x feet of cable still hanging below)\n\n$$F(x) = 800 + 2x$$\n\n## Riemann Sum Approximation\n\nDividing [0, 500] into n subintervals of width Δx:\n\n$$W \\approx \\sum_{i=1}^{n} (800 + 2x_i)\\,\\Delta x$$\n\n## Integral Expression\n\n$$W = \\int_0^{500} (800 + 2x)\\,dx$$\n\n## Evaluation\n\n$$W = \\Big[800x + x^2\\Big]_0^{500} = 800(500) + (500)^2 = 400{,}000 + 250{,}000$$\n\n$$\\boxed{W = 650{,}000 \\text{ ft-lb}}$$\n\nAnswer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 12.666831140988506
+  },
+  "response": {
+    "id": "cmpl-01cb2e17a1fc4a5e9aac8c196ae17b97",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Let me set up the problem. The mine shaft is 500 ft deep. Let x be the distance from the bottom of the shaft (so x = 0 at the bottom, x = 500 at the top).\n\nAt position x (measured from the bottom), the amount of cable still hanging below is x feet, so the weight of the cable is 2x lb. The coal weighs 800 lb.\n\nTotal force at position x: F(x) = 800 + 2x\n\nWork to lift a small segment dx: dW = (800 + 2x) dx\n\nRiemann sum: W ≈ Σ(800 + 2xᵢ) Δx where xᵢ ranges from 0 to 500.\n\nIntegral: W = ∫₀⁵⁰⁰ (800 + 2x) dx\n\nEvaluating: [800x + x²]₀⁵⁰⁰ = 800(500) + (500)² = 400000 + 250000 = 650000 ft-lb\n\nAnswer: F</think># Work Done Lifting Coal and Cable\n\n## Setting Up the Problem\n\nLet **x** measure distance from the bottom of the shaft (x = 0 at bottom, x = 500 at top).\n\nAt position **x**, the force needed to lift is:\n- **Coal:** 800 lb (constant)\n- **Cable:** 2x lb (x feet of cable still hanging below)\n\n$$F(x) = 800 + 2x$$\n\n## Riemann Sum Approximation\n\nDividing [0, 500] into n subintervals of width Δx:\n\n$$W \\approx \\sum_{i=1}^{n} (800 + 2x_i)\\,\\Delta x$$\n\n## Integral Expression\n\n$$W = \\int_0^{500} (800 + 2x)\\,dx$$\n\n## Evaluation\n\n$$W = \\Big[800x + x^2\\Big]_0^{500} = 800(500) + (500)^2 = 400{,}000 + 250{,}000$$\n\n$$\\boxed{W = 650{,}000 \\text{ ft-lb}}$$\n\nAnswer: F"
+      }
+    ],
+    "created": 1791945993,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 276,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.8,
+      "prompt_tokens_per_sec": 345.0,
+      "completion_tokens": 547,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 422,
+        "rejected_prediction_tokens": 453
+      },
+      "completion_time": 11.86,
+      "completion_tokens_per_sec": 46.13,
+      "total_tokens": 823,
+      "total_time": 12.66
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 276,
+      "prompt_ms": 800.0,
+      "prompt_per_token_ms": 2.898550724637681,
+      "prompt_per_second": 345.0,
+      "predicted_n": 547,
+      "predicted_ms": 11860.0,
+      "predicted_per_token_ms": 21.681901279707496,
+      "predicted_per_second": 46.12141652613828,
+      "draft_n": 875,
+      "draft_n_accepted": 422
+    }
+  }
+}

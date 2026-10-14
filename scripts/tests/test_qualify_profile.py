@@ -87,6 +87,9 @@ class DryRunGlmProfile(unittest.TestCase):
         # the GLM profile declares qualification_options.vision_thinking_mode
         self.assertEqual(vision[vision.index("--thinking-mode") + 1], "thinking")
         self.assertEqual(manifest["profile"]["vision_thinking_mode"], "thinking")
+        # No declared vision answer budget: the bench's own 256-token default applies.
+        self.assertNotIn("--max-tokens", vision)
+        self.assertIsNone(manifest["profile"]["vision_max_tokens"])
         toolcall = cells["toolcall"]["argv"]
         self.assertIn("http://127.0.0.1:8099/v1", toolcall)
         self.assertEqual(toolcall[toolcall.index("--model") + 1], "glm-5.3-flash")
@@ -116,6 +119,32 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertEqual(manifest["cells_selected"], ["speed", "soak"])
         self.assertIsNone(manifest["cells"]["soak"]["skip_reason"])
 
+    def test_declared_vision_answer_budget_reaches_the_vision_bench(self) -> None:
+        # MiMo answers MMMU in chat mode with worked steps; at the bench's 256-token
+        # default, 4 of 20 answers ran out of budget mid-calculation
+        # (results/mimo-v26-flash-gates/preflight-2026-10-13/kit/vision), so the profile
+        # declares qualification_options.vision_max_tokens.
+        out = self.tmp / "bundle-vision-budget"
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "--profile", "mimo-v2.6-flash/cuda-spark-128g-262k",
+             "--host", str(self.host), "--dry-run", "--out", str(out), "--cells", "vision"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        manifest = json.loads((out / "manifest.json").read_text())
+        vision = manifest["cells"]["vision"]["argv"]
+        self.assertEqual(vision[vision.index("--thinking-mode") + 1], "chat")
+        self.assertEqual(vision[vision.index("--max-tokens") + 1], "4096")
+        self.assertEqual(manifest["profile"]["vision_max_tokens"], 4096)
+
+    def test_malformed_vision_answer_budget_is_refused(self) -> None:
+        for bad in (0, 32769, "4096", True, 1.5):
+            with self.subTest(bad=bad):
+                with self.assertRaises(kit.KitError):
+                    kit.vision_max_tokens({"vision_max_tokens": bad})
+        self.assertIsNone(kit.vision_max_tokens({}))
+        self.assertEqual(kit.vision_max_tokens({"vision_max_tokens": 32768}), 32768)
+
     def test_speculative_profile_selects_the_block_aware_speed_bench(self) -> None:
         # qualification_options.speed_max_tokens_per_event says one SSE event can carry
         # several tokens (MTP); the frozen bench would count events as tokens.
@@ -133,6 +162,37 @@ class DryRunGlmProfile(unittest.TestCase):
         self.assertTrue(speed[1].endswith("/30_bench_speed_blocks.py"))
         self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "4")
         self.assertEqual(manifest["profile"]["speed_max_tokens_per_event"], 4)
+
+    def test_mimo_dflash_profile_plans_block_speed_and_effortless_accuracy(self) -> None:
+        # DFlash drafts block_size - 1 = 7 tokens, so one SSE event can carry
+        # eight. MiMo's template has no effort levels: the operator passes
+        # --reasoning-effort '' and every suite runs the mimo26 encoder.
+        out = self.tmp / "bundle-mimo"
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), "--profile", "mimo-v2.6-flash/cuda-spark-128g-262k",
+             "--host", str(self.host), "--dry-run", "--out", str(out),
+             "--cells", "speed,accuracy", "--reasoning-effort", ""],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        manifest = json.loads((out / "manifest.json").read_text())
+        self.assertEqual(manifest["profile"]["served_model"], "mimo-v2.6-flash")
+        speed = manifest["cells"]["speed"]["argv"]
+        self.assertTrue(speed[1].endswith("/30_bench_speed_blocks.py"))
+        self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "8")
+        # The TabbyAPI argv starts `-B -m tabby_launch`: the model is
+        # --model-name, never Python's -m module (smoke 2026-10-13 read
+        # `tabby_launch` as the model and passed a bare tokenizer.json).
+        model_root = json.loads(self.host.read_text())["paths"]["model_root"]
+        tokenizer = f"{model_root}/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json"
+        self.assertEqual(speed[speed.index("--output-tokenizer-path") + 1], tokenizer)
+        self.assertEqual(manifest["profile"]["tokenizer_path"], tokenizer)
+        suites = manifest["cells"]["accuracy"]["argv"]
+        self.assertEqual(sorted(suites), ["gsm8k", "humaneval", "mmlu-pro"])
+        for suite, suite_argv in suites.items():
+            with self.subTest(suite=suite):
+                self.assertEqual(suite_argv[suite_argv.index("--encoder") + 1], "mimo26")
+                self.assertNotIn("--reasoning-effort", suite_argv)
 
     def test_every_profile_soaks_at_the_repository_floor(self) -> None:
         # One soak floor for every profile (owner, 2026-10-11): 35_soak.py's

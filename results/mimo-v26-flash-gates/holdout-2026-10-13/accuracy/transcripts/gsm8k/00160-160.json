@@ -1,0 +1,69 @@
+{
+  "index": 160,
+  "task_id": 160,
+  "rendered_prompt_sha256": "f1addd504ed1c531f484b9979957be4038820750782cfab94a5cf939b1f287b7",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Monday: 17 feet\nTuesday: 17 + 7 = 24 feet\nWednesday: 2/3 × 24 = 16 feet</think>Monday: 17 feet\nTuesday: 17 + 7 = 24 feet\nWednesday: 2/3 × 24 = 16 feet\n\nAnswer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5048257689923048
+  },
+  "response": {
+    "id": "cmpl-dda0566a1140468686d5d6199182b4ca",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Monday: 17 feet\nTuesday: 17 + 7 = 24 feet\nWednesday: 2/3 × 24 = 16 feet</think>Monday: 17 feet\nTuesday: 17 + 7 = 24 feet\nWednesday: 2/3 × 24 = 16 feet\n\nAnswer: 16"
+      }
+    ],
+    "created": 1791939477,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 87,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 235.14,
+      "completion_tokens": 81,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 69,
+        "rejected_prediction_tokens": 15
+      },
+      "completion_time": 1.13,
+      "completion_tokens_per_sec": 71.65,
+      "total_tokens": 168,
+      "total_time": 1.5
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 87,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.252873563218391,
+      "prompt_per_second": 235.13513513513513,
+      "predicted_n": 81,
+      "predicted_ms": 1130.0,
+      "predicted_per_token_ms": 13.950617283950617,
+      "predicted_per_second": 71.68141592920354,
+      "draft_n": 84,
+      "draft_n_accepted": 69
+    }
+  },
+  "used_fallback": false
+}

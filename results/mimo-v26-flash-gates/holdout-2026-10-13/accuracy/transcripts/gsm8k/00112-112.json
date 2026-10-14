@@ -1,0 +1,69 @@
+{
+  "index": 112,
+  "task_id": 112,
+  "rendered_prompt_sha256": "867272e8883d97c9b067ef04078023e5daecc470f807265129f5bd72fc95f0cf",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>4 teachers × 2 lessons each = 8 lessons per day\n8 lessons × 3 cleanings per lesson = 24</think>4 teachers × 2 lessons each = 8 lessons per day.\n\n8 lessons × 3 cleanings per lesson = 24 cleanings per day.\n\nAnswer: 24",
+  "finish_reason": "stop",
+  "expected": "24",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.7571122240042314
+  },
+  "response": {
+    "id": "cmpl-4da553697ec74c6fb834306fbf65bcd1",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>4 teachers × 2 lessons each = 8 lessons per day\n8 lessons × 3 cleanings per lesson = 24</think>4 teachers × 2 lessons each = 8 lessons per day.\n\n8 lessons × 3 cleanings per lesson = 24 cleanings per day.\n\nAnswer: 24"
+      }
+    ],
+    "created": 1791939540,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 94,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 247.37,
+      "completion_tokens": 67,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 53,
+        "rejected_prediction_tokens": 45
+      },
+      "completion_time": 1.38,
+      "completion_tokens_per_sec": 48.71,
+      "total_tokens": 161,
+      "total_time": 1.76
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 94,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 4.042553191489362,
+      "prompt_per_second": 247.3684210526316,
+      "predicted_n": 67,
+      "predicted_ms": 1380.0,
+      "predicted_per_token_ms": 20.597014925373134,
+      "predicted_per_second": 48.55072463768116,
+      "draft_n": 98,
+      "draft_n_accepted": 53
+    }
+  },
+  "used_fallback": false
+}

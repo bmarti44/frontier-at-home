@@ -1,0 +1,68 @@
+{
+  "index": 257,
+  "task_id": 329,
+  "rendered_prompt_sha256": "d580ce20c0deb44348d9ed6851adb8eeaaebb1d33e5a523681cba94bf27330f6",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>This is a proportional distribution problem. Total policy amount = $50,000 + $30,000 = $80,000.\n\nAcme's share = ($50,000 / $80,000) × $45,000 = 0.625 × $45,000 = $28,125\nSafe Way's share = ($30,000 / $80,000) × $45,000 = 0.375 × $45,000 = $16,875</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.1225163330091164
+  },
+  "response": {
+    "id": "cmpl-dc4b6ae5d4c145c4b4c20986220e037c",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>This is a proportional distribution problem. Total policy amount = $50,000 + $30,000 = $80,000.\n\nAcme's share = ($50,000 / $80,000) × $45,000 = 0.625 × $45,000 = $28,125\nSafe Way's share = ($30,000 / $80,000) × $45,000 = 0.375 × $45,000 = $16,875</think>Answer: D"
+      }
+    ],
+    "created": 1791940431,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 354,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 1.0,
+      "prompt_tokens_per_sec": 354.0,
+      "completion_tokens": 146,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 124,
+        "rejected_prediction_tokens": 30
+      },
+      "completion_time": 2.12,
+      "completion_tokens_per_sec": 69.03,
+      "total_tokens": 500,
+      "total_time": 3.12
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 354,
+      "prompt_ms": 1000.0,
+      "prompt_per_token_ms": 2.824858757062147,
+      "prompt_per_second": 354.0,
+      "predicted_n": 146,
+      "predicted_ms": 2120.0,
+      "predicted_per_token_ms": 14.520547945205479,
+      "predicted_per_second": 68.86792452830188,
+      "draft_n": 154,
+      "draft_n_accepted": 124
+    }
+  }
+}

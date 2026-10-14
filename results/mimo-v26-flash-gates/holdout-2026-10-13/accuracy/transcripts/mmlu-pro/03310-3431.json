@@ -1,0 +1,68 @@
+{
+  "index": 3310,
+  "task_id": 3431,
+  "rendered_prompt_sha256": "5d33d85a39a56f648c1be0cdc5fdead5a4480c25d2a80c736c01e07baefb5799",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The electron transport chain uses the energy from electrons to pump protons across the membrane, creating a proton gradient that drives ATP synthesis via ATP synthase.</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.1117788819829
+  },
+  "response": {
+    "id": "cmpl-5696a246521e47bab79b3564a16add39",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The electron transport chain uses the energy from electrons to pump protons across the membrane, creating a proton gradient that drives ATP synthesis via ATP synthase.</think>Answer: A"
+      }
+    ],
+    "created": 1791939959,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 103,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 264.1,
+      "completion_tokens": 36,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 18,
+        "rejected_prediction_tokens": 108
+      },
+      "completion_time": 1.71,
+      "completion_tokens_per_sec": 20.99,
+      "total_tokens": 139,
+      "total_time": 2.11
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 103,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.7864077669902914,
+      "prompt_per_second": 264.10256410256414,
+      "predicted_n": 36,
+      "predicted_ms": 1710.0,
+      "predicted_per_token_ms": 47.5,
+      "predicted_per_second": 21.052631578947366,
+      "draft_n": 126,
+      "draft_n_accepted": 18
+    }
+  }
+}

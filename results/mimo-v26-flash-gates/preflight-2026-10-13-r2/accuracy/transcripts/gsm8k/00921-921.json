@@ -1,0 +1,69 @@
+{
+  "index": 921,
+  "task_id": 921,
+  "rendered_prompt_sha256": "4d1c058f32d130f94afd8cfcd40277221713b202925e35d2b71c7d1a6c0f4b6a",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Josh eats 4 slices a day (twice Abby's 2). Together they eat 6 slices a day. 24/6 = 4 days.</think>Abby eats 2 slices a day, and Josh eats twice as much, so Josh eats 4 slices a day. Together they eat 2 + 4 = 6 slices a day. The loaf has 24 slices, so it will last 24 ÷ 6 = 4 days.\n\nAnswer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.000406958977692
+  },
+  "response": {
+    "id": "cmpl-5c1871960acf45bba53cc8fe344ceee7",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Josh eats 4 slices a day (twice Abby's 2). Together they eat 6 slices a day. 24/6 = 4 days.</think>Abby eats 2 slices a day, and Josh eats twice as much, so Josh eats 4 slices a day. Together they eat 2 + 4 = 6 slices a day. The loaf has 24 slices, so it will last 24 ÷ 6 = 4 days.\n\nAnswer: 4"
+      }
+    ],
+    "created": 1791926132,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 69,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 197.14,
+      "completion_tokens": 105,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 78,
+        "rejected_prediction_tokens": 111
+      },
+      "completion_time": 2.65,
+      "completion_tokens_per_sec": 39.66,
+      "total_tokens": 174,
+      "total_time": 3.0
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 69,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 5.072463768115942,
+      "prompt_per_second": 197.14285714285714,
+      "predicted_n": 105,
+      "predicted_ms": 2650.0,
+      "predicted_per_token_ms": 25.238095238095237,
+      "predicted_per_second": 39.62264150943397,
+      "draft_n": 189,
+      "draft_n_accepted": 78
+    }
+  },
+  "used_fallback": false
+}

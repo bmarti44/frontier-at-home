@@ -1,0 +1,68 @@
+{
+  "index": 11482,
+  "task_id": 11706,
+  "rendered_prompt_sha256": "f5bbbdf2ef3325227074dbaf7369f4f4dc9d9421c2a9c8b8ca9c3407d1ecff42",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Steady state heat transfer means the rate of energy in equals the rate of energy out, with no accumulation of energy.</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.1895248759537935
+  },
+  "response": {
+    "id": "cmpl-d6541937729a4dba961f1808c387db4d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Steady state heat transfer means the rate of energy in equals the rate of energy out, with no accumulation of energy.</think>Answer: A"
+      }
+    ],
+    "created": 1791942753,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 228,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.59,
+      "prompt_tokens_per_sec": 386.44,
+      "completion_tokens": 31,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 25,
+        "rejected_prediction_tokens": 17
+      },
+      "completion_time": 0.59,
+      "completion_tokens_per_sec": 52.6,
+      "total_tokens": 259,
+      "total_time": 1.18
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 228,
+      "prompt_ms": 590.0,
+      "prompt_per_token_ms": 2.587719298245614,
+      "prompt_per_second": 386.4406779661017,
+      "predicted_n": 31,
+      "predicted_ms": 590.0,
+      "predicted_per_token_ms": 19.032258064516128,
+      "predicted_per_second": 52.54237288135593,
+      "draft_n": 42,
+      "draft_n_accepted": 25
+    }
+  }
+}

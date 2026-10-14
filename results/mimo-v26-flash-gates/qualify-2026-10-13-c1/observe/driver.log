@@ -1,0 +1,50 @@
+2026-10-13T22:02:12Z head 2a75f1fe4edada07bd13d2b5ff8b756c54c6122c dirty=0
+2026-10-13T22:02:12Z agent-gate fixture sha256_16 2d31aeb3156ae01a
+2026-10-13T22:02:12Z prod-stop: sudo -n 52_engine_switch.sh stop
+STOPPED qwen38fn (active.json unchanged; '/home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh restore' restarts it)
+2026-10-13T22:02:15Z preload MemFree=118533004 MemAvailable=120886772 SwapFree=16543164
+runtime-src tabbyAPI 2636ef602b55b5343cf3740dd55a77f21e0a8003 a5a97dfca985a5f0cff36c8c5b6d127a965a1b3b dirty=0 match=True
+runtime-src exllamav3 f45b84512ba65bca77f7d394399d4b68821fc71b e272949487e45ac37165d4cab8e9f081a8c1e444 dirty=0 match=True
+runtime-wheel exllamav3 sha256_match=True files=629 mismatches=0
+weights model exl3-2.52-mikeroz files=25 bytes=101323582965 mismatches=0
+weights draft_model dflash-exl3-4.0 files=3 bytes=735192453 mismatches=0
+released 52 files under /home/bmarti44/models/qwen3.8-flash-next-nvfp4
+released 136225 files under /home/bmarti44/.cache/qwen38-flash-next
+released 25 files under /home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash
+released 3 files under /home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash
+released 300 files under /home/bmarti44/models/mimo-v2.6-flash-mopd
+released 56 files under /home/bmarti44/models/mimo-v2.6-flash-mopd-exl3-2.52-src
+released 8 files under /home/bmarti44/models/mimo-v2.6-flash-dflash-exl3-src
+released 67415 files under /home/bmarti44/.cache/mimo-v26-flash/native-runtime-001
+2026-10-13T22:03:03Z MemFree gate pass 119397140 kB, MemAvailable 120863620 kB (3 samples)
+2026-10-13T22:03:03Z launching in scope mimo26-c1-2478487
+{"pass":true,"required_gib":104.0,"mem_available_gib":115.251,"stable_samples_observed":3}
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k","pid":2479417,"port":8019}
+2026-10-13T22:04:01Z ready after 58 s; idle MemAvailable=13123656 MemFree=10452928
+{"props": 200, "admin_status": 404, "greedy": ["c933d4cb1288", "afe5a8556aee", "68da9e93ac2f"], "tokens_per_chunk": [5.590909090909091, 2.4651162790697674, 4.857142857142857]}
+2026-10-13T22:04:18Z cell agent-gate
+PASS  prefix-cache: repeat cache_n=22272/22511 (>=total-256: True); shared-prefix cache_n=22272 (checkpoint-bounded floor 13295: True)
+PASS  turn-continuation: appended turn 2: prompt_n=100 cache_n=22528 (< 1756 required; a full re-prefill means in-slot reuse broke)
+PASS  slot-thrash: turn-2 after utility call: prompt_n=355 cache_n=22272 (< 1756 required; single-slot server re-prefills ~20000)
+PASS  prefill-throughput: novel prompt cache_n=0 (<100: True); prefill=780 tok/s (>=350: True); prompt processing=28.9s (<=75: True); prompt time is client-measured TTFT; tuned ub/b=2048 profile measures ~434 tok/s — a failure here usually means the fast buffers were reverted (see docs/speed-tuning-2026-07-23.md)
+2026-10-13T22:06:04Z cell kit speed,toolcall,vision,context,soak
+[speed] starting
+[speed] OK
+[toolcall] starting
+[toolcall] OK
+[vision] starting
+[vision] OK
+[context] starting
+[context] OK
+[soak] starting
+[soak] OK
+MEASURED: /home/bmarti44/mimo26/results/mimo-v26-flash-gates/qualify-2026-10-13-c1/SUMMARY.md
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k","stopped":true}
+2026-10-13T23:06:08Z scope empty after stop
+2026-10-13T23:06:09Z window closed; postrun MemFree=117975056 MemAvailable=120975320 SwapFree=16543164
+2026-10-13T23:06:14Z kernel journal alive after the engine stop
+ERROR: mimo-v2.6-flash/cuda-spark-128g-262k is not running (state file absent)
+Failed to stop mimo26-c1-2478487.scope: Unit mimo26-c1-2478487.scope not loaded.
+2026-10-13T23:06:14Z restore attempt 1: MemAvailable=120965324 MemFree=117964908
+2026-10-13T23:17:50Z restore rc=0
+2026-10-13T23:17:55Z driver exit rc=0

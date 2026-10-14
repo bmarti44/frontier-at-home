@@ -84,8 +84,11 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   - `health_path`: `null` or a local path such as `"/health"` that must
     answer 2xx before readiness.
   - `context_check`: `null`, `{"kind": "slots", "slots": N, "n_ctx": M}`
-    (llama.cpp `/slots`), or `{"kind": "model_card", "max_model_len": M}`
-    (the served id's `/v1/models` card).
+    (llama.cpp `/slots`), `{"kind": "model_card", "max_model_len": M}`
+    (the served id's `/v1/models` card), or
+    `{"kind": "props", "total_slots": N, "n_ctx": M}` (TabbyAPI `/props`:
+    `total_slots` is `--max-batch-size`, `default_generation_settings.n_ctx`
+    is `--max-seq-len`).
 
   A generic profile must use `launch.mechanism` `systemd-run` with a
   non-root `launch.user`, `containment`, `port_role: production`, and
@@ -119,6 +122,10 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   profile); every present field is a positive integer. The first two multiply to
   `context_cap` (aggregate tokens) and must match `--max-num-seqs` and
   `--max-model-len`. Snapshots with this field also carry `safety`.
+  A TabbyAPI (exllamav3) profile, recognised by `--max-seq-len`, must declare
+  exactly `parallel_slots` and `request_context_cap`; they must match
+  `--max-batch-size` and `--max-seq-len`, and the explicit `--cache-size` (the
+  KV pool) must cover every slot's full context and be a multiple of 256.
 
 - `qualification_targets` — optional; read only by
   `scripts/94_qualify_profile.py` (docs/QUALIFY-PROFILE.md), never by the
@@ -136,6 +143,9 @@ plus `min_system_ram_gib`), `status`, `launch`, `memory_model`,
   (`chat`, the README default, or `thinking`) selects the template mode of
   the MMMU cell; a `note` explains why. The kit records the mode in the
   cell's argv, and `--vision-thinking-mode` overrides it.
+  `vision_max_tokens` (an integer in [1, 32768]; absent → the bench's 256)
+  is the MMMU answer budget, for a model whose chat-mode answers run out
+  of 256 tokens before the letter; the kit passes it as `--max-tokens`.
   `speed_max_tokens_per_event` (1 + the speculative draft length, for
   servers that stream several tokens per SSE event, such as vLLM MTP) makes
   the speed cell run `scripts/30_bench_speed_blocks.py`.

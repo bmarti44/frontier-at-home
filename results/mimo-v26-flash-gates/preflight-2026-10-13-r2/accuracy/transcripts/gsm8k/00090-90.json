@@ -1,0 +1,69 @@
+{
+  "index": 90,
+  "task_id": 90,
+  "rendered_prompt_sha256": "bf7262d474f3d87bb9fe719dd4e8e9d9c614726770a9f0aef7536f6100f716cc",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Adults: 20 × 10 = 200 lbs\nChildren: 5 × 5 = 25 lbs\nTotal: 225 lbs</think>Adults eat 10 lbs each: 20 × 10 = 200 lbs\nChildren eat half as much (5 lbs each): 5 × 5 = 25 lbs\nTotal: 200 + 25 = 225 lbs\n\nAnswer: 225",
+  "finish_reason": "stop",
+  "expected": "225",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.164689705998171
+  },
+  "response": {
+    "id": "cmpl-3358f85ba84844e7867af96534624c3d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Adults: 20 × 10 = 200 lbs\nChildren: 5 × 5 = 25 lbs\nTotal: 225 lbs</think>Adults eat 10 lbs each: 20 × 10 = 200 lbs\nChildren eat half as much (5 lbs each): 5 × 5 = 25 lbs\nTotal: 200 + 25 = 225 lbs\n\nAnswer: 225"
+      }
+    ],
+    "created": 1791926225,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 118,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.42,
+      "prompt_tokens_per_sec": 280.95,
+      "completion_tokens": 107,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 89,
+        "rejected_prediction_tokens": 37
+      },
+      "completion_time": 1.74,
+      "completion_tokens_per_sec": 61.67,
+      "total_tokens": 225,
+      "total_time": 2.16
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 118,
+      "prompt_ms": 420.0,
+      "prompt_per_token_ms": 3.559322033898305,
+      "prompt_per_second": 280.95238095238096,
+      "predicted_n": 107,
+      "predicted_ms": 1740.0,
+      "predicted_per_token_ms": 16.261682242990656,
+      "predicted_per_second": 61.49425287356321,
+      "draft_n": 126,
+      "draft_n_accepted": 89
+    }
+  },
+  "used_fallback": false
+}

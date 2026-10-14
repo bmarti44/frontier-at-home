@@ -1,0 +1,69 @@
+{
+  "index": 677,
+  "task_id": 677,
+  "rendered_prompt_sha256": "0b13f61d34f1fdaf37daef9a6213a752074cfc2914bae5d7192d6788d893cc30",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>They currently have 20 + 44 = 64 signatures. They want 100 total. 100 - 64 = 36.</think>Carol has 20 signatures and Jennifer has 44, so together they have 20 + 44 = 64 signatures.\n\nThey want to reach 100 signatures between them, so they need 100 − 64 = 36 more signatures.\n\nAnswer: 36",
+  "finish_reason": "stop",
+  "expected": "36",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.699501102033537
+  },
+  "response": {
+    "id": "cmpl-2b144d6f0f114d8795b66764f0abf48d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>They currently have 20 + 44 = 64 signatures. They want 100 total. 100 - 64 = 36.</think>Carol has 20 signatures and Jennifer has 44, so together they have 20 + 44 = 64 signatures.\n\nThey want to reach 100 signatures between them, so they need 100 − 64 = 36 more signatures.\n\nAnswer: 36"
+      }
+    ],
+    "created": 1791919996,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 148,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.52,
+      "prompt_tokens_per_sec": 284.62,
+      "completion_tokens": 105,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 83,
+        "rejected_prediction_tokens": 71
+      },
+      "completion_time": 2.17,
+      "completion_tokens_per_sec": 48.42,
+      "total_tokens": 253,
+      "total_time": 2.69
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 148,
+      "prompt_ms": 520.0,
+      "prompt_per_token_ms": 3.5135135135135136,
+      "prompt_per_second": 284.61538461538464,
+      "predicted_n": 105,
+      "predicted_ms": 2170.0,
+      "predicted_per_token_ms": 20.666666666666668,
+      "predicted_per_second": 48.38709677419355,
+      "draft_n": 154,
+      "draft_n_accepted": 83
+    }
+  },
+  "used_fallback": false
+}

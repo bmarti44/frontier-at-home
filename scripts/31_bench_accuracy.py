@@ -40,6 +40,7 @@ ENCODER_PATHS = {
     "laguna": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_laguna.py",
     "qwen38": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_qwen38.py",
     "glm53": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_glm53.py",
+    "mimo26": REPO_ROOT / "vendor" / "official-encoding" / "encoding" / "encoding_mimo26.py",
 }
 # Public contracts of the pinned encoders. Validate here instead of relying on
 # encoder assertions so an incompatible request fails before dataset work.
@@ -48,6 +49,8 @@ ENCODER_REASONING_EFFORTS = {
     "laguna": frozenset(("off", "max")),
     "qwen38": frozenset(("low", "medium", "xhigh")),
     "glm53": frozenset(("low", "high", "max")),
+    # MiMo-V2.6's template has thinking on/off only; omit --reasoning-effort.
+    "mimo26": frozenset(),
 }
 # Whether the encoder should emit the template's literal BOS text. Laguna's
 # GGUF sets add_bos_token=true (BOS == EOS == token 2), so llama.cpp adds the
@@ -58,6 +61,7 @@ ENCODER_EMIT_BOS_TEXT = {
     "laguna": False,
     "qwen38": True,
     "glm53": True,
+    "mimo26": False,
 }
 # Retain the historical constant for callers that inspect the default encoder.
 ENCODER_PATH = ENCODER_PATHS["dsv4"]

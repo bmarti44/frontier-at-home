@@ -1,0 +1,69 @@
+{
+  "index": 1213,
+  "task_id": 1213,
+  "rendered_prompt_sha256": "4561bc98830006977fc8c3e9cbe1bb53ae49902a4bd40630a3be4598e5d4a980",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Principal: $300\nInterest: 2% of $300 = $6\nTotal owed: $306\n\nMonthly payments for 11 months: $25 × 11 = $275\n\nRemaining in twelfth month: $306 - $275 = $31</think>Total owed = $300 + 2% of $300 = $300 + $6 = $306\n\nPaid in first 11 months = $25 × 11 = $275\n\nRemaining in twelfth month = $306 − $275 = $31\n\nAnswer: 31",
+  "finish_reason": "stop",
+  "expected": "31",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7720031330245547
+  },
+  "response": {
+    "id": "cmpl-be0de777480d4f5f9343bed7938fb469",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Principal: $300\nInterest: 2% of $300 = $6\nTotal owed: $306\n\nMonthly payments for 11 months: $25 × 11 = $275\n\nRemaining in twelfth month: $306 - $275 = $31</think>Total owed = $300 + 2% of $300 = $300 + $6 = $306\n\nPaid in first 11 months = $25 × 11 = $275\n\nRemaining in twelfth month = $306 − $275 = $31\n\nAnswer: 31"
+      }
+    ],
+    "created": 1791939398,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 102,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 261.54,
+      "completion_tokens": 148,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 123,
+        "rejected_prediction_tokens": 52
+      },
+      "completion_time": 2.37,
+      "completion_tokens_per_sec": 62.36,
+      "total_tokens": 250,
+      "total_time": 2.76
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 102,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.823529411764706,
+      "prompt_per_second": 261.53846153846155,
+      "predicted_n": 148,
+      "predicted_ms": 2370.0,
+      "predicted_per_token_ms": 16.013513513513512,
+      "predicted_per_second": 62.447257383966246,
+      "draft_n": 175,
+      "draft_n_accepted": 123
+    }
+  },
+  "used_fallback": false
+}

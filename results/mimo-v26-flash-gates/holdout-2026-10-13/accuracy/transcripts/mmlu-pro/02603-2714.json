@@ -1,0 +1,68 @@
+{
+  "index": 2603,
+  "task_id": 2714,
+  "rendered_prompt_sha256": "852c2b17fc717c13b1b9ad5ae59a292697a0ec83066c73c85729d17632b45947",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Research on heterogeneous vs homogeneous groups: heterogeneous groups tend to be more creative (diverse perspectives) but perform worse on decision-making tasks (coordination problems, conflict). So option A: more creative but worse at decision-making.\n\nWait — but there's also the finding that heterogeneous groups are less productive overall? Let's think. The classic finding: heterogeneous groups generate more ideas/creativity but have more conflict, leading to poorer decision-making. Option A fits.\n\nBut option J: more creative but less productive overall. Hmm. The question asks about creativity and decision-making specifically. The standard textbook answer: heterogeneous groups are more creative but worse at decision-making. Answer A.</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='A' expected='B'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.993976672994904
+  },
+  "response": {
+    "id": "cmpl-80ae685349d243c7a14e3d5b89c4b702",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Research on heterogeneous vs homogeneous groups: heterogeneous groups tend to be more creative (diverse perspectives) but perform worse on decision-making tasks (coordination problems, conflict). So option A: more creative but worse at decision-making.\n\nWait — but there's also the finding that heterogeneous groups are less productive overall? Let's think. The classic finding: heterogeneous groups generate more ideas/creativity but have more conflict, leading to poorer decision-making. Option A fits.\n\nBut option J: more creative but less productive overall. Hmm. The question asks about creativity and decision-making specifically. The standard textbook answer: heterogeneous groups are more creative but worse at decision-making. Answer A.</think>Answer: A"
+      }
+    ],
+    "created": 1791948118,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 150,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.5,
+      "prompt_tokens_per_sec": 300.0,
+      "completion_tokens": 141,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 85,
+        "rejected_prediction_tokens": 307
+      },
+      "completion_time": 5.49,
+      "completion_tokens_per_sec": 25.69,
+      "total_tokens": 291,
+      "total_time": 5.99
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 150,
+      "prompt_ms": 500.0,
+      "prompt_per_token_ms": 3.3333333333333335,
+      "prompt_per_second": 300.0,
+      "predicted_n": 141,
+      "predicted_ms": 5490.0,
+      "predicted_per_token_ms": 38.93617021276596,
+      "predicted_per_second": 25.683060109289617,
+      "draft_n": 392,
+      "draft_n_accepted": 85
+    }
+  }
+}

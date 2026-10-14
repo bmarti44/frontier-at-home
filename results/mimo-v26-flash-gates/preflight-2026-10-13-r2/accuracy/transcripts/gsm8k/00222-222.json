@@ -1,0 +1,69 @@
+{
+  "index": 222,
+  "task_id": 222,
+  "rendered_prompt_sha256": "3281ce185c9e8b15420e937de1a3125df276a601dd19c0e9da980ed1bba78f94",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Petunias: 90 - 40 = 50. Total: 90 + 50 = 140.</think>Geraniums: 90\nPetunias: 90 − 40 = 50\nTotal: 90 + 50 = 140\n\nAnswer: 140",
+  "finish_reason": "stop",
+  "expected": "140",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.4657305929576978
+  },
+  "response": {
+    "id": "cmpl-1c695f67a1e844cc9c519a2ce15c33fe",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Petunias: 90 - 40 = 50. Total: 90 + 50 = 140.</think>Geraniums: 90\nPetunias: 90 − 40 = 50\nTotal: 90 + 50 = 140\n\nAnswer: 140"
+      }
+    ],
+    "created": 1791926082,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 61,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.32,
+      "prompt_tokens_per_sec": 190.62,
+      "completion_tokens": 79,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 67,
+        "rejected_prediction_tokens": 17
+      },
+      "completion_time": 1.14,
+      "completion_tokens_per_sec": 69.14,
+      "total_tokens": 140,
+      "total_time": 1.46
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 61,
+      "prompt_ms": 320.0,
+      "prompt_per_token_ms": 5.245901639344262,
+      "prompt_per_second": 190.625,
+      "predicted_n": 79,
+      "predicted_ms": 1140.0,
+      "predicted_per_token_ms": 14.430379746835444,
+      "predicted_per_second": 69.29824561403508,
+      "draft_n": 84,
+      "draft_n_accepted": 67
+    }
+  },
+  "used_fallback": false
+}

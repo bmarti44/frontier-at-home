@@ -1,0 +1,154 @@
+{
+ "formula": "PREREG.md",
+ "checks": {
+  "freeze": "2a75f1fe4edada07bd13d2b5ff8b756c54c6122c",
+  "scorer": {
+   "sha256_16": "a37abe472715559b",
+   "scoring_head": "2a75f1fe4edada07bd13d2b5ff8b756c54c6122c",
+   "overrides": {},
+   "mutation": false,
+   "frozen_worktree_diff_rc": 0,
+   "untracked_frozen": []
+  },
+  "failed_attempt_lines": [],
+  "heads": [
+   [
+    "2a75f1fe4edada07bd13d2b5ff8b756c54c6122c",
+    "0"
+   ]
+  ],
+  "frozen_diff_rc": 0,
+  "artifact_identity": {
+   "runtime_src": {
+    "tabbyAPI": [
+     "2636ef602b55b5343cf3740dd55a77f21e0a8003",
+     "a5a97dfca985a5f0cff36c8c5b6d127a965a1b3b",
+     "0",
+     "True"
+    ],
+    "exllamav3": [
+     "f45b84512ba65bca77f7d394399d4b68821fc71b",
+     "e272949487e45ac37165d4cab8e9f081a8c1e444",
+     "0",
+     "True"
+    ]
+   },
+   "runtime_wheel": [
+    [
+     "True",
+     "629",
+     "0"
+    ]
+   ],
+   "weights": {
+    "model": [
+     "exl3-2.52-mikeroz",
+     "25",
+     "101323582965",
+     "0"
+    ],
+    "draft_model": [
+     "dflash-exl3-4.0",
+     "3",
+     "735192453",
+     "0"
+    ]
+   }
+  },
+  "agent_fixture": {
+   "logged": [
+    "2d31aeb3156ae01a"
+   ],
+   "frozen": "2d31aeb3156ae01a"
+  },
+  "kill_lines": [],
+  "stamps": {
+   "memfree_gate": [
+    "2026-10-13T22:03:03Z"
+   ],
+   "launch": [
+    "2026-10-13T22:03:03Z"
+   ],
+   "scope_empty": [
+    "2026-10-13T23:06:08Z"
+   ]
+  },
+  "start_gate_gib": [
+   [
+    113.86598587036133,
+    115.26453018188477
+   ]
+  ],
+  "swap_growth_gib": 0.0,
+  "mem_available_low_gib": 9.556812286376953,
+  "launch_mem_available_gib": 115.26453018188477,
+  "peak_used_gib": 105.70771789550781,
+  "admission_gib": 114,
+  "samples": 4507,
+  "kit_head": "2a75f1fe4edada07bd13d2b5ff8b756c54c6122c",
+  "vision_protocol": {
+   "mode": "chat",
+   "max_tokens": "4096"
+  },
+  "context": {
+   "verdict": "PASS",
+   "total_tokens": 250135,
+   "context_cap": 262144,
+   "max_ttft_s": 683.928982847,
+   "min_mem_available_gib": 9.561332702636719
+  },
+  "text_identity_vs_preflight_r2": [
+   true,
+   true,
+   true
+  ],
+  "toolcall": {
+   "passed": 20,
+   "total": 20
+  },
+  "agent_gate": {
+   "results": {
+    "prefix-cache": true,
+    "turn-continuation": true,
+    "slot-thrash": true,
+    "prefill-throughput": true
+   },
+   "semantics": {
+    "engine": "vllm",
+    "model": "mimo-v2.6-flash",
+    "prefix_block_tokens": 256,
+    "spec_block_drop": false
+   }
+  },
+  "soak": {
+   "pass": true,
+   "mem_floor_gib": 5.0,
+   "mem_floor_source": "default",
+   "mem_available_min_gib": 10.004196166992188,
+   "failed_gates": []
+  },
+  "vision": {
+   "n": 100,
+   "correct": 68,
+   "invalid_count": 4,
+   "error_count": 0,
+   "default_correct": 64,
+   "z_vs_default": 0.5970814340265327
+  },
+  "speed": {
+   "0": {
+    "median_decode": 21.837412068716777,
+    "median_ttft": 0.6510648004999999,
+    "valid": true
+   },
+   "28672": {
+    "median_decode": 37.37059603550432,
+    "median_ttft": 44.2271099245,
+    "valid": true
+   }
+  }
+ },
+ "fail": [],
+ "missing": [],
+ "verdict": "PASS"
+}

@@ -1,0 +1,69 @@
+{
+  "index": 1184,
+  "task_id": 1184,
+  "rendered_prompt_sha256": "c7765cd9a5d2d7ea614bfad92461e5f74fcd4eb329c85577d3d953edd22d248c",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>850 / 50 = 17 bags\n17 × 18 = 306</think>850 ÷ 50 = 17 bags needed.\n\n17 × $18 = $306.\n\nAnswer: 306",
+  "finish_reason": "stop",
+  "expected": "306",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5604867759975605
+  },
+  "response": {
+    "id": "cmpl-b95a614982cd4f4eadb6f5fa89fc5028",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>850 / 50 = 17 bags\n17 × 18 = 306</think>850 ÷ 50 = 17 bags needed.\n\n17 × $18 = $306.\n\nAnswer: 306"
+      }
+    ],
+    "created": 1791926320,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 74,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 205.56,
+      "completion_tokens": 60,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 47,
+        "rejected_prediction_tokens": 44
+      },
+      "completion_time": 1.19,
+      "completion_tokens_per_sec": 50.25,
+      "total_tokens": 134,
+      "total_time": 1.56
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 74,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.864864864864865,
+      "prompt_per_second": 205.55555555555554,
+      "predicted_n": 60,
+      "predicted_ms": 1190.0,
+      "predicted_per_token_ms": 19.833333333333332,
+      "predicted_per_second": 50.42016806722689,
+      "draft_n": 91,
+      "draft_n_accepted": 47
+    }
+  },
+  "used_fallback": false
+}

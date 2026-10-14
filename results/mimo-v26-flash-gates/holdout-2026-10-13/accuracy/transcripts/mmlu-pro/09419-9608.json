@@ -1,0 +1,68 @@
+{
+  "index": 9419,
+  "task_id": 9608,
+  "rendered_prompt_sha256": "166a5121b3461aa5a600002afb052aa671baaa8c53b517a81df78d1bd4068b10",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>ΔL = α × L × ΔT = (10 × 10⁻⁶) × 200 × 100 = 0.20 ft</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5415810169652104
+  },
+  "response": {
+    "id": "cmpl-dfa81f2d3d7a4d719c9f990ef70509a8",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>ΔL = α × L × ΔT = (10 × 10⁻⁶) × 200 × 100 = 0.20 ft</think>Answer: E"
+      }
+    ],
+    "created": 1791947779,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 170,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.54,
+      "prompt_tokens_per_sec": 314.81,
+      "completion_tokens": 44,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 33,
+        "rejected_prediction_tokens": 44
+      },
+      "completion_time": 0.99,
+      "completion_tokens_per_sec": 44.24,
+      "total_tokens": 214,
+      "total_time": 1.54
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 170,
+      "prompt_ms": 540.0,
+      "prompt_per_token_ms": 3.176470588235294,
+      "prompt_per_second": 314.81481481481484,
+      "predicted_n": 44,
+      "predicted_ms": 990.0,
+      "predicted_per_token_ms": 22.5,
+      "predicted_per_second": 44.44444444444445,
+      "draft_n": 77,
+      "draft_n_accepted": 33
+    }
+  }
+}

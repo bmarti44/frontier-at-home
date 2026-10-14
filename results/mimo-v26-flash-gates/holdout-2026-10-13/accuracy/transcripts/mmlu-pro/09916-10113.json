@@ -1,0 +1,68 @@
+{
+  "index": 9916,
+  "task_id": 10113,
+  "rendered_prompt_sha256": "603c05fd67f7acaed1d11b485152e78b8c695f471816591182df491a6429683a",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Momentum: 2m v = 3m V → V = 2v/3.\n\nInitial KE: (1/2)(2m)v² = m v².\nFinal KE: (1/2)(3m)(2v/3)² = (1/2)(3m)(4v²/9) = (2/3) m v².\n\nLost fraction: 1 - 2/3 = 1/3.\n\nAnswer: G.</think>**Setting up the collision**\n\nLet the particle of mass $2m$ move with speed $v$ toward the stationary particle of mass $m$.\n\n**Conservation of momentum** (perfectly inelastic collision, they stick together):\n\n$$2m\\,v = (2m + m)\\,V \\quad\\Rightarrow\\quad V = \\frac{2v}{3}$$\n\n**Initial kinetic energy:**\n\n$$K_i = \\tfrac{1}{2}(2m)v^2 = m v^2$$\n\n**Final kinetic energy:**\n\n$$K_f = \\tfrac{1}{2}(3m)\\left(\\frac{2v}{3}\\right)^2 = \\tfrac{1}{2}(3m)\\cdot\\frac{4v^2}{9} = \\frac{2}{3} m v^2$$\n\n**Fraction lost:**\n\n$$\\frac{K_i - K_f}{K_i} = \\frac{m v^2 - \\tfrac{2}{3} m v^2}{m v^2} = \\frac{1}{3}$$\n\n(Consistent with the general result for a perfectly inelastic collision: $\\dfrac{m_1}{m_1+m_2} = \\dfrac{2m}{3m} = \\dfrac{2}{3}$ retained, so $\\dfrac{1}{3}$ lost.)\n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.377334522025194
+  },
+  "response": {
+    "id": "cmpl-3b1105aff64d45f98709b163af5bc383",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Momentum: 2m v = 3m V → V = 2v/3.\n\nInitial KE: (1/2)(2m)v² = m v².\nFinal KE: (1/2)(3m)(2v/3)² = (1/2)(3m)(4v²/9) = (2/3) m v².\n\nLost fraction: 1 - 2/3 = 1/3.\n\nAnswer: G.</think>**Setting up the collision**\n\nLet the particle of mass $2m$ move with speed $v$ toward the stationary particle of mass $m$.\n\n**Conservation of momentum** (perfectly inelastic collision, they stick together):\n\n$$2m\\,v = (2m + m)\\,V \\quad\\Rightarrow\\quad V = \\frac{2v}{3}$$\n\n**Initial kinetic energy:**\n\n$$K_i = \\tfrac{1}{2}(2m)v^2 = m v^2$$\n\n**Final kinetic energy:**\n\n$$K_f = \\tfrac{1}{2}(3m)\\left(\\frac{2v}{3}\\right)^2 = \\tfrac{1}{2}(3m)\\cdot\\frac{4v^2}{9} = \\frac{2}{3} m v^2$$\n\n**Fraction lost:**\n\n$$\\frac{K_i - K_f}{K_i} = \\frac{m v^2 - \\tfrac{2}{3} m v^2}{m v^2} = \\frac{1}{3}$$\n\n(Consistent with the general result for a perfectly inelastic collision: $\\dfrac{m_1}{m_1+m_2} = \\dfrac{2m}{3m} = \\dfrac{2}{3}$ retained, so $\\dfrac{1}{3}$ lost.)\n\nAnswer: G"
+      }
+    ],
+    "created": 1791947896,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 144,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.46,
+      "prompt_tokens_per_sec": 313.04,
+      "completion_tokens": 404,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 308,
+        "rejected_prediction_tokens": 364
+      },
+      "completion_time": 8.91,
+      "completion_tokens_per_sec": 45.33,
+      "total_tokens": 548,
+      "total_time": 9.37
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 144,
+      "prompt_ms": 460.0,
+      "prompt_per_token_ms": 3.1944444444444446,
+      "prompt_per_second": 313.04347826086956,
+      "predicted_n": 404,
+      "predicted_ms": 8910.0,
+      "predicted_per_token_ms": 22.054455445544555,
+      "predicted_per_second": 45.34231200897867,
+      "draft_n": 672,
+      "draft_n_accepted": 308
+    }
+  }
+}

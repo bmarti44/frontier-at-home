@@ -1,0 +1,219 @@
+{
+  "script_sha256": "758df9ee813f13093db801152c0bbba5c0b5b2498b0f61d1a0762faa94219f62",
+  "fixture_sha256": "2d31aeb3156ae01ab7213cdf50eb7660df8e869de12be7646a6b19aaf3405031",
+  "tokenizer_sha256": "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e",
+  "base_url": "http://127.0.0.1:8019",
+  "model": "mimo-v2.6-flash",
+  "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k",
+  "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+  "args": {
+    "base_url": "http://127.0.0.1:8019",
+    "model": "mimo-v2.6-flash",
+    "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k",
+    "tokenizer_sha256": "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e",
+    "out": "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/qualify-2026-10-13-c1/context",
+    "tokenizer_path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json",
+    "slots": 1,
+    "tokens_per_slot": 250128,
+    "fixture": "/home/bmarti44/mimo26/fixtures/ctx-32k.txt",
+    "seed": 42,
+    "max_tokens": 512,
+    "request_timeout": 3600,
+    "api_key_file": null,
+    "mem_floor_gib": 8.0,
+    "extra_body": "{}",
+    "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+    "phase": "both"
+  },
+  "models_response": {
+    "status": 200,
+    "body": {
+      "object": "list",
+      "data": [
+        {
+          "id": "mimo-v2.6-flash",
+          "object": "model",
+          "created": 1791930261,
+          "owned_by": "tabbyAPI",
+          "logging": null,
+          "parameters": null,
+          "meta": {
+            "n_ctx_train": 1048576,
+            "n_ctx": null,
+            "n_vocab": 152576,
+            "n_embd": 4096,
+            "size": 0
+          }
+        }
+      ]
+    }
+  },
+  "host": {
+    "uname": {
+      "system": "Linux",
+      "node": "spark-aba1",
+      "release": "6.17.0-1026-nvidia",
+      "version": "#26-Ubuntu SMP PREEMPT_DYNAMIC Thu Jun 25 00:57:17 UTC 2026",
+      "machine": "aarch64",
+      "processor": "aarch64"
+    },
+    "nproc": 20,
+    "mem_total_kib": 125483616
+  },
+  "start_unix": 1791930261.919446,
+  "needle_fractions": [
+    0.02,
+    0.2,
+    0.45,
+    0.7,
+    0.9,
+    0.98
+  ],
+  "phases": {
+    "short": [
+      {
+        "slot": 0,
+        "client_prompt_tokens": 4096,
+        "needles": [
+          {
+            "animal": "lynx",
+            "code": "43620311",
+            "char_offset": 1023,
+            "token_offset": 241,
+            "relative_position": 0.058837890625
+          },
+          {
+            "animal": "jackal",
+            "code": "93837171",
+            "char_offset": 4062,
+            "token_offset": 984,
+            "relative_position": 0.240234375
+          },
+          {
+            "animal": "gecko",
+            "code": "70184057",
+            "char_offset": 8272,
+            "token_offset": 2026,
+            "relative_position": 0.49462890625
+          },
+          {
+            "animal": "otter",
+            "code": "24671919",
+            "char_offset": 12298,
+            "token_offset": 3014,
+            "relative_position": 0.73583984375
+          },
+          {
+            "animal": "falcon",
+            "code": "68488794",
+            "char_offset": 15116,
+            "token_offset": 3724,
+            "relative_position": 0.9091796875
+          },
+          {
+            "animal": "ibex",
+            "code": "72802305",
+            "char_offset": 16196,
+            "token_offset": 3991,
+            "relative_position": 0.974365234375
+          }
+        ],
+        "controls": [
+          "bison",
+          "ocelot"
+        ],
+        "target_animal": "lynx",
+        "target_code": "43620311",
+        "target_needle_index": 0,
+        "asked_animals": [
+          "lynx",
+          "gecko",
+          "falcon"
+        ],
+        "asked_codes": [
+          "43620311",
+          "70184057",
+          "68488794"
+        ],
+        "asked_needle_indices": [
+          0,
+          2,
+          4
+        ]
+      }
+    ],
+    "full": [
+      {
+        "slot": 0,
+        "client_prompt_tokens": 250128,
+        "needles": [
+          {
+            "animal": "lynx",
+            "code": "43620311",
+            "char_offset": 20636,
+            "token_offset": 5054,
+            "relative_position": 0.020205654704791146
+          },
+          {
+            "animal": "jackal",
+            "code": "93837171",
+            "char_offset": 205536,
+            "token_offset": 50175,
+            "relative_position": 0.20059729418537708
+          },
+          {
+            "animal": "gecko",
+            "code": "70184057",
+            "char_offset": 461262,
+            "token_offset": 112634,
+            "relative_position": 0.4503054436128702
+          },
+          {
+            "animal": "otter",
+            "code": "24671919",
+            "char_offset": 717621,
+            "token_offset": 175212,
+            "relative_position": 0.7004893494530801
+          },
+          {
+            "animal": "falcon",
+            "code": "68488794",
+            "char_offset": 922626,
+            "token_offset": 225288,
+            "relative_position": 0.9006908462867013
+          },
+          {
+            "animal": "ibex",
+            "code": "72802305",
+            "char_offset": 1004194,
+            "token_offset": 245209,
+            "relative_position": 0.9803340689566942
+          }
+        ],
+        "controls": [
+          "bison",
+          "ocelot"
+        ],
+        "target_animal": "lynx",
+        "target_code": "43620311",
+        "target_needle_index": 0,
+        "asked_animals": [
+          "lynx",
+          "gecko",
+          "falcon"
+        ],
+        "asked_codes": [
+          "43620311",
+          "70184057",
+          "68488794"
+        ],
+        "asked_needle_indices": [
+          0,
+          2,
+          4
+        ]
+      }
+    ]
+  },
+  "end_unix": 1791930956.3303344
+}

@@ -1,0 +1,69 @@
+{
+  "index": 796,
+  "task_id": 796,
+  "rendered_prompt_sha256": "428ac4ef23f8d5d05696c1879436e62bc4b24f11bf55b20ae36ac60e9c70afa5",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Initial: 200 employees.\nMonth 1: 200 + 20 = 220 employees\nMonth 2: 220 + 20 = 240 employees\nMonth 3: 240 + 20 = 260 employees\n\nTotal paid = (220 + 240 + 260) × 4000 = 720 × 4000 = 2,880,000</think>**Month-by-month breakdown:**\n\n- **Month 1:** 200 + 20 = 220 employees → 220 × $4,000 = $880,000\n- **Month 2:** 220 + 20 = 240 employees → 240 × $4,000 = $960,000\n- **Month 3:** 240 + 20 = 260 employees → 260 × $4,000 = $1,040,000\n\n**Total:** $880,000 + $960,000 + $1,040,000 = $2,880,000\n\nAnswer: 2880000",
+  "finish_reason": "stop",
+  "expected": "2880000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.5610385069740005
+  },
+  "response": {
+    "id": "cmpl-181708ecac1d41bba65ce335bb415a92",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Initial: 200 employees.\nMonth 1: 200 + 20 = 220 employees\nMonth 2: 220 + 20 = 240 employees\nMonth 3: 240 + 20 = 260 employees\n\nTotal paid = (220 + 240 + 260) × 4000 = 720 × 4000 = 2,880,000</think>**Month-by-month breakdown:**\n\n- **Month 1:** 200 + 20 = 220 employees → 220 × $4,000 = $880,000\n- **Month 2:** 220 + 20 = 240 employees → 240 × $4,000 = $960,000\n- **Month 3:** 240 + 20 = 260 employees → 260 × $4,000 = $1,040,000\n\n**Total:** $880,000 + $960,000 + $1,040,000 = $2,880,000\n\nAnswer: 2880000"
+      }
+    ],
+    "created": 1791939494,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 95,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 243.59,
+      "completion_tokens": 302,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 258,
+        "rejected_prediction_tokens": 50
+      },
+      "completion_time": 4.17,
+      "completion_tokens_per_sec": 72.43,
+      "total_tokens": 397,
+      "total_time": 4.56
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 95,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 4.105263157894737,
+      "prompt_per_second": 243.58974358974362,
+      "predicted_n": 302,
+      "predicted_ms": 4170.0,
+      "predicted_per_token_ms": 13.80794701986755,
+      "predicted_per_second": 72.4220623501199,
+      "draft_n": 308,
+      "draft_n_accepted": 258
+    }
+  },
+  "used_fallback": false
+}

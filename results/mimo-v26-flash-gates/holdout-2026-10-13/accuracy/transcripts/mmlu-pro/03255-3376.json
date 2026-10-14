@@ -1,0 +1,68 @@
+{
+  "index": 3255,
+  "task_id": 3376,
+  "rendered_prompt_sha256": "fd0dbb99b7e4cba2eb020cc4153fca38378e23478578a9765a3683ebaf52ab38",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The macronucleus in a paramecium controls the day-to-day metabolic functions of the cell, including growth, feeding, and general cellular maintenance. If the macronucleus were removed, the paramecium would lose its ability to carry out these essential functions, leading to cell death.</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.520918424008414
+  },
+  "response": {
+    "id": "cmpl-100bacafd1b04cf59f13199a3d449a63",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The macronucleus in a paramecium controls the day-to-day metabolic functions of the cell, including growth, feeding, and general cellular maintenance. If the macronucleus were removed, the paramecium would lose its ability to carry out these essential functions, leading to cell death.</think>Answer: A"
+      }
+    ],
+    "created": 1791939947,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 144,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.46,
+      "prompt_tokens_per_sec": 313.04,
+      "completion_tokens": 68,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 47,
+        "rejected_prediction_tokens": 100
+      },
+      "completion_time": 2.06,
+      "completion_tokens_per_sec": 33.0,
+      "total_tokens": 212,
+      "total_time": 2.52
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 144,
+      "prompt_ms": 460.0,
+      "prompt_per_token_ms": 3.1944444444444446,
+      "prompt_per_second": 313.04347826086956,
+      "predicted_n": 68,
+      "predicted_ms": 2060.0,
+      "predicted_per_token_ms": 30.294117647058822,
+      "predicted_per_second": 33.00970873786408,
+      "draft_n": 147,
+      "draft_n_accepted": 47
+    }
+  }
+}

@@ -69,6 +69,7 @@ MODEL_ENCODERS = {
     "glm-5.3-flash": "glm53",
     # Chat template and tokenizer are byte-identical to Qwen3.8-27B.
     "qwen3.8-flash-next": "qwen38",
+    "mimo-v2.6-flash": "mimo26",
 }
 
 SPEED_CONTEXT_LEVELS = "0,28672"
@@ -214,7 +215,9 @@ def resolve_profile(args: argparse.Namespace) -> dict:
     if served is None:
         # Generic switch profiles declare the id their server reports.
         served = (raw_profile.get("switch") or {}).get("served_model_id")
-    model_path = argv_value(argv, "--model") or argv_value(argv, "-m")
+    # TabbyAPI names the model --model-name; its argv's -m is Python's module flag.
+    model_path = (argv_value(argv, "--model") or argv_value(argv, "--model-name")
+                  or argv_value(argv, "-m"))
     tokenizer_path = None
     tokenizer_sha = None
     if model_path:
@@ -263,6 +266,7 @@ def resolve_profile(args: argparse.Namespace) -> dict:
     targets = raw_profile.get("qualification_targets")
     options = raw_profile.get("qualification_options") or {}
     vision_thinking_mode = args.vision_thinking_mode or options.get("vision_thinking_mode") or "chat"
+    vision_budget = vision_max_tokens(options)
     if args.targets:
         targets = read_json(Path(args.targets))
 
@@ -307,6 +311,7 @@ def resolve_profile(args: argparse.Namespace) -> dict:
         "speed_max_tokens_per_event": options.get("speed_max_tokens_per_event"),
         "qualification_options": options or None,
         "vision_thinking_mode": vision_thinking_mode,
+        "vision_max_tokens": vision_budget,
         "encoder": encoder,
         "config_hash": config_hash,
     }
@@ -388,6 +393,17 @@ def parse_media_limits(argv: list[str]) -> dict | None:
         return None
 
 
+def vision_max_tokens(options: dict) -> int | None:
+    """qualification_options.vision_max_tokens: the MMMU answer budget, or None for the
+    bench's own 256-token default. An integer in 38_bench_vision.py's accepted range."""
+    value = options.get("vision_max_tokens")
+    if value is None:
+        return None
+    if type(value) is not int or not 1 <= value <= 32768:
+        raise KitError(f"qualification_options.vision_max_tokens must be an integer in [1, 32768], got {value!r}")
+    return value
+
+
 def plan_cells(resolved: dict, args: argparse.Namespace, out: Path, base_url: str) -> dict[str, dict]:
     """Return {cell: {"argv": [...] | None, "skip_reason": str|None, "evidence": path}}."""
     py = sys.executable
@@ -441,6 +457,8 @@ def plan_cells(resolved: dict, args: argparse.Namespace, out: Path, base_url: st
                    "--out", str(cell_dir("vision")), "--thinking-mode", resolved["vision_thinking_mode"]]
     if args.vision_limit:
         vision_argv += ["--limit", str(args.vision_limit)]
+    if resolved.get("vision_max_tokens"):
+        vision_argv += ["--max-tokens", str(resolved["vision_max_tokens"])]
     if served:
         vision_argv += ["--model-id", served]
     plans["vision"] = {"argv": vision_argv, "skip_reason": None, "evidence": "vision/summary.json"}

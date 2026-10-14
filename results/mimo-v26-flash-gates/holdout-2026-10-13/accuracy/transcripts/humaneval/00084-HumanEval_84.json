@@ -1,0 +1,104 @@
+{
+  "index": 84,
+  "task_id": "HumanEval/84",
+  "rendered_prompt_sha256": "5b69b9b354c92bcb61d5e63ec962c1df7cc559708ce12f54b705344d47dc5b28",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    # Convert N to a string\n    N_str = str(N)\n    # Initialize sum of digits\n    sum_digits = 0\n    # Iterate over each digit in N_str\n    for digit in N_str:\n        # Convert digit to integer and add to sum_digits\n        sum_digits += int(digit)\n    # Convert sum_digits to binary string\n    binary_str = bin(sum_digits)[2:]\n    # Return binary string\n    return binary_str\n\ndef test():\n    \"\"\"Test cases for solve function.\"\"\"\n    # Test case 1: N = 1000\n    assert solve(1000) == \"1\"\n    # Test case 2: N = 150\n    assert solve(150) == \"110\"\n    # Test case 3: N = 147\n    assert solve(147) == \"1100\"\n    # Test case 4: N = 0\n    assert solve(0) == \"0\"\n    # Test case 5: N = 10000\n    assert solve(10000) == \"10000\"\n    print(\"All test cases passed.\")\n\nif __name__ == \"__main__\":\n    test()",
+  "finish_reason": "stop",
+  "expected": "    return bin(sum(int(i) for i in str(N)))[2:]\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.9311731469933875
+  },
+  "response": {
+    "id": "cmpl-48579d50b7f7476d88d118c147493a0d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "    # Convert N to a string\n    N_str = str(N)\n    # Initialize sum of digits\n    sum_digits = 0\n    # Iterate over each digit in N_str\n    for digit in N_str:\n        # Convert digit to integer and add to sum_digits\n        sum_digits += int(digit)\n    # Convert sum_digits to binary string\n    binary_str = bin(sum_digits)[2:]\n    # Return binary string\n    return binary_str\n\ndef test():\n    \"\"\"Test cases for solve function.\"\"\"\n    # Test case 1: N = 1000\n    assert solve(1000) == \"1\"\n    # Test case 2: N = 150\n    assert solve(150) == \"110\"\n    # Test case 3: N = 147\n    assert solve(147) == \"1100\"\n    # Test case 4: N = 0\n    assert solve(0) == \"0\"\n    # Test case 5: N = 10000\n    assert solve(10000) == \"10000\"\n    print(\"All test cases passed.\")\n\nif __name__ == \"__main__\":\n    test()"
+      }
+    ],
+    "created": 1791956278,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 142,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.44,
+      "prompt_tokens_per_sec": 322.73,
+      "completion_tokens": 268,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 211,
+        "rejected_prediction_tokens": 188
+      },
+      "completion_time": 5.49,
+      "completion_tokens_per_sec": 48.83,
+      "total_tokens": 410,
+      "total_time": 5.93
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 142,
+      "prompt_ms": 440.0,
+      "prompt_per_token_ms": 3.0985915492957745,
+      "prompt_per_second": 322.72727272727275,
+      "predicted_n": 268,
+      "predicted_ms": 5490.0,
+      "predicted_per_token_ms": 20.48507462686567,
+      "predicted_per_second": 48.81602914389799,
+      "draft_n": 399,
+      "draft_n_accepted": 211
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00084:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 44, in <module>\n    test()\n  File \"/case/main.py\", line 40, in test\n    assert solve(10000) == \"10000\"\n           ^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

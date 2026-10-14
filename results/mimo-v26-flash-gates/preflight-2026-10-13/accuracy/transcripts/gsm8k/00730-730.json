@@ -1,0 +1,69 @@
+{
+  "index": 730,
+  "task_id": 730,
+  "rendered_prompt_sha256": "1b71edcbf8fd88f1804925a8628063a467387dbec7a5d98ffe45c5b3773b5f66",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Parker chews 4 pieces a day for 30 days = 120 pieces. 120/15 = 8 packs.</think>Parker needs 4 × 30 = 120 pieces of gum for 30 days. Since each pack has 15 pieces, he needs 120 ÷ 15 = 8 packs.\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.010452254966367
+  },
+  "response": {
+    "id": "cmpl-ad48a864b00349a7b0dc2fc2930f49ad",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Parker chews 4 pieces a day for 30 days = 120 pieces. 120/15 = 8 packs.</think>Parker needs 4 × 30 = 120 pieces of gum for 30 days. Since each pack has 15 pieces, he needs 120 ÷ 15 = 8 packs.\n\nAnswer: 8"
+      }
+    ],
+    "created": 1791919916,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 77,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 213.89,
+      "completion_tokens": 88,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 71,
+        "rejected_prediction_tokens": 48
+      },
+      "completion_time": 1.65,
+      "completion_tokens_per_sec": 53.37,
+      "total_tokens": 165,
+      "total_time": 2.01
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 77,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.675324675324675,
+      "prompt_per_second": 213.88888888888889,
+      "predicted_n": 88,
+      "predicted_ms": 1650.0,
+      "predicted_per_token_ms": 18.75,
+      "predicted_per_second": 53.333333333333336,
+      "draft_n": 119,
+      "draft_n_accepted": 71
+    }
+  },
+  "used_fallback": false
+}

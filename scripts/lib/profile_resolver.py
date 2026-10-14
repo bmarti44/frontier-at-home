@@ -259,6 +259,8 @@ def _substitute(value: str, mapping: dict, label: str) -> str:
 
 
 VLLM_TOPOLOGY_FLAGS = ("--max-model-len", "--max-num-seqs")
+TABBY_TOPOLOGY_FLAG = "--max-seq-len"
+TABBY_CACHE_PAGE = 256
 
 
 def _single_flag_value(argv: list, flags: tuple) -> str | None:
@@ -292,6 +294,9 @@ def validate_serving_topology(profile: dict) -> None:
         raise ValueError("serving topology values must be positive integers")
     if serving["parallel_slots"] * serving["request_context_cap"] != profile["context_cap"]:
         raise ValueError("aggregate context topology mismatch")
+    if any(arg.split("=", 1)[0] == TABBY_TOPOLOGY_FLAG for arg in argv):
+        validate_tabby_topology(argv, serving)
+        return
     ctx = _single_flag_value(argv, ("-c", "--ctx"))
     if ctx != str(serving["request_context_cap"]):
         raise ValueError("serving topology disagrees with -c/--ctx")
@@ -300,6 +305,24 @@ def validate_serving_topology(profile: dict) -> None:
         raise ValueError("serving topology disagrees with --batched-session")
     if serving["parallel_slots"] == 1 and sessions not in (None, "1"):
         raise ValueError("serving topology disagrees with --batched-session")
+
+
+def validate_tabby_topology(argv: list, serving: dict) -> None:
+    """TabbyAPI: --max-seq-len per request, --max-batch-size slots, and an
+    explicit --cache-size KV pool holding every slot's context in pages."""
+    seq = _single_flag_value(argv, (TABBY_TOPOLOGY_FLAG,))
+    if seq != str(serving["request_context_cap"]):
+        raise ValueError("serving topology disagrees with --max-seq-len")
+    batch = _single_flag_value(argv, ("--max-batch-size",))
+    if batch != str(serving["parallel_slots"]):
+        raise ValueError("serving topology disagrees with --max-batch-size")
+    cache = _single_flag_value(argv, ("--cache-size",))
+    if cache is None or not cache.isdigit():
+        raise ValueError("a TabbyAPI profile needs an explicit --cache-size")
+    tokens = serving["parallel_slots"] * serving["request_context_cap"]
+    if int(cache) < tokens or int(cache) % TABBY_CACHE_PAGE:
+        raise ValueError(
+            f"--cache-size must cover {tokens} tokens in {TABBY_CACHE_PAGE}-token pages")
 
 
 def resolve(profile: dict, model: dict, host: dict, verb: str = "start") -> dict:

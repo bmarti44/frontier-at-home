@@ -1,0 +1,104 @@
+{
+  "index": 61,
+  "task_id": "HumanEval/61",
+  "rendered_prompt_sha256": "f900fc0b3f9f9e3d6380108cad345c8211f454cac5496d16402442819340e1bb",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    # Initialize a counter to keep track of the number of open brackets\n    open_count = 0\n\n    # Iterate through each character in the brackets string\n    for char in brackets:\n        # If the character is an opening bracket, increment the counter\n        if char == \"(\":\n            open_count += 1\n        # If the character is a closing bracket, decrement the counter\n        elif char == \")\":\n            open_count -= 1\n        # If the counter goes negative, it means there's a closing bracket without a corresponding opening bracket\n        if open_count < 0:\n            return False\n\n    # If the counter is zero at the end, it means all opening brackets have been matched with closing brackets\n    return open_count == 0\n\ndef test():\n    \"\"\"\n    Test cases for the correct_bracketing function.\n    \"\"\"\n    # Test case 1: Single opening bracket\n    assert correct_bracketing(\"(\") == False\n\n    # Test case 2: Single pair of brackets\n    assert correct_bracketing(\"()\") == True\n\n    # Test case 3: Multiple pairs of brackets\n    assert correct_bracketing(\"(()())\") == True\n\n    # Test case 4: Closing bracket before opening bracket\n    assert correct_bracketing(\")(()\") == False\n\n    # Test case 5: Empty string\n    assert correct_bracketing(\"\") == True\n\n    # Test case 6: Nested brackets\n    assert correct_bracketing(\"((()))\") == True\n\n    # Test case 7: Unbalanced brackets\n    assert correct_bracketing(\"((())\") == False\n\n    # Test case 8: Multiple closing brackets\n    assert correct_bracketing(\"()))\") == False\n\n    # Test case 9: Multiple opening brackets\n    assert correct_bracketing(\"(((\") == False\n\n    # Test case 10: Mixed brackets\n    assert correct_bracketing(\"()()()\") == True\n\n    print(\"All test cases passed!\")\n\nif __name__ == \"__main__\":\n    test()",
+  "finish_reason": "stop",
+  "expected": "    depth = 0\n    for b in brackets:\n        if b == \"(\":\n            depth += 1\n        else:\n            depth -= 1\n        if depth < 0:\n            return False\n    return depth == 0\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.453344020002987
+  },
+  "response": {
+    "id": "cmpl-f963b1e2f62d4b0398f391ae8540df3e",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "    # Initialize a counter to keep track of the number of open brackets\n    open_count = 0\n\n    # Iterate through each character in the brackets string\n    for char in brackets:\n        # If the character is an opening bracket, increment the counter\n        if char == \"(\":\n            open_count += 1\n        # If the character is a closing bracket, decrement the counter\n        elif char == \")\":\n            open_count -= 1\n        # If the counter goes negative, it means there's a closing bracket without a corresponding opening bracket\n        if open_count < 0:\n            return False\n\n    # If the counter is zero at the end, it means all opening brackets have been matched with closing brackets\n    return open_count == 0\n\ndef test():\n    \"\"\"\n    Test cases for the correct_bracketing function.\n    \"\"\"\n    # Test case 1: Single opening bracket\n    assert correct_bracketing(\"(\") == False\n\n    # Test case 2: Single pair of brackets\n    assert correct_bracketing(\"()\") == True\n\n    # Test case 3: Multiple pairs of brackets\n    assert correct_bracketing(\"(()())\") == True\n\n    # Test case 4: Closing bracket before opening bracket\n    assert correct_bracketing(\")(()\") == False\n\n    # Test case 5: Empty string\n    assert correct_bracketing(\"\") == True\n\n    # Test case 6: Nested brackets\n    assert correct_bracketing(\"((()))\") == True\n\n    # Test case 7: Unbalanced brackets\n    assert correct_bracketing(\"((())\") == False\n\n    # Test case 8: Multiple closing brackets\n    assert correct_bracketing(\"()))\") == False\n\n    # Test case 9: Multiple opening brackets\n    assert correct_bracketing(\"(((\") == False\n\n    # Test case 10: Mixed brackets\n    assert correct_bracketing(\"()()()\") == True\n\n    print(\"All test cases passed!\")\n\nif __name__ == \"__main__\":\n    test()"
+      }
+    ],
+    "created": 1791953818,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 84,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.33,
+      "prompt_tokens_per_sec": 254.55,
+      "completion_tokens": 431,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 339,
+        "rejected_prediction_tokens": 305
+      },
+      "completion_time": 9.12,
+      "completion_tokens_per_sec": 47.25,
+      "total_tokens": 515,
+      "total_time": 9.45
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 84,
+      "prompt_ms": 330.0,
+      "prompt_per_token_ms": 3.9285714285714284,
+      "prompt_per_second": 254.54545454545453,
+      "predicted_n": 431,
+      "predicted_ms": 9120.0,
+      "predicted_per_token_ms": 21.160092807424594,
+      "predicted_per_second": 47.25877192982456,
+      "draft_n": 644,
+      "draft_n_accepted": 339
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00061:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "All test cases passed!\n",
+    "stderr": ""
+  }
+}

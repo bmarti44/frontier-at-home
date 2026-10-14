@@ -1,0 +1,68 @@
+{
+  "index": 10824,
+  "task_id": 11041,
+  "rendered_prompt_sha256": "69153ed73b7024c58248c3c5ddfdb76b420337025b9fee95be594a6c2e357bab",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>James Rachels' thought experiment: Smith drowns his own child (holding him underwater) to inherit money. Jones, unaware of Smith's action, also drowns his child for the same reason. Smith's action is killing (intentional act causing death), as opposed to letting die.\n\nAnswer: I</think>Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.5438875690451823
+  },
+  "response": {
+    "id": "cmpl-966b41f465854158af66730e398d47ca",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>James Rachels' thought experiment: Smith drowns his own child (holding him underwater) to inherit money. Jones, unaware of Smith's action, also drowns his child for the same reason. Smith's action is killing (intentional act causing death), as opposed to letting die.\n\nAnswer: I</think>Answer: I"
+      }
+    ],
+    "created": 1791946998,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 111,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 270.73,
+      "completion_tokens": 70,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 38,
+        "rejected_prediction_tokens": 186
+      },
+      "completion_time": 3.12,
+      "completion_tokens_per_sec": 22.4,
+      "total_tokens": 181,
+      "total_time": 3.54
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 111,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.6936936936936937,
+      "prompt_per_second": 270.7317073170732,
+      "predicted_n": 70,
+      "predicted_ms": 3120.0,
+      "predicted_per_token_ms": 44.57142857142857,
+      "predicted_per_second": 22.435897435897438,
+      "draft_n": 224,
+      "draft_n_accepted": 38
+    }
+  }
+}

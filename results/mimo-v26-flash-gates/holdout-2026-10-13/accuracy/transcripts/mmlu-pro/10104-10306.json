@@ -1,0 +1,68 @@
+{
+  "index": 10104,
+  "task_id": 10306,
+  "rendered_prompt_sha256": "34194a85653dc611a0f9dde68e6251a6fd8f3f2c8bd155e7d67ae076f4ddb186",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Faraday's law: m = (M × I × t) / (n × F)\n\nSilver: M = 107.87 g/mol, n = 1, F = 96485 C/mol\n\nI = 0.50 A, t = 20 min = 1200 s\n\nQ = 0.50 × 1200 = 600 C\n\nmoles = 600 / 96485 = 0.006219 mol\n\nmass = 0.006219 × 107.87 = 0.6708 g ≈ 0.671 g\n\nAnswer: J</think>Answer: J",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.5517232149722986
+  },
+  "response": {
+    "id": "cmpl-c9d56588bf1c4c07a95277676a0ff801",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Faraday's law: m = (M × I × t) / (n × F)\n\nSilver: M = 107.87 g/mol, n = 1, F = 96485 C/mol\n\nI = 0.50 A, t = 20 min = 1200 s\n\nQ = 0.50 × 1200 = 600 C\n\nmoles = 600 / 96485 = 0.006219 mol\n\nmass = 0.006219 × 107.87 = 0.6708 g ≈ 0.671 g\n\nAnswer: J</think>Answer: J"
+      }
+    ],
+    "created": 1791947970,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 150,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.51,
+      "prompt_tokens_per_sec": 294.12,
+      "completion_tokens": 166,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 133,
+        "rejected_prediction_tokens": 98
+      },
+      "completion_time": 3.04,
+      "completion_tokens_per_sec": 54.61,
+      "total_tokens": 316,
+      "total_time": 3.55
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 150,
+      "prompt_ms": 510.0,
+      "prompt_per_token_ms": 3.4,
+      "prompt_per_second": 294.11764705882354,
+      "predicted_n": 166,
+      "predicted_ms": 3040.0,
+      "predicted_per_token_ms": 18.313253012048193,
+      "predicted_per_second": 54.60526315789474,
+      "draft_n": 231,
+      "draft_n_accepted": 133
+    }
+  }
+}

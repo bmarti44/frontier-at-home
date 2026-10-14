@@ -1,0 +1,68 @@
+{
+  "index": 10414,
+  "task_id": 10622,
+  "rendered_prompt_sha256": "11bd1ec905616f1bdf377068bf4c7a155207a16d2373da7cdffa497e6e36f477",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Let me analyze each statement:\n\nI. \"The virtual address space can be larger than the amount of physical memory.\" - This is TRUE. Virtual memory allows programs to have a virtual address space larger than physical memory by using disk storage as backing store.\n\nII. \"Programs must be resident in main memory throughout their execution.\" - This is FALSE. The whole point of virtual memory is that programs don't need to be fully resident in main memory. Pages can be swapped in and out.\n\nIII. \"Pages correspond to semantic characteristics of the program.\" - This is FALSE. Pages are fixed-size blocks of memory (typically 4KB) that don't correspond to semantic characteristics of the program. They are just fixed-size chunks of the address space.\n\nSo only I is true.\n\nAnswer: G</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.103265072975773
+  },
+  "response": {
+    "id": "cmpl-9f05b8b17f424a519eec600363008ff2",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Let me analyze each statement:\n\nI. \"The virtual address space can be larger than the amount of physical memory.\" - This is TRUE. Virtual memory allows programs to have a virtual address space larger than physical memory by using disk storage as backing store.\n\nII. \"Programs must be resident in main memory throughout their execution.\" - This is FALSE. The whole point of virtual memory is that programs don't need to be fully resident in main memory. Pages can be swapped in and out.\n\nIII. \"Pages correspond to semantic characteristics of the program.\" - This is FALSE. Pages are fixed-size blocks of memory (typically 4KB) that don't correspond to semantic characteristics of the program. They are just fixed-size chunks of the address space.\n\nSo only I is true.\n\nAnswer: G</think>Answer: G"
+      }
+    ],
+    "created": 1791941723,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 146,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.53,
+      "prompt_tokens_per_sec": 275.47,
+      "completion_tokens": 165,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 120,
+        "rejected_prediction_tokens": 195
+      },
+      "completion_time": 4.57,
+      "completion_tokens_per_sec": 36.08,
+      "total_tokens": 311,
+      "total_time": 5.1
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 146,
+      "prompt_ms": 530.0,
+      "prompt_per_token_ms": 3.6301369863013697,
+      "prompt_per_second": 275.47169811320754,
+      "predicted_n": 165,
+      "predicted_ms": 4570.0,
+      "predicted_per_token_ms": 27.696969696969695,
+      "predicted_per_second": 36.10503282275711,
+      "draft_n": 315,
+      "draft_n_accepted": 120
+    }
+  }
+}

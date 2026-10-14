@@ -1,0 +1,69 @@
+{
+  "index": 844,
+  "task_id": 844,
+  "rendered_prompt_sha256": "c315d4677e721652b7286f6fd4a537aa6cc51850f34d57b48a87af2d454ab81f",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Jack collected 60 dishes.\nJack collected twice as many dishes as socks: 60 = 2 × socks → Jack's socks = 30.\n\nPeter has twice as many socks as Jack: Peter's socks = 60.\nPeter has half times as many dishes as Jack: Peter's dishes = 30.\n\nTotal = Jack's socks + Jack's dishes + Peter's socks + Peter's dishes = 30 + 60 + 60 + 30 = 180.</think>**Step-by-step:**\n\n1. Jack collected 60 dishes.\n2. Jack collected twice as many dishes as socks → Jack's socks = 60 ÷ 2 = **30 socks**.\n3. Peter has twice as many socks as Jack → Peter's socks = 30 × 2 = **60 socks**.\n4. Peter has half as many dishes as Jack → Peter's dishes = 60 ÷ 2 = **30 dishes**.\n\n**Total = 30 + 60 + 60 + 30 = 180**\n\nAnswer: 180",
+  "finish_reason": "stop",
+  "expected": "180",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.97700824495405
+  },
+  "response": {
+    "id": "cmpl-fcebb7c0828d45ce9a1f971df4c51e3d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Jack collected 60 dishes.\nJack collected twice as many dishes as socks: 60 = 2 × socks → Jack's socks = 30.\n\nPeter has twice as many socks as Jack: Peter's socks = 60.\nPeter has half times as many dishes as Jack: Peter's dishes = 30.\n\nTotal = Jack's socks + Jack's dishes + Peter's socks + Peter's dishes = 30 + 60 + 60 + 30 = 180.</think>**Step-by-step:**\n\n1. Jack collected 60 dishes.\n2. Jack collected twice as many dishes as socks → Jack's socks = 60 ÷ 2 = **30 socks**.\n3. Peter has twice as many socks as Jack → Peter's socks = 30 × 2 = **60 socks**.\n4. Peter has half as many dishes as Jack → Peter's dishes = 60 ÷ 2 = **30 dishes**.\n\n**Total = 30 + 60 + 60 + 30 = 180**\n\nAnswer: 180"
+      }
+    ],
+    "created": 1791939456,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 81,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 225.0,
+      "completion_tokens": 241,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 194,
+        "rejected_prediction_tokens": 135
+      },
+      "completion_time": 4.61,
+      "completion_tokens_per_sec": 52.28,
+      "total_tokens": 322,
+      "total_time": 4.97
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 81,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.444444444444445,
+      "prompt_per_second": 225.0,
+      "predicted_n": 241,
+      "predicted_ms": 4610.0,
+      "predicted_per_token_ms": 19.12863070539419,
+      "predicted_per_second": 52.27765726681128,
+      "draft_n": 329,
+      "draft_n_accepted": 194
+    }
+  },
+  "used_fallback": false
+}

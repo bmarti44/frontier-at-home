@@ -1,0 +1,69 @@
+{
+  "index": 21,
+  "task_id": 21,
+  "rendered_prompt_sha256": "63288b406fe91150052886fc9a5b69db50da459a25a54062624c0125dcf6c1ae",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Samantha is 31, Raymond was born 6 years before Samantha, so Raymond is 37. Raymond had a son at age 23, so the son was born when Raymond was 23, which was 37 - 23 = 14 years ago.</think>Raymond is 6 years older than Samantha, so Raymond is 31 + 6 = 37 years old.\n\nRaymond had his son at age 23, so his son was born 37 - 23 = 14 years ago.\n\nAnswer: 14",
+  "finish_reason": "stop",
+  "expected": "14",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.766704486042727
+  },
+  "response": {
+    "id": "cmpl-002b7a120d5d4767ace58307f8023187",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Samantha is 31, Raymond was born 6 years before Samantha, so Raymond is 37. Raymond had a son at age 23, so the son was born when Raymond was 23, which was 37 - 23 = 14 years ago.</think>Raymond is 6 years older than Samantha, so Raymond is 31 + 6 = 37 years old.\n\nRaymond had his son at age 23, so his son was born 37 - 23 = 14 years ago.\n\nAnswer: 14"
+      }
+    ],
+    "created": 1791926190,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 78,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 216.67,
+      "completion_tokens": 126,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 101,
+        "rejected_prediction_tokens": 74
+      },
+      "completion_time": 2.4,
+      "completion_tokens_per_sec": 52.42,
+      "total_tokens": 204,
+      "total_time": 2.77
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 78,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.615384615384615,
+      "prompt_per_second": 216.66666666666666,
+      "predicted_n": 126,
+      "predicted_ms": 2400.0,
+      "predicted_per_token_ms": 19.047619047619047,
+      "predicted_per_second": 52.5,
+      "draft_n": 175,
+      "draft_n_accepted": 101
+    }
+  },
+  "used_fallback": false
+}

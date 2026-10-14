@@ -1,0 +1,104 @@
+{
+  "index": 104,
+  "task_id": "HumanEval/104",
+  "rendered_prompt_sha256": "bebe5af48f3614d96f23c19fa6134409f0b3bfe2f759662569f0987e15e0507c",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    # Filter out numbers that contain any even digit\n    filtered = [num for num in x if all(int(digit) % 2 != 0 for digit in str(num))]\n    # Sort the filtered list\n    return sorted(filtered)",
+  "finish_reason": "stop",
+  "expected": "    odd_digit_elements = []\n    for i in x:\n        if all (int(c) % 2 == 1 for c in str(i)):\n            odd_digit_elements.append(i)\n    return sorted(odd_digit_elements)\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.8303135589812882
+  },
+  "response": {
+    "id": "cmpl-60fce5af06ad4a8a92a3b42606a4fad4",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "    # Filter out numbers that contain any even digit\n    filtered = [num for num in x if all(int(digit) % 2 != 0 for digit in str(num))]\n    # Sort the filtered list\n    return sorted(filtered)"
+      }
+    ],
+    "created": 1791958820,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 110,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 289.47,
+      "completion_tokens": 51,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 36,
+        "rejected_prediction_tokens": 69
+      },
+      "completion_time": 1.44,
+      "completion_tokens_per_sec": 35.35,
+      "total_tokens": 161,
+      "total_time": 1.82
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 110,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 3.4545454545454546,
+      "prompt_per_second": 289.47368421052636,
+      "predicted_n": 51,
+      "predicted_ms": 1440.0,
+      "predicted_per_token_ms": 28.235294117647058,
+      "predicted_per_second": 35.416666666666664,
+      "draft_n": 105,
+      "draft_n_accepted": 36
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00104:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

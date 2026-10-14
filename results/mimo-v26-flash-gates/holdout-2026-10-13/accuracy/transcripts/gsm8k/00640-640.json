@@ -1,0 +1,69 @@
+{
+  "index": 640,
+  "task_id": 640,
+  "rendered_prompt_sha256": "b1daf3476fde1dadf629aa40d303dac8520fc11176f9ebd1ec5eb96fc66fa786",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Base: 30,000\nKing cab: 7,500\nLeather seats: 7,500/3 = 2,500\nRunning boards: 2,500 - 500 = 2,000\nExterior light package: 1,500\nTowing package: not specified... hmm, \"towing package\" is listed but no cost given. Wait, let me re-read.\n\nFeatures: king cab upgrade, towing package, leather seats, running boards, upgraded exterior light package.\n\nCosts given: king cab 7,500, leather seats 2,500, running boards 2,000, exterior light 1,500. Towing package cost not given... \n\nHmm, maybe the towing package is included in base? Or perhaps I'm missing something. Let me re-read: \"The base price of the truck is $30,000, and the other features are at extra cost.\"\n\nNo towing package cost specified. Perhaps the problem intends total = 30,000 + 7,500 + 2,500 + 2,000 + 1,500 = 43,500.\n\nAnswer: 43500</think>**Calculating the costs:**\n\n- Base price: $30,000\n- King cab upgrade: $7,500\n- Leather seats: $7,500 ÷ 3 = $2,500\n- Running boards: $2,500 − $500 = $2,000\n- Upgraded exterior light package: $1,500\n\n**Total:** $30,000 + $7,500 + $2,500 + $2,000 + $1,500 = $43,500\n\nAnswer: 43500",
+  "finish_reason": "stop",
+  "expected": "43,500",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 8.264128707000054
+  },
+  "response": {
+    "id": "cmpl-e13ac1b811994134a4f89716c49401ad",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Base: 30,000\nKing cab: 7,500\nLeather seats: 7,500/3 = 2,500\nRunning boards: 2,500 - 500 = 2,000\nExterior light package: 1,500\nTowing package: not specified... hmm, \"towing package\" is listed but no cost given. Wait, let me re-read.\n\nFeatures: king cab upgrade, towing package, leather seats, running boards, upgraded exterior light package.\n\nCosts given: king cab 7,500, leather seats 2,500, running boards 2,000, exterior light 1,500. Towing package cost not given... \n\nHmm, maybe the towing package is included in base? Or perhaps I'm missing something. Let me re-read: \"The base price of the truck is $30,000, and the other features are at extra cost.\"\n\nNo towing package cost specified. Perhaps the problem intends total = 30,000 + 7,500 + 2,500 + 2,000 + 1,500 = 43,500.\n\nAnswer: 43500</think>**Calculating the costs:**\n\n- Base price: $30,000\n- King cab upgrade: $7,500\n- Leather seats: $7,500 ÷ 3 = $2,500\n- Running boards: $2,500 − $500 = $2,000\n- Upgraded exterior light package: $1,500\n\n**Total:** $30,000 + $7,500 + $2,500 + $2,000 + $1,500 = $43,500\n\nAnswer: 43500"
+      }
+    ],
+    "created": 1791939534,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 167,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.56,
+      "prompt_tokens_per_sec": 298.21,
+      "completion_tokens": 430,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 352,
+        "rejected_prediction_tokens": 194
+      },
+      "completion_time": 7.7,
+      "completion_tokens_per_sec": 55.84,
+      "total_tokens": 597,
+      "total_time": 8.26
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 167,
+      "prompt_ms": 560.0,
+      "prompt_per_token_ms": 3.3532934131736525,
+      "prompt_per_second": 298.2142857142857,
+      "predicted_n": 430,
+      "predicted_ms": 7700.0,
+      "predicted_per_token_ms": 17.906976744186046,
+      "predicted_per_second": 55.844155844155836,
+      "draft_n": 546,
+      "draft_n_accepted": 352
+    }
+  },
+  "used_fallback": false
+}

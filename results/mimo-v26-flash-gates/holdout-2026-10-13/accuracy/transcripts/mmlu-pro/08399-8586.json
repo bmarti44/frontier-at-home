@@ -1,0 +1,68 @@
+{
+  "index": 8399,
+  "task_id": 8586,
+  "rendered_prompt_sha256": "475b92cee81f9bc1d70a670c72145fda0579c40a3774d6d02a9a1550383276f0",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>LCM of 16, 15, 12.\n\n16 = 2^4, 15 = 3·5, 12 = 2^2·3\nLCM = 2^4 · 3 · 5 = 240</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6112944099586457
+  },
+  "response": {
+    "id": "cmpl-2d059932ceea40a28f3ffaa3c04af5ce",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>LCM of 16, 15, 12.\n\n16 = 2^4, 15 = 3·5, 12 = 2^2·3\nLCM = 2^4 · 3 · 5 = 240</think>Answer: A"
+      }
+    ],
+    "created": 1791946377,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 115,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 294.87,
+      "completion_tokens": 67,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 54,
+        "rejected_prediction_tokens": 37
+      },
+      "completion_time": 1.21,
+      "completion_tokens_per_sec": 55.2,
+      "total_tokens": 182,
+      "total_time": 1.61
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 115,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.391304347826087,
+      "prompt_per_second": 294.8717948717949,
+      "predicted_n": 67,
+      "predicted_ms": 1210.0,
+      "predicted_per_token_ms": 18.059701492537314,
+      "predicted_per_second": 55.371900826446286,
+      "draft_n": 91,
+      "draft_n_accepted": 54
+    }
+  }
+}

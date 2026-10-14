@@ -1,0 +1,69 @@
+{
+  "index": 364,
+  "task_id": 364,
+  "rendered_prompt_sha256": "06f0bc23bd940918618c566af12835b9759412e4f1051ccaa8db346101c4bce6",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Total students: 96\nGirls: 43\nBoys: 96 - 43 = 53\nAbsent boys: 4\nBoys present on Friday: 53 - 4 = 49</think>Total fourth-graders: 96\nGirls: 43\nBoys: 96 - 43 = 53\nAbsent boys on Friday: 4\nBoys present on Friday: 53 - 4 = 49\n\nAnswer: 49",
+  "finish_reason": "stop",
+  "expected": "49",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.5184136600000784
+  },
+  "response": {
+    "id": "cmpl-6dcf2061baf34fba8fc8033e07630c4f",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Total students: 96\nGirls: 43\nBoys: 96 - 43 = 53\nAbsent boys: 4\nBoys present on Friday: 53 - 4 = 49</think>Total fourth-graders: 96\nGirls: 43\nBoys: 96 - 43 = 53\nAbsent boys on Friday: 4\nBoys present on Friday: 53 - 4 = 49\n\nAnswer: 49"
+      }
+    ],
+    "created": 1791926203,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 85,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 229.73,
+      "completion_tokens": 113,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 91,
+        "rejected_prediction_tokens": 63
+      },
+      "completion_time": 2.14,
+      "completion_tokens_per_sec": 52.72,
+      "total_tokens": 198,
+      "total_time": 2.52
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 85,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.352941176470588,
+      "prompt_per_second": 229.7297297297297,
+      "predicted_n": 113,
+      "predicted_ms": 2140.0,
+      "predicted_per_token_ms": 18.938053097345133,
+      "predicted_per_second": 52.80373831775701,
+      "draft_n": 154,
+      "draft_n_accepted": 91
+    }
+  },
+  "used_fallback": false
+}

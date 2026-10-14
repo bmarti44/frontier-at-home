@@ -1,0 +1,68 @@
+{
+  "index": 10905,
+  "task_id": 11125,
+  "rendered_prompt_sha256": "3f2bcfdf335451feafb92df5902fe871c14d2918b6dccccaa126099826bd1b38",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Let me parse the sentence: \"Leroy is bad only if DJ Khaled shouts his name.\"\n\n\"only if\" translates as: P only if Q = P ⊃ Q\n\nSo: Leroy is bad ⊃ DJ Khaled shouts his name\n\nLet me figure out the predicates:\n- \"Leroy is bad\" → Bl (Leroy = l, bad = B)\n- \"DJ Khaled shouts his name\" → Sk (Khaled = k, shouts = S)\n\nSo: Bl ⊃ Sk\n\nThat's option D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.12513623398263
+  },
+  "response": {
+    "id": "cmpl-86c8fe2a923a4a43bd8f4ae75cdba600",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Let me parse the sentence: \"Leroy is bad only if DJ Khaled shouts his name.\"\n\n\"only if\" translates as: P only if Q = P ⊃ Q\n\nSo: Leroy is bad ⊃ DJ Khaled shouts his name\n\nLet me figure out the predicates:\n- \"Leroy is bad\" → Bl (Leroy = l, bad = B)\n- \"DJ Khaled shouts his name\" → Sk (Khaled = k, shouts = S)\n\nSo: Bl ⊃ Sk\n\nThat's option D.</think>Answer: D"
+      }
+    ],
+    "created": 1791947004,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 119,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 290.24,
+      "completion_tokens": 120,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 92,
+        "rejected_prediction_tokens": 104
+      },
+      "completion_time": 2.71,
+      "completion_tokens_per_sec": 44.3,
+      "total_tokens": 239,
+      "total_time": 3.12
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 119,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.4453781512605044,
+      "prompt_per_second": 290.2439024390244,
+      "predicted_n": 120,
+      "predicted_ms": 2710.0,
+      "predicted_per_token_ms": 22.583333333333332,
+      "predicted_per_second": 44.28044280442804,
+      "draft_n": 196,
+      "draft_n_accepted": 92
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "index": 6,
+  "task_id": "HumanEval/6",
+  "rendered_prompt_sha256": "39b4ae7cbb22820ff04ffe8a3cbe4bd4332d16046130335d78f36d75a5c3cf4c",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    groups = paren_string.split(' ')\n    result = []\n    for group in groups:\n        depth = 0\n        max_depth = 0\n        for char in group:\n            if char == '(':\n                depth += 1\n                max_depth = max(max_depth, depth)\n            elif char == ')':\n                depth -= 1\n        result.append(max_depth)\n    return result\n\n\ndef test_parse_nested_parens():\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('()') == [1]\n    assert parse_nested_parens('((()))') == [3]\n    assert parse_nested_parens('(()())') == [2]\n    assert parse_nested_parens('() ()') == [1, 1]\n    assert parse_nested_parens('((())) ((()))') == [3, 3]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, ",
+  "finish_reason": "stop",
+  "expected": "    def parse_paren_group(s):\n        depth = 0\n        max_depth = 0\n        for c in s:\n            if c == '(':\n                depth += 1\n                max_depth = max(depth, max_depth)\n            else:\n                depth -= 1\n\n        return max_depth\n\n    return [parse_paren_group(x) for x in paren_string.split(' ') if x]\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 14.56742087501334
+  },
+  "response": {
+    "id": "cmpl-af1d0ee14b124534aefc7b349a82aebe",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    groups = paren_string.split(' ')\n    result = []\n    for group in groups:\n        depth = 0\n        max_depth = 0\n        for char in group:\n            if char == '(':\n                depth += 1\n                max_depth = max(max_depth, depth)\n            elif char == ')':\n                depth -= 1\n        result.append(max_depth)\n    return result\n\n\ndef test_parse_nested_parens():\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('()') == [1]\n    assert parse_nested_parens('((()))') == [3]\n    assert parse_nested_parens('(()())') == [2]\n    assert parse_nested_parens('() ()') == [1, 1]\n    assert parse_nested_parens('((())) ((()))') == [3, 3]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, 1]\n    assert parse_nested_parens('(()()) ((())) () ((())()())') == [2, 3, 1, 3]\n    assert parse_nested_parens('((())) (()())') == [3, 2]\n    assert parse_nested_parens('() ((()))') == [1, 3]\n    assert parse_nested_parens('((())) ()') == [3, "
+      }
+    ],
+    "created": 1791948911,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 106,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 278.95,
+      "completion_tokens": 1001,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 860,
+        "rejected_prediction_tokens": 127
+      },
+      "completion_time": 14.18,
+      "completion_tokens_per_sec": 70.6,
+      "total_tokens": 1107,
+      "total_time": 14.56
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 106,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 3.5849056603773586,
+      "prompt_per_second": 278.94736842105266,
+      "predicted_n": 1001,
+      "predicted_ms": 14180.0,
+      "predicted_per_token_ms": 14.165834165834166,
+      "predicted_per_second": 70.59238363892807,
+      "draft_n": 987,
+      "draft_n_accepted": 860
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00006:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "from typing import List\n\n\ndef parse_nested_parens(paren_string: str) -> List[int]:\n    \"\"\" Input to this function is a string represented multiple groups for nested parentheses separated by spaces.\n    For each of the group, output the deepest level of nesting of parentheses.\n    E.g. (()()) has maximum two levels of nesting while ((())) has three.\n\n    >>> parse_nested_parens('(()()) ((())) () ((())()())')\n    [2, 3, 1, 3]\n    \"\"\"\n"
+}

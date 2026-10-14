@@ -1,0 +1,139 @@
+humaneval runtime {'image': 'python:3.12-slim', 'repo_digest': 'python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de', 'pin_path': 'configs/pins/humaneval-runtime.json', 'pin_sha256': '548912ac64a29b3dcaa30bf45616954d329c19862c781fe901b8bc18d7fe54f5'}
+2026-10-13T20:57:00Z head 2346730855f05a43f15eb491f419cc812f616a21 dirty=0
+2026-10-13T20:57:00Z prod-stop: sudo -n 52_engine_switch.sh stop
+STOPPED qwen38fn (active.json unchanged; '/home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh restore' restarts it)
+2026-10-13T20:57:03Z preload MemFree=118534092 MemAvailable=120985516 SwapFree=16543156
+released 52 files under /home/bmarti44/models/qwen3.8-flash-next-nvfp4
+released 136225 files under /home/bmarti44/.cache/qwen38-flash-next
+released 25 files under /home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash
+released 3 files under /home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash
+released 300 files under /home/bmarti44/models/mimo-v2.6-flash-mopd
+released 56 files under /home/bmarti44/models/mimo-v2.6-flash-mopd-exl3-2.52-src
+released 8 files under /home/bmarti44/models/mimo-v2.6-flash-dflash-exl3-src
+released 67414 files under /home/bmarti44/.cache/mimo-v26-flash/native-runtime-001
+2026-10-13T20:57:09Z MemFree gate pass 119264564 kB (3 samples)
+2026-10-13T20:57:09Z launching in scope mimo26-preflight-2391511
+{"pass":true,"required_gib":104.0,"mem_available_gib":115.283,"stable_samples_observed":3}
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k","pid":2391861,"port":8019}
+2026-10-13T20:58:05Z ready after 56 s; idle MemAvailable=13137072 MemFree=10267940
+{"props": 200, "admin_status": 404, "greedy": ["c933d4cb1288", "afe5a8556aee", "68da9e93ac2f"], "tokens_per_chunk": [5.590909090909091, 2.4651162790697674, 4.857142857142857]}
+2026-10-13T20:58:21Z cell agent-gate
+PASS  prefix-cache: repeat cache_n=22272/22511 (>=total-256: True); shared-prefix cache_n=22272 (checkpoint-bounded floor 13295: True)
+PASS  turn-continuation: appended turn 2: prompt_n=75 cache_n=22528 (< 1756 required; a full re-prefill means in-slot reuse broke)
+PASS  slot-thrash: turn-2 after utility call: prompt_n=355 cache_n=22272 (< 1756 required; single-slot server re-prefills ~20000)
+PASS  prefill-throughput: novel prompt cache_n=0 (<100: True); prefill=811 tok/s (>=350: True); prompt processing=27.8s (<=75: True); prompt time is client-measured TTFT; tuned ub/b=2048 profile measures ~434 tok/s — a failure here usually means the fast buffers were reverted (see docs/speed-tuning-2026-07-23.md)
+2026-10-13T21:00:07Z cell kit vision,context
+[vision] starting
+[vision] OK
+[context] starting
+[context] OK
+MEASURED: /home/bmarti44/mimo26/results/mimo-v26-flash-gates/preflight-2026-10-13-r2/kit/SUMMARY.md
+2026-10-13T21:14:05Z cell accuracy encoder path (gsm8k dev, cut at 1200 s)
+[1/100] index=588 correct=True reason=correct
+[2/100] index=1214 correct=True reason=correct
+[3/100] index=57 correct=True reason=correct
+[4/100] index=906 correct=True reason=correct
+[5/100] index=1252 correct=True reason=correct
+[6/100] index=618 correct=True reason=correct
+[7/100] index=599 correct=True reason=correct
+[8/100] index=289 correct=True reason=correct
+[9/100] index=608 correct=True reason=correct
+[10/100] index=400 correct=True reason=correct
+[11/100] index=237 correct=True reason=correct
+[12/100] index=616 correct=True reason=correct
+[13/100] index=672 correct=True reason=correct
+[14/100] index=1132 correct=True reason=correct
+[15/100] index=463 correct=True reason=correct
+[16/100] index=222 correct=True reason=correct
+[17/100] index=945 correct=True reason=correct
+[18/100] index=238 correct=True reason=correct
+[19/100] index=730 correct=True reason=correct
+[20/100] index=55 correct=True reason=correct
+[21/100] index=772 correct=True reason=correct
+[22/100] index=176 correct=True reason=correct
+[23/100] index=15 correct=True reason=correct
+[24/100] index=66 correct=True reason=correct
+[25/100] index=479 correct=True reason=correct
+[26/100] index=896 correct=True reason=correct
+[27/100] index=1122 correct=True reason=correct
+[28/100] index=1005 correct=True reason=correct
+[29/100] index=480 correct=True reason=correct
+[30/100] index=187 correct=False reason=incorrect: parsed='106.12' expected='106'
+[31/100] index=275 correct=True reason=correct
+[32/100] index=868 correct=True reason=correct
+[33/100] index=921 correct=True reason=correct
+[34/100] index=562 correct=True reason=correct
+[35/100] index=1082 correct=True reason=correct
+[36/100] index=172 correct=True reason=correct
+[37/100] index=770 correct=True reason=correct
+[38/100] index=1191 correct=True reason=correct
+[39/100] index=413 correct=True reason=correct
+[40/100] index=537 correct=True reason=correct
+[41/100] index=1154 correct=True reason=correct
+[42/100] index=1308 correct=True reason=correct
+[43/100] index=454 correct=False reason=incorrect: parsed='240' expected='150'
+[44/100] index=280 correct=True reason=correct
+[45/100] index=177 correct=True reason=correct
+[46/100] index=923 correct=True reason=correct
+[47/100] index=677 correct=True reason=correct
+[48/100] index=1176 correct=True reason=correct
+[49/100] index=21 correct=True reason=correct
+[50/100] index=970 correct=True reason=correct
+[51/100] index=356 correct=True reason=correct
+[52/100] index=100 correct=True reason=correct
+[53/100] index=132 correct=True reason=correct
+[54/100] index=364 correct=True reason=correct
+[55/100] index=969 correct=True reason=correct
+[56/100] index=1273 correct=True reason=correct
+[57/100] index=143 correct=True reason=correct
+[58/100] index=442 correct=True reason=correct
+[59/100] index=464 correct=True reason=correct
+[60/100] index=1089 correct=True reason=correct
+[61/100] index=259 correct=True reason=correct
+[62/100] index=90 correct=True reason=correct
+[63/100] index=998 correct=True reason=correct
+[64/100] index=989 correct=True reason=correct
+[65/100] index=22 correct=True reason=correct
+[66/100] index=586 correct=True reason=correct
+[67/100] index=756 correct=True reason=correct
+[68/100] index=1261 correct=True reason=correct
+[69/100] index=296 correct=True reason=correct
+[70/100] index=383 correct=True reason=correct
+[71/100] index=709 correct=True reason=correct
+[72/100] index=1069 correct=True reason=correct
+[73/100] index=1141 correct=True reason=correct
+[74/100] index=179 correct=True reason=correct
+[75/100] index=731 correct=True reason=correct
+[76/100] index=1241 correct=True reason=correct
+[77/100] index=371 correct=True reason=correct
+[78/100] index=107 correct=True reason=correct
+[79/100] index=1115 correct=True reason=correct
+[80/100] index=851 correct=True reason=correct
+[81/100] index=303 correct=True reason=correct
+[82/100] index=535 correct=True reason=correct
+[83/100] index=544 correct=True reason=correct
+[84/100] index=374 correct=True reason=correct
+[85/100] index=387 correct=True reason=correct
+[86/100] index=434 correct=True reason=correct
+[87/100] index=706 correct=True reason=correct
+[88/100] index=347 correct=True reason=correct
+[89/100] index=811 correct=True reason=correct
+[90/100] index=35 correct=True reason=correct
+[91/100] index=892 correct=True reason=correct
+[92/100] index=314 correct=True reason=correct
+[93/100] index=2 correct=True reason=correct
+[94/100] index=944 correct=True reason=correct
+[95/100] index=687 correct=True reason=correct
+[96/100] index=1184 correct=True reason=correct
+[97/100] index=297 correct=True reason=correct
+[98/100] index=1068 correct=True reason=correct
+[99/100] index=792 correct=True reason=correct
+[100/100] index=932 correct=True reason=correct
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k","stopped":true}
+2026-10-13T21:18:55Z scope empty after stop
+2026-10-13T21:18:55Z window closed; postrun MemFree=117924700 MemAvailable=121045924 SwapFree=16543156
+ERROR: mimo-v2.6-flash/cuda-spark-128g-262k is not running (state file absent)
+Failed to stop mimo26-preflight-2391511.scope: Unit mimo26-preflight-2391511.scope not loaded.
+2026-10-13T21:18:56Z restore attempt 1: MemAvailable=121029496 MemFree=117907840
+2026-10-13T21:29:40Z restore rc=0
+2026-10-13T21:29:45Z driver exit rc=0

@@ -58,7 +58,7 @@ CONTROL_INSTALLER = ROOT / "scripts/53_install_switch_control.sh"
 FIXTURES = ROOT / "scripts/tests/fixtures/profile-conformance"
 SWITCH_ALIASES = (
     "dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m", "dsv41flash",
-    "qwen38fn",
+    "qwen38fn", "mimo26flash",
 )
 PRODUCTION_REPO = "/home/bmarti44/spark-deepseek-v4-flash"
 GLM53_PROFILE = ROOT / "configs" / "profiles" / "glm-5.3-flash" / "cuda-spark-128g-1m.json"
@@ -1791,6 +1791,215 @@ class EngineSwitchTests(unittest.TestCase):
                 json.loads((root / "active.json").read_text())["profile"], "dsv4"
             )
             self.assertFalse((root / "qwen38fn-running").exists())
+
+    # -- mimo26flash: MiMo-V2.6-Flash on TabbyAPI (exllamav3), the first
+    # generic alias whose launch goes through scripts/lib/tabby_launch.py. It
+    # needs no `-qualified-for-test` marker: the committed profile is qualified
+    # (M3 candidate 3, results/mimo-v26-flash-gates/qualify-2026-10-13-c1).
+    # Cases switch from the default, qwen38fn.
+
+    def mimo26flash_root(self, root: Path, *, hashes: bool = True) -> None:
+        (root / "active.json").write_text(
+            json.dumps({"schema_version": 1, "profile": "qwen38fn"})
+        )
+        (root / "qwen38fn-running").touch()
+        (root / "qwen38fn-hashes-valid").touch()
+        if hashes:
+            (root / "mimo26flash-hashes-valid").touch()
+
+    def test_mimo26flash_production_launcher_matches_the_profile(self):
+        snapshot = render_switch_snapshot("mimo26flash")
+        runtime = "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001"
+        self.assertEqual(snapshot["mechanism"], "systemd-run")
+        self.assertEqual(snapshot["binary"], f"{runtime}/runtime/bin/python3.12")
+        argv = snapshot["argv"]
+        self.assertEqual(argv[:3], ["-B", "-m", "tabby_launch"])
+        self.assertEqual(argv[argv.index("--model-name") + 1],
+                         "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash")
+        self.assertEqual(argv[argv.index("--draft-model-name") + 1],
+                         "/home/bmarti44/models/mimo-v2.6-flash-draft/"
+                         "mimo-v2.6-flash-dflash")
+        for flag, value in (("--host", "127.0.0.1"), ("--port", "8013"),
+                            ("--disable-auth", "true"),
+                            ("--inline-model-loading", "false"),
+                            ("--max-seq-len", "262144"), ("--cache-size", "262144"),
+                            ("--max-batch-size", "1")):
+            self.assertEqual(argv[argv.index(flag) + 1], value, flag)
+        systemd = snapshot["systemd"]
+        self.assertEqual(systemd["unit"], "mimo26flash-engine")
+        self.assertEqual(systemd["properties"]["User"], "bmarti44")
+        self.assertEqual(systemd["properties"]["MemorySwapMax"], "0")
+        self.assertEqual(
+            systemd["server_log"],
+            "/home/dsv4/ds4-project/engine-switch/mimo26flash.server.log",
+        )
+        self.assertEqual(snapshot["env"]["TABBY_ROOT"], f"{runtime}/src/tabbyAPI")
+        self.assertEqual(snapshot["env"]["PYTHONPATH"],
+                         f"{PRODUCTION_REPO}/scripts/lib")
+
+    def test_mimo26flash_hash_failure_is_rejected_before_the_default_is_stopped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.mimo26flash_root(root, hashes=False)
+            result = self.run_switch(root, "mimo26flash")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("mimo26flash", result.stderr)
+            self.assertTrue((root / "qwen38fn-running").exists())
+            self.assertFalse((root / "actions.log").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+
+    def test_mimo26flash_switches_from_qwen38fn_through_the_shim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.mimo26flash_root(root)
+            (root / "mimo26flash-unit-killed").touch()
+            result = self.run_switch(root, "mimo26flash")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "mimo26flash",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            self.assertLess(actions.index("HASHES mimo26flash"),
+                            actions.index("STOP qwen38fn"))
+            self.assertIn("SYSTEMCTL reset-failed mimo26flash-engine.service", actions)
+            launch = next(line for line in actions
+                          if line.startswith("SYSTEMD_RUN --unit=mimo26flash-engine"))
+            self.assertIn(
+                f"{root}/cache/mimo-v26-flash/native-runtime-001/runtime/bin/"
+                "python3.12 -B -m tabby_launch --host 127.0.0.1 --port 8013 "
+                "--disable-auth true --disable-fetch-requests true --model-name "
+                f"{root}/models/mimo-v2.6-flash-serve/mimo-v2.6-flash --backend "
+                "exllamav3 --inline-model-loading false --max-seq-len 262144",
+                launch,
+            )
+            self.assertIn(
+                f"--draft-model-name {root}/models/mimo-v2.6-flash-draft/"
+                "mimo-v2.6-flash-dflash --draft-mode model", launch)
+            self.assertIn("--property MemorySwapMax=0", launch)
+            self.assertIn(f"--setenv PYTHONPATH={ROOT}/scripts/lib", launch)
+            self.assertIn(
+                f"--setenv TABBY_ROOT={root}/cache/mimo-v26-flash/"
+                "native-runtime-001/src/tabbyAPI", launch)
+            self.assertIn(
+                f"--property StandardOutput=append:{root}/mimo26flash.server.log",
+                launch,
+            )
+            self.assertLess(actions.index("STOP qwen38fn"), actions.index(launch))
+            for step in ("START mimo26flash", "WAIT mimo26flash",
+                         "VERIFY mimo26flash"):
+                self.assertIn(step, actions)
+            self.assertFalse((root / "mimo26flash-unit-killed").exists())
+            self.assertFalse((root / "qwen38fn-running").exists())
+            self.assertTrue((root / "mimo26flash-running").exists())
+
+    def test_mimo26flash_startup_death_rolls_back_to_qwen38fn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.mimo26flash_root(root)
+            (root / "fail-mimo26flash-start").touch()
+            result = self.run_switch(root, "mimo26flash")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("mimo26flash transient unit failed to start", result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            self.assertNotIn("START mimo26flash", actions)
+            self.assertLess(actions.index("STOP mimo26flash"),
+                            actions.index("START qwen38fn"))
+            self.assertIn("VERIFY qwen38fn", actions)
+            self.assertTrue((root / "qwen38fn-running").exists())
+            self.assertFalse((root / "mimo26flash-running").exists())
+
+    def test_mimo26flash_wrong_model_identity_rolls_back_to_qwen38fn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.mimo26flash_root(root)
+            (root / "fail-mimo26flash-verify").touch()
+            result = self.run_switch(root, "mimo26flash")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            self.assertIn("START mimo26flash", actions)
+            self.assertLess(actions.index("VERIFY mimo26flash"),
+                            actions.index("STOP mimo26flash"))
+            self.assertLess(actions.index("STOP mimo26flash"),
+                            actions.index("START qwen38fn"))
+            self.assertIn("VERIFY qwen38fn", actions)
+            self.assertTrue((root / "qwen38fn-running").exists())
+            self.assertFalse((root / "mimo26flash-running").exists())
+
+    def test_switching_back_to_qwen38fn_stops_mimo26flash_first(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "mimo26flash"})
+            )
+            (root / "mimo26flash-running").touch()
+            (root / "mimo26flash-hashes-valid").touch()
+            (root / "qwen38fn-hashes-valid").touch()
+            result = self.run_switch(root, "qwen38fn")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            self.assertLess(actions.index("HASHES qwen38fn"),
+                            actions.index("STOP mimo26flash"))
+            self.assertLess(actions.index("STOP mimo26flash"),
+                            actions.index("START qwen38fn"))
+            self.assertFalse((root / "mimo26flash-running").exists())
+            self.assertTrue((root / "qwen38fn-running").exists())
+
+    def test_status_and_stop_accept_mimo26flash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "mimo26flash"})
+            )
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            status = json.loads(result.stdout)
+            self.assertEqual(status["active_profile"], "mimo26flash")
+            self.assertEqual(status["state"], "recorded")
+            (root / "mimo26flash-running").touch()
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("STOPPED mimo26flash", result.stdout)
+            self.assertIn("STOP mimo26flash", (root / "actions.log").read_text())
+            self.assertFalse((root / "mimo26flash-running").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "mimo26flash",
+            )
+
+    def test_restore_mimo26flash_restarts_the_recorded_profile_without_a_marker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "mimo26flash"})
+            )
+            (root / "mimo26flash-hashes-valid").touch()
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "mimo26flash",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            for step in ("HASHES mimo26flash", "START mimo26flash",
+                         "VERIFY mimo26flash"):
+                self.assertIn(step, actions)
+            self.assertNotIn("DSV4 start", actions)
 
     def test_generic_discovery_error_fails_closed(self):
         # An alias-shaped active profile that no profile resolves might still

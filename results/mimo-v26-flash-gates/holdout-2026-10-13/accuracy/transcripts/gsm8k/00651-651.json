@@ -1,0 +1,69 @@
+{
+  "index": 651,
+  "task_id": 651,
+  "rendered_prompt_sha256": "9f0743bc0d75b4f990c9b10fdd2760172275cd143691b54a1f2d86e270ee5e0b",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Red hats: $400\nGreen hats: $400 × 2 = $800\nFirst month total: $400 + $800 = $1200\nSecond month: 3/4 × $1200 = $900\nTwo months total: $1200 + $900 = $2100</think>Red hat sales = $400, which is half the green hat sales → Green hat sales = $800.\n\nFirst month total = $400 + $800 = $1200.\n\nSecond month = 3/4 × $1200 = $900.\n\nTwo months total = $1200 + $900 = $2100.\n\nAnswer: 2100",
+  "finish_reason": "stop",
+  "expected": "2100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.2946813859743997
+  },
+  "response": {
+    "id": "cmpl-916149c39c694a2481982b7c4d26fa6e",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Red hats: $400\nGreen hats: $400 × 2 = $800\nFirst month total: $400 + $800 = $1200\nSecond month: 3/4 × $1200 = $900\nTwo months total: $1200 + $900 = $2100</think>Red hat sales = $400, which is half the green hat sales → Green hat sales = $800.\n\nFirst month total = $400 + $800 = $1200.\n\nSecond month = 3/4 × $1200 = $900.\n\nTwo months total = $1200 + $900 = $2100.\n\nAnswer: 2100"
+      }
+    ],
+    "created": 1791939562,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 105,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 256.1,
+      "completion_tokens": 179,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 149,
+        "rejected_prediction_tokens": 61
+      },
+      "completion_time": 2.88,
+      "completion_tokens_per_sec": 62.1,
+      "total_tokens": 284,
+      "total_time": 3.29
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 105,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.9047619047619047,
+      "prompt_per_second": 256.0975609756097,
+      "predicted_n": 179,
+      "predicted_ms": 2880.0,
+      "predicted_per_token_ms": 16.089385474860336,
+      "predicted_per_second": 62.15277777777778,
+      "draft_n": 210,
+      "draft_n_accepted": 149
+    }
+  },
+  "used_fallback": false
+}
