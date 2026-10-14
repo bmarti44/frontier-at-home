@@ -1,0 +1,104 @@
+{
+  "index": 42,
+  "task_id": "HumanEval/42",
+  "rendered_prompt_sha256": "8b6d8ac13f22a485fb80312ee1b077ba1cc2653fbff4c36fb7e3d36ca1b8d609",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    return [x + 1 for x in l]\n\ndef incr_list(l: list):\n    \"\"\"Return list with elements incremented by 1.\n    >>> incr_list([1, 2, 3])\n    [2, 3, 4]\n    >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])\n    [6, 4, 6, 3, 4, 4, 10, 1, 124]\n    \"\"\"\n    return [x + 1 for x in l]\n\ndef incr_list(l: list):\n    \"\"\"Return list with elements incremented by 1.\n    >>> incr_list([1, 2, 3])\n    [2, 3, 4]\n    >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])\n    [6, 4, 6, 3, 4, 4, 10, 1, 124]\n    \"\"\"\n    return [x + 1 for x in l]\n\ndef incr_list(l: list):\n    \"\"\"Return list with elements incremented by 1.\n    >>> incr_list([1, 2, 3])\n    [2, 3, 4]\n    >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])\n    [6, 4, 6, 3, 4, 4, 10, 1, 124]\n    \"\"\"\n    return [x + 1 for x in l]\n\ndef incr_list(l: list):\n    \"\"\"Return list with elements incremented by 1.\n    >>> incr_list([1, 2, 3])\n    [2, 3, 4]\n    >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])\n    [6, 4, 6, 3, 4, 4, 10, 1, 124]\n    \"\"\"\n    return [x + 1 for x in l]\n\ndef incr_list(l: list):\n    \"\"\"Return list with elements incremented by 1.\n    >>> incr_list([1, 2, 3])\n    [2, 3, 4]\n    >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])\n    [6, 4, 6, 3, 4, 4, 10, 1, 124]\n    \"\"\"\n    return [x + 1 for x in l]\n\ndef incr_list(l: list):\n    \"\"\"Return list with elements incremented by 1.\n    >>> incr_list([1, 2, 3])\n    [2, 3, 4]\n    >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])\n    [6, 4, 6, 3, 4, 4, 10, 1, 124]\n    \"\"\"\n    return [x + 1 for x in l]\n\ndef incr_list(l: list):\n    \"\"\"Return list with elements incremented by 1.\n    >>> incr_list([1, 2, 3])\n    [2, 3, 4]\n    >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])\n",
+  "finish_reason": "stop",
+  "expected": "    return [(e + 1) for e in l]\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.477074331021868
+  },
+  "response": {
+    "id": "cmpl-f2acaab22da04ee99ac30428250299e7",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    return [x + 1 for x in l]<rendered-prompt-redacted>    return [x + 1 for x in l]<rendered-prompt-redacted>    return [x + 1 for x in l]<rendered-prompt-redacted>    return [x + 1 for x in l]<rendered-prompt-redacted>    return [x + 1 for x in l]<rendered-prompt-redacted>    return [x + 1 for x in l]<rendered-prompt-redacted>    return [x + 1 for x in l]\n\ndef incr_list(l: list):\n    \"\"\"Return list with elements incremented by 1.\n    >>> incr_list([1, 2, 3])\n    [2, 3, 4]\n    >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])\n"
+      }
+    ],
+    "created": 1791952257,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 108,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 308.57,
+      "completion_tokens": 800,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 699,
+        "rejected_prediction_tokens": 8
+      },
+      "completion_time": 10.12,
+      "completion_tokens_per_sec": 79.03,
+      "total_tokens": 908,
+      "total_time": 10.47
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 108,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 3.240740740740741,
+      "prompt_per_second": 308.57142857142856,
+      "predicted_n": 800,
+      "predicted_ms": 10120.0,
+      "predicted_per_token_ms": 12.65,
+      "predicted_per_second": 79.05138339920948,
+      "draft_n": 707,
+      "draft_n_accepted": 699
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00042:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

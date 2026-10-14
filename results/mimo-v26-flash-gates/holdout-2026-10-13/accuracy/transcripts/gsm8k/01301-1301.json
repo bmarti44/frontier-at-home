@@ -1,0 +1,69 @@
+{
+  "index": 1301,
+  "task_id": 1301,
+  "rendered_prompt_sha256": "b13546a8a8f796621eed3f9004ccf094e9145633d95ccdea12787584e76ae169",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Start: 9 oatmeal, 4 chocolate chip, 5 sugar = 18 total.\n\nAte 3 (one of each): oatmeal 8, chocolate chip 3, sugar 4 = 15.\nAte 2 oatmeal: oatmeal 6 = 13.\nGives 2 sugar: sugar 2 = 11.\nBakes 4 of each: oatmeal 10, chocolate chip 7, sugar 6 = 23.</think>Starting cookies: 9 oatmeal + 4 chocolate chip + 5 sugar = 18\n\n- Ate 3 (one of each): 18 - 3 = 15\n- Ate 2 oatmeal: 15 - 2 = 13\n- Gave away 2 sugar: 13 - 2 = 11\n- Baked 4 of each flavor (12 total): 11 + 12 = 23\n\nAnswer: 23",
+  "finish_reason": "stop",
+  "expected": "23",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.405694808985572
+  },
+  "response": {
+    "id": "cmpl-a53102f8c31241078fda1efd36fea0bc",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Start: 9 oatmeal, 4 chocolate chip, 5 sugar = 18 total.\n\nAte 3 (one of each): oatmeal 8, chocolate chip 3, sugar 4 = 15.\nAte 2 oatmeal: oatmeal 6 = 13.\nGives 2 sugar: sugar 2 = 11.\nBakes 4 of each: oatmeal 10, chocolate chip 7, sugar 6 = 23.</think>Starting cookies: 9 oatmeal + 4 chocolate chip + 5 sugar = 18\n\n- Ate 3 (one of each): 18 - 3 = 15\n- Ate 2 oatmeal: 15 - 2 = 13\n- Gave away 2 sugar: 13 - 2 = 11\n- Baked 4 of each flavor (12 total): 11 + 12 = 23\n\nAnswer: 23"
+      }
+    ],
+    "created": 1791939550,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 110,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.4,
+      "prompt_tokens_per_sec": 275.0,
+      "completion_tokens": 217,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 176,
+        "rejected_prediction_tokens": 111
+      },
+      "completion_time": 4.0,
+      "completion_tokens_per_sec": 54.27,
+      "total_tokens": 327,
+      "total_time": 4.4
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 110,
+      "prompt_ms": 400.0,
+      "prompt_per_token_ms": 3.6363636363636362,
+      "prompt_per_second": 275.0,
+      "predicted_n": 217,
+      "predicted_ms": 4000.0,
+      "predicted_per_token_ms": 18.433179723502302,
+      "predicted_per_second": 54.25,
+      "draft_n": 287,
+      "draft_n_accepted": 176
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,104 @@
+{
+  "index": 23,
+  "task_id": "HumanEval/23",
+  "rendered_prompt_sha256": "18b94c4f616dccb558eb6824a5b9a070cb075a0f411448abc24eefc0083865a9",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    return len(string)\n\ndef strrev(string: str) -> str:\n    \"\"\" Return reversed string\n    >>> strrev('')\n    ''\n    >>> strrev('abc')\n    'cba'\n    \"\"\"\n    return string[::-1]\n\ndef strfind(string: str, sub: str) -> int:\n    \"\"\" Return index of first occurrence of sub in string\n    >>> strfind('abc', 'b')\n    1\n    >>> strfind('abc', 'd')\n    -1\n    \"\"\"\n    return string.find(sub)\n\ndef strreplace(string: str, old: str, new: str) -> str:\n    \"\"\" Return string with all occurrences of old replaced by new\n    >>> strreplace('abc', 'b', 'd')\n    'adc'\n    >>> strreplace('abc', 'd', 'e')\n    'abc'\n    \"\"\"\n    return string.replace(old, new)\n\ndef strsplit(string: str, sep: str) -> list:\n    \"\"\" Return list of substrings separated by sep\n    >>> strsplit('abc', 'b')\n    ['a', 'c']\n    >>> strsplit('abc', 'd')\n    ['abc']\n    \"\"\"\n    return string.split(sep)\n\ndef strjoin(list: list, sep: str) -> str:\n    \"\"\" Return string with list elements joined by sep\n    >>> strjoin(['a', 'b'], 'c')\n    'acb'\n    >>> strjoin(['a', 'b'], '')\n    'ab'\n    \"\"\"\n    return sep.join(list)\n\ndef strupper(string: str) -> str:\n    \"\"\" Return string with all characters converted to uppercase\n    >>> strupper('abc')\n    'ABC'\n    >>> strupper('ABC')\n    'ABC'\n    \"\"\"\n    return string.upper()\n\ndef strlower(string: str) -> str:\n    \"\"\" Return string with all characters converted to lowercase\n    >>> strlower('ABC')\n    'abc'\n    >>> strlower('abc')\n    'abc'\n    \"\"\"\n    return string.lower()\n\ndef strstrip(string: str, chars: str) -> str:\n    \"\"\" Return string with leading and trailing characters removed\n    >>> strstrip(' abc ', ' ')\n    'abc'\n    >>> strstrip('abc', ' ')\n    'abc'\n    \"\"\"\n    return string.strip(chars)\n\ndef strlstrip(string: str, chars: str) -> str:\n    \"\"\" Return string with leading characters removed\n    >>> strlstrip(' abc ', ' ')\n    'abc '\n    >>> strlstrip('abc', ' ')\n    'abc'\n    \"\"\"\n    return string.lstrip(chars)\n\ndef strrstrip(string: str, chars: str) -> str:\n    \"\"\" Return string with trailing characters removed\n    >>> strrstrip(' abc ', ' ')\n    ' abc'\n    >>> strrstrip('abc', ' ')\n    'abc'\n    \"\"\"\n    return string.rstrip(chars)\n\ndef strcount(string: str, sub: str) -> int:\n    \"\"\" Return number of occurrences of sub in string\n    >>> strcount('abc', 'b')\n    1\n    >>> strcount('abc', 'd')\n    0\n    \"\"\"\n    return string.count(sub)\n\ndef strstartswith(string: str, sub: str) -> bool:\n    \"\"\" Return True if string starts with sub\n    >>> strstartswith('abc', 'a')\n    True\n    >>> strstartswith('abc', 'b')\n    False\n    \"\"\"\n    return string.startswith(sub)\n\ndef strendswith(string: str, sub: str) -> bool:\n    \"\"\" Return True if string ends with sub\n    >>> strendswith('abc', 'c')\n    True\n    >>> strendswith('abc', 'b')\n    False\n    \"\"\"\n    return string.endswith(sub)\n\ndef strisalpha(string: str) -> bool:\n    \"\"\" Return True if string contains only alphabetic characters\n    >>> strisalpha('abc')\n    True\n    >>> strisalpha('abc123')\n    False\n    \"\"\"\n    return string.isalpha()\n\ndef strisdigit(string: str) -> bool:\n    \"\"\" Return True if string contains only digits\n    >>> strisdigit('123')\n    True\n    >>> strisdigit('abc123')\n    False\n    \"\"\"\n    return string.isdigit()\n\ndef strisalnum(string: str) -> bool:\n    \"\"\" Return True if string contains only alphanumeric characters\n    >>> strisalnum('abc123')\n    True\n    >>> strisalnum('abc 123')\n    False\n    \"\"\"\n    return string.isalnum()\n\ndef strislower(string: str) -> bool:\n    \"\"\" Return True if string contains only lowercase characters\n    >>> strislower('abc')\n    True\n    >>> strislower('ABC')\n    False\n    \"\"\"\n    return string.islower()\n\ndef strisupper(string: str) -> bool:\n    \"\"\" Return True if string contains only uppercase characters\n    >>> strisupper('ABC')\n    True\n    >>> strisupper('abc')\n    False\n    \"\"\"\n    return string.isupper()\n\ndef stristitle(string: str) -> bool:\n    \"\"\" Return True if string is title case\n    >>> stristitle('Abc')\n    True\n    >>> stristitle('abc')\n    False\n    \"\"\"\n    return string.istitle()\n\ndef strisdecimal(string: str) -> bool:\n    \"\"\" Return True if string contains only decimal characters\n    >>> strisdecimal('123')\n    True\n    >>> strisdecimal('abc123')\n    False\n    \"\"\"\n    return string.isdecimal()\n\ndef strisnumeric(string: str) -> bool:\n    \"\"\" Return True if string contains only numeric characters\n    >>> strisnumeric('123')\n    True\n    >>> strisnumeric('abc123')\n    False\n    \"\"\"\n    return string.isnumeric()\n\ndef strisprintable(string: str) -> bool:\n    \"\"\" Return True if string contains only printable characters\n    >>> strisprintable('abc')\n    True\n    >>> strisprintable('abc\\n')\n    False\n    \"\"\"\n    return string.isprintable()\n\ndef strisspace(string: str) -> bool:\n    \"\"\" Return True if string contains only whitespace characters\n    >>> strisspace(' ')\n    True\n    >>> strisspace('abc')\n    False\n    \"\"\"\n    return string.isspace()\n\ndef strisidentifier(string: str) -> bool:\n    \"\"\" Return True if string is a valid identifier\n    >>> strisidentifier('abc')\n    True\n    >>> strisidentifier('123')\n    False\n    \"\"\"\n    return string.isidentifier()\n\ndef strisdecimal(string: str) -> bool:\n    \"\"\" Return True if string contains only decimal characters\n    >>> strisdecimal('123')\n    True\n    >>> strisdecimal('abc123')\n    False\n    \"\"\"\n    return string.isdecimal()\n\ndef strisnumeric(string: str) -> bool:\n    \"\"\" Return True if string contains only numeric characters\n    >>> strisnumeric('123')\n    True\n    >>> strisnumeric('abc123')\n    False\n    \"\"\"\n    return string.isnumeric()\n\ndef strisprintable(string: str) -> bool:\n    \"\"\" Return True if string contains only printable characters\n    >>> strisprintable('abc')\n    True\n    >>> strisprintable('abc\\n')\n    False\n    \"\"\"\n    return string.isprintable()\n\ndef strisspace(string: str) -> bool:\n    \"\"\" Return True if string contains only whitespace characters\n    >>> strisspace(' ')\n    True\n    >>> strisspace('abc')\n    False\n    \"\"\"\n    return string.isspace()\n\ndef strisidentifier(string: str) -> bool:\n    \"\"\" Return True if string is a valid identifier\n    >>> strisidentifier('abc')\n    True\n    >>> strisidentifier('123')\n    False\n    \"\"\"\n    return string.isidentifier()\n\ndef strisdecimal(string: str) -> bool:\n    \"\"\" Return True if string contains only decimal characters\n    >>> strisdecimal('123')\n    True\n    >>> strisdecimal('abc123')\n    False\n    \"\"\"\n    return string.isdecimal()\n\ndef strisnumeric(string: str) -> bool:\n    \"\"\" Return True if string contains only numeric characters\n    >>> strisnumeric('123')\n    True\n    >>> strisnumeric('abc123')\n    False\n    \"\"\"\n    return string.isnumeric()\n\ndef strisprintable(string: str) -> bool:\n    \"\"\" Return True if string contains only printable characters\n    >>> strisprintable('abc')\n    True\n    >>> strisprintable('abc\\n')\n    False\n    \"\"\"\n    return string.isprintable()\n\ndef strisspace(string: str) -> bool:\n    \"\"\" Return True if string contains only whitespace characters\n    >>> strisspace(' ')\n    True\n    >>> strisspace('abc')\n    False\n    \"\"\"\n    return string.isspace()\n\ndef strisidentifier(string: str) -> bool:\n    \"\"\" Return True if string is a valid identifier\n    >>> strisidentifier('abc')\n    True\n   ",
+  "finish_reason": "stop",
+  "expected": "    return len(string)\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 28.892749899008777
+  },
+  "response": {
+    "id": "cmpl-cc82cf78e1394841afd3033233a19440",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    return len(string)\n\ndef strrev(string: str) -> str:\n    \"\"\" Return reversed string\n    >>> strrev('')\n    ''\n    >>> strrev('abc')\n    'cba'\n    \"\"\"\n    return string[::-1]\n\ndef strfind(string: str, sub: str) -> int:\n    \"\"\" Return index of first occurrence of sub in string\n    >>> strfind('abc', 'b')\n    1\n    >>> strfind('abc', 'd')\n    -1\n    \"\"\"\n    return string.find(sub)\n\ndef strreplace(string: str, old: str, new: str) -> str:\n    \"\"\" Return string with all occurrences of old replaced by new\n    >>> strreplace('abc', 'b', 'd')\n    'adc'\n    >>> strreplace('abc', 'd', 'e')\n    'abc'\n    \"\"\"\n    return string.replace(old, new)\n\ndef strsplit(string: str, sep: str) -> list:\n    \"\"\" Return list of substrings separated by sep\n    >>> strsplit('abc', 'b')\n    ['a', 'c']\n    >>> strsplit('abc', 'd')\n    ['abc']\n    \"\"\"\n    return string.split(sep)\n\ndef strjoin(list: list, sep: str) -> str:\n    \"\"\" Return string with list elements joined by sep\n    >>> strjoin(['a', 'b'], 'c')\n    'acb'\n    >>> strjoin(['a', 'b'], '')\n    'ab'\n    \"\"\"\n    return sep.join(list)\n\ndef strupper(string: str) -> str:\n    \"\"\" Return string with all characters converted to uppercase\n    >>> strupper('abc')\n    'ABC'\n    >>> strupper('ABC')\n    'ABC'\n    \"\"\"\n    return string.upper()\n\ndef strlower(string: str) -> str:\n    \"\"\" Return string with all characters converted to lowercase\n    >>> strlower('ABC')\n    'abc'\n    >>> strlower('abc')\n    'abc'\n    \"\"\"\n    return string.lower()\n\ndef strstrip(string: str, chars: str) -> str:\n    \"\"\" Return string with leading and trailing characters removed\n    >>> strstrip(' abc ', ' ')\n    'abc'\n    >>> strstrip('abc', ' ')\n    'abc'\n    \"\"\"\n    return string.strip(chars)\n\ndef strlstrip(string: str, chars: str) -> str:\n    \"\"\" Return string with leading characters removed\n    >>> strlstrip(' abc ', ' ')\n    'abc '\n    >>> strlstrip('abc', ' ')\n    'abc'\n    \"\"\"\n    return string.lstrip(chars)\n\ndef strrstrip(string: str, chars: str) -> str:\n    \"\"\" Return string with trailing characters removed\n    >>> strrstrip(' abc ', ' ')\n    ' abc'\n    >>> strrstrip('abc', ' ')\n    'abc'\n    \"\"\"\n    return string.rstrip(chars)\n\ndef strcount(string: str, sub: str) -> int:\n    \"\"\" Return number of occurrences of sub in string\n    >>> strcount('abc', 'b')\n    1\n    >>> strcount('abc', 'd')\n    0\n    \"\"\"\n    return string.count(sub)\n\ndef strstartswith(string: str, sub: str) -> bool:\n    \"\"\" Return True if string starts with sub\n    >>> strstartswith('abc', 'a')\n    True\n    >>> strstartswith('abc', 'b')\n    False\n    \"\"\"\n    return string.startswith(sub)\n\ndef strendswith(string: str, sub: str) -> bool:\n    \"\"\" Return True if string ends with sub\n    >>> strendswith('abc', 'c')\n    True\n    >>> strendswith('abc', 'b')\n    False\n    \"\"\"\n    return string.endswith(sub)\n\ndef strisalpha(string: str) -> bool:\n    \"\"\" Return True if string contains only alphabetic characters\n    >>> strisalpha('abc')\n    True\n    >>> strisalpha('abc123')\n    False\n    \"\"\"\n    return string.isalpha()\n\ndef strisdigit(string: str) -> bool:\n    \"\"\" Return True if string contains only digits\n    >>> strisdigit('123')\n    True\n    >>> strisdigit('abc123')\n    False\n    \"\"\"\n    return string.isdigit()\n\ndef strisalnum(string: str) -> bool:\n    \"\"\" Return True if string contains only alphanumeric characters\n    >>> strisalnum('abc123')\n    True\n    >>> strisalnum('abc 123')\n    False\n    \"\"\"\n    return string.isalnum()\n\ndef strislower(string: str) -> bool:\n    \"\"\" Return True if string contains only lowercase characters\n    >>> strislower('abc')\n    True\n    >>> strislower('ABC')\n    False\n    \"\"\"\n    return string.islower()\n\ndef strisupper(string: str) -> bool:\n    \"\"\" Return True if string contains only uppercase characters\n    >>> strisupper('ABC')\n    True\n    >>> strisupper('abc')\n    False\n    \"\"\"\n    return string.isupper()\n\ndef stristitle(string: str) -> bool:\n    \"\"\" Return True if string is title case\n    >>> stristitle('Abc')\n    True\n    >>> stristitle('abc')\n    False\n    \"\"\"\n    return string.istitle()\n\ndef strisdecimal(string: str) -> bool:\n    \"\"\" Return True if string contains only decimal characters\n    >>> strisdecimal('123')\n    True\n    >>> strisdecimal('abc123')\n    False\n    \"\"\"\n    return string.isdecimal()\n\ndef strisnumeric(string: str) -> bool:\n    \"\"\" Return True if string contains only numeric characters\n    >>> strisnumeric('123')\n    True\n    >>> strisnumeric('abc123')\n    False\n    \"\"\"\n    return string.isnumeric()\n\ndef strisprintable(string: str) -> bool:\n    \"\"\" Return True if string contains only printable characters\n    >>> strisprintable('abc')\n    True\n    >>> strisprintable('abc\\n')\n    False\n    \"\"\"\n    return string.isprintable()\n\ndef strisspace(string: str) -> bool:\n    \"\"\" Return True if string contains only whitespace characters\n    >>> strisspace(' ')\n    True\n    >>> strisspace('abc')\n    False\n    \"\"\"\n    return string.isspace()\n\ndef strisidentifier(string: str) -> bool:\n    \"\"\" Return True if string is a valid identifier\n    >>> strisidentifier('abc')\n    True\n    >>> strisidentifier('123')\n    False\n    \"\"\"\n    return string.isidentifier()\n\ndef strisdecimal(string: str) -> bool:\n    \"\"\" Return True if string contains only decimal characters\n    >>> strisdecimal('123')\n    True\n    >>> strisdecimal('abc123')\n    False\n    \"\"\"\n    return string.isdecimal()\n\ndef strisnumeric(string: str) -> bool:\n    \"\"\" Return True if string contains only numeric characters\n    >>> strisnumeric('123')\n    True\n    >>> strisnumeric('abc123')\n    False\n    \"\"\"\n    return string.isnumeric()\n\ndef strisprintable(string: str) -> bool:\n    \"\"\" Return True if string contains only printable characters\n    >>> strisprintable('abc')\n    True\n    >>> strisprintable('abc\\n')\n    False\n    \"\"\"\n    return string.isprintable()\n\ndef strisspace(string: str) -> bool:\n    \"\"\" Return True if string contains only whitespace characters\n    >>> strisspace(' ')\n    True\n    >>> strisspace('abc')\n    False\n    \"\"\"\n    return string.isspace()\n\ndef strisidentifier(string: str) -> bool:\n    \"\"\" Return True if string is a valid identifier\n    >>> strisidentifier('abc')\n    True\n    >>> strisidentifier('123')\n    False\n    \"\"\"\n    return string.isidentifier()\n\ndef strisdecimal(string: str) -> bool:\n    \"\"\" Return True if string contains only decimal characters\n    >>> strisdecimal('123')\n    True\n    >>> strisdecimal('abc123')\n    False\n    \"\"\"\n    return string.isdecimal()\n\ndef strisnumeric(string: str) -> bool:\n    \"\"\" Return True if string contains only numeric characters\n    >>> strisnumeric('123')\n    True\n    >>> strisnumeric('abc123')\n    False\n    \"\"\"\n    return string.isnumeric()\n\ndef strisprintable(string: str) -> bool:\n    \"\"\" Return True if string contains only printable characters\n    >>> strisprintable('abc')\n    True\n    >>> strisprintable('abc\\n')\n    False\n    \"\"\"\n    return string.isprintable()\n\ndef strisspace(string: str) -> bool:\n    \"\"\" Return True if string contains only whitespace characters\n    >>> strisspace(' ')\n    True\n    >>> strisspace('abc')\n    False\n    \"\"\"\n    return string.isspace()\n\ndef strisidentifier(string: str) -> bool:\n    \"\"\" Return True if string is a valid identifier\n    >>> strisidentifier('abc')\n    True\n   "
+      }
+    ],
+    "created": 1791950165,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 38,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.23,
+      "prompt_tokens_per_sec": 165.22,
+      "completion_tokens": 1894,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 1609,
+        "rejected_prediction_tokens": 386
+      },
+      "completion_time": 28.66,
+      "completion_tokens_per_sec": 66.1,
+      "total_tokens": 1932,
+      "total_time": 28.89
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 38,
+      "prompt_ms": 230.0,
+      "prompt_per_token_ms": 6.052631578947368,
+      "prompt_per_second": 165.2173913043478,
+      "predicted_n": 1894,
+      "predicted_ms": 28660.0,
+      "predicted_per_token_ms": 15.131995776135163,
+      "predicted_per_second": 66.08513607815772,
+      "draft_n": 1995,
+      "draft_n_accepted": 1609
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00023:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

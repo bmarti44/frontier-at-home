@@ -1,0 +1,106 @@
+{
+  "kind": "qualify-profile-config-evidence",
+  "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+  "server_binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+  "files": [
+    {
+      "path": "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime/bin/python3.12",
+      "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/model.safetensors.index.json",
+      "sha256": "773cd59f2a48d3cfa0bbd094a1145f8f066c0e59f4d30b632be765585a0e3c42"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/config.json",
+      "sha256": "f45948486d0c52ccf5440807e9e4b102c33dd0f56b859b35cd9013f35d319302"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/quantization_config.json",
+      "sha256": "2f5990e7d36b60c8eda92ee13c52316b3abe59beed371cc524286ff8069aa5d5"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json",
+      "sha256": "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer_config.json",
+      "sha256": "413a7845f52943ccf4de0e5c838414507d16c44dbf573da9e20bc8902b384d06"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/chat_template.jinja",
+      "sha256": "11ea52e156de38a458e6b7720ad45915d65b97d4ec979a09f55e3c9bd1b4d059"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/generation_config.json",
+      "sha256": "eecf00d9701921271c904a916c425ba6db61bcd190902e200d0a322bfd5572dd"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/preprocessor_config.json",
+      "sha256": "fbe073ccca943767c92ce3774f535dc8037e126f1594056f397ad3a4b1a1a7a4"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash/config.json",
+      "sha256": "fc1896087781e12c3d162314ab4c5ecfc9f8ed84e388c20f640d83d4f4b1a3e6"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash/quantization_config.json",
+      "sha256": "f6a9cb5eb62ac199a7fdb1678b7b1a36b42d287e9f260ec3ecf6b6421fdc261c"
+    },
+    {
+      "path": "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash/model.safetensors",
+      "sha256": "a1e133f57bed80405386ce917a6f12b1f47d5fc5c69a74e32d84d976875390af"
+    }
+  ],
+  "argv": [
+    "-B",
+    "-m",
+    "tabby_launch",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8013",
+    "--disable-auth",
+    "true",
+    "--disable-fetch-requests",
+    "true",
+    "--model-name",
+    "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash",
+    "--backend",
+    "exllamav3",
+    "--inline-model-loading",
+    "false",
+    "--max-seq-len",
+    "262144",
+    "--cache-size",
+    "262144",
+    "--max-batch-size",
+    "1",
+    "--cache-mode",
+    "8,8",
+    "--chunk-size",
+    "2048",
+    "--sysmem-recurrent-cache",
+    "512",
+    "--sysmem-multimodal-cache",
+    "256",
+    "--vision",
+    "true",
+    "--reasoning",
+    "true",
+    "--tool-format",
+    "qwen3_coder",
+    "--draft-model-name",
+    "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash",
+    "--draft-mode",
+    "model",
+    "--log-prompt",
+    "false",
+    "--log-generation-params",
+    "false",
+    "--log-requests",
+    "false",
+    "--log-chat-completion-requests",
+    "false"
+  ]
+}

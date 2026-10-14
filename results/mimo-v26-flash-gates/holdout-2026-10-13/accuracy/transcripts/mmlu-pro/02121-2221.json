@@ -1,0 +1,68 @@
+{
+  "index": 2121,
+  "task_id": 2221,
+  "rendered_prompt_sha256": "8ff777447356955ec7772cdd13158118f51ce64dea1bba56b7ec7d882f5834ca",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Selye's General Adaptation Syndrome has three stages: alarm, resistance, and exhaustion. During the exhaustion stage, the body's resources are depleted and we are most susceptible to disease.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.3823481730069034
+  },
+  "response": {
+    "id": "cmpl-3c1bae0873264912869e79ca31651865",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Selye's General Adaptation Syndrome has three stages: alarm, resistance, and exhaustion. During the exhaustion stage, the body's resources are depleted and we are most susceptible to disease.</think>Answer: C"
+      }
+    ],
+    "created": 1791947990,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 98,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 257.89,
+      "completion_tokens": 44,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 34,
+        "rejected_prediction_tokens": 36
+      },
+      "completion_time": 0.99,
+      "completion_tokens_per_sec": 44.31,
+      "total_tokens": 142,
+      "total_time": 1.37
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 98,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 3.877551020408163,
+      "prompt_per_second": 257.89473684210526,
+      "predicted_n": 44,
+      "predicted_ms": 990.0,
+      "predicted_per_token_ms": 22.5,
+      "predicted_per_second": 44.44444444444445,
+      "draft_n": 70,
+      "draft_n_accepted": 34
+    }
+  }
+}

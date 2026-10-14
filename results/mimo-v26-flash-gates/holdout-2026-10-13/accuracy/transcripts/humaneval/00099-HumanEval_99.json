@@ -1,0 +1,104 @@
+{
+  "index": 99,
+  "task_id": "HumanEval/99",
+  "rendered_prompt_sha256": "53ad185333496f1faa011070d323b24af3e23506e32f52ced0b3c0f9867d2719",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    if value[-1] in \".b\":\n        value = value[:-1]\n\n    if value[-2:] in \".e\":\n        value = value[:-1]\n\n    if value[0] in \"+-\":\n        sign = -1 if value[0] == \"-\" else 1\n        n = int(value)\n    else:\n        sign = 1\n        n = int(value)\n\n    frac = value.find(\".\")\n    if frac != -1:\n        frac = value[frac + 1:]\n        if len(frac) > 1:\n            frac = int(frac)\n        else:\n            frac = int(frac) * 10\n\n    if frac == 5:\n        n += sign\n    elif frac > 5:\n        n += sign\n\n    return n\n\ndef test():\n    import doctest\n    doctest.testmod()\n\nif __name__ == \"__main__\":\n    test()\n```\n```python\ndef closest_integer(value):\n    '''\n    Create a function that takes a value (string) representing a number\n    and returns the closest integer to it. If the number is equidistant\n    from two integers, round it away from zero.\n\n    Examples\n    >>> closest_integer(\"10\")\n    10\n    >>> closest_integer(\"15.3\")\n    15\n\n    Note:\n    Rounding away from zero means that if the given number is equidistant\n    from two integers, the one you should return is the one that is the\n    farthest from zero. For example closest_integer(\"14.5\") should\n    return 15 and closest_integer(\"-14.5\") should return -15.\n    '''\n    if value[-1] in \".b\":\n        value = value[:-1]\n\n    if value[-2:] in \".e\":\n        value = value[:-1]\n\n    if value[0] in \"+-\":\n        sign = -1 if value[0] == \"-\" else 1\n        n = int(value)\n    else:\n        sign = 1\n        n = int(value)\n\n    frac = value.find(\".\")\n    if frac != -1:\n        frac = value[frac + 1:]\n        if len(frac) > 1:\n            frac = int(frac)\n        else:\n            frac = int(frac) * 10\n\n    if frac == 5:\n        n += sign\n    elif frac > 5:\n        n += sign\n\n    return n\n\ndef test():\n    import doctest\n    doctest.testmod()\n\nif __name__ == \"__main__\":\n    test()\n```\n```python\ndef closest_integer(value):\n    '''\n    Create a function that takes a value (string) representing a number\n    and returns the closest integer to it. If the number is equidistant\n    from two integers, round it away from zero.\n\n    Examples\n    >>> closest_integer(\"10\")\n    10\n    >>> closest_integer(\"15.3\")\n    15\n\n    Note:\n    Rounding away from zero means that if the given number is equidistant\n    from two integers, the one you should return is the one that is the\n    farthest from zero. For example closest_integer(\"14.5\") should\n    return 15 and closest_integer(\"-14.5\") should return -15.\n    '''\n    if value[-1] in \".b\":\n        value = value[:-1]\n\n    if value[-2:] in \".e\":\n        value = value[:-1]\n\n    if value[0] in \"+-\":\n        sign = -1 if value[0] == \"-\" else 1\n        n = int(value)\n    else:\n        sign = 1\n        n = int(value)\n\n    frac = value.find(\".\")\n    if frac != -1",
+  "finish_reason": "stop",
+  "expected": "    from math import floor, ceil\n\n    if value.count('.') == 1:\n        # remove trailing zeros\n        while (value[-1] == '0'):\n            value = value[:-1]\n\n    num = float(value)\n    if value[-2:] == '.5':\n        if num > 0:\n            res = ceil(num)\n        else:\n            res = floor(num)\n    elif len(value) > 0:\n        res = int(round(num))\n    else:\n        res = 0\n\n    return res\n\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 13.781169600959402
+  },
+  "response": {
+    "id": "cmpl-5c556e39000e4aa59074945c005316d3",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    if value[-1] in \".b\":\n        value = value[:-1]\n\n    if value[-2:] in \".e\":\n        value = value[:-1]\n\n    if value[0] in \"+-\":\n        sign = -1 if value[0] == \"-\" else 1\n        n = int(value)\n    else:\n        sign = 1\n        n = int(value)\n\n    frac = value.find(\".\")\n    if frac != -1:\n        frac = value[frac + 1:]\n        if len(frac) > 1:\n            frac = int(frac)\n        else:\n            frac = int(frac) * 10\n\n    if frac == 5:\n        n += sign\n    elif frac > 5:\n        n += sign\n\n    return n\n\ndef test():\n    import doctest\n    doctest.testmod()\n\nif __name__ == \"__main__\":\n    test()\n```\n```python<rendered-prompt-redacted>    if value[-1] in \".b\":\n        value = value[:-1]\n\n    if value[-2:] in \".e\":\n        value = value[:-1]\n\n    if value[0] in \"+-\":\n        sign = -1 if value[0] == \"-\" else 1\n        n = int(value)\n    else:\n        sign = 1\n        n = int(value)\n\n    frac = value.find(\".\")\n    if frac != -1:\n        frac = value[frac + 1:]\n        if len(frac) > 1:\n            frac = int(frac)\n        else:\n            frac = int(frac) * 10\n\n    if frac == 5:\n        n += sign\n    elif frac > 5:\n        n += sign\n\n    return n\n\ndef test():\n    import doctest\n    doctest.testmod()\n\nif __name__ == \"__main__\":\n    test()\n```\n```python<rendered-prompt-redacted>    if value[-1] in \".b\":\n        value = value[:-1]\n\n    if value[-2:] in \".e\":\n        value = value[:-1]\n\n    if value[0] in \"+-\":\n        sign = -1 if value[0] == \"-\" else 1\n        n = int(value)\n    else:\n        sign = 1\n        n = int(value)\n\n    frac = value.find(\".\")\n    if frac != -1"
+      }
+    ],
+    "created": 1791958084,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 159,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.51,
+      "prompt_tokens_per_sec": 311.76,
+      "completion_tokens": 800,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 667,
+        "rejected_prediction_tokens": 264
+      },
+      "completion_time": 13.26,
+      "completion_tokens_per_sec": 60.32,
+      "total_tokens": 959,
+      "total_time": 13.77
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 159,
+      "prompt_ms": 510.0,
+      "prompt_per_token_ms": 3.207547169811321,
+      "prompt_per_second": 311.7647058823529,
+      "predicted_n": 800,
+      "predicted_ms": 13260.0,
+      "predicted_per_token_ms": 16.575,
+      "predicted_per_second": 60.33182503770739,
+      "draft_n": 931,
+      "draft_n_accepted": 667
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00099:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "**********************************************************************\nFile \"/case/main.py\", line 11, in __main__.closest_integer\nFailed example:\n    closest_integer(\"15.3\")\nException raised:\n    Traceback (most recent call last):\n      File \"/usr/local/lib/python3.12/doctest.py\", line 1368, in __run\n        exec(compile(example.source, filename, \"single\",\n      File \"<doctest __main__.closest_integer[1]>\", line 1, in <module>\n        closest_integer(\"15.3\")\n      File \"/case/main.py\", line 31, in closest_integer\n        n = int(value)\n            ^^^^^^^^^^\n    ValueError: invalid literal for int() with base 10: '15.3'\n**********************************************************************\n1 items had failures:\n   1 of   2 in __main__.closest_integer\n***Test Failed*** 1 failures.\n",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 69, in <module>\n    check(closest_integer)\n  File \"/case/main.py\", line 60, in check\n    assert candidate(\"14.5\") == 15, \"Test 2\"\n           ^^^^^^^^^^^^^^^^^\n  File \"/case/main.py\", line 31, in closest_integer\n    n = int(value)\n        ^^^^^^^^^^\nValueError: invalid literal for int() with base 10: '14.5'\n"
+  }
+}

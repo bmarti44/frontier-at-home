@@ -1,0 +1,68 @@
+{
+  "index": 6973,
+  "task_id": 7144,
+  "rendered_prompt_sha256": "1fe8f0b5e91651bc7e24330dbd6dd8d5e7eed59e63ee0973d786501779dea12e",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The bond pays a coupon of 5% × $100,000 = $5,000 next year, plus the maturity value of $100,000.\n\nTotal cash flow next year = $105,000\n\nPresent value = $105,000 / (1 + 0.09) = $105,000 / 1.09 = $96,330.28</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7232542160199955
+  },
+  "response": {
+    "id": "cmpl-4b5f145d12e14dfd80d62ce759d2e94b",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The bond pays a coupon of 5% × $100,000 = $5,000 next year, plus the maturity value of $100,000.\n\nTotal cash flow next year = $105,000\n\nPresent value = $105,000 / (1 + 0.09) = $105,000 / 1.09 = $96,330.28</think>Answer: B"
+      }
+    ],
+    "created": 1791941933,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 192,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.57,
+      "prompt_tokens_per_sec": 336.84,
+      "completion_tokens": 110,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 87,
+        "rejected_prediction_tokens": 74
+      },
+      "completion_time": 2.14,
+      "completion_tokens_per_sec": 51.29,
+      "total_tokens": 302,
+      "total_time": 2.72
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 192,
+      "prompt_ms": 570.0,
+      "prompt_per_token_ms": 2.96875,
+      "prompt_per_second": 336.84210526315786,
+      "predicted_n": 110,
+      "predicted_ms": 2140.0,
+      "predicted_per_token_ms": 19.454545454545453,
+      "predicted_per_second": 51.401869158878505,
+      "draft_n": 161,
+      "draft_n_accepted": 87
+    }
+  }
+}

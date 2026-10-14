@@ -1,0 +1,69 @@
+{
+  "index": 856,
+  "task_id": 856,
+  "rendered_prompt_sha256": "be85c6f0a207e47f26a5c4e85e63a2e2817ad1b32010959a108c781f3f9bfb68",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Total glue sticks needed: 27 × 2 = 54\nPacks needed: 54 ÷ 8 = 6.75, so 7 packs</think>Total glue sticks needed: 27 × 2 = 54\n\nPacks needed: 54 ÷ 8 = 6.75, so Mr. Jackson must buy 7 whole packs (giving him 56 glue sticks, with 2 extra).\n\nAnswer: 7",
+  "finish_reason": "stop",
+  "expected": "7",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.4252250930294394
+  },
+  "response": {
+    "id": "cmpl-45ef6cc3d9d84f3c94d23e2c962c2cad",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Total glue sticks needed: 27 × 2 = 54\nPacks needed: 54 ÷ 8 = 6.75, so 7 packs</think>Total glue sticks needed: 27 × 2 = 54\n\nPacks needed: 54 ÷ 8 = 6.75, so Mr. Jackson must buy 7 whole packs (giving him 56 glue sticks, with 2 extra).\n\nAnswer: 7"
+      }
+    ],
+    "created": 1791939423,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 105,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.4,
+      "prompt_tokens_per_sec": 262.5,
+      "completion_tokens": 104,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 83,
+        "rejected_prediction_tokens": 64
+      },
+      "completion_time": 2.02,
+      "completion_tokens_per_sec": 51.47,
+      "total_tokens": 209,
+      "total_time": 2.42
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 105,
+      "prompt_ms": 400.0,
+      "prompt_per_token_ms": 3.8095238095238093,
+      "prompt_per_second": 262.5,
+      "predicted_n": 104,
+      "predicted_ms": 2020.0,
+      "predicted_per_token_ms": 19.423076923076923,
+      "predicted_per_second": 51.48514851485149,
+      "draft_n": 147,
+      "draft_n_accepted": 83
+    }
+  },
+  "used_fallback": false
+}

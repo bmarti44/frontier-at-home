@@ -1,0 +1,68 @@
+{
+  "index": 158,
+  "task_id": 229,
+  "rendered_prompt_sha256": "02f8a2cc27a63933fa8d6ec0649767961a237705fe9ac084d187cc5f261ea4a7",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Cost per ride for the family: 2 adults × $0.75 + 2 children × $0.50 = $1.50 + $1.00 = $2.50\n\n$10 / $2.50 = 4 rides</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6554101450019516
+  },
+  "response": {
+    "id": "cmpl-3a46686de8e54a40b93191876762c03a",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Cost per ride for the family: 2 adults × $0.75 + 2 children × $0.50 = $1.50 + $1.00 = $2.50\n\n$10 / $2.50 = 4 rides</think>Answer: F"
+      }
+    ],
+    "created": 1791939974,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 147,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.52,
+      "prompt_tokens_per_sec": 282.69,
+      "completion_tokens": 64,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 52,
+        "rejected_prediction_tokens": 32
+      },
+      "completion_time": 1.13,
+      "completion_tokens_per_sec": 56.56,
+      "total_tokens": 211,
+      "total_time": 1.65
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 147,
+      "prompt_ms": 520.0,
+      "prompt_per_token_ms": 3.5374149659863945,
+      "prompt_per_second": 282.6923076923077,
+      "predicted_n": 64,
+      "predicted_ms": 1130.0,
+      "predicted_per_token_ms": 17.65625,
+      "predicted_per_second": 56.63716814159292,
+      "draft_n": 84,
+      "draft_n_accepted": 52
+    }
+  }
+}

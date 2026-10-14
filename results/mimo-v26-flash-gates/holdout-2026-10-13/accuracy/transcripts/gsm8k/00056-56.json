@@ -1,0 +1,70 @@
+{
+  "index": 56,
+  "task_id": 56,
+  "rendered_prompt_sha256": "c6a55e709fbdda389e4de90995725ac80384fd539710c50a41d26d05f5020c3d",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Each trip costs $7 + $7 = $14. $42 / $14 = 3.</think>Each trip costs $7 (ticket) + $7 (popcorn) = $14.\n\n$42 ÷ $14 = 3 trips.\n\nAnswer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.41162995895138
+  },
+  "response": {
+    "id": "cmpl-699c8a2e22ad4aeabb1171e5f9d0bffa",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Each trip costs $7 + $7 = $14. $42 / $14 = 3.</think>Each trip costs $7 (ticket) + $7 (popcorn) = $14.\n\n$42 ÷ $14 = 3 trips.\n\nAnswer: 3"
+      }
+    ],
+    "created": 1791939338,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 77,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 213.89,
+      "completion_tokens": 64,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 53,
+        "rejected_prediction_tokens": 24
+      },
+      "completion_time": 1.05,
+      "completion_tokens_per_sec": 60.86,
+      "total_tokens": 141,
+      "total_time": 1.41
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 77,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.675324675324675,
+      "prompt_per_second": 213.88888888888889,
+      "predicted_n": 64,
+      "predicted_ms": 1050.0,
+      "predicted_per_token_ms": 16.40625,
+      "predicted_per_second": 60.95238095238095,
+      "draft_n": 77,
+      "draft_n_accepted": 53
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nPeter plans to go to the movies this week. He always gets a ticket for $7 and popcorn for $7. If he has 42 dollars for the week, how many times can he go to the movies?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

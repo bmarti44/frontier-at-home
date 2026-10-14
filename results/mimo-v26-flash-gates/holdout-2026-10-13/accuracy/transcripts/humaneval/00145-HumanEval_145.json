@@ -1,0 +1,104 @@
+{
+  "index": 145,
+  "task_id": "HumanEval/145",
+  "rendered_prompt_sha256": "7a5c9e6cb4cbac4500da147421870d0aaac0c5e8f98d646aca7a6349fa239c3e",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    def digit_sum(n):\n        return sum(int(d) for d in str(abs(n)))\n\n    # Sort by digit sum, then by original index\n    return [x for _, x in sorted(enumerate(nums), key=lambda p: (digit_sum(p[1]), p[0]))]\n\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -1",
+  "finish_reason": "stop",
+  "expected": "    def digits_sum(n):\n        neg = 1\n        if n < 0: n, neg = -1 * n, -1 \n        n = [int(i) for i in str(n)]\n        n[0] = n[0] * neg\n        return sum(n)\n    return sorted(nums, key=digits_sum)\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.99425023799995
+  },
+  "response": {
+    "id": "cmpl-04a69c0357c84d18826559d32fef365c",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    def digit_sum(n):\n        return sum(int(d) for d in str(abs(n)))\n\n    # Sort by digit sum, then by original index\n    return [x for _, x in sorted(enumerate(nums), key=lambda p: (digit_sum(p[1]), p[0]))]\n\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\nassert order_by_points([]) == []\nassert order_by_points([1, 11, -1, -1"
+      }
+    ],
+    "created": 1791963357,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 116,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 297.44,
+      "completion_tokens": 860,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 743,
+        "rejected_prediction_tokens": 76
+      },
+      "completion_time": 11.6,
+      "completion_tokens_per_sec": 74.12,
+      "total_tokens": 976,
+      "total_time": 12.0
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 116,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.3620689655172415,
+      "prompt_per_second": 297.43589743589746,
+      "predicted_n": 860,
+      "predicted_ms": 11600.0,
+      "predicted_per_token_ms": 13.488372093023257,
+      "predicted_per_second": 74.13793103448276,
+      "draft_n": 819,
+      "draft_n_accepted": 743
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00145:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 19, in <module>\n    assert order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

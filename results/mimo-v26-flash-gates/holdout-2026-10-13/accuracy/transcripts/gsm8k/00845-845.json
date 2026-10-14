@@ -1,0 +1,69 @@
+{
+  "index": 845,
+  "task_id": 845,
+  "rendered_prompt_sha256": "4f17add52bd821e725b7ae46c89ece5975b37fe5c7d9e1dac6344be812e5b811",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Total students = 20\nMath only = 5\nEnglish only = 8\nBoth = 20 - 5 - 8 = 7\n\nGood at math = math only + both = 5 + 7 = 12</think>Total students = 20\n\n- Math only: 5\n- English only: 8\n- Both: 20 − 5 − 8 = 7\n\nGood at math = math only + both = 5 + 7 = 12\n\nAnswer: 12",
+  "finish_reason": "stop",
+  "expected": "12",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.379324159002863
+  },
+  "response": {
+    "id": "cmpl-b51efe61e59e49189a166d67b25828c6",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Total students = 20\nMath only = 5\nEnglish only = 8\nBoth = 20 - 5 - 8 = 7\n\nGood at math = math only + both = 5 + 7 = 12</think>Total students = 20\n\n- Math only: 5\n- English only: 8\n- Both: 20 − 5 − 8 = 7\n\nGood at math = math only + both = 5 + 7 = 12\n\nAnswer: 12"
+      }
+    ],
+    "created": 1791939513,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 82,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 221.62,
+      "completion_tokens": 116,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 95,
+        "rejected_prediction_tokens": 52
+      },
+      "completion_time": 2.01,
+      "completion_tokens_per_sec": 57.81,
+      "total_tokens": 198,
+      "total_time": 2.38
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 82,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.512195121951219,
+      "prompt_per_second": 221.6216216216216,
+      "predicted_n": 116,
+      "predicted_ms": 2009.9999999999998,
+      "predicted_per_token_ms": 17.327586206896548,
+      "predicted_per_second": 57.71144278606966,
+      "draft_n": 147,
+      "draft_n_accepted": 95
+    }
+  },
+  "used_fallback": false
+}

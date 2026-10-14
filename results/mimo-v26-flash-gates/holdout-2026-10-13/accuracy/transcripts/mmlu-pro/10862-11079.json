@@ -1,0 +1,68 @@
+{
+  "index": 10862,
+  "task_id": 11079,
+  "rendered_prompt_sha256": "5e553cbbd3634848cd687d2381d48d3112b9fcbd00b8ed9483d60a5d3bdd2eae",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The sentence is \"Marco doesn't move from Spain to Italy.\"\n\nThe predicate is Mxyz: x moves to y from z.\n\nSo \"Marco moves from Spain to Italy\" would be Mmis (m moves to i from s).\n\n\"Marco doesn't move from Spain to Italy\" would be ~Mmis.\n\nLooking at the options:\nD. ~Mmis\n\nThat matches.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.3498623929917812
+  },
+  "response": {
+    "id": "cmpl-5eee0e5483304006bdd6dc3dee191eb1",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The sentence is \"Marco doesn't move from Spain to Italy.\"\n\nThe predicate is Mxyz: x moves to y from z.\n\nSo \"Marco moves from Spain to Italy\" would be Mmis (m moves to i from s).\n\n\"Marco doesn't move from Spain to Italy\" would be ~Mmis.\n\nLooking at the options:\nD. ~Mmis\n\nThat matches.</think>Answer: D"
+      }
+    ],
+    "created": 1791947001,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 118,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 287.8,
+      "completion_tokens": 83,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 63,
+        "rejected_prediction_tokens": 77
+      },
+      "completion_time": 1.94,
+      "completion_tokens_per_sec": 42.84,
+      "total_tokens": 201,
+      "total_time": 2.35
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 118,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.4745762711864407,
+      "prompt_per_second": 287.8048780487805,
+      "predicted_n": 83,
+      "predicted_ms": 1940.0,
+      "predicted_per_token_ms": 23.373493975903614,
+      "predicted_per_second": 42.78350515463917,
+      "draft_n": 140,
+      "draft_n_accepted": 63
+    }
+  }
+}

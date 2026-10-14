@@ -1,0 +1,68 @@
+{
+  "index": 5197,
+  "task_id": 5339,
+  "rendered_prompt_sha256": "151d484a4b0a0ae55fe631c2622dec6796f232a85ac41078caf7b4723cbca37f",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The process of a gas turning into a liquid is called condensation.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.8416562550119124
+  },
+  "response": {
+    "id": "cmpl-6e1a4ebe0a244962b4076fe7adc76256",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The process of a gas turning into a liquid is called condensation.</think>Answer: C"
+      }
+    ],
+    "created": 1791946825,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 85,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 242.86,
+      "completion_tokens": 20,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 15,
+        "rejected_prediction_tokens": 20
+      },
+      "completion_time": 0.48,
+      "completion_tokens_per_sec": 41.3,
+      "total_tokens": 105,
+      "total_time": 0.84
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 85,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.117647058823529,
+      "prompt_per_second": 242.85714285714286,
+      "predicted_n": 20,
+      "predicted_ms": 480.0,
+      "predicted_per_token_ms": 24.0,
+      "predicted_per_second": 41.66666666666667,
+      "draft_n": 35,
+      "draft_n_accepted": 15
+    }
+  }
+}

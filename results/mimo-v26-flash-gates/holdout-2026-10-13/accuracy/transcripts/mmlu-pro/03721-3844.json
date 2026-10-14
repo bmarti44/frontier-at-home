@@ -1,0 +1,68 @@
+{
+  "index": 3721,
+  "task_id": 3844,
+  "rendered_prompt_sha256": "195cccec259d10cea430ca61dfb16079e89eab0e8673acd5234cd7455aa9fdcc",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The reaction: 2 NaCN + H2SO4 → 2 HCN + Na2SO4\n\nMolar mass NaCN = 23 + 12 + 14 = 49 g/mol.\n\n196 g / 49 = 4 mol NaCN → 4 mol HCN (since 2 mol NaCN gives 2 mol HCN, 1:1).\n\nAt STP, 1 mol = 22.4 L → 4 × 22.4 = 89.6 L.\n\nAnswer F.</think>**Answer: F**\n\n**Reasoning:**\n\nThe reaction of sodium cyanide with sulfuric acid is:\n\n$$2\\,\\text{NaCN} + \\text{H}_2\\text{SO}_4 \\rightarrow 2\\,\\text{HCN} + \\text{Na}_2\\text{SO}_4$$\n\nSince excess acid is added, NaCN is the limiting reagent.\n\n- Molar mass of NaCN = 23 + 12 + 14 = **49 g/mol**\n- Moles of NaCN = 196 g ÷ 49 g/mol = **4 mol**\n- From the stoichiometry, 2 mol NaCN → 2 mol HCN, so 4 mol NaCN → **4 mol HCN**\n\nAt STP, 1 mol of gas occupies 22.4 L:\n\n$$V = 4 \\times 22.4\\ \\text{L} = 89.6\\ \\text{L}$$\n\nAnswer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.696188698057085
+  },
+  "response": {
+    "id": "cmpl-4edc53c95ad54e3baf8feb51d67995bb",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The reaction: 2 NaCN + H2SO4 → 2 HCN + Na2SO4\n\nMolar mass NaCN = 23 + 12 + 14 = 49 g/mol.\n\n196 g / 49 = 4 mol NaCN → 4 mol HCN (since 2 mol NaCN gives 2 mol HCN, 1:1).\n\nAt STP, 1 mol = 22.4 L → 4 × 22.4 = 89.6 L.\n\nAnswer F.</think>**Answer: F**\n\n**Reasoning:**\n\nThe reaction of sodium cyanide with sulfuric acid is:\n\n$$2\\,\\text{NaCN} + \\text{H}_2\\text{SO}_4 \\rightarrow 2\\,\\text{HCN} + \\text{Na}_2\\text{SO}_4$$\n\nSince excess acid is added, NaCN is the limiting reagent.\n\n- Molar mass of NaCN = 23 + 12 + 14 = **49 g/mol**\n- Moles of NaCN = 196 g ÷ 49 g/mol = **4 mol**\n- From the stoichiometry, 2 mol NaCN → 2 mol HCN, so 4 mol NaCN → **4 mol HCN**\n\nAt STP, 1 mol of gas occupies 22.4 L:\n\n$$V = 4 \\times 22.4\\ \\text{L} = 89.6\\ \\text{L}$$\n\nAnswer: F"
+      }
+    ],
+    "created": 1791940772,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 171,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.56,
+      "prompt_tokens_per_sec": 305.36,
+      "completion_tokens": 341,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 265,
+        "rejected_prediction_tokens": 267
+      },
+      "completion_time": 7.13,
+      "completion_tokens_per_sec": 47.82,
+      "total_tokens": 512,
+      "total_time": 7.69
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 171,
+      "prompt_ms": 560.0,
+      "prompt_per_token_ms": 3.2748538011695905,
+      "prompt_per_second": 305.3571428571429,
+      "predicted_n": 341,
+      "predicted_ms": 7130.0,
+      "predicted_per_token_ms": 20.90909090909091,
+      "predicted_per_second": 47.826086956521735,
+      "draft_n": 532,
+      "draft_n_accepted": 265
+    }
+  }
+}

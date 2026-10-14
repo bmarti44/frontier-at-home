@@ -1,0 +1,68 @@
+{
+  "index": 4409,
+  "task_id": 4541,
+  "rendered_prompt_sha256": "6e3fe8bd7a28f61a09d0212d409898e5406f8ac6fee9531307b2594c026e73ee",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>NaCN is a salt of a weak acid (HCN) and strong base (NaOH). CN⁻ hydrolyzes.\n\nK_b for CN⁻ = K_w / K_a = 1.0×10^-14 / 4.0×10^-10 = 2.5×10^-5\n\n[OH⁻] = sqrt(K_b × C) = sqrt(2.5×10^-5 × 1.0) = sqrt(2.5×10^-5) = 5.0×10^-3\n\npOH = -log(5.0×10^-3) = 3 - log(5) = 3 - 0.699 = 2.301\n\npH = 14 - 2.301 = 11.699 ≈ 11.70\n\nAnswer: H</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.309525560995098
+  },
+  "response": {
+    "id": "cmpl-1e832ad3f1d745fa972692340f248201",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>NaCN is a salt of a weak acid (HCN) and strong base (NaOH). CN⁻ hydrolyzes.\n\nK_b for CN⁻ = K_w / K_a = 1.0×10^-14 / 4.0×10^-10 = 2.5×10^-5\n\n[OH⁻] = sqrt(K_b × C) = sqrt(2.5×10^-5 × 1.0) = sqrt(2.5×10^-5) = 5.0×10^-3\n\npOH = -log(5.0×10^-3) = 3 - log(5) = 3 - 0.699 = 2.301\n\npH = 14 - 2.301 = 11.699 ≈ 11.70\n\nAnswer: H</think>Answer: H"
+      }
+    ],
+    "created": 1791941654,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 159,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.51,
+      "prompt_tokens_per_sec": 311.76,
+      "completion_tokens": 201,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 160,
+        "rejected_prediction_tokens": 127
+      },
+      "completion_time": 3.79,
+      "completion_tokens_per_sec": 53.04,
+      "total_tokens": 360,
+      "total_time": 4.3
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 159,
+      "prompt_ms": 510.0,
+      "prompt_per_token_ms": 3.207547169811321,
+      "prompt_per_second": 311.7647058823529,
+      "predicted_n": 201,
+      "predicted_ms": 3790.0,
+      "predicted_per_token_ms": 18.855721393034827,
+      "predicted_per_second": 53.03430079155673,
+      "draft_n": 287,
+      "draft_n_accepted": 160
+    }
+  }
+}

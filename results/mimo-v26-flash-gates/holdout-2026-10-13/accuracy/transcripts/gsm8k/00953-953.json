@@ -1,0 +1,69 @@
+{
+  "index": 953,
+  "task_id": 953,
+  "rendered_prompt_sha256": "290eee5c453537439ded1566919b03f467025a23761794ca0310e52204b3559c",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Kim usually sleeps from 10 p.m. to 6 a.m. = 8 hours = 480 minutes.\n\nThat day she woke up 5 minutes earlier than usual to go to the bathroom. So she woke up at 5:55 a.m. instead of 6 a.m.\n\nShe was sleepwalking from 2:15 to 2:38 a.m. = 23 minutes.\n\nTotal time in bed: 10 p.m. to 5:55 a.m. = 7 hours 55 minutes = 475 minutes.\n\nMinus sleepwalking time: 475 - 23 = 452 minutes.\n\nWait, but she also woke up 5 minutes earlier to go to the bathroom. The question says she \"woke up 5 minutes earlier than usual to go to the bathroom.\" This means she woke up at 5:55 a.m. instead of 6 a.m. So she was in bed from 10 p.m. to 5:55 a.m. = 475 minutes.\n\nBut wait - does \"woke up 5 minutes earlier\" mean she woke up at 5:55 a.m.? That would mean she was in bed for 475 minutes total.\n\nThen subtract the sleepwalking time (23 minutes): 475 - 23 = 452 minutes.\n\nHmm, but actually the sleepwalking happened during the night, so she was awake during that time. And she woke up 5 minutes earlier (at 5:55 instead of 6:00), so she was awake from 5:55 to 6:00 as well? No - she woke up at 5:55 to go to the bathroom, then presumably went back to sleep until 6:00 (her usual wake time).\n\nWait, let me re-read: \"she woke up 5 minutes earlier than usual to go to the bathroom.\" So she woke up at 5:55 a.m., went to the bathroom, and then... presumably went back to sleep until 6 a.m.? Or did she stay awake?\n\nThe question asks how many minutes she slept on her bed. So:\n\nTotal time in bed: 10 p.m. to 6 a.m. = 480 minutes.\n\nMinus sleepwalking: 23 minutes.\nMinus waking up 5 minutes early for bathroom: 5 minutes.\n\n480 - 23 - 5 = 452 minutes.\n\nAnswer: 452</think>## Solving Step by Step\n\n**Normal sleep time:** 10 p.m. to 6 a.m. = 8 hours = **480 minutes**\n\n**Adjustments for that day:**\n\n1. **Sleepwalking:** 2:15 a.m. to 2:38 a.m. = **23 minutes** awake\n2. **Woke up 5 minutes early** for the bathroom = **5 minutes** awake\n\n**Total sleep time:** 480 − 23 − 5 = **452 minutes**\n\nAnswer: 452",
+  "finish_reason": "stop",
+  "expected": "452",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 15.75509803701425
+  },
+  "response": {
+    "id": "cmpl-5299adb2a22b4414a83645326b8861da",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Kim usually sleeps from 10 p.m. to 6 a.m. = 8 hours = 480 minutes.\n\nThat day she woke up 5 minutes earlier than usual to go to the bathroom. So she woke up at 5:55 a.m. instead of 6 a.m.\n\nShe was sleepwalking from 2:15 to 2:38 a.m. = 23 minutes.\n\nTotal time in bed: 10 p.m. to 5:55 a.m. = 7 hours 55 minutes = 475 minutes.\n\nMinus sleepwalking time: 475 - 23 = 452 minutes.\n\nWait, but she also woke up 5 minutes earlier to go to the bathroom. The question says she \"woke up 5 minutes earlier than usual to go to the bathroom.\" This means she woke up at 5:55 a.m. instead of 6 a.m. So she was in bed from 10 p.m. to 5:55 a.m. = 475 minutes.\n\nBut wait - does \"woke up 5 minutes earlier\" mean she woke up at 5:55 a.m.? That would mean she was in bed for 475 minutes total.\n\nThen subtract the sleepwalking time (23 minutes): 475 - 23 = 452 minutes.\n\nHmm, but actually the sleepwalking happened during the night, so she was awake during that time. And she woke up 5 minutes earlier (at 5:55 instead of 6:00), so she was awake from 5:55 to 6:00 as well? No - she woke up at 5:55 to go to the bathroom, then presumably went back to sleep until 6:00 (her usual wake time).\n\nWait, let me re-read: \"she woke up 5 minutes earlier than usual to go to the bathroom.\" So she woke up at 5:55 a.m., went to the bathroom, and then... presumably went back to sleep until 6 a.m.? Or did she stay awake?\n\nThe question asks how many minutes she slept on her bed. So:\n\nTotal time in bed: 10 p.m. to 6 a.m. = 480 minutes.\n\nMinus sleepwalking: 23 minutes.\nMinus waking up 5 minutes early for bathroom: 5 minutes.\n\n480 - 23 - 5 = 452 minutes.\n\nAnswer: 452</think>## Solving Step by Step\n\n**Normal sleep time:** 10 p.m. to 6 a.m. = 8 hours = **480 minutes**\n\n**Adjustments for that day:**\n\n1. **Sleepwalking:** 2:15 a.m. to 2:38 a.m. = **23 minutes** awake\n2. **Woke up 5 minutes early** for the bathroom = **5 minutes** awake\n\n**Total sleep time:** 480 − 23 − 5 = **452 minutes**\n\nAnswer: 452"
+      }
+    ],
+    "created": 1791939301,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 144,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.47,
+      "prompt_tokens_per_sec": 306.38,
+      "completion_tokens": 664,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 509,
+        "rejected_prediction_tokens": 576
+      },
+      "completion_time": 15.28,
+      "completion_tokens_per_sec": 43.44,
+      "total_tokens": 808,
+      "total_time": 15.76
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 144,
+      "prompt_ms": 470.0,
+      "prompt_per_token_ms": 3.263888888888889,
+      "prompt_per_second": 306.3829787234042,
+      "predicted_n": 664,
+      "predicted_ms": 15280.0,
+      "predicted_per_token_ms": 23.012048192771083,
+      "predicted_per_second": 43.45549738219895,
+      "draft_n": 1085,
+      "draft_n_accepted": 509
+    }
+  },
+  "used_fallback": false
+}

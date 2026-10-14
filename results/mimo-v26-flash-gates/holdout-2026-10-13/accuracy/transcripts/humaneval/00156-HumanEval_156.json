@@ -1,0 +1,104 @@
+{
+  "index": 156,
+  "task_id": "HumanEval/156",
+  "rendered_prompt_sha256": "8959ac1c6c2fd7f47f748d3f39d4698b9ef610a28fbd428fad7dc4e856e9d737",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    roman_numerals = [\n        (1000, 'm'),\n        (900, 'cm'),\n        (500, 'd'),\n        (400, 'cd'),\n        (100, 'c'),\n        (90, 'xc'),\n        (50, 'l'),\n        (40, 'xl'),\n        (10, 'x'),\n        (9, 'ix'),\n        (5, 'v'),\n        (4, 'iv'),\n        (1, 'i')\n    ]\n\n    result = ''\n    for value, symbol in roman_numerals:\n        while number >= value:\n            result += symbol\n            number -= value\n\n    return result\n\ndef test_int_to_mini_roman():\n    assert int_to_mini_roman(19) == 'xix'\n    assert int_to_mini_roman(152) == 'clii'\n    assert int_to_mini_roman(426) == 'cdxxvi'\n    assert int_to_mini_roman(1) == 'i'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(999) == 'cmxcix'\n    assert int_to_mini_roman(40) == 'xl'\n    assert int_to_mini_roman(90) == 'xc'\n    assert int_to_mini_roman(400) == 'cd'\n    assert int_to_mini_roman(900) == 'cm'\n    assert int_to_mini_roman(500) == 'd'\n    assert int_to_mini_roman(50) == 'l'\n    assert int_to_mini_roman(5) == 'v'\n    assert int_to_mini_roman(4) == 'iv'\n    assert int_to_mini_roman(9) == 'ix'\n    assert int_to_mini_roman(10) == 'x'\n    assert int_to_mini_roman(100) == 'c'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n",
+  "finish_reason": "stop",
+  "expected": "    num = [1, 4, 5, 9, 10, 40, 50, 90,  \n           100, 400, 500, 900, 1000] \n    sym = [\"I\", \"IV\", \"V\", \"IX\", \"X\", \"XL\",  \n           \"L\", \"XC\", \"C\", \"CD\", \"D\", \"CM\", \"M\"] \n    i = 12\n    res = ''\n    while number: \n        div = number // num[i] \n        number %= num[i] \n        while div: \n            res += sym[i] \n            div -= 1\n        i -= 1\n    return res.lower()\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 16.82721551298164
+  },
+  "response": {
+    "id": "cmpl-400dc085daf5468d81a30919d3d20a1f",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    roman_numerals = [\n        (1000, 'm'),\n        (900, 'cm'),\n        (500, 'd'),\n        (400, 'cd'),\n        (100, 'c'),\n        (90, 'xc'),\n        (50, 'l'),\n        (40, 'xl'),\n        (10, 'x'),\n        (9, 'ix'),\n        (5, 'v'),\n        (4, 'iv'),\n        (1, 'i')\n    ]\n\n    result = ''\n    for value, symbol in roman_numerals:\n        while number >= value:\n            result += symbol\n            number -= value\n\n    return result\n\ndef test_int_to_mini_roman():\n    assert int_to_mini_roman(19) == 'xix'\n    assert int_to_mini_roman(152) == 'clii'\n    assert int_to_mini_roman(426) == 'cdxxvi'\n    assert int_to_mini_roman(1) == 'i'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(999) == 'cmxcix'\n    assert int_to_mini_roman(40) == 'xl'\n    assert int_to_mini_roman(90) == 'xc'\n    assert int_to_mini_roman(400) == 'cd'\n    assert int_to_mini_roman(900) == 'cm'\n    assert int_to_mini_roman(500) == 'd'\n    assert int_to_mini_roman(50) == 'l'\n    assert int_to_mini_roman(5) == 'v'\n    assert int_to_mini_roman(4) == 'iv'\n    assert int_to_mini_roman(9) == 'ix'\n    assert int_to_mini_roman(10) == 'x'\n    assert int_to_mini_roman(100) == 'c'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n    assert int_to_mini_roman(1000) == 'm'\n"
+      }
+    ],
+    "created": 1791964328,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 103,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 278.38,
+      "completion_tokens": 1221,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 1061,
+        "rejected_prediction_tokens": 59
+      },
+      "completion_time": 16.45,
+      "completion_tokens_per_sec": 74.23,
+      "total_tokens": 1324,
+      "total_time": 16.82
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 103,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 3.592233009708738,
+      "prompt_per_second": 278.3783783783784,
+      "predicted_n": 1221,
+      "predicted_ms": 16450.0,
+      "predicted_per_token_ms": 13.472563472563472,
+      "predicted_per_second": 74.22492401215806,
+      "draft_n": 1120,
+      "draft_n_accepted": 1061
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00156:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

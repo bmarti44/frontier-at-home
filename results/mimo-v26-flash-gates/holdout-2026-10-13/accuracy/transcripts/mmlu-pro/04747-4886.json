@@ -1,0 +1,68 @@
+{
+  "index": 4747,
+  "task_id": 4886,
+  "rendered_prompt_sha256": "bb439a80d66fca253365ff428fbaf12af6157c67b7ac4896c9fbab29ad668f9e",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Logan's Address emphasizes that he was a friend of the whites, that he was wronged by Colonel Cresap who murdered his family, and that he sought revenge. A sympathetic reader would recognize that Logan had legitimate grievances and that the Indians had been wronged by white settlers. Such a reader would most likely support respecting Indian territory and sovereignty.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='G' expected='B'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.018992247991264
+  },
+  "response": {
+    "id": "cmpl-f8620b0d6ae041d1bd0faf0fb4320844",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Logan's Address emphasizes that he was a friend of the whites, that he was wronged by Colonel Cresap who murdered his family, and that he sought revenge. A sympathetic reader would recognize that Logan had legitimate grievances and that the Indians had been wronged by white settlers. Such a reader would most likely support respecting Indian territory and sovereignty.</think>Answer: G"
+      }
+    ],
+    "created": 1791944860,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 425,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 1.19,
+      "prompt_tokens_per_sec": 357.14,
+      "completion_tokens": 75,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 45,
+        "rejected_prediction_tokens": 165
+      },
+      "completion_time": 2.82,
+      "completion_tokens_per_sec": 26.57,
+      "total_tokens": 500,
+      "total_time": 4.01
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 425,
+      "prompt_ms": 1190.0,
+      "prompt_per_token_ms": 2.8,
+      "prompt_per_second": 357.14285714285717,
+      "predicted_n": 75,
+      "predicted_ms": 2820.0,
+      "predicted_per_token_ms": 37.6,
+      "predicted_per_second": 26.595744680851066,
+      "draft_n": 210,
+      "draft_n_accepted": 45
+    }
+  }
+}

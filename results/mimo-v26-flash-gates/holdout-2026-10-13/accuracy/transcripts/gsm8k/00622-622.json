@@ -1,0 +1,69 @@
+{
+  "index": 622,
+  "task_id": 622,
+  "rendered_prompt_sha256": "9874d3e150ce6612a812198c86534a3535671d2f09629724d387911e640bd51a",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>School day: 8 hours, chews 1 piece every 2 hours → 8/2 = 4 pieces\nWay home: 1 piece\nAfter dinner: 1 piece\nTotal chewed: 4 + 1 + 1 = 6\nRemaining: 20 - 6 = 14\nGives half to sister: 14/2 = 7\nLeft: 7</think>Let's work through this step by step:\n\n- **At school:** 8 hours ÷ 2 hours per piece = **4 pieces**\n- **On the way home:** **1 piece**\n- **After dinner:** **1 piece**\n- **Total chewed:** 4 + 1 + 1 = **6 pieces**\n- **Remaining:** 20 − 6 = **14 pieces**\n- **Gives half to sister:** 14 ÷ 2 = **7 pieces given away**\n- **Left:** 14 − 7 = **7 pieces**\n\nAnswer: 7",
+  "finish_reason": "stop",
+  "expected": "7",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.347407389024738
+  },
+  "response": {
+    "id": "cmpl-eb731486a2a34f4b97033051fbd86c74",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>School day: 8 hours, chews 1 piece every 2 hours → 8/2 = 4 pieces\nWay home: 1 piece\nAfter dinner: 1 piece\nTotal chewed: 4 + 1 + 1 = 6\nRemaining: 20 - 6 = 14\nGives half to sister: 14/2 = 7\nLeft: 7</think>Let's work through this step by step:\n\n- **At school:** 8 hours ÷ 2 hours per piece = **4 pieces**\n- **On the way home:** **1 piece**\n- **After dinner:** **1 piece**\n- **Total chewed:** 4 + 1 + 1 = **6 pieces**\n- **Remaining:** 20 − 6 = **14 pieces**\n- **Gives half to sister:** 14 ÷ 2 = **7 pieces given away**\n- **Left:** 14 − 7 = **7 pieces**\n\nAnswer: 7"
+      }
+    ],
+    "created": 1791939395,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 129,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.42,
+      "prompt_tokens_per_sec": 307.14,
+      "completion_tokens": 216,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 176,
+        "rejected_prediction_tokens": 104
+      },
+      "completion_time": 3.92,
+      "completion_tokens_per_sec": 55.11,
+      "total_tokens": 345,
+      "total_time": 4.34
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 129,
+      "prompt_ms": 420.0,
+      "prompt_per_token_ms": 3.255813953488372,
+      "prompt_per_second": 307.14285714285717,
+      "predicted_n": 216,
+      "predicted_ms": 3920.0,
+      "predicted_per_token_ms": 18.14814814814815,
+      "predicted_per_second": 55.10204081632653,
+      "draft_n": 280,
+      "draft_n_accepted": 176
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,68 @@
+{
+  "index": 7318,
+  "task_id": 7500,
+  "rendered_prompt_sha256": "10101beeb6029db1bd9652a4b3e54ce3bde56bd478d4f1ab21d8fe713e27f1ca",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Let me analyze each option:\n\nA. TFC = AVC at all levels of output. - False. TFC is total fixed cost, AVC is average variable cost. They are not equal.\n\nB. AVC + AFC = TC. - False. AVC + AFC = ATC (average total cost), not TC (total cost).\n\nC. TFC = TC at all levels of output. - False. TC = TFC + TVC, so TFC = TC only when TVC = 0 (output = 0).\n\nD. MC = AVC + AFC. - False. MC is marginal cost, not equal to AVC + AFC.\n\nE. AFC = TC - AVC. - False. AFC = ATC - AVC, not TC - AVC.\n\nF. ATC = TC - AFC. - False. ATC = TC/Q, not TC - AFC.\n\nG. MC = TC - TFC. - False. MC = ΔTC/ΔQ.\n\nH. TC = (AVC + AFC)Q. - Let me check: AVC + AFC = ATC. So (AVC + AFC)Q = ATC * Q = (TC/Q) * Q = TC. This is TRUE!\n\nI. TC = MC * Q. - False. MC is the derivative of TC with respect to Q, so TC = ∫MC dQ, not MC * Q.\n\nJ. AVC = TC - TFC. - False. AVC = TVC/Q, not TC - TFC.\n\nSo the answer is H.</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.068816261016764
+  },
+  "response": {
+    "id": "cmpl-a0689381b4504d52875129452be4e223",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Let me analyze each option:\n\nA. TFC = AVC at all levels of output. - False. TFC is total fixed cost, AVC is average variable cost. They are not equal.\n\nB. AVC + AFC = TC. - False. AVC + AFC = ATC (average total cost), not TC (total cost).\n\nC. TFC = TC at all levels of output. - False. TC = TFC + TVC, so TFC = TC only when TVC = 0 (output = 0).\n\nD. MC = AVC + AFC. - False. MC is marginal cost, not equal to AVC + AFC.\n\nE. AFC = TC - AVC. - False. AFC = ATC - AVC, not TC - AVC.\n\nF. ATC = TC - AFC. - False. ATC = TC/Q, not TC - AFC.\n\nG. MC = TC - TFC. - False. MC = ΔTC/ΔQ.\n\nH. TC = (AVC + AFC)Q. - Let me check: AVC + AFC = ATC. So (AVC + AFC)Q = ATC * Q = (TC/Q) * Q = TC. This is TRUE!\n\nI. TC = MC * Q. - False. MC is the derivative of TC with respect to Q, so TC = ∫MC dQ, not MC * Q.\n\nJ. AVC = TC - TFC. - False. AVC = TVC/Q, not TC - TFC.\n\nSo the answer is H.</think>Answer: H"
+      }
+    ],
+    "created": 1791942131,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 127,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.4,
+      "prompt_tokens_per_sec": 317.5,
+      "completion_tokens": 320,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 251,
+        "rejected_prediction_tokens": 232
+      },
+      "completion_time": 6.66,
+      "completion_tokens_per_sec": 48.06,
+      "total_tokens": 447,
+      "total_time": 7.06
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 127,
+      "prompt_ms": 400.0,
+      "prompt_per_token_ms": 3.1496062992125986,
+      "prompt_per_second": 317.5,
+      "predicted_n": 320,
+      "predicted_ms": 6660.0,
+      "predicted_per_token_ms": 20.8125,
+      "predicted_per_second": 48.048048048048045,
+      "draft_n": 483,
+      "draft_n_accepted": 251
+    }
+  }
+}

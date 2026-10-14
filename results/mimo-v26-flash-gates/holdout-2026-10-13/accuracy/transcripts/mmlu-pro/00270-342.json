@@ -1,0 +1,68 @@
+{
+  "index": 270,
+  "task_id": 342,
+  "rendered_prompt_sha256": "334a2daa9822de33570e95a90a1bf302c4c7919e9093d19bf6f5be4f00d156da",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Let me calculate each:\n\n(a) 346 glasses @ 50¢ each = 346 × 0.50 = $173.00\n\n(b) 870 nails @ 3½¢ each = 870 × 0.035 = $30.45\n\n(c) 125 chains @ $16.48 each = 125 × 16.48 = $2,060.00\n\nSo the answer is $173.00, $30.45, $2,060.00 which is option H.</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.9759713929961435
+  },
+  "response": {
+    "id": "cmpl-dd88008a0b824e3bad55e5081a8573a6",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Let me calculate each:\n\n(a) 346 glasses @ 50¢ each = 346 × 0.50 = $173.00\n\n(b) 870 nails @ 3½¢ each = 870 × 0.035 = $30.45\n\n(c) 125 chains @ $16.48 each = 125 × 16.48 = $2,060.00\n\nSo the answer is $173.00, $30.45, $2,060.00 which is option H.</think>Answer: H"
+      }
+    ],
+    "created": 1791940434,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 356,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.96,
+      "prompt_tokens_per_sec": 370.83,
+      "completion_tokens": 148,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 127,
+        "rejected_prediction_tokens": 20
+      },
+      "completion_time": 2.01,
+      "completion_tokens_per_sec": 73.65,
+      "total_tokens": 504,
+      "total_time": 2.97
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 356,
+      "prompt_ms": 960.0,
+      "prompt_per_token_ms": 2.696629213483146,
+      "prompt_per_second": 370.83333333333337,
+      "predicted_n": 148,
+      "predicted_ms": 2009.9999999999998,
+      "predicted_per_token_ms": 13.581081081081079,
+      "predicted_per_second": 73.63184079601992,
+      "draft_n": 147,
+      "draft_n_accepted": 127
+    }
+  }
+}

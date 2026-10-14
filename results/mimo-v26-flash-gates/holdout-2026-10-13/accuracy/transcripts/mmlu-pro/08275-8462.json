@@ -1,0 +1,68 @@
+{
+  "index": 8275,
+  "task_id": 8462,
+  "rendered_prompt_sha256": "3fd7a55d91101604b910abcc34599ad011aaf8aa1bef73b5820c5232637fc346",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>56 = 8 × 7 = 7 × 8 = 4 × 14 = 2 × 28 = 1 × 56\n\nA: 8 × 7 = 56 ✓\nB: 9 × 6 = 54 ✗\nC: 7 × 7 = 49 ✗\nD: 10 × 5 = 50 ✗\nE: 11 × 5 = 55 ✗\nF: 6 × 8 = 48 ✗\nG: 5 × 10 = 50 ✗\nH: 3 × 18 = 54 ✗</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.0183434329810552
+  },
+  "response": {
+    "id": "cmpl-720e8c5d3bf94a19bd141843e5f932dc",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>56 = 8 × 7 = 7 × 8 = 4 × 14 = 2 × 28 = 1 × 56\n\nA: 8 × 7 = 56 ✓\nB: 9 × 6 = 54 ✗\nC: 7 × 7 = 49 ✗\nD: 10 × 5 = 50 ✗\nE: 11 × 5 = 55 ✗\nF: 6 × 8 = 48 ✗\nG: 5 × 10 = 50 ✗\nH: 3 × 18 = 54 ✗</think>Answer: A"
+      }
+    ],
+    "created": 1791946254,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 217,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.59,
+      "prompt_tokens_per_sec": 367.8,
+      "completion_tokens": 156,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 131,
+        "rejected_prediction_tokens": 44
+      },
+      "completion_time": 2.42,
+      "completion_tokens_per_sec": 64.51,
+      "total_tokens": 373,
+      "total_time": 3.01
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 217,
+      "prompt_ms": 590.0,
+      "prompt_per_token_ms": 2.71889400921659,
+      "prompt_per_second": 367.7966101694915,
+      "predicted_n": 156,
+      "predicted_ms": 2420.0,
+      "predicted_per_token_ms": 15.512820512820513,
+      "predicted_per_second": 64.46280991735537,
+      "draft_n": 175,
+      "draft_n_accepted": 131
+    }
+  }
+}

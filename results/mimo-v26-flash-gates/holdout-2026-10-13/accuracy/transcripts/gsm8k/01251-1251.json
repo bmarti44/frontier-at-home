@@ -1,0 +1,69 @@
+{
+  "index": 1251,
+  "task_id": 1251,
+  "rendered_prompt_sha256": "8af4713ebd90500c0e8c411b4a5cc4f5e4a6990c176e6681692fecb721d55356",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>First side: 5 minutes\nSecond side: 2 × 5 = 10 minutes\nThird side: 2 × 5 = 10 minutes\nFourth side: 5/2 = 2.5 minutes\nFifth side: 5/2 = 2.5 minutes\n\nTotal: 5 + 10 + 10 + 2.5 + 2.5 = 30 minutes</think>Let me break this down:\n\n- **1st side:** 5 minutes\n- **2nd side:** 2 × 5 = 10 minutes\n- **3rd side:** 2 × 5 = 10 minutes\n- **4th side:** 5 ÷ 2 = 2.5 minutes\n- **5th side:** 5 ÷ 2 = 2.5 minutes\n\nTotal = 5 + 10 + 10 + 2.5 + 2.5 = 30 minutes\n\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.6120719729806297
+  },
+  "response": {
+    "id": "cmpl-1573307b851746cabe91f003acd77f26",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>First side: 5 minutes\nSecond side: 2 × 5 = 10 minutes\nThird side: 2 × 5 = 10 minutes\nFourth side: 5/2 = 2.5 minutes\nFifth side: 5/2 = 2.5 minutes\n\nTotal: 5 + 10 + 10 + 2.5 + 2.5 = 30 minutes</think>Let me break this down:\n\n- **1st side:** 5 minutes\n- **2nd side:** 2 × 5 = 10 minutes\n- **3rd side:** 2 × 5 = 10 minutes\n- **4th side:** 5 ÷ 2 = 2.5 minutes\n- **5th side:** 5 ÷ 2 = 2.5 minutes\n\nTotal = 5 + 10 + 10 + 2.5 + 2.5 = 30 minutes\n\nAnswer: 30"
+      }
+    ],
+    "created": 1791939416,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 105,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.4,
+      "prompt_tokens_per_sec": 262.5,
+      "completion_tokens": 215,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 182,
+        "rejected_prediction_tokens": 49
+      },
+      "completion_time": 3.2,
+      "completion_tokens_per_sec": 67.08,
+      "total_tokens": 320,
+      "total_time": 3.61
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 105,
+      "prompt_ms": 400.0,
+      "prompt_per_token_ms": 3.8095238095238093,
+      "prompt_per_second": 262.5,
+      "predicted_n": 215,
+      "predicted_ms": 3200.0,
+      "predicted_per_token_ms": 14.883720930232558,
+      "predicted_per_second": 67.1875,
+      "draft_n": 231,
+      "draft_n_accepted": 182
+    }
+  },
+  "used_fallback": false
+}

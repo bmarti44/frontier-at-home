@@ -1,0 +1,69 @@
+{
+  "index": 889,
+  "task_id": 889,
+  "rendered_prompt_sha256": "567ea704ef7b280b16f504290aee2615eb0146ec26fbd363bd51c395be07bd79",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Orchids: 5 × 5 = 25 petals\nDaisies: 4 × 10 = 40 petals\nDifference: 40 - 25 = 15</think>Orchids: 5 × 5 = 25 petals\nDaisies: 4 × 10 = 40 petals\nDifference: 40 − 25 = 15\n\nAnswer: 15",
+  "finish_reason": "stop",
+  "expected": "15",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.714204050018452
+  },
+  "response": {
+    "id": "cmpl-d6990f1693c74c6c82cda7d5965260ad",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Orchids: 5 × 5 = 25 petals\nDaisies: 4 × 10 = 40 petals\nDifference: 40 - 25 = 15</think>Orchids: 5 × 5 = 25 petals\nDaisies: 4 × 10 = 40 petals\nDifference: 40 − 25 = 15\n\nAnswer: 15"
+      }
+    ],
+    "created": 1791939340,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 85,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 229.73,
+      "completion_tokens": 97,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 83,
+        "rejected_prediction_tokens": 15
+      },
+      "completion_time": 1.34,
+      "completion_tokens_per_sec": 72.57,
+      "total_tokens": 182,
+      "total_time": 1.71
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 85,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.352941176470588,
+      "prompt_per_second": 229.7297297297297,
+      "predicted_n": 97,
+      "predicted_ms": 1340.0,
+      "predicted_per_token_ms": 13.814432989690722,
+      "predicted_per_second": 72.38805970149254,
+      "draft_n": 98,
+      "draft_n_accepted": 83
+    }
+  },
+  "used_fallback": false
+}

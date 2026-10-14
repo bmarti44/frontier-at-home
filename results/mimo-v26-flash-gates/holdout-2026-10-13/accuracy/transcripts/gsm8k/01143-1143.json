@@ -1,0 +1,69 @@
+{
+  "index": 1143,
+  "task_id": 1143,
+  "rendered_prompt_sha256": "653095e4254bfd328c16045287ecd5f8aaaf5d915138a7ce6eb1746d59eb4d5f",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>5 trees × 6 lemons × 10 years = 300</think>5 trees × 6 lemons per tree × 10 years = 300 lemons\n\nAnswer: 300",
+  "finish_reason": "stop",
+  "expected": "300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.252710102009587
+  },
+  "response": {
+    "id": "cmpl-3f3b62324bd441d7bd60f4dc0479b2c2",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>5 trees × 6 lemons × 10 years = 300</think>5 trees × 6 lemons per tree × 10 years = 300 lemons\n\nAnswer: 300"
+      }
+    ],
+    "created": 1791939368,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 63,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.32,
+      "prompt_tokens_per_sec": 196.88,
+      "completion_tokens": 48,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 38,
+        "rejected_prediction_tokens": 32
+      },
+      "completion_time": 0.93,
+      "completion_tokens_per_sec": 51.74,
+      "total_tokens": 111,
+      "total_time": 1.25
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 63,
+      "prompt_ms": 320.0,
+      "prompt_per_token_ms": 5.079365079365079,
+      "prompt_per_second": 196.875,
+      "predicted_n": 48,
+      "predicted_ms": 930.0,
+      "predicted_per_token_ms": 19.375,
+      "predicted_per_second": 51.61290322580645,
+      "draft_n": 70,
+      "draft_n_accepted": 38
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,68 @@
+{
+  "index": 5240,
+  "task_id": 5383,
+  "rendered_prompt_sha256": "3544e08c9884b4acbc38f78c3e923d02b867002d9ce5aed7d3d7a1c52b49e94d",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The large intestine (colon) in an adult human is approximately 5 feet long.</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.1338667819509283
+  },
+  "response": {
+    "id": "cmpl-4724ef17f580453ea473fee2450bc38e",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The large intestine (colon) in an adult human is approximately 5 feet long.</think>Answer: H"
+      }
+    ],
+    "created": 1791946826,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 89,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 254.29,
+      "completion_tokens": 23,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 15,
+        "rejected_prediction_tokens": 41
+      },
+      "completion_time": 0.78,
+      "completion_tokens_per_sec": 29.46,
+      "total_tokens": 112,
+      "total_time": 1.13
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 89,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 3.932584269662921,
+      "prompt_per_second": 254.28571428571428,
+      "predicted_n": 23,
+      "predicted_ms": 780.0,
+      "predicted_per_token_ms": 33.91304347826087,
+      "predicted_per_second": 29.48717948717949,
+      "draft_n": 56,
+      "draft_n_accepted": 15
+    }
+  }
+}

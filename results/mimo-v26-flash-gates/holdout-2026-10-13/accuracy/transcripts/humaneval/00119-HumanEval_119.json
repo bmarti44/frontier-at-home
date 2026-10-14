@@ -1,0 +1,104 @@
+{
+  "index": 119,
+  "task_id": "HumanEval/119",
+  "rendered_prompt_sha256": "7d057f437949f329d47d033084ee94a506621185f9063e13a91bbb741dca6216",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    def is_good(s):\n        count = 0\n        for c in s:\n            if c == '(':\n                count += 1\n            elif c == ')':\n                count -= 1\n            if count < 0:\n                return False\n        return count == 0\n\n    s1, s2 = lst\n    if is_good(s1 + s2) or is_good(s2 + s1):\n        return 'Yes'\n    return 'No'\n\nassert match_parens(['()(', ')']) == 'Yes'\nassert match_parens([')', ')']) == 'No'\nassert match_parens(['(', ')']) == 'Yes'\nassert match_parens(['(', '(']) == 'No'\nassert match_parens([')', '(']) == 'Yes'\nassert match_parens(['()', '()']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', '(']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_p",
+  "finish_reason": "stop",
+  "expected": "    def check(s):\n        val = 0\n        for i in s:\n            if i == '(':\n                val = val + 1\n            else:\n                val = val - 1\n            if val < 0:\n                return False\n        return True if val == 0 else False\n\n    S1 = lst[0] + lst[1]\n    S2 = lst[1] + lst[0]\n    return 'Yes' if check(S1) or check(S2) else 'No'\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 15.007621539989486
+  },
+  "response": {
+    "id": "cmpl-c2383274e48e4fe993479075d5d47970",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    def is_good(s):\n        count = 0\n        for c in s:\n            if c == '(':\n                count += 1\n            elif c == ')':\n                count -= 1\n            if count < 0:\n                return False\n        return count == 0\n\n    s1, s2 = lst\n    if is_good(s1 + s2) or is_good(s2 + s1):\n        return 'Yes'\n    return 'No'\n\nassert match_parens(['()(', ')']) == 'Yes'\nassert match_parens([')', ')']) == 'No'\nassert match_parens(['(', ')']) == 'Yes'\nassert match_parens(['(', '(']) == 'No'\nassert match_parens([')', '(']) == 'Yes'\nassert match_parens(['()', '()']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', '(']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_parens(['()', ')']) == 'Yes'\nassert match_p"
+      }
+    ],
+    "created": 1791960310,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 163,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.52,
+      "prompt_tokens_per_sec": 313.46,
+      "completion_tokens": 1000,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 861,
+        "rejected_prediction_tokens": 112
+      },
+      "completion_time": 14.49,
+      "completion_tokens_per_sec": 69.03,
+      "total_tokens": 1163,
+      "total_time": 15.01
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 163,
+      "prompt_ms": 520.0,
+      "prompt_per_token_ms": 3.1901840490797544,
+      "prompt_per_second": 313.46153846153845,
+      "predicted_n": 1000,
+      "predicted_ms": 14490.0,
+      "predicted_per_token_ms": 14.49,
+      "predicted_per_second": 69.01311249137336,
+      "draft_n": 973,
+      "draft_n_accepted": 861
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00119:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 39, in <module>\n    assert match_parens(['()', ')']) == 'Yes'\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

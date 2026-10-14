@@ -1,0 +1,68 @@
+{
+  "index": 81,
+  "task_id": 152,
+  "rendered_prompt_sha256": "739610170d84d721eb206c711f1bf38743283a90462ada4e4043771d8d7d036f",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Invoice dated March 2, amount $416.50, less 15% and 2.5% (successive discounts).\n\nFirst discount: 416.50 × 0.85 = 354.025\nSecond discount: 354.025 × 0.975 = 345.174375 ≈ 345.17\n\nTerms: 2% 10-EOM. EOM = end of month. Invoice dated March 2, so EOM is March 31. Discount period: 10 days after EOM → April 10. Payment on April 10 qualifies for 2% discount.\n\n345.17 × 0.98 = 338.2666 ≈ 338.27\n\nAnswer: E</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.68924977700226
+  },
+  "response": {
+    "id": "cmpl-18fb6357b23d4e47b6271a2fd1f331a6",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Invoice dated March 2, amount $416.50, less 15% and 2.5% (successive discounts).\n\nFirst discount: 416.50 × 0.85 = 354.025\nSecond discount: 354.025 × 0.975 = 345.174375 ≈ 345.17\n\nTerms: 2% 10-EOM. EOM = end of month. Invoice dated March 2, so EOM is March 31. Discount period: 10 days after EOM → April 10. Payment on April 10 qualifies for 2% discount.\n\n345.17 × 0.98 = 338.2666 ≈ 338.27\n\nAnswer: E</think>Answer: E"
+      }
+    ],
+    "created": 1791939972,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 186,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.56,
+      "prompt_tokens_per_sec": 332.14,
+      "completion_tokens": 200,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 157,
+        "rejected_prediction_tokens": 144
+      },
+      "completion_time": 4.12,
+      "completion_tokens_per_sec": 48.49,
+      "total_tokens": 386,
+      "total_time": 4.69
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 186,
+      "prompt_ms": 560.0,
+      "prompt_per_token_ms": 3.010752688172043,
+      "prompt_per_second": 332.14285714285717,
+      "predicted_n": 200,
+      "predicted_ms": 4120.0,
+      "predicted_per_token_ms": 20.6,
+      "predicted_per_second": 48.54368932038835,
+      "draft_n": 301,
+      "draft_n_accepted": 157
+    }
+  }
+}

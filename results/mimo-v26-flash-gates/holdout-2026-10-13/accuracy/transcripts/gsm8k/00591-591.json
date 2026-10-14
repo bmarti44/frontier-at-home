@@ -1,0 +1,69 @@
+{
+  "index": 591,
+  "task_id": 591,
+  "rendered_prompt_sha256": "2368f73520229070b65565fdd5a92e72b980dde882cfb5022264402313a75243",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Affenpinscher: 10 pounds\nDachshund: 20 pounds\nPapillon: 5 pounds\nMastiff: 44 × 5 = 220 pounds</think>Affenpinscher: 10 pounds\nDachshund: 2 × 10 = 20 pounds\nPapillon: 20 ÷ 4 = 5 pounds\nMastiff: 44 × 5 = 220 pounds\n\nAnswer: 220",
+  "finish_reason": "stop",
+  "expected": "220",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.175325942982454
+  },
+  "response": {
+    "id": "cmpl-25574080e5004ad8b2b23ef2b6bbd386",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Affenpinscher: 10 pounds\nDachshund: 20 pounds\nPapillon: 5 pounds\nMastiff: 44 × 5 = 220 pounds</think>Affenpinscher: 10 pounds\nDachshund: 2 × 10 = 20 pounds\nPapillon: 20 ÷ 4 = 5 pounds\nMastiff: 44 × 5 = 220 pounds\n\nAnswer: 220"
+      }
+    ],
+    "created": 1791939408,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 152,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.53,
+      "prompt_tokens_per_sec": 286.79,
+      "completion_tokens": 113,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 96,
+        "rejected_prediction_tokens": 23
+      },
+      "completion_time": 1.64,
+      "completion_tokens_per_sec": 68.9,
+      "total_tokens": 265,
+      "total_time": 2.17
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 152,
+      "prompt_ms": 530.0,
+      "prompt_per_token_ms": 3.486842105263158,
+      "prompt_per_second": 286.79245283018867,
+      "predicted_n": 113,
+      "predicted_ms": 1640.0,
+      "predicted_per_token_ms": 14.513274336283185,
+      "predicted_per_second": 68.90243902439025,
+      "draft_n": 119,
+      "draft_n_accepted": 96
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,69 @@
+{
+  "index": 220,
+  "task_id": 220,
+  "rendered_prompt_sha256": "255df5781dd6867eadbf656d9e3757aedd153ce799e0cb8ab460a8e6859b20ce",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>3 × 10 = 30 minutes for crosswords\n8 × 5 = 40 minutes for sudoku\nTotal = 70 minutes</think>Crosswords: 3 × 10 = 30 minutes\nSudoku: 8 × 5 = 40 minutes\nTotal: 30 + 40 = 70 minutes\n\nAnswer: 70",
+  "finish_reason": "stop",
+  "expected": "70",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.8374161510146223
+  },
+  "response": {
+    "id": "cmpl-1c34c947f0fe4958a868b04bd30dfc5a",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>3 × 10 = 30 minutes for crosswords\n8 × 5 = 40 minutes for sudoku\nTotal = 70 minutes</think>Crosswords: 3 × 10 = 30 minutes\nSudoku: 8 × 5 = 40 minutes\nTotal: 30 + 40 = 70 minutes\n\nAnswer: 70"
+      }
+    ],
+    "created": 1791939319,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 81,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 207.69,
+      "completion_tokens": 84,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 69,
+        "rejected_prediction_tokens": 36
+      },
+      "completion_time": 1.45,
+      "completion_tokens_per_sec": 58.08,
+      "total_tokens": 165,
+      "total_time": 1.84
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 81,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 4.814814814814815,
+      "prompt_per_second": 207.6923076923077,
+      "predicted_n": 84,
+      "predicted_ms": 1450.0,
+      "predicted_per_token_ms": 17.261904761904763,
+      "predicted_per_second": 57.931034482758626,
+      "draft_n": 105,
+      "draft_n_accepted": 69
+    }
+  },
+  "used_fallback": false
+}
