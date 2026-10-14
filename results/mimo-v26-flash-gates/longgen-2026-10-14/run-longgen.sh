@@ -29,13 +29,14 @@ OBS=$EV/observe
 RELEASE_ROOTS=(/home/bmarti44/models/qwen3.8-flash-next-nvfp4 /home/bmarti44/.cache/qwen38-flash-next
                "$PACK" "$DRAFT" "$OFFICIAL" /home/bmarti44/models/mimo-v2.6-flash-mopd-exl3-2.52-src
                /home/bmarti44/models/mimo-v2.6-flash-dflash-exl3-src "$RT")
-CAP=3600   # per arm
+CAP=3900   # per arm: load + probe 900 s + longgen 2700 s fit under it (review B, LG-3)
 # The restore's output goes outside the evidence: production's memwatch keeps it open.
 RESTORE_LOG=$LOGS/mimo26-longgen-restore-$$.log
 INFERENCE_LOCK=/run/lock/frontier-at-home/inference.lock
 GIB=1048576
 KILL_KERNEL='out of memory|oom-kill|oom_reaper|NVRM|Xid'
 KILL_MEMWATCH='BREACH|EMERGENCY_STOP|FAIL_CLOSED'
+KILL_SERVER='CUDA out of memory|OutOfMemoryError|NVRM|Xid'
 [[ ! -e $OBS ]] || { echo "REFUSED $OBS exists; this window has run" >&2; exit 2; }
 [[ -z $(git -C "$WT" status --porcelain --untracked-files=no) ]] || { echo "REFUSED tracked edits; commit first" >&2; exit 2; }
 [[ -z $(git -C "$WT" status --porcelain -- "$EV") ]] || { echo "REFUSED uncommitted files under $EV" >&2; exit 2; }
@@ -43,6 +44,21 @@ for arm in "${ARM_ORDER[@]}"; do
     python3 "$WT/scripts/92_resolve_profile.py" check --profile "${ARM_PROFILE[$arm]}" >/dev/null \
         || { echo "REFUSED arm $arm profile ${ARM_PROFILE[$arm]} does not resolve" >&2; exit 2; }
 done
+# The TabbyAPI shim checks its flags only at server start, after production is
+# down: render every arm and run the shim's own check first (review B, LG-1).
+python3 - "$WT" "$HOST" "${ARM_PROFILE[@]}" <<'PY' || { echo "REFUSED an arm's launch is refused by the TabbyAPI shim" >&2; exit 2; }
+import sys
+sys.path.insert(0, sys.argv[1] + "/scripts/lib")
+import profile_resolver as r
+import tabby_launch
+host = r.load_host(sys.argv[2])
+for profile_id in sys.argv[3:]:
+    slug, name = profile_id.split("/")
+    snapshot = r.resolve(r.load_profile(slug, name + ".json"), r.load_model(slug), host)
+    assert snapshot["argv"][:3] == ["-B", "-m", "tabby_launch"], profile_id
+    tabby_launch.tabby_argv(snapshot["argv"][3:])
+    print(f"shim accepts {profile_id}")
+PY
 cd "$WT"
 
 stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -223,8 +239,9 @@ for arm in "${ARM_ORDER[@]}"; do
     CURRENT_ARM=
     log "arm $arm: closed; MemFree=$(meminfo MemFree) MemAvailable=$(meminfo MemAvailable) SwapFree=$(meminfo SwapFree)"
     # A kill line or a memwatch breach ends the window: no further arm starts.
-    if grep -E -i -q "$KILL_KERNEL" "$OBS/kernel.log" || grep -E -q "$KILL_MEMWATCH" "$OBS/arm-$arm/memwatch.log"; then
-        log "FAILED_ATTEMPT arm $arm: kill line or memwatch breach; no further arms"
+    if grep -E -i -q "$KILL_KERNEL" "$OBS/kernel.log" || grep -E -q "$KILL_MEMWATCH" "$OBS/arm-$arm/memwatch.log" \
+        || grep -E -q "$KILL_SERVER" "$OBS/arm-$arm/server.log"; then
+        log "FAILED_ATTEMPT arm $arm: kill line, server CUDA error or memwatch breach; no further arms"
         break
     fi
 done
