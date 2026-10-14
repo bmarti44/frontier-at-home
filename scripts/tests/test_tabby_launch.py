@@ -319,6 +319,16 @@ class LaunchArgv(unittest.TestCase):
                                 "--draft-model-dir", "/models/draft",
                                 "--draft-model-name", "mimo-dflash"])
 
+    def test_output_chunking_is_a_listed_flag(self) -> None:
+        # The long-generation diagnostic serves an arm with output chunking
+        # off (results/mimo-v26-flash-gates/longgen-2026-10-14); the flag and
+        # its value pass through to TabbyAPI unchanged.
+        for value in ("false", "true"):
+            with self.subTest(value=value):
+                argv = tabby_launch.tabby_argv(
+                    BASE + ["--output-chunking", value, "--model-name", "/m/p/pack"])
+                self.assertEqual(argv[len(BASE):len(BASE) + 2], ["--output-chunking", value])
+
     def test_draft_model_is_optional(self) -> None:
         argv = tabby_launch.tabby_argv(BASE + ["--model-name", "/m/p/pack"])
         self.assertEqual(argv[len(BASE):],

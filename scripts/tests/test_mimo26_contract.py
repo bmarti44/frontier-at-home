@@ -265,6 +265,21 @@ class Profile(unittest.TestCase):
                      "results/mimo-v26-flash-gates/qualify-x/kit/a.json"):
             self.assertTrue(any(fnmatch.fnmatch(path, p) for p in patterns), path)
 
+    def test_every_mimo_profile_launches_through_the_shim(self) -> None:
+        # The qualified launch and every diagnostic variant must render to an
+        # argv the shim accepts; a refusal would surface only at server start,
+        # after production was stopped.
+        host = profile_resolver.load_host(SPARK_HOST)
+        model = profile_resolver.load_model(SLUG)
+        names = sorted(p.name for p in (ROOT / "configs/profiles" / SLUG).glob("*.json")
+                       if p.name != "model.json" and not p.name.startswith("_"))
+        self.assertIn(PROFILE_FILE, names)
+        for name in names:
+            with self.subTest(profile=name):
+                snapshot = profile_resolver.resolve(profile_resolver.load_profile(SLUG, name), model, host)
+                self.assertEqual(snapshot["argv"][:3], ["-B", "-m", "tabby_launch"])
+                tabby_launch.tabby_argv(snapshot["argv"][3:])
+
     def test_host_lists_the_dev_port(self) -> None:
         host = json.loads(SPARK_HOST.read_text())
         self.assertEqual(host["ports"]["dev"][SLUG], 8019)
