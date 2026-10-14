@@ -68,6 +68,7 @@ ALLOWED_FLAGS = frozenset({
     "--chunk-size", "--vision", "--reasoning", "--tool-format",
     "--draft-mode", "--draft-cache-mode", "--draft-num-tokens",
     "--sysmem-recurrent-cache", "--sysmem-multimodal-cache", "--warmup",
+    "--output-chunking",
     "--log-prompt", "--log-generation-params", "--log-requests",
     "--log-chat-completion-requests",
 })
