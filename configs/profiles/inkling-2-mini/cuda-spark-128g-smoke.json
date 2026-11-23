@@ -66,6 +66,8 @@
       "auto",
       "--gpu-memory-utilization",
       "0.80",
+      "--kv-cache-memory-bytes",
+      "24000000000",
       "--enable-prefix-caching",
       "--enable-chunked-prefill",
       "--max-num-batched-tokens",
@@ -111,9 +113,9 @@
     "kv_bytes_per_token": 0,
     "resident_weights_gib": 20,
     "overhead_gib": 12,
-    "extra_gib": 40,
+    "extra_gib": 23,
     "floor_gib": 15,
-    "basis": "ESTIMATE, pre-measurement: resident_weights_gib 20 rounds up the 18.8 GiB checkpoint (model + mtp head); overhead_gib 12 covers CUDA context, activations, compile and CUDA-graph workspace; extra_gib 40 is a conservative cap for the BF16 KV arena and image encoder at --gpu-memory-utilization 0.80 (kv_bytes_per_token stays 0 because the arena is charged here). Replace every value with the engine-reported pool and the measured peak after the first load."
+    "basis": "ESTIMATE, pre-measurement: resident_weights_gib 20 rounds up the 18.8 GiB checkpoint (model + mtp head); overhead_gib 12 covers CUDA context, activations, compile and CUDA-graph workspace; extra_gib 23 is the fixed BF16 KV arena (--kv-cache-memory-bytes 24000000000 = 22.35 GiB; a fixed arena also turns off this vLLM build's default extensible KV cache, which would otherwise commit up to 0.80 x total memory after warmup) (kv_bytes_per_token stays 0 because the arena is charged here). Replace every value with the engine-reported pool and the measured peak after the first load."
   },
   "serving": {
     "parallel_slots": 2,
