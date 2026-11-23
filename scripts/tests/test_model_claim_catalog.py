@@ -47,6 +47,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
             "deepseek-v4.1-flash",
             "gpt-oss",
             "mistral-large-3",
+            "inkling-2-mini",
         }
         models = catalog["models"]
         self.assertEqual({model["slug"] for model in models}, expected)
@@ -74,6 +75,7 @@ class ModelClaimCatalogTests(unittest.TestCase):
         self.assertEqual(statuses["qwen3.8-27b"], "qualified")
         self.assertEqual(statuses["laguna-s-2.1"], "qualified")
         self.assertEqual(statuses["qwen3.8-flash-next"], "qualified")
+        self.assertEqual(statuses["inkling-2-mini"], "active")
 
     def test_readme_claim_links_are_catalogued_and_keep_active_models(self):
         catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
