@@ -96,9 +96,15 @@ printf '%s\n' "$GUARD" | tee -a "$OBS/driver.log"
 log "preload $(awk '/MemAvailable|MemFree|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
 
 log "gpu self-test"
-systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 -- \
-    "$RUNTIME_PY" "$EV/gpu_selftest.py" 8>&- 2>&1 | tail -3 | tee "$OBS/gpu-selftest.json" | tee -a "$OBS/driver.log" \
-    || log "gpu self-test exit nonzero"
+# Isolated like the server (env -i, no user site): ~/.local shadows torch/triton otherwise.
+if systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 -p RuntimeMaxSec=300 -- \
+    env -i PATH=/usr/bin:/bin CUDA_VISIBLE_DEVICES=0 PYTHONNOUSERSITE=1 \
+    HOME=/home/bmarti44/.cache/inkling-2-mini/home "$RUNTIME_PY" -s "$EV/gpu_selftest.py" \
+    8>&- >"$OBS/gpu-selftest.json" 2>"$OBS/gpu-selftest.log"; then
+    log "gpu self-test: $(cat "$OBS/gpu-selftest.json")"
+else
+    log "gpu self-test exit nonzero (stderr in gpu-selftest.log)"
+fi
 sleep 2
 
 log "$RUN: launching in scope $UNIT"
@@ -112,7 +118,7 @@ fi
 log "$RUN: ready after $((SECONDS - t0)) s"
 awk '/MemAvailable/{printf "%s idle_mem_available_kib=%s\n", "'"$(stamp)"'", $2}' /proc/meminfo | tee -a "$OBS/driver.log"
 NEW_LOG() { tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG"; }
-NEW_LOG | grep -E 'GPU KV cache size|Maximum concurrency|block size|INKLING2_MAX_CTAS_POW2|Available KV cache memory|Model loading took|CUDA graph|torch.compile|non_default' \
+NEW_LOG | grep -E 'GPU KV cache size|Maximum concurrency|block size|INKLING2_MAX_CTAS_POW2|Available KV cache memory|Model loading took|CUDA graph|torch.compile|non-default args' \
     | cut -c1-400 | sed 's/^/serverlog /' | tee -a "$OBS/driver.log" || true
 
 python3 "$EV/probe.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/probe.json" 2>&1 | tee -a "$OBS/driver.log" \
@@ -128,6 +134,8 @@ python3 "$WT/scripts/30_bench_speed.py" --base-url "http://127.0.0.1:$PORT" --ou
 python3 "$WT/scripts/39_bench_toolcall.py" --base-url "http://127.0.0.1:$PORT/v1" --model inkling-2-mini \
     --out "$OBS/toolcall.json" --temperature 0 2>&1 | tee -a "$OBS/toolcall.log" | tail -3 | tee -a "$OBS/driver.log" \
     || log "toolcall exit nonzero"
+# 38_bench_vision's chat mode sends enable_thinking=false, which the Inkling template
+# ignores: these rows run at the profile's default effort (low, 0.2), not "none".
 python3 "$WT/scripts/38_bench_vision.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/vision" \
     --thinking-mode chat --limit 10 --model-id inkling-2-mini 2>&1 | tee -a "$OBS/vision.log" | tail -3 \
     | tee -a "$OBS/driver.log" || log "vision exit nonzero"
