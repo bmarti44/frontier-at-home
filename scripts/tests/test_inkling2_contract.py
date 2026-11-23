@@ -26,6 +26,9 @@ SMOKE = "cuda-spark-128g-smoke.json"
 ONE_M = "cuda-spark-128g-1m.json"
 ARTIFACT = "official-b85c3cfa"
 ENGINE = "vllm-inkling2-r001"
+# The lever screen's carrier (results/inkling2-gates/tune-screen-2026-11-23/RESULT.md) and its effort pick.
+SCREEN = ROOT / "results/inkling2-gates/tune-screen-2026-11-23"
+CARRIER = "cuda-spark-128g-1m-tune-dspark-humming-pow2.json"
 RUNTIME = "{cache_root}/inkling-2-mini/native-runtime-001/runtime"
 WEIGHTS_MANIFEST = ROOT / "weights/inkling-2-mini/manifest.json"
 BUILD_MANIFEST = "configs/build-manifests/inkling-2-mini-runtime.json"
@@ -276,8 +279,10 @@ class Inkling2OneMillionProfile(unittest.TestCase):
     Sized from smoke run2 (results/inkling2-gates/smoke-2026-11-23/run2): a
     24,000,000,000-byte arena gave vLLM's group-aware capacity 2.86x at
     131,072 tokens, so 4.0x at 262,144 needs about 67.1e9 bytes; 68e9 leaves
-    a margin. The arena is the lever screen's carrier (a0) and stays
-    ``estimated`` until a load shows >= 4.0x at 262,144.
+    a margin (the screen measured 5.36x without DSpark, 4.72x with it). The
+    profile serves the lever screen's carrier a6 exactly (DSpark x7, humming
+    MoE, #69288) at the effort the screen's pick chose, and stays
+    ``estimated`` until M3 passes.
     """
 
     @classmethod
@@ -286,6 +291,7 @@ class Inkling2OneMillionProfile(unittest.TestCase):
         cls.model = profile_resolver.load_model(SLUG)
         cls.host = profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json")
         cls.smoke = profile_resolver.load_profile(SLUG, SMOKE)
+        cls.carrier = profile_resolver.load_profile(SLUG, CARRIER)
 
     def test_four_native_262144_slots_are_the_full_1m(self):
         p = self.profile
@@ -306,29 +312,38 @@ class Inkling2OneMillionProfile(unittest.TestCase):
         self.assertGreaterEqual(budget["extra_gib"] * 2**30, 68e9)
         self.assertEqual(budget["kv_bytes_per_token"], 0)
 
-    def test_carrier_matches_the_smoke_except_topology_and_the_release_worker(self):
-        smoke = list(self.smoke["launch"]["args"])
-        argv = list(self.profile["launch"]["args"])
-        worker = argv.index("--worker-cls")
-        self.assertEqual(argv[worker + 1], "qwen38fn_worker.HostCacheReleaseWorker")
-        del argv[worker:worker + 2]
-        for flag, old, new in (("--max-model-len", "131072", "262144"), ("--max-num-seqs", "2", "4"),
-                               ("--kv-cache-memory-bytes", "24000000000", "68000000000")):
+    def test_serves_the_screen_carrier_launch_at_the_picked_effort(self):
+        # Like qwen38fn c10: the serving profile's launch is the screen carrier's, except names
+        # and the reasoning effort, which the screen's effort pick sets.
+        argv, carrier = list(self.profile["launch"]["args"]), list(self.carrier["launch"]["args"])
+        kwargs = "--default-chat-template-kwargs"
+        self.assertEqual(json.loads(arg(carrier, kwargs)), {"reasoning_effort": "low"})
+        effort = json.loads(arg(argv, kwargs))
+        self.assertEqual(set(effort), {"reasoning_effort"})
+        carrier[carrier.index(kwargs) + 1] = arg(argv, kwargs)
+        self.assertEqual(argv, carrier)
+        self.assertEqual(self.profile["launch"]["env"], self.carrier["launch"]["env"])
+        for flag, value in (("--moe-backend", "humming"), ("--max-num-batched-tokens", "2048"),
+                            ("--worker-cls", "qwen38fn_worker.HostCacheReleaseWorker")):
             with self.subTest(flag=flag):
-                self.assertEqual(arg(smoke, flag), old)
-                smoke[smoke.index(flag) + 1] = new
-        self.assertEqual(argv, smoke)
-        self.assertEqual(arg(argv, "--max-num-batched-tokens"), "2048")
-        for flag in ("--speculative-config", "--quantization"):
-            with self.subTest(flag=flag):
-                self.assertNotIn(flag, argv)
+                self.assertEqual(arg(argv, flag), value)
+        self.assertEqual(json.loads(arg(argv, "--speculative-config")),
+                         {"method": "dspark", "num_speculative_tokens": 7, "draft_sample_method": "probabilistic"})
+        self.assertNotIn("--quantization", argv)
 
-    def test_env_adds_only_the_release_roots(self):
+    def test_effort_is_the_screens_pick(self):
+        pick = json.loads((SCREEN / "effort-a6" / "pick.json").read_text())
+        self.assertEqual(pick["verdict"], "COMPLETE")
+        self.assertIn(pick["effort"], ("low", "medium"))
+        argv = self.profile["launch"]["args"]
+        self.assertEqual(json.loads(arg(argv, "--default-chat-template-kwargs")), {"reasoning_effort": pick["effort"]})
+
+    def test_env_adds_the_release_roots_and_the_69288_switch(self):
         env = dict(self.profile["launch"]["env"])
         self.assertEqual(env.pop("QWEN38FN_HOST_RELEASE_ROOTS"),
                          "{cache_root}/inkling-2-mini:{cache_root}/qwen38-flash-next")
+        self.assertEqual(env.pop("INKLING2_MAX_CTAS_POW2"), "1")
         self.assertEqual(env, self.smoke["launch"]["env"])
-        self.assertNotIn("INKLING2_MAX_CTAS_POW2", env)
 
     def test_estimated_without_a_switch_alias_until_qualified(self):
         p = self.profile
@@ -358,7 +373,9 @@ class Inkling2OneMillionProfile(unittest.TestCase):
         self.assertEqual(targets["toolcall_min"], 19)
         self.assertEqual(targets["vision_min"], 0.64)
         self.assertIs(targets["context_pass"], True)
-        self.assertEqual(self.profile["qualification_options"], {"vision_max_tokens": 4096})
+        # DSpark streams up to 8 tokens per event: the kit's block-aware bench (as the screen ran it).
+        self.assertEqual(self.profile["qualification_options"],
+                         {"vision_max_tokens": 4096, "speed_max_tokens_per_event": 8})
 
     def test_renders_feasible_on_this_host(self):
         snapshot = profile_resolver.resolve(self.profile, self.model, self.host)
