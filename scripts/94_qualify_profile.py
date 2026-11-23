@@ -69,6 +69,7 @@ MODEL_ENCODERS = {
     "glm-5.3-flash": "glm53",
     # Chat template and tokenizer are byte-identical to Qwen3.8-27B.
     "qwen3.8-flash-next": "qwen38",
+    "inkling-2-mini": "inkling2",
 }
 
 SPEED_CONTEXT_LEVELS = "0,28672"
