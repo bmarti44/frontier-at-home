@@ -1,0 +1,53 @@
+2026-11-23T06:05:19Z arm a6 profile inkling-2-mini/cuda-spark-128g-1m-tune-dspark-humming-pow2 stack inkling-2-mini-cuda-spark-128g-1m-tune-dspark-humming-pow2 tokens_per_event 8
+2026-11-23T06:05:19Z head 9c81b32541016abe4a9b2e22c6a89c33532058de dirty=0
+2026-11-23T06:05:19Z inference lock /run/lock/frontier-at-home/inference.lock held by the driver
+2026-11-23T06:05:19Z vllm_tree 5bcb020bc1e801e364925e45e5d89b3ea7b095dc26238f98fc96a33dfe4f1425 files=6525
+2026-11-23T06:05:19Z triton cache: 420 entries moved aside to /home/bmarti44/.cache/inkling-2-mini/home/.triton/cache.pre-a6-20261123T060519Z; this start compiles from empty
+2026-11-23T06:05:19Z page cache released under /home/bmarti44/.cache/inkling-2-mini: 98939 files
+2026-11-23T06:05:19Z page cache released under /home/bmarti44/models/inkling-2-mini: 30 files
+2026-11-23T06:05:19Z page cache released under /home/bmarti44/.cache/qwen38-flash-next: 136225 files
+2026-11-23T06:05:19Z page cache released under /home/bmarti44/models/qwen3.8-flash-next-nvfp4: 52 files
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.589,"stable_samples_observed":3}
+2026-11-23T06:05:19Z preload MemFree:=118359660 MemAvailable:=121204936 SwapFree:=16595424 
+2026-11-23T06:05:21Z a6: launching in scope inkling2-tune-a6-3663242
+{"pass":true,"required_gib":29.0,"mem_available_gib":115.605,"stable_samples_observed":3}
+{"ok":true,"profile":"inkling-2-mini/cuda-spark-128g-1m-tune-dspark-humming-pow2","pid":3663559,"port":8018}
+2026-11-23T06:09:53Z a6: ready after 272 s
+2026-11-23T06:09:53Z idle_mem_available_kib=26486404
+2026-11-23T06:09:53Z a6: KV concurrency 4.72x at 262,144 per request
+serverlog ===== inkling-2-mini/cuda-spark-128g-1m-tune-dspark-humming-pow2 session start 2026-11-23T06:05:50Z =====
+serverlog (APIServer pid=3663559) INFO 11-23 01:06:02 [startup.py:96] non-default args: {'default_chat_template_kwargs': {'reasoning_effort': 'low'}, 'enable_auto_tool_choice': True, 'tool_call_parser': 'inkling', 'enable_prompt_tokens_details': True, 'host': '127.0.0.1', 'port': 8018, 'middleware': ['vllm_reasoning_compat.ReasoningContentMiddleware', 'glm53_runtime_policy.SplitTerminalSseMiddleware'], 'model': '/home/bmarti44/models/inkling-2-mini', 'max_model_len': 262144, 'served_model_name': ['inkling-2-mini', 'default'], 'reasoning_parser': 'inkling', 'worker_cls': 'qwen38fn_worker.HostCacheRelease
+serverlog (APIServer pid=3663559) INFO 11-23 01:06:02 [processing.py:69] INKLING2_MAX_IMAGE_SIDE=4096: encoder budget sized for 4096 x 4096 px images
+serverlog (APIServer pid=3663559) INFO 11-23 01:06:02 [trtllm_bmm.py:32] INKLING2_MAX_CTAS_POW2=1: max_ctas bucketed to powers of two (PR #69288)
+serverlog (APIServer pid=3663559) INFO 11-23 01:06:02 [vision.py:43] INKLING2_VISION_ATTN=triton: vision encoder attention via Triton prefill
+serverlog (APIServer pid=3663559) INFO 11-23 01:06:04 [speculative.py:1582] Overriding draft model max model len from 1048576 to 262144
+serverlog (APIServer pid=3663559) WARNING 11-23 01:06:04 [vllm.py:2434] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+serverlog (APIServer pid=3663559) WARNING 11-23 01:06:06 [encoder_cache_manager.py:378] Raising encoder_cache_size from 2048 to 10609 tokens so one image item fits.
+serverlog (EngineCore pid=3663768) INFO 11-23 01:06:13 [core.py:154] Initializing a V1 LLM engine (v0.34.0rc1.dev1133+g647a76866) with config: model='/home/bmarti44/models/inkling-2-mini', speculative_config=SpeculativeConfig(method='dspark', model='/home/bmarti44/models/inkling-2-mini', num_spec_tokens=7), tokenizer='/home/bmarti44/models/inkling-2-mini', skip_tokenizer_init=False, tokenizer_mode=inkling, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=262144, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_p
+serverlog (EngineCore pid=3663768) INFO 11-23 01:06:15 [processing.py:69] INKLING2_MAX_IMAGE_SIDE=4096: encoder budget sized for 4096 x 4096 px images
+serverlog (EngineCore pid=3663768) INFO 11-23 01:06:15 [trtllm_bmm.py:32] INKLING2_MAX_CTAS_POW2=1: max_ctas bucketed to powers of two (PR #69288)
+serverlog (EngineCore pid=3663768) INFO 11-23 01:06:15 [vision.py:43] INKLING2_VISION_ATTN=triton: vision encoder attention via Triton prefill
+serverlog (EngineCore pid=3663768) WARNING 11-23 01:08:16 [vllm.py:2434] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+serverlog (EngineCore pid=3663768) INFO 11-23 01:08:17 [model_runner.py:461] Model loading took 19.02 GiB memory and 120.447154 seconds
+serverlog (EngineCore pid=3663768) WARNING 11-23 01:08:18 [encoder_cache_manager.py:378] Raising encoder_cache_size from 2048 to 10609 tokens so one image item fits.
+serverlog (EngineCore pid=3663768) INFO 11-23 01:08:25 [encoder_runner.py:155] Encoder cache can hold 10609 tokens of image embeddings across requests (0.05 GiB, taken from the KV cache).
+serverlog (EngineCore pid=3663768) INFO 11-23 01:08:37 [kv_cache_utils.py:1123] GPU KV cache size: 1,238,000 tokens, Maximum concurrency for 262,144 tokens per request: 4.72x
+serverlog (EngineCore pid=3663768) INFO 11-23 01:08:37 [kv_cache_utils.py:838] kv cache group sizes (16, 16, 16, 16, 16, 16, 64, 64, 64, 64, 64, 64, 64)
+serverlog (EngineCore pid=3663768) INFO 11-23 01:08:37 [qwen38fn_worker.py:83] host page cache released under /home/bmarti44/.cache/inkling-2-mini (99492 files) before the KV arena
+serverlog (EngineCore pid=3663768) INFO 11-23 01:08:38 [qwen38fn_worker.py:83] host page cache released under /home/bmarti44/.cache/qwen38-flash-next (136225 files) before the KV arena
+serverlog (EngineCore pid=3663768) INFO 11-23 01:08:38 [qwen38fn_worker.py:97] host page cache released under /home/bmarti44/models (919 files); MemFree 87.75 GiB, KV arena 63.33 GiB + margin 2.00 GiB
+serverlog (EngineCore pid=3663768) WARNING 11-23 01:09:51 [encoder_cache_manager.py:378] Raising encoder_cache_size from 2048 to 10609 tokens so one image item fits.
+{"greedy": ["170c63d11040", "85f745a0d87f", "217aaabaf808"], "tokens_per_chunk": [4.0, 2.789473684210526, 3.6]}
+{"sum_prompt_tokens": 122633, "sum_ttft_s": 41.73551231343299, "aggregate_prefill_tok_per_s": 2938.336998933384}
+{"method": "(completion_tokens - K) / (t_last_event - t_first_event), K = max tokens per event", "max_tokens_per_event": 8, "valid": true, "median_decode_tok_s": 51.66036570639574}
+[19/20] id=choose-email-among-distractors passed=True
+[20/20] id=typed-composite passed=True
+{"ok": true, "out": "/home/bmarti44/inkling2/results/inkling2-gates/tune-screen-2026-11-23/a6/toolcall.json", "score": 1.0}
+[9/10] id=validation_Architecture_and_Engineering_1 correct=False parsed=None
+[10/10] id=validation_Architecture_and_Engineering_10 correct=True parsed=C
+{"ok": true, "summary": "/home/bmarti44/inkling2/results/inkling2-gates/tune-screen-2026-11-23/a6/vision/summary.json", "transcripts": "/home/bmarti44/inkling2/results/inkling2-gates/tune-screen-2026-11-23/a6/vision/transcripts.jsonl"}
+{"ok":true,"profile":"inkling-2-mini/cuda-spark-128g-1m-tune-dspark-humming-pow2","stopped":true}
+2026-11-23T06:16:50Z a6: scope empty after stop
+2026-11-23T06:16:50Z postrun MemAvailable:=121296128 SwapFree:=16595424 
+ERROR: inkling-2-mini/cuda-spark-128g-1m-tune-dspark-humming-pow2 is not running (state file absent)
+2026-11-23T06:16:56Z driver exit
