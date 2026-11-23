@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -119,7 +121,7 @@ class Inkling2ScaffoldContract(unittest.TestCase):
                     "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.4/"))
         patches = {p["path"]: p["sha256"] for p in self.build["patches"]}
         on_disk = sorted(PATCHES.glob("*.diff"))
-        self.assertEqual(len(on_disk), 3)
+        self.assertEqual(len(on_disk), 4)
         self.assertEqual(set(patches), {str(p.relative_to(ROOT)) for p in on_disk})
         for path in on_disk:
             with self.subTest(patch=path.name):
@@ -202,6 +204,37 @@ class Inkling2ScaffoldContract(unittest.TestCase):
         # driver cannot JIT on SM12x (smoke run1); patch 0003 routes the vision
         # encoder's attention through vLLM's Triton prefill kernel.
         self.assertEqual(env["INKLING2_VISION_ATTN"], "triton")
+        # The model card accepts images up to 4096 px a side, but vLLM sizes the
+        # encoder budget from a 2048 px profiling image (52 x 52 = 2,704 tokens):
+        # smoke run2 rejected two MMMU images of 3,456 and 2,752 tokens with HTTP
+        # 400. Patch 0004 lets the profile raise that side to 4096 (103 x 103 =
+        # 10,609 tokens per image).
+        self.assertEqual(env["INKLING2_MAX_IMAGE_SIDE"], "4096")
+
+    def test_patch_0004_gates_the_profiling_image_side_at_the_upstream_default(self):
+        text = (PATCHES / "0004-local-max-image-side.diff").read_text()
+        self.assertIn("+++ b/vllm/models/inkling2/processing.py", text)
+        self.assertIn('os.environ.get("INKLING2_MAX_IMAGE_SIDE", "2048")', text)
+        self.assertIn("-MAX_DUMMY_IMAGE_SIDE = 2048", text)
+
+    def test_smoke_declares_the_vision_answer_budget(self):
+        # Inkling reasons even at low effort; at the bench's 256-token default,
+        # 5 of 10 smoke run2 MMMU answers ran out of budget before the letter.
+        options = self.profile["qualification_options"]
+        self.assertEqual(options["vision_max_tokens"], 4096)
+        with tempfile.TemporaryDirectory(prefix="inkling2-kit-") as tmp:
+            out = Path(tmp) / "bundle"
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "scripts/94_qualify_profile.py"), "--profile",
+                 f"{SLUG}/cuda-spark-128g-smoke", "--host", str(ROOT / "configs/hosts/spark-aba1.json"),
+                 "--dry-run", "--out", str(out), "--cells", "vision"],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+            manifest = json.loads((out / "manifest.json").read_text())
+        vision = manifest["cells"]["vision"]["argv"]
+        self.assertEqual(arg(vision, "--max-tokens"), "4096")
+        self.assertEqual(manifest["profile"]["vision_max_tokens"], 4096)
 
     def test_smoke_safety_and_memory_are_conservative_estimates(self):
         p = self.profile

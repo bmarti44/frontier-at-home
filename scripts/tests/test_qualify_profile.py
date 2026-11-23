@@ -87,6 +87,9 @@ class DryRunGlmProfile(unittest.TestCase):
         # the GLM profile declares qualification_options.vision_thinking_mode
         self.assertEqual(vision[vision.index("--thinking-mode") + 1], "thinking")
         self.assertEqual(manifest["profile"]["vision_thinking_mode"], "thinking")
+        # No declared vision answer budget: the bench's own 256-token default applies.
+        self.assertNotIn("--max-tokens", vision)
+        self.assertIsNone(manifest["profile"]["vision_max_tokens"])
         toolcall = cells["toolcall"]["argv"]
         self.assertIn("http://127.0.0.1:8099/v1", toolcall)
         self.assertEqual(toolcall[toolcall.index("--model") + 1], "glm-5.3-flash")
@@ -115,6 +118,14 @@ class DryRunGlmProfile(unittest.TestCase):
         manifest = json.loads((out / "manifest.json").read_text())
         self.assertEqual(manifest["cells_selected"], ["speed", "soak"])
         self.assertIsNone(manifest["cells"]["soak"]["skip_reason"])
+
+    def test_malformed_vision_answer_budget_is_refused(self) -> None:
+        for bad in (0, 32769, "4096", True, 1.5):
+            with self.subTest(bad=bad):
+                with self.assertRaises(kit.KitError):
+                    kit.vision_max_tokens({"vision_max_tokens": bad})
+        self.assertIsNone(kit.vision_max_tokens({}))
+        self.assertEqual(kit.vision_max_tokens({"vision_max_tokens": 32768}), 32768)
 
     def test_speculative_profile_selects_the_block_aware_speed_bench(self) -> None:
         # qualification_options.speed_max_tokens_per_event says one SSE event can carry
