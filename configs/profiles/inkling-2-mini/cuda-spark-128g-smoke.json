@@ -39,7 +39,8 @@
       "FLASHINFER_NVCC_THREADS": "1",
       "FLASHINFER_DISABLE_JIT": "1",
       "TRITON_CACHE_DIR": "{cache_root}/inkling-2-mini/home/.triton/cache",
-      "INKLING2_VISION_ATTN": "triton"
+      "INKLING2_VISION_ATTN": "triton",
+      "INKLING2_MAX_IMAGE_SIDE": "4096"
     },
     "diagnostics_unset": [
       "VLLM_LOGGING_LEVEL",
@@ -127,5 +128,8 @@
   "port_role": "production",
   "bench": {
     "stack_label": "inkling-2-mini-cuda-spark-128g-smoke"
+  },
+  "qualification_options": {
+    "vision_max_tokens": 4096
   }
 }

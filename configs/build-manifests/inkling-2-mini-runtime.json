@@ -41,6 +41,14 @@
       "enabled_by": "INKLING2_VISION_ATTN=triton (read once at import, only fa or triton, default fa: the upstream vllm_flash_attn FA2 call)",
       "why": "the wheel's _vllm_fa2_C ships sm_80 SASS plus PTX ISA 9.2 only; the r580 driver (CUDA 13.0) cannot JIT that PTX on GB10 (cudaErrorUnsupportedPtxVersion in smoke run1, results/inkling2-gates/smoke-2026-11-23)",
       "sha256": "8c00dddda7d2985bb67885c812f251a3fd32df833d2cfb3cb7cf7a0256c18c0a"
+    },
+    {
+      "name": "local: INKLING2_MAX_IMAGE_SIDE sets the Inkling 2 profiling image side (the encoder budget)",
+      "path": "patches/inkling2/0004-local-max-image-side.diff",
+      "scope": "vllm/models/inkling2/processing.py",
+      "enabled_by": "INKLING2_MAX_IMAGE_SIDE=<40..8192> (read once at import, default 2048: the upstream MAX_DUMMY_IMAGE_SIDE)",
+      "why": "the model card accepts images up to 4096 px a side, but vLLM sizes the encoder cache and compute budget from a 2048 px profiling image (2,704 tokens); smoke run2 refused MMMU images of 3,456 and 2,752 tokens with HTTP 400 (results/inkling2-gates/smoke-2026-11-23)",
+      "sha256": "5ab91dd51a407dba5a579177d25d68939f5c3dd425dc4313aabd6e97e0a8993f"
     }
   ],
   "patch_command": "git apply, in order, run in runtime/lib/python3.12/site-packages",
