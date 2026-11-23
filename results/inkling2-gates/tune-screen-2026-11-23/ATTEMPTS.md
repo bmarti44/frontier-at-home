@@ -37,3 +37,8 @@ It recurred when a5 exited at 05:15:29Z. a1, a2 and a0r each started and were re
 - The preflight waits up to 15 s for the lock (`flock -w 15`) instead of failing at once. A serving engine holds the lock indefinitely, so this still refuses while production is up.
 
 **Next.** Window s2 runs `a3 a1 a2 a0r`. a0r still runs last of all lever arms, so a0 (first in s1) and a0r (last in s2) bracket every lever arm, as PREREG's baseline pair requires. No extra repeat is needed.
+
+**a6 authored before window s2** (`cuda-spark-128g-1m-tune-dspark-humming`, `"levers": ["dspark7", "moe_humming"]`, `min_concurrency` 3.0). Against a0 alone, window s1 keeps DSpark (decode geomean 1.099, code 1.352) and humming (rp 1.237, probes byte-identical). Authoring a6 now lets s2 run it right after a0r, without another production stop.
+- `--may-run` admits a6 only when a1–a5 all exist and the scorer's kept set, with a0r and a3/a1/a2 counted, is exactly these two levers.
+- If the kept set changes, a6 is refused without a directory, and a corrected combined arm (a6b, the last combined entry, which the scorer reads) is authored before it runs.
+- Window s2's `effort:<arm>` entries are admitted by `--effort-due` only for the carrier of a `COMPLETE` screen. The others refuse in their preflight.

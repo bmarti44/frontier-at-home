@@ -32,10 +32,15 @@ ARMS = {
     "a5": (f"{BASE}-tune-humming", "moe_humming"),
     "a0r": (BASE, None),   # a0 again, last in the window: the drift control
 }
+COMBINED = {
+    # arm: (profile leaf, levers in the order they are applied); PREREG's a6 rules
+    "a6": (f"{BASE}-tune-dspark-humming", ["dspark7", "moe_humming"]),
+}
 EXTRA = {
-    # arm: the arms.json keys beyond profile/lever/base (PREREG.md)
+    # arm: the arms.json keys beyond profile/lever(s)/base (PREREG.md)
     "a0r": {"repeat_of": "a0"},
     "a4": {"min_concurrency": 3.0},   # DSpark's draft KV shares the arena
+    "a6": {"min_concurrency": 3.0},
 }
 LEVER_ARMS = [arm for arm, (_leaf, lever) in ARMS.items() if lever is not None]
 
@@ -91,7 +96,11 @@ class Inkling2TuneArms(unittest.TestCase):
         cls.arms_doc = json.loads((SCREEN / "arms.json").read_text())
 
     def test_arms_json_names_each_arm_profile_and_lever(self):
-        self.assertEqual(set(self.arms_doc), set(ARMS))
+        self.assertEqual(set(self.arms_doc), set(ARMS) | set(COMBINED))
+        for arm, (leaf, levers) in COMBINED.items():
+            with self.subTest(arm=arm):
+                self.assertEqual(self.arms_doc[arm], {"profile": f"{SLUG}/{leaf}", "levers": levers, "base": "a0",
+                                                      **EXTRA.get(arm, {})})
         for arm, (leaf, lever) in ARMS.items():
             with self.subTest(arm=arm):
                 self.assertEqual(self.arms_doc[arm], {"profile": f"{SLUG}/{leaf}", "lever": lever,
@@ -113,6 +122,30 @@ class Inkling2TuneArms(unittest.TestCase):
             with self.subTest(arm=arm):
                 profile = profile_resolver.load_profile(SLUG, f"{leaf}.json")
                 self.assertEqual(strip_identity(profile), strip_identity(expected(self.base, lever)))
+
+    def test_a_combined_arm_is_the_carrier_plus_exactly_its_levers(self):
+        for arm, (leaf, levers) in COMBINED.items():
+            with self.subTest(arm=arm):
+                want = self.base
+                for lever in levers:
+                    want = expected(want, lever)
+                profile = profile_resolver.load_profile(SLUG, f"{leaf}.json")
+                self.assertEqual(strip_identity(profile), strip_identity(want))
+                self.assertEqual(profile["profile_id"], f"{SLUG}/{leaf}")
+                self.assertEqual(profile["status"]["state"], "estimated")
+                self.assertIn(f"DIAGNOSTIC screen arm {arm}", profile["purpose"])
+                self.assertNotIn("switch_alias", profile)
+                self.assertEqual(profile["bench"]["stack_label"], f"{SLUG}-{leaf}")
+                self.assertEqual(profile["containment"]["unit"], f"inkling2-{leaf.split('-tune-')[1]}")
+                host = profile_resolver.load_host(ROOT / "configs/hosts/spark-aba1.json")
+                snapshot = profile_resolver.resolve(profile, profile_resolver.load_model(SLUG), host)
+                self.assertEqual(snapshot["status"], "estimated")
+
+    def test_every_dspark_arm_has_the_draft_kv_floor(self):
+        for arm, entry in self.arms_doc.items():
+            levers = entry.get("levers") or [entry.get("lever")]
+            with self.subTest(arm=arm):
+                self.assertEqual(entry.get("min_concurrency"), 3.0 if "dspark7" in levers else None)
 
     def test_arm_identity_is_a_diagnostic_dev_profile(self):
         stacks = set()
