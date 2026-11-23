@@ -119,7 +119,7 @@ class Inkling2ScaffoldContract(unittest.TestCase):
                     "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.4/"))
         patches = {p["path"]: p["sha256"] for p in self.build["patches"]}
         on_disk = sorted(PATCHES.glob("*.diff"))
-        self.assertEqual(len(on_disk), 2)
+        self.assertEqual(len(on_disk), 3)
         self.assertEqual(set(patches), {str(p.relative_to(ROOT)) for p in on_disk})
         for path in on_disk:
             with self.subTest(patch=path.name):
