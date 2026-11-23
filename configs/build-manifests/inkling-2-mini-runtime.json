@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "scope": "Native vLLM runtime for inkling-2-mini; no qualification claim",
+  "status": "DRAFT: packages, freeze_sha256, vllm_tree and gpu_selftest are filled from the finished install, never estimated",
+  "runtime_root": "{cache_root}/inkling-2-mini/native-runtime-001/runtime",
+  "interpreter": {
+    "source": "uv-managed CPython 3.12.13 (cpython-3.12.13-linux-aarch64-gnu), copied as a relocatable tree (same interpreter bytes as the qwen3.8-flash-next runtime)",
+    "path": "runtime/bin/python3.12",
+    "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+  },
+  "vllm": {
+    "repository": "https://github.com/vllm-project/vllm",
+    "commit": "647a76866b4559a74e27d1c6b55fbffe85c07ce4",
+    "version": "0.34.0rc1.dev1133+g647a76866",
+    "wheel": {
+      "url": "https://wheels.vllm.ai/647a76866b4559a74e27d1c6b55fbffe85c07ce4/vllm-0.34.0rc1.dev1133%2Bg647a76866-cp38-abi3-manylinux_2_28_aarch64.whl",
+      "sha256": "dfba467982d6d33f6b5e42fbfc987e322af6ece8e49f512650137df021dc2f1c"
+    },
+    "cuda_compile": "none (prebuilt aarch64 cu13 wheel)"
+  },
+  "patches": [
+    {
+      "name": "vllm PR #69288 [Inkling2] round the off-TRT-LLM-gen expert_plan max_ctas bound up to a power of two (SM12x)",
+      "pr_head_short": "2202ea70",
+      "path": "patches/inkling2/0001-vllm-pr69288-2202ea70.diff",
+      "scope": "vllm/ paths only (the PR's tests/ hunk is excluded)",
+      "enabled_by": "0002 (INKLING2_MAX_CTAS_POW2)",
+      "sha256": "a84e7c6ac0390d724768da0294008e7e5d6d9b8be64466601e36df73123e54ac"
+    },
+    {
+      "name": "local gate: INKLING2_MAX_CTAS_POW2 around 0001",
+      "path": "patches/inkling2/0002-local-gate-max-ctas-pow2.diff",
+      "scope": "vllm/models/inkling2/nvidia/ops/trtllm_bmm.py, applied after 0001",
+      "enabled_by": "INKLING2_MAX_CTAS_POW2=1 (read once at import, only 0 or 1, default off: the unpatched exact bound)",
+      "sha256": "ee4778d794eff43261755e0fe6f3668a0de543b0683ebdc3b4d4fe190350d30d"
+    }
+  ],
+  "patch_command": "git apply, in order, run in runtime/lib/python3.12/site-packages",
+  "packages": "pending",
+  "install_command": "uv pip install --python runtime/bin/python3 <vllm wheel> --extra-index-url https://download.pytorch.org/whl/cu130 --index-strategy unsafe-best-match",
+  "freeze_sha256": "pending",
+  "vllm_tree": "pending",
+  "gpu_selftest": "pending",
+  "flashinfer_jit_cache": {
+    "why": "AOT kernels so startup never JIT-compiles; profiles set FLASHINFER_DISABLE_JIT=1, so a missing module fails the load instead of running nvcc beside the model",
+    "install_command": "uv pip install --python runtime/bin/python3 --no-deps <the three wheels below>",
+    "wheels": [
+      {
+        "name": "flashinfer_jit_cache-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "note": "selector shim (4,436 bytes)",
+        "url": "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.4/flashinfer_jit_cache-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "sha256": "3965e79b8f7438fd07661352605e8b5657a36044556b8c7db641edf088dfcd10"
+      },
+      {
+        "name": "flashinfer_jit_cache_sm120f-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "url": "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.4/flashinfer_jit_cache_sm120f-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "sha256": "49f84b2a513da1505d50a0a04eea84ff21c73a373360dabd317a07cf42ef976f"
+      },
+      {
+        "name": "flashinfer_jit_cache_sm121a-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "url": "https://github.com/flashinfer-ai/flashinfer/releases/download/v0.7.4/flashinfer_jit_cache_sm121a-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+        "sha256": "166d7f1792c81f52683b137083bc510ed7ee5c653eea9e3b8434d62b3ed623d8"
+      }
+    ]
+  }
+}
