@@ -51,7 +51,9 @@ DIRTY=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)
 [[ $DIRTY -eq 0 ]] || { echo "$WT has $DIRTY tracked changes; commit before an arm" >&2; exit 2; }
 python3 "$EV/screen_verdict.py" --may-run "$EV" "$ARM" || { echo "$ARM is not due" >&2; exit 2; }
 exec 8>"$INFERENCE_LOCK"
-flock -n 8 || { echo "$INFERENCE_LOCK is held: an engine is serving; stop it first" >&2; exit 2; }
+# Wait out the previous arm's exiting children (window s1: a3 met them, ATTEMPTS.md); a serving
+# engine holds the lock indefinitely, so this still refuses while production is up.
+flock -w 15 8 || { echo "$INFERENCE_LOCK is held: an engine is serving; stop it first" >&2; exit 2; }
 # The vLLM tree this arm loads, by the build manifest's vllm_tree method (sorted
 # relpath NUL sha256 LF, no __pycache__/*.pyc); hashed before the release below drops its pages.
 TREE=$(python3 - "$SITE/vllm" <<'PY3'
@@ -111,9 +113,9 @@ MEMWATCH_OFF=$(size_of "$MEMWATCH_LOG")
     [[ -n $cg && -r /sys/fs/cgroup$cg/memory.current ]] && printf 'cgroup_memory_current=%s ' "$(<"/sys/fs/cgroup$cg/memory.current")"
     printf '\n'
     sleep 1
-  done >>"$OBS/meminfo.log" ) &
+  done >>"$OBS/meminfo.log" ) 8>&- &
 SAMPLER=$!
-journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 &
+journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 8>&- &
 JOURNAL=$!
 cleanup() {
     "${SERVE[@]}" stop >>"$OBS/driver.log" 2>&1 || true
