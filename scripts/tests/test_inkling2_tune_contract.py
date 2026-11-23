@@ -34,7 +34,7 @@ ARMS = {
 }
 COMBINED = {
     # arm: (profile leaf, levers in the order they are applied); PREREG's a6 rules
-    "a6": (f"{BASE}-tune-dspark-humming", ["dspark7", "moe_humming"]),
+    "a6": (f"{BASE}-tune-dspark-humming-pow2", ["dspark7", "moe_humming", "max_ctas_pow2"]),
 }
 EXTRA = {
     # arm: the arms.json keys beyond profile/lever(s)/base (PREREG.md)

@@ -42,3 +42,5 @@ It recurred when a5 exited at 05:15:29Z. a1, a2 and a0r each started and were re
 - `--may-run` admits a6 only when a1–a5 all exist and the scorer's kept set, with a0r and a3/a1/a2 counted, is exactly these two levers.
 - If the kept set changes, a6 is refused without a directory, and a corrected combined arm (a6b, the last combined entry, which the scorer reads) is authored before it runs.
 - Window s2's `effort:<arm>` entries are admitted by `--effort-due` only for the carrier of a `COMPLETE` screen. The others refuse in their preflight.
+
+**a6 redefined before it loaded** (05:50Z, while a2 ran). a3 (#69288) was also kept against a0: TTFT@0 0.173 s vs 1.767 s, rc 1.187, probes byte-identical. a1 (batch 4096) was not: rp 0.997, rc 0.908. a6 is now `cuda-spark-128g-1m-tune-dspark-humming-pow2` with `"levers": ["dspark7", "moe_humming", "max_ctas_pow2"]`. It replaces the never-loaded DSpark + humming leaf. `--may-run` still admits it only if the final kept set, a2 and a0r counted, is exactly these three.

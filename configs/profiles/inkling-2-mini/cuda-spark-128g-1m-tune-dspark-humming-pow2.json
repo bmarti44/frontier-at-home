@@ -1,11 +1,11 @@
 {
   "schema_version": 4,
-  "profile_id": "inkling-2-mini/cuda-spark-128g-1m-tune-dspark-humming",
+  "profile_id": "inkling-2-mini/cuda-spark-128g-1m-tune-dspark-humming-pow2",
   "model": "inkling-2-mini",
   "backend": "cuda",
   "hardware_class": "spark",
   "ram_tier_gib": 128,
-  "purpose": "DIAGNOSTIC screen arm a6 (results/inkling2-gates/tune-screen-2026-11-23): cuda-spark-128g-1m plus the two levers the single-lever arms kept against a0 in window s1, DSpark speculative decoding (7 draft tokens, probabilistic draft sampling, standard rejection sampling) and --moe-backend humming. Run only if the screen's kept set is exactly these two (--may-run). Dev serving only; never a headline, acceptance number or switch alias.",
+  "purpose": "DIAGNOSTIC screen arm a6 (results/inkling2-gates/tune-screen-2026-11-23): cuda-spark-128g-1m plus every lever the single-lever arms kept, DSpark speculative decoding (7 draft tokens, probabilistic draft sampling, standard rejection sampling); --moe-backend humming; INKLING2_MAX_CTAS_POW2=1 (patch 0001 = vLLM PR #69288). Run only if the screen's kept set is exactly these (--may-run). Dev serving only; never a headline, acceptance number or switch alias.",
   "status": {
     "state": "estimated",
     "basis": "Lever screen arm; its measurements are diagnostic and decide only whether the lever joins the next acceptance candidate."
@@ -17,7 +17,7 @@
   "launch": {
     "mechanism": "systemd-run",
     "user": "bmarti44",
-    "log_name": "inkling2-tune-dspark-humming",
+    "log_name": "inkling2-tune-dspark-humming-pow2",
     "env": {
       "HOME": "{cache_root}/inkling-2-mini/home",
       "LANG": "C.UTF-8",
@@ -41,7 +41,8 @@
       "TRITON_CACHE_DIR": "{cache_root}/inkling-2-mini/home/.triton/cache",
       "INKLING2_VISION_ATTN": "triton",
       "INKLING2_MAX_IMAGE_SIDE": "4096",
-      "QWEN38FN_HOST_RELEASE_ROOTS": "{cache_root}/inkling-2-mini:{cache_root}/qwen38-flash-next"
+      "QWEN38FN_HOST_RELEASE_ROOTS": "{cache_root}/inkling-2-mini:{cache_root}/qwen38-flash-next",
+      "INKLING2_MAX_CTAS_POW2": "1"
     },
     "diagnostics_unset": [
       "VLLM_LOGGING_LEVEL",
@@ -104,7 +105,7 @@
     ]
   },
   "containment": {
-    "unit": "inkling2-dspark-humming",
+    "unit": "inkling2-dspark-humming-pow2",
     "memory_high": "92G",
     "memory_max": "96G",
     "memory_swap_max": "0",
@@ -134,7 +135,7 @@
   "context_cap": 1048576,
   "port_role": "production",
   "bench": {
-    "stack_label": "inkling-2-mini-cuda-spark-128g-1m-tune-dspark-humming"
+    "stack_label": "inkling-2-mini-cuda-spark-128g-1m-tune-dspark-humming-pow2"
   },
   "qualification_options": {
     "vision_max_tokens": 4096,
