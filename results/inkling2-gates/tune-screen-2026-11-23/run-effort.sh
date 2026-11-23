@@ -113,7 +113,13 @@ MEMWATCH_OFF=$(size_of "$MEMWATCH_LOG")
 SAMPLER=$!
 journalctl -k -f -o short-iso --since now >"$OBS/kernel.log" 2>&1 &
 JOURNAL=$!
+pids=()
 cleanup() {
+    # The suites never hold the inference lock (fd 8 closed) and never outlive the driver.
+    if ((${#pids[@]})); then
+        kill "${pids[@]}" 2>/dev/null || true
+        wait "${pids[@]}" 2>/dev/null || true
+    fi
     "${SERVE[@]}" stop >>"$OBS/driver.log" 2>&1 || true
     sleep 5   # teardown kernel lines reach the journal capture
     kill "$SAMPLER" "$JOURNAL" 2>/dev/null || true
@@ -171,7 +177,6 @@ if [[ -z $conc ]] || ! awk -v c="$conc" -v m="$MIN_CONC" 'BEGIN{exit !(c >= m)}'
 fi
 
 kernel_check accuracy
-pids=()
 for effort in low medium; do
     for suite in gsm8k mmlu-pro; do
         mkdir -p "$OBS/$effort"
@@ -179,7 +184,7 @@ for effort in low medium; do
             --out "$OBS/$effort/acc-$suite.json" --stack-label "$STACK" --suite "$suite" --split dev \
             --transcripts-dir "$OBS/$effort/transcripts/$suite" --encoder inkling2 --reasoning-effort "$effort" \
             --max-tokens 16384 --request-timeout 2700 --profile-id "$PROFILE" \
-            >"$OBS/$effort/acc-$suite.log" 2>&1 &
+            >"$OBS/$effort/acc-$suite.log" 2>&1 8>&- &
         pids+=($!)
         log "started $suite dev at effort $effort (pid $!)"
     done
