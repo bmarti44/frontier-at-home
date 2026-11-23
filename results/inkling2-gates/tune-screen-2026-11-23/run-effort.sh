@@ -13,9 +13,13 @@ EV=$WT/results/inkling2-gates/tune-screen-2026-11-23
 SMOKE=$WT/results/inkling2-gates/smoke-2026-11-23
 PORT=8018
 HOST=$SMOKE/host-worktree.json
+SITE=/home/bmarti44/.cache/inkling-2-mini/native-runtime-001/runtime/lib/python3.12/site-packages
+TRITON_CACHE=/home/bmarti44/.cache/inkling-2-mini/home/.triton/cache
 # Every arm's speed cell uses one bench and one K (DSpark streams up to 8 tokens per event).
 K=8
 PROFILE=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]]["profile"])' "$EV/arms.json" "$ARM")
+# The readiness floor: 4.0x unless arms.json lowers it (DSpark's draft KV shares the arena; PREREG).
+MIN_CONC=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]].get("min_concurrency", 4.0))' "$EV/arms.json" "$ARM")
 read -r SLUG_DIR PROFILE_FILE <<<"${PROFILE/\// }"
 read -r STACK TOKENIZER TOKENIZER_SHA < <(python3 - "$WT" "$SLUG_DIR" "$PROFILE_FILE.json" <<'PY'
 import sys
@@ -46,6 +50,23 @@ DIRTY=$(git -C "$WT" status --porcelain --untracked-files=no | wc -l)
 python3 "$EV/screen_verdict.py" --effort-due "$EV" "$ARM" || { echo "the screen did not name $ARM as its carrier" >&2; exit 2; }
 exec 8>"$INFERENCE_LOCK"
 flock -n 8 || { echo "$INFERENCE_LOCK is held: an engine is serving; stop it first" >&2; exit 2; }
+# The vLLM tree this arm loads, by the build manifest's vllm_tree method (sorted
+# relpath NUL sha256 LF, no __pycache__/*.pyc); hashed before the release below drops its pages.
+TREE=$(python3 - "$SITE/vllm" <<'PY3'
+import hashlib, os, sys
+root = sys.argv[1]
+rows = []
+for d, _, files in os.walk(root):
+    for n in files:
+        rel = os.path.relpath(os.path.join(d, n), root).replace(os.sep, "/")
+        if "__pycache__" in rel.split("/") or rel.endswith(".pyc"):
+            continue
+        with open(os.path.join(d, n), "rb") as f:
+            rows.append(f"{rel}\0{hashlib.file_digest(f, 'sha256').hexdigest()}\n")
+rows.sort()
+print(hashlib.sha256("".join(rows).encode()).hexdigest(), len(rows))
+PY3
+) || { echo "vLLM tree hash failed" >&2; exit 2; }
 RELEASED=$(python3 - "$WT/scripts/lib" <<'PY2'
 import sys
 sys.path.insert(0, sys.argv[1])
@@ -60,6 +81,15 @@ GUARD=$(python3 "$WT/scripts/03_memory_guard.py" --required-gib 110 --stable-sam
 MEMFREE_GIB=$(awk '/^MemFree:/{printf "%.2f", $2/1048576}' /proc/meminfo)
 awk -v f="$MEMFREE_GIB" 'BEGIN{exit !(f >= 100)}' \
     || { echo "MemFree ${MEMFREE_GIB} GiB < 100 GiB: page cache would starve the 63 GiB arena; drop caches first" >&2; exit 2; }
+# Every start compiles its Triton kernels from an empty cache, so no arm inherits
+# another's compiled variants (the cold-length probe measures those compiles).
+TRITON_ENTRIES=0
+TRITON_ASIDE=none
+if [[ -d $TRITON_CACHE ]]; then
+    TRITON_ENTRIES=$(ls -A "$TRITON_CACHE" | wc -l)
+    TRITON_ASIDE=$TRITON_CACHE.pre-${OBS##*/}-$(date -u +%Y%m%dT%H%M%SZ)
+    mv -- "$TRITON_CACHE" "$TRITON_ASIDE"
+fi
 mkdir -p "$OBS"
 
 stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -106,6 +136,8 @@ trap cleanup EXIT
 log "arm $ARM profile $PROFILE stack $STACK tokens_per_event $K"
 log "head $(git -C "$WT" rev-parse HEAD) dirty=$DIRTY"
 log "inference lock $INFERENCE_LOCK held by the driver"
+log "vllm_tree ${TREE% *} files=${TREE#* }"
+log "triton cache: $TRITON_ENTRIES entries moved aside to $TRITON_ASIDE; this start compiles from empty"
 printf '%s\n' "$RELEASED" | sed "s/^/$(stamp) /" | tee -a "$OBS/driver.log"
 printf '%s\n' "$GUARD" | tee -a "$OBS/driver.log"
 log "preload $(awk '/MemAvailable|MemFree|SwapFree/{printf "%s=%s ", $1, $2}' /proc/meminfo)"
@@ -133,8 +165,8 @@ conc=$(NEW_LOG | grep -oP 'Maximum concurrency for 262,144 tokens per request: \
 log "$ARM: KV concurrency ${conc:-unknown}x at 262,144 per request"
 NEW_LOG | grep -E 'GPU KV cache size|kv cache group sizes|non-default args|INKLING2_|Encoder cache can hold|Raising encoder_cache_size|host page cache released|Model loading took|speculative|Humming|humming' \
     | cut -c1-600 | sed 's/^/serverlog /' | tee -a "$OBS/driver.log" || true
-if [[ -z $conc ]] || ! awk -v c="$conc" 'BEGIN{exit !(c >= 4.0)}'; then
-    log "FAILED_ATTEMPT $ARM: KV concurrency ${conc:-unknown}x at 262,144 (want >= 4.0)"
+if [[ -z $conc ]] || ! awk -v c="$conc" -v m="$MIN_CONC" 'BEGIN{exit !(c >= m)}'; then
+    log "FAILED_ATTEMPT $ARM: KV concurrency ${conc:-unknown}x at 262,144 (want >= $MIN_CONC)"
     exit 1
 fi
 

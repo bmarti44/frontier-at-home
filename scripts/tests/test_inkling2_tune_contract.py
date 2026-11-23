@@ -30,7 +30,14 @@ ARMS = {
     "a3": (f"{BASE}-tune-pow2", "max_ctas_pow2"),
     "a4": (f"{BASE}-tune-dspark", "dspark7"),
     "a5": (f"{BASE}-tune-humming", "moe_humming"),
+    "a0r": (BASE, None),   # a0 again, last in the window: the drift control
 }
+EXTRA = {
+    # arm: the arms.json keys beyond profile/lever/base (PREREG.md)
+    "a0r": {"repeat_of": "a0"},
+    "a4": {"min_concurrency": 3.0},   # DSpark's draft KV shares the arena
+}
+LEVER_ARMS = [arm for arm, (_leaf, lever) in ARMS.items() if lever is not None]
 
 
 def set_arg(argv: list[str], flag: str, value: str) -> None:
@@ -87,10 +94,9 @@ class Inkling2TuneArms(unittest.TestCase):
         self.assertEqual(set(self.arms_doc), set(ARMS))
         for arm, (leaf, lever) in ARMS.items():
             with self.subTest(arm=arm):
-                entry = self.arms_doc[arm]
-                self.assertEqual(entry["profile"], f"{SLUG}/{leaf}")
-                self.assertEqual(entry["lever"], lever)
-                self.assertEqual(entry["base"], None if arm == "a0" else "a0")
+                self.assertEqual(self.arms_doc[arm], {"profile": f"{SLUG}/{leaf}", "lever": lever,
+                                                      "base": None if lever is None else "a0",
+                                                      **EXTRA.get(arm, {})})
 
     def test_each_arm_is_the_carrier_plus_exactly_its_lever(self):
         for arm, (leaf, lever) in ARMS.items():
@@ -115,7 +121,7 @@ class Inkling2TuneArms(unittest.TestCase):
                 self.assertEqual(profile["bench"]["stack_label"], f"{SLUG}-{leaf}")
                 self.assertEqual(profile["containment"]["unit"], f"inkling2-{leaf.split('-tune-')[1]}")
                 stacks.add(profile["bench"]["stack_label"])
-        self.assertEqual(len(stacks), len(ARMS) - 1)
+        self.assertEqual(len(stacks), len(LEVER_ARMS))
 
     def test_only_the_dspark_arm_streams_blocks(self):
         for arm, (leaf, lever) in ARMS.items():
