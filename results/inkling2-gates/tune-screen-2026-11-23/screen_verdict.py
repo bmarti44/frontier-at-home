@@ -3,6 +3,7 @@
 
   screen_verdict.py <screen dir>                 score every arm, write summary.json, print the verdict
   screen_verdict.py --may-run <screen dir> <arm> exit 0 only if <arm> is due
+  screen_verdict.py --effort-due <screen dir> <arm> exit 0 only if the screen is COMPLETE with <arm> as carrier
   screen_verdict.py --self-test                  synthetic cases; all must match
 
 Each lever arm (a1-a5) is compared with a0 alone. The combined arm (a6, named
@@ -293,6 +294,13 @@ def may_run(ev: Path, arm: str) -> bool:
     return True
 
 
+def effort_due(ev: Path, arm: str) -> bool:
+    if (ev / f"effort-{arm}").exists():
+        return False
+    result = score(ev)
+    return result["verdict"] == "COMPLETE" and result.get("carrier") == arm
+
+
 # --------------------------------------------------------------------------- self-test
 
 def _write_arm(root: Path, arm: str, levers: list[str], **kw) -> None:
@@ -448,11 +456,15 @@ def self_test() -> int:
         checks = [may_run(root, "a0"), not may_run(root, "a4"), not may_run(root, "zz")]
         _write_arm(root, "a0", [])
         checks += [not may_run(root, "a0"), may_run(root, "a4")]
+        _write_arm(root, "a4", ["dspark7"], s={"r0": 1.05, "r28": 1.05})
+        checks += [effort_due(root, "a4"), not effort_due(root, "a0")]
+        (root / "effort-a4").mkdir()
+        checks += [not effort_due(root, "a4")]
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     ok = all(checks)
     failures += not ok
-    print(f"{'ok  ' if ok else 'FAIL'} --may-run admits only due arms {checks}")
+    print(f"{'ok  ' if ok else 'FAIL'} --may-run and --effort-due admit only due runs {checks}")
     print(f"{len(cases) + 1 - failures}/{len(cases) + 1} self-test cases match")
     return 1 if failures else 0
 
@@ -462,6 +474,8 @@ def main(argv: list[str]) -> int:
         return self_test()
     if argv[:1] == ["--may-run"] and len(argv) == 3:
         return 0 if may_run(Path(argv[1]), argv[2]) else 1
+    if argv[:1] == ["--effort-due"] and len(argv) == 3:
+        return 0 if effort_due(Path(argv[1]), argv[2]) else 1
     if len(argv) != 1:
         print(__doc__, file=sys.stderr)
         return 2

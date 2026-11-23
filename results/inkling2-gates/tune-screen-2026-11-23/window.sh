@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # GPU window wrapper (DIAGNOSTIC): stop production, run screen arms in order, restore production.
-# Usage: setsid -f bash window.sh <tag> <arm> [<arm> ...] >~/.frontier-at-home/logs/inkling2-screen-<tag>.log 2>&1
+# Usage: setsid -f bash window.sh <tag> <arm|effort:arm> [...] >~/.frontier-at-home/logs/inkling2-screen-<tag>.log 2>&1
+# "effort:<arm>" runs run-effort.sh <arm> (the reasoning-effort pick on the carrier).
 # Adapted from ../smoke-2026-11-23/window.sh. Production's restored root memwatch inherits
 # this script's stdout, so stdout must be a file outside the repository, never a pipe.
 # Any kernel NVRM/Xid/OOM line after an arm stops the window before the next arm.
@@ -29,7 +30,11 @@ for arm in "$@"; do
         break
     fi
     echo "$(date -u +%FT%TZ) arm $arm start"
-    bash "$EV/run-arm.sh" "$arm"
+    if [[ $arm == effort:* ]]; then
+        bash "$EV/run-effort.sh" "${arm#effort:}"
+    else
+        bash "$EV/run-arm.sh" "$arm"
+    fi
     echo "$(date -u +%FT%TZ) arm $arm exit $?"
     if journalctl -k --since "$SINCE" --no-pager -o short-iso 2>/dev/null | grep -Eiq "$KILL"; then
         echo "$(date -u +%FT%TZ) window: kernel kill line after $arm; no further arms"

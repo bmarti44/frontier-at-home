@@ -131,6 +131,8 @@ One fresh load of the carrier runs `31_bench_accuracy.py` on the **dev** split, 
 
 The effort with the higher dev sum (GSM8K + MMLU-Pro correct) is served. A tie goes to `low`, the repository convention. That effort goes into `--default-chat-template-kwargs` for the M3 candidate and into the holdout.
 
+**How it runs.** `run-effort.sh <carrier>` (via `window.sh … effort:<carrier>`) reuses run-arm.sh's preflight, containment and monitoring, with `RuntimeMaxSec` 8 h. `--effort-due` admits only the carrier of a `COMPLETE` screen. The four suite runs (2 suites × 2 efforts) go to the one server concurrently, each with its own transcripts. Both efforts therefore share the same batching conditions.
+
 Mean completion tokens per effort are reported, not gating. HumanEval has no dev split, so it is not used here.
 
 ## Reported, not gating
