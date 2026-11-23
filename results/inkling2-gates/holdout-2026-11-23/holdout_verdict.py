@@ -47,8 +47,10 @@ DEFAULT_SUM = 454
 ROWSETS = {suite: json.loads((CODE / DEFAULT_DRAW / "accuracy" / f"acc-{suite}.json").read_text())["rowset_sha256"]
            for suite in ("gsm8k", "mmlu-pro", "humaneval")}
 WORSE_Z = -1.645
-# The owner's "faster": the default's published c10 row (README), each leg at least equal.
+# The owner's "faster": the default's published c10 row (README), each leg at least equal. These
+# are the rounded values the rule names; c10's unrounded kit values are 2711.49, 34.0745, 40.9182.
 FASTER = {"prefill_28672": 2711.5, "decode_0": 34.07, "decode_28672": 40.92}
+DEFAULT_SPEED = "results/qwen38fn-gates/qualify-2026-10-12-c10/speed/speed.json"
 MMMU_MIN, TOOLCALL_MIN = 64, 19
 DRAW_LINE = "probe identical to candidate 2 and KV covers 1M; drawing the holdout at effort low"
 JOURNAL_ALIVE = "kernel journal alive after the engine stop"
@@ -60,6 +62,10 @@ SERVER_KILL = re.compile(r"CUDA out of memory|OutOfMemoryError|NVRM|Xid")
 MEMWATCH_KILL = re.compile(r"BREACH|EMERGENCY_STOP|FAIL_CLOSED")
 TRANSPORT = re.compile(r"^invalid: ")                # an exception, not a scored answer
 TIMED_OUT = re.compile(r"timed out|TimeoutError", re.I)   # the clock is part of the contract: scored wrong
+# HumanEval rows whose sandbox never ran the code: Docker itself failed (exit 125/126/127) or could not
+# be launched. These are infrastructure failures, not wrong answers (review A-M5-M1).
+SANDBOX_INFRA = re.compile(r"^sandbox launch failed|^sandbox failed with exit (125|126|127)$")
+HOST_TIMEOUT = "sandbox host timeout"                # reported; the code ran and was killed at 30 s
 
 
 class Bad(Exception):
@@ -111,10 +117,14 @@ def code_identity(driver: str) -> dict:
     if len(heads) != 1 or heads[0][1] != "0":
         raise Bad(f"driver.log head lines {heads}, want one clean head")
     head = heads[0][0]
-    freeze = git("log", "-1", "--format=%H", "--", f"{HOLDOUT}/README.md")
+    # The freeze is the last commit at or before the run's head that changed README.md, so a later
+    # result commit cannot move it (review A-M5-L3).
+    freeze = git("log", "-1", "--format=%H", head, "--", f"{HOLDOUT}/README.md")
     frozen, m3_freeze = m3_frozen()
     if not unchanged(freeze, head, HOLDOUT_FROZEN):
         raise Bad(f"head {head[:12]} differs from this draw's freeze {freeze[:12]} under HOLDOUT_FROZEN")
+    if not unchanged(freeze, None, HOLDOUT_FROZEN):
+        raise Bad(f"the working tree (this scorer included) differs from the freeze {freeze[:12]} under HOLDOUT_FROZEN")
     if not unchanged(m3_freeze, head, frozen):
         raise Bad(f"head {head[:12]} differs from candidate 2's freeze {m3_freeze[:12]} under its FROZEN")
     return {"head": head, "freeze": freeze, "m3_freeze": m3_freeze}
@@ -158,7 +168,7 @@ def draw(ev: Path, ledger: Path, identity=code_identity, declared=None) -> dict:
         transcripts = sorted((ev / "accuracy" / "transcripts" / suite).glob("*.json"))
         if len(transcripts) != n:
             raise Bad(f"{suite}: {len(transcripts)} transcripts for {n} rows")
-        errors = []
+        errors, host_timeouts = [], 0
         for t in transcripts:
             row = load(t)
             if row.get("rendering") != d["rendering"][suite]:
@@ -166,20 +176,26 @@ def draw(ev: Path, ledger: Path, identity=code_identity, declared=None) -> dict:
             reason = str(row.get("reason", ""))
             if TRANSPORT.match(reason) and not TIMED_OUT.search(reason):
                 errors.append(reason[:120])
+            if suite == "humaneval" and SANDBOX_INFRA.match(reason):
+                errors.append(reason[:120])
+            host_timeouts += suite == "humaneval" and reason.startswith(HOST_TIMEOUT)
         if errors:
-            raise Bad(f"{suite}: {len(errors)} transport/server errors (FAILED_ATTEMPT), first {errors[0]!r}")
+            raise Bad(f"{suite}: {len(errors)} transport/server/sandbox errors (FAILED_ATTEMPT), first {errors[0]!r}")
         if suite in LEDGERED:
             phases = sorted(e.get("phase") for e in entries if isinstance(e, dict)
                             and e.get("stack_label") == d["stack"] and e.get("suite") == suite
                             and e.get("ledger_namespace") == "")
             done = [e for e in entries if isinstance(e, dict) and e.get("stack_label") == d["stack"]
-                    and e.get("suite") == suite and e.get("phase") == "completed"]
+                    and e.get("suite") == suite and e.get("ledger_namespace") == ""
+                    and e.get("phase") == "completed"]
             if phases != ["completed", "started"] or (done[0].get("n"), done[0].get("correct")) != (n, acc["correct"]):
                 raise Bad(f"ledger: {suite} at {d['stack']} has phases {phases}, want one started and one completed "
                           "matching acc-{suite}.json")
         rows[suite] = {"correct": acc["correct"], "n": n, "invalid": acc.get("invalid_count"),
                        "default": DEFAULT[suite], "delta": acc["correct"] - DEFAULT[suite],
                        "z": worse_z(acc["correct"], n, DEFAULT[suite])}
+        if suite == "humaneval":
+            rows[suite]["sandbox_host_timeouts"] = host_timeouts
     return rows
 
 
@@ -201,7 +217,22 @@ def m3(c2: Path) -> dict:
         raise Bad("M3 vision summary malformed")
     if tool.get("total") != 20 or type(tool.get("passed")) is not int:
         raise Bad("M3 toolcall malformed")
-    return {"speed": values, "mmmu": vision["correct"], "toolcall": tool["passed"]}
+    return {"speed": values, "mmmu": vision["correct"], "toolcall": tool["passed"],
+            "ttft": {"0": levels["0"].get("median_ttft_s"), "28672": levels["28672"].get("median_ttft_s")}}
+
+
+def matched_decode(c2: Path) -> dict:
+    """Reported, not gating (review A-M5-M2): both kits seed each rep's prompt from the same counter,
+    so the reps pair by prompt_sha256. Per prompt, Inkling's and the default's decode."""
+    try:
+        mine = load(c2 / "speed" / "speed.json")["cells"]
+        theirs = {c["ctx_tokens"]: {r["prompt_sha256"]: r["decode_tok_s"] for r in c["reps"]}
+                  for c in load(CODE / DEFAULT_SPEED)["cells"]}
+        return {str(c["ctx_tokens"]): [{"prompt_sha256_16": r["prompt_sha256"][:16], "inkling": r["decode_tok_s"],
+                                        "default": theirs.get(c["ctx_tokens"], {}).get(r["prompt_sha256"])}
+                                       for r in c["reps"]] for c in mine}
+    except (Bad, KeyError, TypeError) as error:
+        return {"unavailable": str(error)}
 
 
 def evaluate(ev: Path, c2: Path, ledger: Path, identity=code_identity) -> dict:
@@ -223,8 +254,10 @@ def evaluate(ev: Path, c2: Path, ledger: Path, identity=code_identity) -> dict:
     }
     faster = all(v["ok"] for v in legs["faster"].values())
     accurate = total > DEFAULT_SUM and not worse and legs["mmmu"]["ok"] and legs["toolcall"]["ok"]
+    reported = {"ttft_s": {"inkling": measured["ttft"], "default": {"0": 0.21, "28672": 12.80}},
+                "decode_per_prompt": matched_decode(c2)}
     return {**out, "rows": rows, "legs": legs, "faster": faster, "more_accurate": accurate,
-            "verdict": "PROMOTE" if faster and accurate else "KEEP_DEFAULT"}
+            "reported_not_gating": reported, "verdict": "PROMOTE" if faster and accurate else "KEEP_DEFAULT"}
 
 
 # ---- self-test ---------------------------------------------------------------------------------
@@ -257,6 +290,8 @@ def _bundle(root: Path, scores=(99, 225, 140), speed=(3000.0, 36.0, 42.0), mmmu=
                 reason = "invalid: URLError: <urlopen error [Errno 111] Connection refused>"
             if kw.get("timeout") == suite and i == n - 1:
                 reason = "invalid: TimeoutError: timed out"
+            if kw.get("sandbox") and suite == "humaneval" and i == n - 1:
+                reason = kw["sandbox"]
             rendering = RENDERING[suite]
             if kw.get("effort") == suite and i == 0:
                 rendering = rendering.replace(f"-effort-{EFFORT}", "-effort-medium")
@@ -303,6 +338,11 @@ CASES = [
     ("a transcript short: NO_RESULT", {"short": "gsm8k"}, "NO_RESULT"),
     ("a connection-refused row: NO_RESULT", {"transport": "mmlu-pro"}, "NO_RESULT"),
     ("a timed-out row is scored, not refused", {"timeout": "mmlu-pro"}, "PROMOTE"),
+    ("a sandbox exit 1 is a wrong answer", {"sandbox": "sandbox failed with exit 1"}, "PROMOTE"),
+    ("a sandbox host timeout is a wrong answer", {"sandbox": "sandbox host timeout after 30 seconds"}, "PROMOTE"),
+    ("Docker exit 125: NO_RESULT", {"sandbox": "sandbox failed with exit 125"}, "NO_RESULT"),
+    ("a sandbox launch failure: NO_RESULT",
+     {"sandbox": "sandbox launch failed: FileNotFoundError: docker"}, "NO_RESULT"),
     ("a row rendered at another effort: NO_RESULT", {"effort": "mmlu-pro"}, "NO_RESULT"),
     ("a HumanEval row sent through the chat wrapper: NO_RESULT", {"wrapped": "humaneval"}, "NO_RESULT"),
     ("a kernel Xid: NO_RESULT", {"xid": True}, "NO_RESULT"),
@@ -347,7 +387,10 @@ def real_evidence() -> bool:
             and measured["speed"]["decode_0"] == gate["speed"]["0"]["median_decode"] \
             and measured["speed"]["decode_28672"] == gate["speed"]["28672"]["median_decode"] \
             and finite(measured["speed"]["prefill_28672"])
-    except (Bad, KeyError, TypeError) as error:
+        pairs = matched_decode(C2)
+        ok_m3 = ok_m3 and sorted(pairs) == ["0", "28672"] and all(
+            len(v) == 2 and all(finite(r["inkling"]) and finite(r["default"]) for r in v) for v in pairs.values())
+    except (Bad, KeyError, TypeError, AttributeError) as error:
         measured, ok_m3 = str(error), False
     print(f"{'ok ' if ok_m3 else 'BAD'}  real-m3       m3() on candidate 2's committed bundle: {measured}")
     return ok_default and ok_m3
@@ -362,7 +405,8 @@ def driver_literals() -> bool:
     text = driver.read_text()
     need = (f"EFFORT={EFFORT}\n", DRAW_LINE.replace(f"effort {EFFORT}", "effort $EFFORT"), JOURNAL_ALIVE,
             "scope empty after stop", 'log "head $(git -C "$WT" rev-parse HEAD) dirty=', "FAILED_ATTEMPT",
-            '--reasoning-effort "$EFFORT"', "--accuracy-split holdout", 'OBS=$EV/observe')
+            '--reasoning-effort "$EFFORT"', "--accuracy-split holdout", 'OBS=$EV/observe',
+            'timeout 86400 "${KIT[@]}"', "RuntimeMaxSec=90000")
     absent = [n for n in need if n not in text]
     print(f"{'ok ' if not absent else 'BAD'}  driver        run-holdout.sh logs the lines draw() requires"
           + (f"; absent {absent}" if absent else ""))

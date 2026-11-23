@@ -10,6 +10,8 @@
 # Launch only after any other GPU window has exited, with stdout to a file, never a pipe:
 #   setsid -f bash run-holdout.sh > ~/.frontier-at-home/logs/inkling2-holdout.log 2>&1
 # ABORT: `systemctl --user stop inkling2-holdout-<driver pid>.scope`; never SIGKILL the driver.
+# An abort spends only the suite in progress: the next ledgered suite fails its model check before
+# it writes its ledger "started" entry (review B-M5 nit).
 set -Eeuo pipefail
 WT=/home/bmarti44/inkling2
 PROD=/home/bmarti44/spark-deepseek-v4-flash
@@ -201,7 +203,7 @@ release_and_gate
 t0=$SECONDS
 log "launching in scope $UNIT"
 if ! systemd-run --user --scope -q --unit="$UNIT" \
-    -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec=28800 \
+    -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec=90000 \
     -- "${SERVE[@]}" start 8>&- 2>&1 | tee -a "$OBS/driver.log"; then
     log "FAILED_ATTEMPT launch did not reach ready"
     exit 1
@@ -226,7 +228,12 @@ sys.exit(0 if len(a) == 3 and a == b else 1)
 PY
 then
     log "probe identical to candidate 2 and KV covers 1M; drawing the holdout at effort $EFFORT"
-    timeout 27000 "${KIT[@]}" --cells accuracy --accuracy-split holdout --reasoning-effort "$EFFORT" 8>&- 2>&1 \
+    # The clock covers the worst case: GSM8K and MMLU-Pro about 4,500 s at the effort pick's dev
+    # rates, then every HumanEval item at the full 16,384 tokens at the slowest measured decode
+    # (33.5 tok/s, about 489 s): 4,500 + 164 x 489 = 84,700 s. A timeout would void the draw after both
+    # ledgered suites are spent (reviews A-M5-H1, B-M5-M1); the window ends when the kit does.
+    # RuntimeMaxSec is 90,000 s.
+    timeout 86400 "${KIT[@]}" --cells accuracy --accuracy-split holdout --reasoning-effort "$EFFORT" 8>&- 2>&1 \
         | tee -a "$OBS/driver.log" || log "kit exit nonzero"
 else
     log "FAILED_ATTEMPT probe differs from candidate 2 or KV ${kv:-unknown} < 1048576; holdout not drawn"
