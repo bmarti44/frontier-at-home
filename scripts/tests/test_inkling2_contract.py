@@ -48,6 +48,8 @@ ADDED_PIN_DIGESTS = {
     "jit_cache": "3965e79b8f7438fd",
     "jit_cache_sm120f": "49f84b2a513da150",
     "jit_cache_sm121a": "166d7f1792c81f52",
+    # site-packages/vllm after patches 0001-0004 (the runtime's real pin).
+    "vllm_tree": "5bcb020bc1e801e3",
 }
 
 
@@ -127,10 +129,14 @@ class Inkling2ScaffoldContract(unittest.TestCase):
         for path in on_disk:
             with self.subTest(patch=path.name):
                 self.assertEqual(patches[str(path.relative_to(ROOT))], sha256(path))
-        # Filled by the install, never guessed.
+        # Filled from the install, never guessed.
         for key in ("packages", "freeze_sha256", "vllm_tree", "gpu_selftest"):
             with self.subTest(pending=key):
-                self.assertIn(key, self.build)
+                self.assertNotEqual(self.build[key], "pending")
+        self.assertTrue(self.build["vllm_tree"]["sha256"].startswith(ADDED_PIN_DIGESTS["vllm_tree"]))
+        self.assertEqual(self.build["vllm_tree"]["after"], "patches 0001-0004")
+        self.assertEqual(self.build["packages"]["pins"]["vllm"].split("-")[1], "0.34.0rc1.dev1133+g647a76866")
+        self.assertEqual(self.build["packages"]["pins"]["torch"], "2.14.0+cu130")
 
     def test_smoke_is_an_estimated_diagnostic_without_a_switch_alias(self):
         p = self.profile

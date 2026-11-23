@@ -52,11 +52,62 @@
     }
   ],
   "patch_command": "git apply, in order, run in runtime/lib/python3.12/site-packages",
-  "packages": "pending",
+  "packages": {
+    "source": "uv pip freeze of the installed runtime ({cache_root}/inkling-2-mini/native-runtime-001/freeze.txt, 203 lines)",
+    "pins": {
+      "flashinfer-jit-cache": "flashinfer_jit_cache-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+      "flashinfer-jit-cache-sm120f": "flashinfer_jit_cache_sm120f-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+      "flashinfer-jit-cache-sm121a": "flashinfer_jit_cache_sm121a-0.7.4+cu130-cp39-abi3-manylinux_2_28_aarch64.whl",
+      "flashinfer-python": "0.7.4",
+      "numpy": "2.3.5",
+      "nvidia-cutlass-dsl": "4.8.0",
+      "safetensors": "0.8.0",
+      "tokenizers": "0.23.3",
+      "torch": "2.14.0+cu130",
+      "transformers": "5.23.0",
+      "triton": "3.8.0",
+      "vllm": "vllm-0.34.0rc1.dev1133+g647a76866-cp38-abi3-manylinux_2_28_aarch64.whl"
+    }
+  },
   "install_command": "uv pip install --python runtime/bin/python3 <vllm wheel> --extra-index-url https://download.pytorch.org/whl/cu130 --index-strategy unsafe-best-match",
-  "freeze_sha256": "pending",
-  "vllm_tree": "pending",
-  "gpu_selftest": "pending",
+  "freeze_sha256": "85a4f99d5e707f57b940f7ca42597c62f285f87648f34dbc80cf88989da84e63",
+  "vllm_tree": {
+    "sha256": "5bcb020bc1e801e364925e45e5d89b3ea7b095dc26238f98fc96a33dfe4f1425",
+    "files": 6525,
+    "after": "patches 0001-0004",
+    "history": [
+      {
+        "after": "unpatched",
+        "sha256": "ba2f72c815aab0630ffab1a22c45e8c431f491568542f4073582f3a9c045685d"
+      },
+      {
+        "after": "0001-0002",
+        "sha256": "9e93b5d818200a861ad92722ab81afd5408db7b2d8b726aaf7674b1c0759a4d8"
+      },
+      {
+        "after": "0001-0003",
+        "sha256": "190f89a22694f9a86330b9a981b8b5eb6a92f9bea0fd80a8e6a2526848908718"
+      }
+    ],
+    "method": "sha256 over the sorted lines relpath + NUL + sha256(file bytes) hex + LF, relpath relative to site-packages/vllm, excluding __pycache__/ and *.pyc (the qwen38-flash-next runtime-002 method)"
+  },
+  "gpu_selftest": {
+    "evidence": "results/inkling2-gates/smoke-2026-11-23/run2/gpu-selftest.json",
+    "result": {
+      "torch": "2.14.0+cu130",
+      "cuda": "13.0",
+      "device": "NVIDIA GB10",
+      "cc": [
+        12,
+        1
+      ],
+      "matmul_ok": true,
+      "pageable_uses_host_page_tables": 1,
+      "inkling2_use_sm100_kernels": false,
+      "vision_triton_attn_ok": true
+    },
+    "note": "run2 ran on the 0001-0003 tree; 0004 only changes the profiling image side."
+  },
   "flashinfer_jit_cache": {
     "why": "AOT kernels so startup never JIT-compiles; profiles set FLASHINFER_DISABLE_JIT=1, so a missing module fails the load instead of running nvcc beside the model",
     "install_command": "uv pip install --python runtime/bin/python3 --no-deps <the three wheels below>",
