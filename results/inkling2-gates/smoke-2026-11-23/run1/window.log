@@ -1,0 +1,53 @@
+2026-11-23T03:23:09Z window run1 open (kernel log since 2026-11-22 22:23:09 local)
+[gate] stopping production
+STOPPED qwen38fn (active.json unchanged; '/home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh restore' restarts it)
+2026-11-23T03:23:17Z run run1 profile inkling-2-mini/cuda-spark-128g-smoke stack inkling-2-mini-cuda-spark-128g-smoke
+2026-11-23T03:23:17Z head 6d65b4fa4ec45be67e277f20743eac664fb2ed3a dirty=0
+2026-11-23T03:23:17Z inference lock /run/lock/frontier-at-home/inference.lock held by the driver
+2026-11-23T03:23:17Z page cache released under /home/bmarti44/.cache/inkling-2-mini: 71990 files
+2026-11-23T03:23:17Z page cache released under /home/bmarti44/models/inkling-2-mini: 30 files
+2026-11-23T03:23:17Z page cache released under /home/bmarti44/.cache/qwen38-flash-next: 136225 files
+2026-11-23T03:23:17Z page cache released under /home/bmarti44/models/qwen3.8-flash-next-nvfp4: 52 files
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.541,"stable_samples_observed":3}
+2026-11-23T03:23:17Z preload MemFree:=115550548 MemAvailable:=121154676 SwapFree:=16595404 
+2026-11-23T03:23:17Z gpu self-test
+2026-11-23T03:23:25Z gpu self-test: {"torch": "2.14.0+cu130", "cuda": "13.0", "device": "NVIDIA GB10", "cc": [12, 1], "matmul_ok": true, "pageable_uses_host_page_tables": 1, "vllm": "0.34.0rc1.dev1133+g647a76866", "inkling2_use_sm100_kernels": false, "flashinfer": "0.7.4"}
+2026-11-23T03:23:27Z run1: launching in scope inkling2-smoke-run1-3536641
+{"pass":true,"required_gib":30.0,"mem_available_gib":115.548,"stable_samples_observed":3}
+ERROR: server exited during startup; see /home/bmarti44/.frontier-at-home/logs/inkling-2-mini-cuda-spark-128g-smoke.server.log
+2026-11-23T03:26:08Z FAILED_ATTEMPT run1: launch did not reach ready
+2026-11-23T03:26:13Z driver exit
+2026-11-23T03:26:13Z smoke run1 exit 1
+[gate-restore] restoring production
+curl: (7) Failed to connect to 127.0.0.1 port 8013 after 0 ms: Couldn't connect to server
+host caches released: MemFree 116.11 GiB, MemAvailable 115.75 GiB
+{"pass":true,"required_gib":114.0,"mem_available_gib":115.751,"stable_samples_observed":3}
+free-memory gate: MemFree 116.10 GiB >= 114 GiB
+Waiting for qwen38fn load: MemAvailable=64.08 GiB
+Waiting for qwen38fn load: MemAvailable=34.30 GiB
+Waiting for qwen38fn load: MemAvailable=29.79 GiB
+Waiting for qwen38fn load: MemAvailable=34.51 GiB
+Waiting for qwen38fn load: MemAvailable=29.75 GiB
+Waiting for qwen38fn load: MemAvailable=35.12 GiB
+Waiting for qwen38fn load: MemAvailable=30.63 GiB
+Waiting for qwen38fn load: MemAvailable=35.54 GiB
+Waiting for qwen38fn load: MemAvailable=31.44 GiB
+Waiting for qwen38fn load: MemAvailable=27.22 GiB
+Waiting for qwen38fn load: MemAvailable=32.25 GiB
+Waiting for qwen38fn load: MemAvailable=27.75 GiB
+Waiting for qwen38fn load: MemAvailable=32.80 GiB
+Waiting for qwen38fn load: MemAvailable=28.64 GiB
+Waiting for qwen38fn load: MemAvailable=33.77 GiB
+Waiting for qwen38fn load: MemAvailable=29.26 GiB
+Waiting for qwen38fn load: MemAvailable=34.41 GiB
+Waiting for qwen38fn load: MemAvailable=30.91 GiB
+Waiting for qwen38fn load: MemAvailable=24.72 GiB
+Waiting for qwen38fn load: MemAvailable=22.31 GiB
+Waiting for qwen38fn load: MemAvailable=29.47 GiB
+Waiting for qwen38fn load: MemAvailable=12.63 GiB
+[gate-restore] production healthy
+2026-11-23T03:37:46Z production restore attempted; switch status:
+{"active_profile":"qwen38fn","schema_version":1,"state":"recorded"}
+kernel lines matching NVRM|Xid|oom|Out of memory since window open:
+(none)
+2026-11-23T03:37:46Z window run1 closed: MemFree:=10628632 MemAvailable:=12416448 SwapFree:=16595404 
