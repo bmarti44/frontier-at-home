@@ -1,0 +1,35 @@
+--- a/vllm/models/inkling2/nvidia/ops/trtllm_bmm.py
++++ b/vllm/models/inkling2/nvidia/ops/trtllm_bmm.py
+@@ -16,8 +16,21 @@
+ import regex as re
+ import torch
+ 
++from vllm.logger import init_logger
++
+ from . import use_sm100_kernels
+ 
++logger = init_logger(__name__)
++
++# Local gate for vLLM PR #69288 (patches/inkling2): read once at import,
++# default off. "1" rounds the off-TRT-LLM-gen max_ctas bound to a power of two.
++_POW2_ENV = os.environ.get("INKLING2_MAX_CTAS_POW2", "0")
++if _POW2_ENV not in ("0", "1"):
++    raise ValueError(f"INKLING2_MAX_CTAS_POW2 must be 0 or 1, got {_POW2_ENV!r}")
++MAX_CTAS_POW2 = _POW2_ENV == "1"
++if MAX_CTAS_POW2:
++    logger.info("INKLING2_MAX_CTAS_POW2=1: max_ctas bucketed to powers of two (PR #69288)")
++
+ _SOURCE = os.path.join(os.path.dirname(__file__), "trtllm_bmm.cu")
+ 
+ # The GEMMs' TMA accesses can reach the first 128 KiB of an operand however
+@@ -145,7 +158,9 @@
+         # No TRT-LLM-gen kernels (Hopper, SM12x): only `route`'s layout. The
+         # Triton kernels take MAX_CTAS as a constexpr, so round this upper
+         # bound up to a power of two to share compiled kernels across sizes.
+-        return ExpertPlan(tile, 1 << (max_ctas - 1).bit_length(), (0, 0))
++        if MAX_CTAS_POW2:
++            max_ctas = 1 << (max_ctas - 1).bit_length()
++        return ExpertPlan(tile, max_ctas, (0, 0))
+     names = configs(nvfp4, tile)
+     keys = _KERNELS[(nvfp4, tile)]
+     kernels = []
