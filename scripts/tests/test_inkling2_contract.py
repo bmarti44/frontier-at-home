@@ -198,6 +198,10 @@ class Inkling2ScaffoldContract(unittest.TestCase):
         self.assertEqual(env["FLASHINFER_DISABLE_JIT"], "1")
         self.assertEqual(env["TRITON_CACHE_DIR"], "{cache_root}/inkling-2-mini/home/.triton/cache")
         self.assertEqual(env["HF_HUB_OFFLINE"], "1")
+        # The wheel's FA2 ships sm_80 SASS + PTX ISA 9.2 only, which the r580
+        # driver cannot JIT on SM12x (smoke run1); patch 0003 routes the vision
+        # encoder's attention through vLLM's Triton prefill kernel.
+        self.assertEqual(env["INKLING2_VISION_ATTN"], "triton")
 
     def test_smoke_safety_and_memory_are_conservative_estimates(self):
         p = self.profile
