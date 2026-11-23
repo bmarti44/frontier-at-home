@@ -33,6 +33,14 @@
       "scope": "vllm/models/inkling2/nvidia/ops/trtllm_bmm.py, applied after 0001",
       "enabled_by": "INKLING2_MAX_CTAS_POW2=1 (read once at import, only 0 or 1, default off: the unpatched exact bound)",
       "sha256": "ee4778d794eff43261755e0fe6f3668a0de543b0683ebdc3b4d4fe190350d30d"
+    },
+    {
+      "name": "local: Inkling 2 vision encoder attention through vLLM's Triton prefill kernel off SM100",
+      "path": "patches/inkling2/0003-local-vision-attn-triton.diff",
+      "scope": "vllm/models/inkling2/nvidia/vision.py",
+      "enabled_by": "INKLING2_VISION_ATTN=triton (read once at import, only fa or triton, default fa: the upstream vllm_flash_attn FA2 call)",
+      "why": "the wheel's _vllm_fa2_C ships sm_80 SASS plus PTX ISA 9.2 only; the r580 driver (CUDA 13.0) cannot JIT that PTX on GB10 (cudaErrorUnsupportedPtxVersion in smoke run1, results/inkling2-gates/smoke-2026-11-23)",
+      "sha256": "8c00dddda7d2985bb67885c812f251a3fd32df833d2cfb3cb7cf7a0256c18c0a"
     }
   ],
   "patch_command": "git apply, in order, run in runtime/lib/python3.12/site-packages",

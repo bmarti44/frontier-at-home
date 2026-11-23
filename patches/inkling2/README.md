@@ -10,5 +10,6 @@ Each patch is Python only, so no CUDA build is needed. They apply in order with 
 |---|---|---|---|
 | 0001 | vLLM #69288 @ `2202ea70`, `vllm/` hunk only (the PR's `tests/` hunk is left out) | On GPUs without TRT-LLM-gen kernels (Hopper, SM12x such as GB10), `expert_plan` rounds the `max_ctas` upper bound up to a power of two. The Triton MoE kernels take `MAX_CTAS` as a constexpr, so batch sizes then share compiled kernels instead of compiling one per size | via 0002 |
 | 0002 | local | Puts 0001 behind `INKLING2_MAX_CTAS_POW2`. It is read once at import, accepts only `0` or `1`, defaults to off (the exact pre-#69288 bound), and logs one startup line when on | `INKLING2_MAX_CTAS_POW2=1` |
+| 0003 | local | Off SM100, runs the vision encoder's non-causal varlen attention through vLLM's Triton prefill kernel (`context_attention_fwd`) instead of `vllm_flash_attn` FA2. The wheel's FA2 ships sm_80 SASS plus PTX ISA 9.2 only, and the r580 (CUDA 13.0) driver cannot JIT that PTX on GB10: smoke run1 died with `cudaErrorUnsupportedPtxVersion`. Read once at import; only `fa` (default, upstream) or `triton` | `INKLING2_VISION_ATTN=triton` |
 
 **With the switch off, the runtime runs the unpatched expert plan.** The rounded bound only changes which compiled kernel variant runs, not the routed rows, so output should be unchanged with it on; a screen records whether it is.
