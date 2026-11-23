@@ -124,6 +124,13 @@ fi
 log "$ARM: ready after $((SECONDS - t0)) s"
 awk '/MemAvailable/{printf "%s idle_mem_available_kib=%s\n", "'"$(stamp)"'", $2}' /proc/meminfo | tee -a "$OBS/driver.log"
 NEW_LOG() { tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG"; }
+# A kernel NVRM/Xid/OOM line ends the run before the next step (the EXIT trap stops the engine).
+kernel_check() {
+    if grep -Eiq 'NVRM|Xid|oom-kill|Out of memory' "$OBS/kernel.log"; then
+        log "FAILED_ATTEMPT $ARM: kernel kill line before $1"
+        exit 1
+    fi
+}
 conc=$(NEW_LOG | grep -oP 'Maximum concurrency for 262,144 tokens per request: \K[0-9.]+(?=x)' | tail -1 || true)
 log "$ARM: KV concurrency ${conc:-unknown}x at 262,144 per request"
 NEW_LOG | grep -E 'GPU KV cache size|kv cache group sizes|non-default args|INKLING2_|Encoder cache can hold|Raising encoder_cache_size|host page cache released|Model loading took|speculative|Humming|humming' \
@@ -133,10 +140,13 @@ if [[ -z $conc ]] || ! awk -v c="$conc" 'BEGIN{exit !(c >= 4.0)}'; then
     exit 1
 fi
 
+kernel_check probe
 python3 "$SMOKE/probe.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/probe.json" 2>&1 | tee -a "$OBS/driver.log" \
     || log "probe exit nonzero"
+kernel_check cold
 python3 "$SMOKE/cold_ttft.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/cold.json" 2>&1 | tee -a "$OBS/cold.log" \
     | tail -1 | tee -a "$OBS/driver.log" || log "cold probe exit nonzero"
+kernel_check speed
 metrics "$OBS/metrics-before.txt"
 python3 "$WT/scripts/30_bench_speed_blocks.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/speed.json" \
     --stack-label "$STACK" --reps 3 --warmup 1 --max-tokens 384 --min-completion-tokens 200 --seed 42 \
@@ -146,11 +156,14 @@ python3 "$WT/scripts/30_bench_speed_blocks.py" --base-url "http://127.0.0.1:$POR
     || log "speed exit nonzero"
 tail -5 "$OBS/speed.log" | tee -a "$OBS/driver.log"
 metrics "$OBS/metrics-after.txt"
+kernel_check code
 python3 "$EV/code_decode.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/code.json" --max-tokens-per-event "$K" \
     2>&1 | tee -a "$OBS/code.log" | tail -1 | tee -a "$OBS/driver.log" || log "code decode exit nonzero"
+kernel_check toolcall
 python3 "$WT/scripts/39_bench_toolcall.py" --base-url "http://127.0.0.1:$PORT/v1" --model inkling-2-mini \
     --out "$OBS/toolcall.json" --temperature 0 2>&1 | tee -a "$OBS/toolcall.log" | tail -3 | tee -a "$OBS/driver.log" \
     || log "toolcall exit nonzero"
+kernel_check vision
 if [[ $ARM == a0 || $ARM == a6* ]]; then
     # Patch 0004's live check (images up to 4096 px) and the declared 4096-token answer budget.
     python3 "$WT/scripts/38_bench_vision.py" --base-url "http://127.0.0.1:$PORT" --out "$OBS/vision" \

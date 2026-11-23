@@ -17,16 +17,19 @@ echo "$(date -u +%FT%TZ) window $TAG open for arms $* (kernel log since $SINCE l
 source /home/bmarti44/spark-deepseek-v4-flash/scripts/lib/gate_window.sh
 # A signal must not start the restore while an arm's engine is still loaded. Abort
 # procedure: touch $EV/ABORT (no further arm starts), then kill -TERM the running
-# run-arm.sh; its EXIT trap stops the engine and this wrapper then restores production.
-trap 'echo "$(date -u +%FT%TZ) window: signal deferred until the running arm exits"' TERM INT HUP
+# run-arm.sh only (never this window's process group: a group signal during the restore
+# would reach the switch); its EXIT trap stops the engine and this wrapper then restores.
+# A deferred signal also ends the window: no further arm starts after it.
+aborted=0
+trap 'aborted=1; echo "$(date -u +%FT%TZ) window: signal deferred until the running arm exits; no further arms"' TERM INT HUP
 _gate_window_armed=true
 trap gate_restore_production EXIT
 echo "[gate] stopping production"
 sudo /home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh stop \
     || echo "$(date -u +%FT%TZ) window: production stop failed (run-arm.sh refuses while the inference lock is held)"
 for arm in "$@"; do
-    if [[ -e $EV/ABORT ]]; then
-        echo "$(date -u +%FT%TZ) window: ABORT file present; no further arms"
+    if [[ $aborted == 1 || -e $EV/ABORT ]]; then
+        echo "$(date -u +%FT%TZ) window: aborted (signal or ABORT file); no further arms"
         break
     fi
     echo "$(date -u +%FT%TZ) arm $arm start"
@@ -35,12 +38,32 @@ for arm in "$@"; do
     else
         bash "$EV/run-arm.sh" "$arm"
     fi
-    echo "$(date -u +%FT%TZ) arm $arm exit $?"
+    rc=$?
+    echo "$(date -u +%FT%TZ) arm $arm exit $rc"
+    dir=$EV/$arm
+    [[ $arm == effort:* ]] && dir=$EV/effort-${arm#effort:}
+    if [[ -f $dir/memwatch.log ]] && grep -Eq 'BREACH|EMERGENCY_STOP|FAIL_CLOSED' "$dir/memwatch.log"; then
+        echo "$(date -u +%FT%TZ) window: memwatch fired in $arm; no further arms"
+        break
+    fi
+    if [[ $arm == a0 && $rc -ne 0 ]]; then
+        echo "$(date -u +%FT%TZ) window: a0 failed (rc $rc); the screen is NO_RESULT without it; no further arms"
+        break
+    fi
     if journalctl -k --since "$SINCE" --no-pager -o short-iso 2>/dev/null | grep -Eiq "$KILL"; then
         echo "$(date -u +%FT%TZ) window: kernel kill line after $arm; no further arms"
         break
     fi
 done
+# The restore needs the dev engine gone: port 8018 closed and the memory back.
+for ((i = 0; i < 120; i++)); do
+    if ! curl -s --max-time 2 -o /dev/null http://127.0.0.1:8018/health \
+        && awk '/^MemAvailable:/{exit !($2/1048576 >= 110)}' /proc/meminfo; then
+        break
+    fi
+    sleep 5
+done
+((i < 120)) || echo "$(date -u +%FT%TZ) window: WARNING: dev engine still answering or MemAvailable < 110 GiB before the restore"
 gate_window_close
 echo "$(date -u +%FT%TZ) production restore attempted; switch status:"
 /home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh status --json

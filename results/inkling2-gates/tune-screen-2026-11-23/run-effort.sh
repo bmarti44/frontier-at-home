@@ -122,6 +122,13 @@ fi
 log "$ARM: ready after $((SECONDS - t0)) s"
 awk '/MemAvailable/{printf "%s idle_mem_available_kib=%s\n", "'"$(stamp)"'", $2}' /proc/meminfo | tee -a "$OBS/driver.log"
 NEW_LOG() { tail -c +$((SERVER_OFF + 1)) -- "$SERVER_LOG"; }
+# A kernel NVRM/Xid/OOM line ends the run before the next step (the EXIT trap stops the engine).
+kernel_check() {
+    if grep -Eiq 'NVRM|Xid|oom-kill|Out of memory' "$OBS/kernel.log"; then
+        log "FAILED_ATTEMPT $ARM: kernel kill line before $1"
+        exit 1
+    fi
+}
 conc=$(NEW_LOG | grep -oP 'Maximum concurrency for 262,144 tokens per request: \K[0-9.]+(?=x)' | tail -1 || true)
 log "$ARM: KV concurrency ${conc:-unknown}x at 262,144 per request"
 NEW_LOG | grep -E 'GPU KV cache size|kv cache group sizes|non-default args|INKLING2_|Encoder cache can hold|Raising encoder_cache_size|host page cache released|Model loading took|speculative|Humming|humming' \
@@ -131,6 +138,7 @@ if [[ -z $conc ]] || ! awk -v c="$conc" 'BEGIN{exit !(c >= 4.0)}'; then
     exit 1
 fi
 
+kernel_check accuracy
 pids=()
 for effort in low medium; do
     for suite in gsm8k mmlu-pro; do
@@ -143,6 +151,18 @@ for effort in low medium; do
         pids+=($!)
         log "started $suite dev at effort $effort (pid $!)"
     done
+done
+# Watch the kernel log while the suites run (hours): a kill line stops them all.
+while :; do
+    alive=0
+    for pid in "${pids[@]}"; do kill -0 "$pid" 2>/dev/null && alive=1; done
+    ((alive)) || break
+    if grep -Eiq 'NVRM|Xid|oom-kill|Out of memory' "$OBS/kernel.log"; then
+        kill "${pids[@]}" 2>/dev/null
+        log "FAILED_ATTEMPT $ARM: kernel kill line during the accuracy suites"
+        exit 1
+    fi
+    sleep 30
 done
 rc=0
 for pid in "${pids[@]}"; do wait "$pid" || rc=1; done
