@@ -5,10 +5,10 @@
   "backend": "cuda",
   "hardware_class": "spark",
   "ram_tier_gib": 128,
-  "purpose": "Inkling 2 Mini serving candidate: four native 262,144-token slots (1,048,576 total), the official NVFP4/MXFP8 QAT experts as shipped, BF16 KV in a fixed arena, prefix cache, images on (4 per prompt, up to 4096 px a side), video off, reasoning effort low. The lever screen's carrier (a0) until qualified.",
+  "purpose": "Inkling 2 Mini serving candidate: four native 262,144-token slots (1,048,576 total), the official NVFP4/MXFP8 QAT experts as shipped, BF16 KV in a fixed arena, prefix cache, images on (4 per prompt, up to 4096 px a side), video off. Serves the lever screen's carrier a6 (results/inkling2-gates/tune-screen-2026-11-23/RESULT.md): DSpark speculative decoding x7 (the target verifies every token), --moe-backend humming and INKLING2_MAX_CTAS_POW2=1 (vLLM PR #69288), at the reasoning effort the screen's dev-split pick chose. Estimated until M3 qualifies it.",
   "status": {
     "state": "estimated",
-    "basis": "Sized from the diagnostic smoke run2 (results/inkling2-gates/smoke-2026-11-23/run2), never loaded at this topology: every memory figure is a projection until a load reports the arena's capacity at 262,144 tokens and a run measures the peak."
+    "basis": "Loaded at this topology only as diagnostic screen arm a6 (results/inkling2-gates/tune-screen-2026-11-23/a6, same argv and env): vLLM reported 4.72x at 262,144 tokens with DSpark (5.36x without), peak use 91.19 GiB (MemAvailable 115.61 -> 24.42) on short and 28K-token requests. The direct 1M fill and the peak it sets are unmeasured until M3. The scope's memory.current peaked at 21.5 GiB: the CUDA arena and weights are not charged to the cgroup on this host."
   },
   "engine": "vllm-inkling2-r001",
   "artifact_roles": {
@@ -41,7 +41,8 @@
       "TRITON_CACHE_DIR": "{cache_root}/inkling-2-mini/home/.triton/cache",
       "INKLING2_VISION_ATTN": "triton",
       "INKLING2_MAX_IMAGE_SIDE": "4096",
-      "QWEN38FN_HOST_RELEASE_ROOTS": "{cache_root}/inkling-2-mini:{cache_root}/qwen38-flash-next"
+      "QWEN38FN_HOST_RELEASE_ROOTS": "{cache_root}/inkling-2-mini:{cache_root}/qwen38-flash-next",
+      "INKLING2_MAX_CTAS_POW2": "1"
     },
     "diagnostics_unset": [
       "VLLM_LOGGING_LEVEL",
@@ -89,6 +90,10 @@
       "{\"reasoning_effort\":\"low\"}",
       "--worker-cls",
       "qwen38fn_worker.HostCacheReleaseWorker",
+      "--speculative-config",
+      "{\"method\":\"dspark\",\"num_speculative_tokens\":7,\"draft_sample_method\":\"probabilistic\"}",
+      "--moe-backend",
+      "humming",
       "--middleware",
       "vllm_reasoning_compat.ReasoningContentMiddleware",
       "--middleware",
@@ -133,7 +138,8 @@
     "stack_label": "inkling-2-mini-cuda-spark-128g-1m"
   },
   "qualification_options": {
-    "vision_max_tokens": 4096
+    "vision_max_tokens": 4096,
+    "speed_max_tokens_per_event": 8
   },
   "qualification_targets": {
     "note": "qwen38fn (Qwen3.8-Flash-Next, candidate 10) README headline: Inkling must meet these and beat its holdout to replace the default (promotion rule, results/inkling2-gates). Misses are reported.",

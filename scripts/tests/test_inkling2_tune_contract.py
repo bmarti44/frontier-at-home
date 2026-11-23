@@ -78,6 +78,20 @@ def expected(base: dict, lever: str) -> dict:
 IDENTITY = ("profile_id", "purpose", "status", "bench", "launch.log_name", "containment.unit")
 
 
+def screen_a0(serving: dict) -> dict:
+    """The screen's a0: the serving profile without the levers it took from the carrier
+    (DSpark, humming, #69288) and at effort low, the profile as the screen ran it."""
+    p = copy.deepcopy(serving)
+    argv = p["launch"]["args"]
+    for flag in ("--speculative-config", "--moe-backend"):
+        at = argv.index(flag)
+        del argv[at:at + 2]
+    argv[argv.index("--default-chat-template-kwargs") + 1] = '{"reasoning_effort":"low"}'
+    del p["launch"]["env"]["INKLING2_MAX_CTAS_POW2"]
+    del p["qualification_options"]["speed_max_tokens_per_event"]
+    return p
+
+
 def strip_identity(profile: dict) -> dict:
     p = copy.deepcopy(profile)
     for key in IDENTITY:
@@ -92,7 +106,7 @@ def strip_identity(profile: dict) -> dict:
 class Inkling2TuneArms(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.base = profile_resolver.load_profile(SLUG, f"{BASE}.json")
+        cls.base = screen_a0(profile_resolver.load_profile(SLUG, f"{BASE}.json"))
         cls.arms_doc = json.loads((SCREEN / "arms.json").read_text())
 
     def test_arms_json_names_each_arm_profile_and_lever(self):
@@ -166,7 +180,7 @@ class Inkling2TuneArms(unittest.TestCase):
 
     def test_only_the_dspark_arm_streams_blocks(self):
         for arm, (leaf, lever) in ARMS.items():
-            profile = profile_resolver.load_profile(SLUG, f"{leaf}.json")
+            profile = self.base if leaf == BASE else profile_resolver.load_profile(SLUG, f"{leaf}.json")
             with self.subTest(arm=arm):
                 k = profile["qualification_options"].get("speed_max_tokens_per_event")
                 self.assertEqual(k, 8 if lever == "dspark7" else None)
