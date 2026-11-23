@@ -155,6 +155,9 @@ class Inkling2ScaffoldContract(unittest.TestCase):
         argv = self.profile["launch"]["args"]
         for flag, value in (("--kv-cache-dtype", "auto"),
                             ("--gpu-memory-utilization", "0.80"),
+                            # A fixed arena: without it this vLLM's extensible KV
+                            # cache commits up to 0.80 x total memory after warmup.
+                            ("--kv-cache-memory-bytes", "24000000000"),
                             ("--max-num-batched-tokens", "2048"),
                             ("--reasoning-parser", "inkling"),
                             ("--tool-call-parser", "inkling"),
@@ -203,7 +206,7 @@ class Inkling2ScaffoldContract(unittest.TestCase):
         self.assertEqual(p["safety"]["startup_timeout_seconds"], 1800)
         budget = p["memory_model"]
         self.assertEqual((budget["resident_weights_gib"], budget["overhead_gib"],
-                          budget["extra_gib"], budget["floor_gib"]), (20, 12, 40, 15))
+                          budget["extra_gib"], budget["floor_gib"]), (20, 12, 23, 15))
         self.assertIn("ESTIMATE", budget["basis"])
         containment = p["containment"]
         self.assertEqual((containment["memory_swap_max"], containment["oom_policy"],
