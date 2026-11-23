@@ -98,6 +98,14 @@ class Inkling2TuneArms(unittest.TestCase):
                                                       "base": None if lever is None else "a0",
                                                       **EXTRA.get(arm, {})})
 
+    def test_a_retry_keeps_its_original_lever_and_floor(self):
+        for arm, entry in self.arms_doc.items():
+            if "retry_of" in entry:
+                with self.subTest(arm=arm):
+                    original = self.arms_doc[entry["retry_of"]]
+                    self.assertEqual(entry["lever"], original["lever"])
+                    self.assertEqual(entry.get("min_concurrency"), original.get("min_concurrency"))
+
     def test_each_arm_is_the_carrier_plus_exactly_its_lever(self):
         for arm, (leaf, lever) in ARMS.items():
             if lever is None:

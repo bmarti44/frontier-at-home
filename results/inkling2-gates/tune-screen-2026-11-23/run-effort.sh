@@ -152,7 +152,7 @@ sleep 2   # at least one meminfo sample precedes the launching line
 log "$ARM: launching in scope $UNIT"
 t0=$SECONDS
 if ! systemd-run --user --scope -q --unit="$UNIT" \
-    -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec=28800 \
+    -p MemoryHigh=92G -p MemoryMax=96G -p MemorySwapMax=0 -p OOMPolicy=kill -p RuntimeMaxSec=50400 \
     -- "${SERVE[@]}" start 8>&- | tee -a "$OBS/driver.log"; then
     log "FAILED_ATTEMPT $ARM: launch did not reach ready"
     exit 1
@@ -204,6 +204,13 @@ done
 rc=0
 for pid in "${pids[@]}"; do wait "$pid" || rc=1; done
 log "accuracy runs finished (any nonzero exit: $rc)"
+# An engine that died mid-run (memwatch, an EngineCore exception, RuntimeMaxSec) turns every
+# remaining row into a fast transport error; the run then decides nothing.
+if ! curl -sf --max-time 10 -o /dev/null "http://127.0.0.1:$PORT/health"; then
+    log "FAILED_ATTEMPT $ARM: engine not healthy after the accuracy suites"
+    exit 1
+fi
+log "effort-$ARM: engine healthy after the accuracy suites"
 for effort in low medium; do
     for suite in gsm8k mmlu-pro; do
         python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(sys.argv[2], sys.argv[3], d.get("correct"), "/", d.get("n"))' \

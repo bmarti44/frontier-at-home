@@ -21,7 +21,7 @@ The verdict comes from `screen_verdict.py`. That script, `arms.json`, `run-arm.s
 
 **Baseline pair.** a0 and a0r bracket the lever arms in time. A lever's gain must clear its threshold against the *better* of the two baseline starts, metric by metric. Its no-regression floors are measured against the *worse* one. Thermal or host drift during the window therefore cannot manufacture a gain. Greedy probe identity is always checked against a0.
 
-**Retries.** A rerun of a failed or `NO_RESULT` arm is a new arm id with `"retry_of": "<original>"` and the same lever, committed before it loads. Its decision replaces the original's, and the original's directory stays as evidence. If a retry runs on a different runtime tree (a new patch), its arms.json entry names that tree in `"vllm_tree"`.
+**Retries.** A rerun of a failed or `NO_RESULT` arm is a new arm id with `"retry_of": "<original>"` and the same lever, committed before it loads. Its decision replaces the original's, and the original's directory stays as evidence. If a retry runs on a different runtime tree (a new patch), its arms.json entry names that tree in `"vllm_tree"`. A retry also carries its original's `min_concurrency`, which the contract test checks. A retry or a6 run in a later window is bracketed by its own baseline repeat: a new arm with `"repeat_of": "a0"`, run last in that window. The scorer pools every repeat into the baseline pair.
 
 **a6 rules:**
 - It is a new profile leaf plus an `arms.json` entry with `"levers": [...]`, committed before it loads.
@@ -109,7 +109,7 @@ Defects found by running an arm follow AGENTS.md:
 
 **Ratios against the baseline pair** (gains against the better start, floors against the worse):
 - r0 and r28 are the decode medians at 0 and 28,672;
-- rp is the median prefill at 28,672;
+- rp is the fastest valid prefill rep at 28,672. A Triton compile for a new prompt-length variant only adds time. a0 and a0r replay the same prompts from an empty cache, so they would stall identically, and the batch arms change the chunking, which could fake or hide a gain;
 - rc is the cold aggregate prefill;
 - rt0 is the median TTFT at 0;
 - rcode is the code decode median.
@@ -127,7 +127,7 @@ Defects found by running an arm follow AGENTS.md:
 - `INCOMPLETE`: an arm (a0r included) has not run, a lever is `NO_RESULT`, or a6 is due but absent.
 - `NO_RESULT`: a0 or a0r is unsafe or malformed, a0r ran on another tree, or a6's levers disagree with the kept set.
 
-`screen_verdict.py --self-test` runs 51 synthetic cases, which must all match before it scores. They cover:
+`screen_verdict.py --self-test` runs 60 synthetic cases, which must all match before it scores. They cover:
 - each safety clause and each integrity clause;
 - every keep branch;
 - the baseline pair;
@@ -152,9 +152,15 @@ One fresh load of the carrier runs `31_bench_accuracy.py` on the **dev** split, 
 - a split other than dev, or a row count other than 100/253;
 - a different encoder or token budget;
 - a `FAILED_ATTEMPT`;
-- no clean stop.
+- no clean stop, or no healthy engine after the suites;
+- a kernel, server or memwatch kill line (the screen's patterns);
+- a driver profile line that is not the carrier's, or a vLLM tree that is not a0's;
+- transcripts that number other than n, or one not rendered at its effort;
+- any row whose reason is an exception other than a timeout. A dead engine turns every remaining row into a fast transport error. That error would be scored wrong and would bias the pick towards the effort that finished first (reviewer A). A timeout is part of the measurement contract and stays scored wrong.
 
-**How it runs.** `run-effort.sh <carrier>` (via `window.sh … effort:<carrier>`) reuses run-arm.sh's preflight, containment and monitoring, with `RuntimeMaxSec` 8 h. `--effort-due` admits only the carrier of a `COMPLETE` screen. The four suite runs (2 suites × 2 efforts) go to the one server concurrently, each with its own transcripts. Both efforts therefore share the same batching conditions.
+Mean completion tokens per suite and effort are reported.
+
+**How it runs.** `run-effort.sh <carrier>` (via `window.sh … effort:<carrier>`) reuses run-arm.sh's preflight, containment and monitoring, with `RuntimeMaxSec` 14 h. Flash-Next's low-effort MMLU-Pro holdout took 1.95 h as one sequential stream, and Inkling's medium-effort stream may run several times longer. After the suites, the driver requires a healthy `/health`, or it logs `FAILED_ATTEMPT`. `--effort-due` admits only the carrier of a `COMPLETE` screen. The four suite runs (2 suites × 2 efforts) go to the one server concurrently, each with its own transcripts. Both efforts therefore share the same batching conditions.
 
 Mean completion tokens per effort are reported, not gating. HumanEval has no dev split, so it is not used here.
 

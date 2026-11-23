@@ -200,7 +200,8 @@ def score_arm(arm_dir: Path, entry: dict) -> dict:
         raise Bad("prefill reps at 28,672 missing")
     out["decode0"] = cells[0]["median_decode"]
     out["decode28"] = cells[28672]["median_decode"]
-    out["prefill28"] = statistics.median(prefill)
+    # The fastest rep: a Triton compile for a new prompt-length variant only adds time (reviewer A).
+    out["prefill28"] = max(prefill)
     out["ttft0"] = cells[0].get("median_ttft")
     if not finite(out["ttft0"]):
         raise Bad("speed cell 0 has no median TTFT")
@@ -418,16 +419,33 @@ DEV_ROWS = {"gsm8k": 100, "mmlu-pro": 253}
 EFFORT_MARGIN = 4          # medium must beat low by >= 4 of 353 dev items (~1%); otherwise low
 
 
+TRANSPORT = re.compile(r"^invalid: ")   # an exception, not a scored answer
+TIMED_OUT = re.compile(r"timed out|TimeoutError", re.I)   # the clock is part of the contract: scored wrong
+
+
 def effort_pick(ev: Path, arm: str) -> dict:
     """PREREG effort rule over effort-<arm>/{low,medium}/acc-<suite>.json."""
     obs = ev / f"effort-{arm}"
     driver = (obs / "driver.log").read_text() if (obs / "driver.log").exists() else ""
-    out: dict = {"carrier": arm, "sums": {}, "rows": {}}
+    out: dict = {"carrier": arm, "sums": {}, "rows": {}, "mean_completion_tokens": {}}
     try:
         if "FAILED_ATTEMPT" in driver:
             raise Bad("driver.log has FAILED_ATTEMPT")
-        if "scope empty after stop" not in driver:
-            raise Bad("driver.log has no clean stop")
+        if "scope empty after stop" not in driver or f"effort-{arm}: engine healthy after the accuracy suites" not in driver:
+            raise Bad("driver.log has no healthy engine at the end or no clean stop")
+        arms = load_json(ev / "arms.json")
+        m = re.search(r"^\S+ arm \S+ profile (\S+) ", driver, re.M)
+        if arm not in arms or not m or m.group(1) != arms[arm]["profile"]:
+            raise Bad(f"driver.log profile {m and m.group(1)} is not arms.json's for {arm}")
+        tree = re.search(r"vllm_tree ([0-9a-f]{64}) files=", driver)
+        tree0 = re.search(r"vllm_tree ([0-9a-f]{64}) files=", (ev / "a0" / "driver.log").read_text())
+        if not (tree and tree0) or tree.group(1) != arms[arm].get("vllm_tree", tree0.group(1)):
+            raise Bad("vllm_tree missing or not the carrier's")
+        kills = [l for l in (obs / "kernel.log").read_text().splitlines() if KERNEL_KILL.search(l)]
+        kills += [l for l in (obs / "server.log").read_text().splitlines() if SERVER_KILL.search(l)]
+        kills += [l for l in (obs / "memwatch.log").read_text().splitlines() if MEMWATCH_KILL.search(l)]
+        if kills:
+            raise Bad(f"kill line: {kills[0][:200]}")
         for effort in ("low", "medium"):
             total = 0
             for suite, n in DEV_ROWS.items():
@@ -440,8 +458,25 @@ def effort_pick(ev: Path, arm: str) -> dict:
                         or not str(acc.get("transcript_dir", "")).endswith(f"/{effort}/transcripts/{suite}") \
                         or not isinstance(acc.get("correct"), int) or not 0 <= acc["correct"] <= n:
                     raise Bad(f"{effort}/acc-{suite}.json is not the declared dev run")
+                transcripts = sorted((obs / effort / "transcripts" / suite).glob("*.json"))
+                if len(transcripts) != n:
+                    raise Bad(f"{effort}/{suite}: {len(transcripts)} transcripts for {n} rows")
+                tokens, errors = [], []
+                for t in transcripts:
+                    row = load_json(t)
+                    if not str(row.get("rendering", "")).endswith(f"-effort-{effort}"):
+                        raise Bad(f"{t.name} was not rendered at effort {effort}")
+                    reason = str(row.get("reason", ""))
+                    if TRANSPORT.match(reason) and not TIMED_OUT.search(reason):
+                        errors.append(reason[:120])
+                    usage = (row.get("response") or {}).get("usage") if isinstance(row.get("response"), dict) else None
+                    if isinstance(usage, dict) and finite(usage.get("completion_tokens")):
+                        tokens.append(usage["completion_tokens"])
+                if errors:
+                    raise Bad(f"{effort}/{suite}: {len(errors)} transport/server errors, first {errors[0]!r}")
                 out["rows"][f"{effort}/{suite}"] = {"correct": acc["correct"], "n": n,
-                                                    "invalid": acc.get("invalid_count")}
+                                                    "invalid": acc.get("invalid_count"),
+                                                    "mean_completion_tokens": statistics.mean(tokens) if tokens else None}
                 total += acc["correct"]
             out["sums"][effort] = total
     except (Bad, OSError) as exc:
@@ -456,13 +491,32 @@ def effort_pick(ev: Path, arm: str) -> dict:
 def _write_effort(root: Path, arm: str, low: tuple[int, int], medium: tuple[int, int], **kw) -> Path:
     obs = root / f"effort-{arm}"
     obs.mkdir(parents=True)
-    lines = []
+    (root / "arms.json").write_text(json.dumps({arm: {"profile": "p/a0", "lever": None, "base": None}}))
+    (root / "a0").mkdir(exist_ok=True)
+    (root / "a0" / "driver.log").write_text(f"2026-11-23T05:00:00Z vllm_tree {TREE} files=6525\n")
+    lines = [f"2026-11-23T08:00:00Z arm {arm} profile {kw.get('logged_profile', 'p/a0')} stack s tokens_per_event 8",
+             f"2026-11-23T08:00:00Z vllm_tree {kw.get('tree', TREE)} files=6525"]
+    (obs / "kernel.log").write_text(kw.get("kernel", ""))
+    (obs / "server.log").write_text("INFO session start\n")
+    (obs / "memwatch.log").write_text("ts=x ARMED target_pid=1\n" + kw.get("memwatch", ""))
     for effort, counts in (("low", low), ("medium", medium)):
         for (suite, n), correct in zip(DEV_ROWS.items(), counts):
             lines.append(f"2026-11-23T08:00:00Z started {suite} dev at effort {effort} (pid 1)")
             if kw.get("missing") == f"{effort}/{suite}":
                 continue
-            (obs / effort).mkdir(exist_ok=True)
+            tdir = obs / effort / "transcripts" / suite
+            tdir.mkdir(parents=True)
+            rows = n - (1 if kw.get("short_transcripts") == f"{effort}/{suite}" else 0)
+            for i in range(rows):
+                reason = "correct" if i < correct else "wrong answer"
+                if kw.get("transport") == f"{effort}/{suite}" and i == rows - 1:
+                    reason = "invalid: URLError: <urlopen error [Errno 111] Connection refused>"
+                if kw.get("timeout") == f"{effort}/{suite}" and i == rows - 1:
+                    reason = "invalid: TimeoutError: timed out"
+                rendered_effort = kw.get("rendered_effort", effort) if i == 0 else effort
+                (tdir / f"{suite}-{i:05d}.json").write_text(json.dumps({
+                    "rendering": f"official-encoder-inkling2-thinking-effort-{rendered_effort}", "reason": reason,
+                    "response": {"usage": {"completion_tokens": 500}}}))
             (obs / effort / f"acc-{suite}.json").write_text(json.dumps({
                 "suite": suite, "split": kw.get("split", "dev"), "n": kw.get("n", {}).get(suite, n),
                 "correct": correct, "invalid_count": 0,
@@ -470,6 +524,8 @@ def _write_effort(root: Path, arm: str, low: tuple[int, int], medium: tuple[int,
                 "generation": {"encoder": "inkling2", "max_tokens": 16384}}))
     if kw.get("failed"):
         lines.append("2026-11-23T09:00:00Z FAILED_ATTEMPT a0: kernel kill line during the accuracy suites")
+    if not kw.get("dead"):
+        lines.append(f"2026-11-23T10:00:00Z effort-{arm}: engine healthy after the accuracy suites")
     lines.append(f"2026-11-23T10:00:00Z effort-{arm}: scope empty after stop")
     (obs / "driver.log").write_text("\n".join(lines) + "\n")
     return root
@@ -705,6 +761,24 @@ def self_test() -> int:
         ("short row count: NO_RESULT", (90, 180), (92, 190), {"n": {"mmlu-pro": 250}},
          lambda r: r["verdict"] == "NO_RESULT"),
         ("FAILED_ATTEMPT: NO_RESULT", (90, 180), (92, 190), {"failed": True}, lambda r: r["verdict"] == "NO_RESULT"),
+        ("engine not healthy at the end: NO_RESULT", (90, 180), (92, 190), {"dead": True},
+         lambda r: r["verdict"] == "NO_RESULT"),
+        ("a connection-refused row: NO_RESULT", (90, 180), (92, 190), {"transport": "medium/mmlu-pro"},
+         lambda r: r["verdict"] == "NO_RESULT"),
+        ("a timed-out row is scored, not refused", (90, 180), (92, 190), {"timeout": "medium/mmlu-pro"},
+         lambda r: r["verdict"] == "COMPLETE" and r["effort"] == "medium"),
+        ("memwatch breach: NO_RESULT", (90, 180), (92, 190), {"memwatch": "BREACH\n"},
+         lambda r: r["verdict"] == "NO_RESULT"),
+        ("kernel Xid: NO_RESULT", (90, 180), (92, 190), {"kernel": "NVRM: Xid 13\n"},
+         lambda r: r["verdict"] == "NO_RESULT"),
+        ("a transcript missing: NO_RESULT", (90, 180), (92, 190), {"short_transcripts": "low/gsm8k"},
+         lambda r: r["verdict"] == "NO_RESULT"),
+        ("a row rendered at the other effort: NO_RESULT", (90, 180), (92, 190), {"rendered_effort": "low"},
+         lambda r: r["verdict"] == "NO_RESULT"),
+        ("driver profile not the carrier's: NO_RESULT", (90, 180), (92, 190), {"logged_profile": "p/a4"},
+         lambda r: r["verdict"] == "NO_RESULT"),
+        ("another runtime tree: NO_RESULT", (90, 180), (92, 190), {"tree": "f" * 64},
+         lambda r: r["verdict"] == "NO_RESULT"),
     ]
     for name, low, medium, kw, check in effort_cases:
         tmp = Path(tempfile.mkdtemp(prefix="inkling2-effort-"))
