@@ -1,0 +1,60 @@
+{
+  "index": 314,
+  "task_id": 314,
+  "rendered_prompt_sha256": "19bf50179ed5ab63b7141e27c554182cdffc89cf909d757fc1be96c49c3998ed",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need think briefly. Let's solve: Let defense = d. Offense = 2d. Special teams = half of defense = d/2. Total = d + 2d + d/2 = 3.5d = 7/2 d =105. d =105*2/7 =15*2? 105/7=15, *2=30. Check offense 60, special 15, total 105. Final with brief explanation and final line exact format. Ensure final numeric answer on own line. Could include concise steps then Answer: 30. Need no extra after final line.Let defense be \\(d\\). Offense is \\(2d\\), special teams is \\(d/2\\).  \n\\(d + 2d + d/2 = 105\\), so \\(\\frac{7}{2}d = 105\\), hence \\(d = 30\\).\n\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.200234768912196
+  },
+  "response": {
+    "id": "cmpl-9d65a5e7a8abfcfc",
+    "object": "text_completion",
+    "created": 1795415925,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need think briefly. Let's solve: Let defense = d. Offense = 2d. Special teams = half of defense = d/2. Total = d + 2d + d/2 = 3.5d = 7/2 d =105. d =105*2/7 =15*2? 105/7=15, *2=30. Check offense 60, special 15, total 105. Final with brief explanation and final line exact format. Ensure final numeric answer on own line. Could include concise steps then Answer: 30. Need no extra after final line.Let defense be \\(d\\). Offense is \\(2d\\), special teams is \\(d/2\\).  \n\\(d + 2d + d/2 = 105\\), so \\(\\frac{7}{2}d = 105\\), hence \\(d = 30\\).\n\nAnswer: 30",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 94,
+      "total_tokens": 319,
+      "completion_tokens": 225,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

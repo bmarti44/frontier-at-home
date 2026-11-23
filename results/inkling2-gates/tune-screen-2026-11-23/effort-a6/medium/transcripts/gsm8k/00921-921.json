@@ -1,0 +1,60 @@
+{
+  "index": 921,
+  "task_id": 921,
+  "rendered_prompt_sha256": "05a16eeb1721edd929c3a674cdb7efa77ae044be6d34aaa378e8b6ba001f7df5",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need think briefly. Problem: loaf 24 slices. Abby eats 2 slices/day. Josh can eat twice as much = 4 slices/day. Combined 6 slices/day. Days = 24/6 = 4. Need final numeric answer on own line form Answer: <number>. Could include brief explanation then final line. Ensure final line exactly. No extra after.Abby eats 2 slices/day; Josh eats 4 slices/day. Together they eat 6 slices/day, so 24 ÷ 6 = 4 days.\n\nAnswer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.127933776006103
+  },
+  "response": {
+    "id": "cmpl-84442b2c568d34dd",
+    "object": "text_completion",
+    "created": 1795415215,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need think briefly. Problem: loaf 24 slices. Abby eats 2 slices/day. Josh can eat twice as much = 4 slices/day. Combined 6 slices/day. Days = 24/6 = 4. Need final numeric answer on own line form Answer: <number>. Could include brief explanation then final line. Ensure final line exactly. No extra after.Abby eats 2 slices/day; Josh eats 4 slices/day. Together they eat 6 slices/day, so 24 ÷ 6 = 4 days.\n\nAnswer: 4",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 81,
+      "total_tokens": 222,
+      "completion_tokens": 141,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

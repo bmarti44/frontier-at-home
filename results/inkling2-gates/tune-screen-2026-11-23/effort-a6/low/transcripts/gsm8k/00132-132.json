@@ -1,0 +1,60 @@
+{
+  "index": 132,
+  "task_id": 132,
+  "rendered_prompt_sha256": "ffa5852a6be2d64af0eb36ab8503d453c461070f0c448a91260ef2234487b72f",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer arithmetic. Need compute carefully. Pam rode roller coaster 2 times, Fred 4 times. Total roller coaster rides = 6. After that, each decided to ride luge 2 times. Each of them 2 rides => Pam 2, Fred 2, total luge rides = 4. Total rides = 10. Each ride cost 6 tickets => 60 tickets. Need final with brief explanation and final line exactly Answer: 60. Ensure no extra after final line.Roller coaster rides: 2 + 4 = 6. Luge rides: 2 + 2 = 4. Total rides: 10. Tickets used: 10 × 6 = 60.\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.134740866255015
+  },
+  "response": {
+    "id": "cmpl-8294ddb5b03b53d0",
+    "object": "text_completion",
+    "created": 1795415507,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer arithmetic. Need compute carefully. Pam rode roller coaster 2 times, Fred 4 times. Total roller coaster rides = 6. After that, each decided to ride luge 2 times. Each of them 2 rides => Pam 2, Fred 2, total luge rides = 4. Total rides = 10. Each ride cost 6 tickets => 60 tickets. Need final with brief explanation and final line exactly Answer: 60. Ensure no extra after final line.Roller coaster rides: 2 + 4 = 6. Luge rides: 2 + 2 = 4. Total rides: 10. Tickets used: 10 × 6 = 60.\n\nAnswer: 60",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 101,
+      "total_tokens": 273,
+      "completion_tokens": 172,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

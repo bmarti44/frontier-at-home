@@ -1,0 +1,59 @@
+{
+  "index": 7561,
+  "task_id": 7744,
+  "rendered_prompt_sha256": "d055fd3d36b21e84a32b1cf96e88b429b0bf1aad56787553bb0bebeb2ea548e5",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer single letter. Need compute probability. Set 1..100. Divisible by 2: floor(100/2)=50. Divisible by both 2 and 3 = divisible by 6: floor(100/6)=16 (6..96). Divisible by 2 not 3 = 50-16=34. Probability=34/100=17/50. Option D. Need final exactly Answer: D. Ensure no extra.Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.48201186908409
+  },
+  "response": {
+    "id": "cmpl-8bca8cd2baa7ae6d",
+    "object": "text_completion",
+    "created": 1795417252,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer single letter. Need compute probability. Set 1..100. Divisible by 2: floor(100/2)=50. Divisible by both 2 and 3 = divisible by 6: floor(100/6)=16 (6..96). Divisible by 2 not 3 = 50-16=34. Probability=34/100=17/50. Option D. Need final exactly Answer: D. Ensure no extra.Answer: D",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 192,
+      "total_tokens": 302,
+      "completion_tokens": 110,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

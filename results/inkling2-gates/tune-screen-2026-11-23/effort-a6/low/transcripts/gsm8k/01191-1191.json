@@ -1,0 +1,60 @@
+{
+  "index": 1191,
+  "task_id": 1191,
+  "rendered_prompt_sha256": "11a93da6c108002ff25d5df03d65222a9cafd9eab92f32a48fc2389b9bcc84d2",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Hair started at 10 inches and ended at 8 inches, so cut length = 2 inches. Cost of haircut = $30 per inch * 2 = $60. Color = $40. Total = $100. Need final line exactly \"Answer: <number>\". Could include brief explanation then final line. Ensure final numeric answer on its own line. Use $ maybe number only? Form says <number>. Use 100.Hair cut length: 10 − 8 = 2 inches.  \nHaircut cost: 2 × $30 = $60.  \nTotal: $60 + $40 = $100.\n\nAnswer: 100",
+  "finish_reason": "stop",
+  "expected": "100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.704156432766467
+  },
+  "response": {
+    "id": "cmpl-bd266c0b92120e37",
+    "object": "text_completion",
+    "created": 1795415393,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Hair started at 10 inches and ended at 8 inches, so cut length = 2 inches. Cost of haircut = $30 per inch * 2 = $60. Color = $40. Total = $100. Need final line exactly \"Answer: <number>\". Could include brief explanation then final line. Ensure final numeric answer on its own line. Use $ maybe number only? Form says <number>. Use 100.Hair cut length: 10 − 8 = 2 inches.  \nHaircut cost: 2 × $30 = $60.  \nTotal: $60 + $40 = $100.\n\nAnswer: 100",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 89,
+      "total_tokens": 241,
+      "completion_tokens": 152,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

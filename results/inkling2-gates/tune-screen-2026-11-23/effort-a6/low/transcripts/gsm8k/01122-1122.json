@@ -1,0 +1,60 @@
+{
+  "index": 1122,
+  "task_id": 1122,
+  "rendered_prompt_sha256": "f1af394a76df9e65781bda1124a8e5d4ea701b0fb693ba05558732e145188f29",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Order 400, end shift needs another 20, so produced 380. 5 workers, 10h. 2 workers at 6/h => 2*6*10=120. 2 workers at 4/h => 2*4*10=80. Sum known=200. Fifth produces 380-200=180 over 10h => 18/h. Need final with brief explanation and final line exact format. Ensure final numeric answer on own line.They produced 400 − 20 = 380 toys.  \nKnown workers: 2×6×10 + 2×4×10 = 120 + 80 = 200 toys.  \nFifth worker: 380 − 200 = 180 toys over 10 hours = 18 toys/hour.\n\nAnswer: 18",
+  "finish_reason": "stop",
+  "expected": "18",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.686366796959192
+  },
+  "response": {
+    "id": "cmpl-8ff662c3b51bd53d",
+    "object": "text_completion",
+    "created": 1795415304,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Order 400, end shift needs another 20, so produced 380. 5 workers, 10h. 2 workers at 6/h => 2*6*10=120. 2 workers at 4/h => 2*4*10=80. Sum known=200. Fifth produces 380-200=180 over 10h => 18/h. Need final with brief explanation and final line exact format. Ensure final numeric answer on own line.They produced 400 − 20 = 380 toys.  \nKnown workers: 2×6×10 + 2×4×10 = 120 + 80 = 200 toys.  \nFifth worker: 380 − 200 = 180 toys over 10 hours = 18 toys/hour.\n\nAnswer: 18",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 140,
+      "total_tokens": 332,
+      "completion_tokens": 192,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

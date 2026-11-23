@@ -1,0 +1,59 @@
+{
+  "index": 11144,
+  "task_id": 11366,
+  "rendered_prompt_sha256": "0838c15e17b365fe30fb6eb4bd03fe9f0bc9858c53667aaf404dbdbce43f460c",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer multiple choice. Need compute. Let's reason carefully.\n\nMethane: critical T 190.6 K? Tc = 190.56 K (-116.6 C), Pc = 4.599 MPa = 667.8 psi? Actually methane critical pressure 4.5992 MPa = 667.8 psi, critical temp 190.56 K = -82.6 C = -116.7 F? Wait -116.6 C = -182 F? Let's check: methane critical temp is 190.6 K = -82.6 °C = -116.7 °F. Yes.\n\nGiven P=3000 psi, T=65°F = 18.33°C = 291.48 K. Reduced T = 291.5/190.6 = 1.529. Reduced P = 3000/667.8 = 4.495. Generalized compressibility chart at Tr=1.53, Pr=4.5 gives Z maybe ~0.78? Need density.\n\nIdeal density = P M/(R T). Use lbm/ft3. P=3000 psi = 3000*144 = 432000 lbf/ft2. R for methane = 10.7316 ft·lbf/(lbm·R)? Universal gas constant 1545 ft·lbf/(lbmol·R), M=16.043 lbm/lbmol => R=96.3? Wait check: R = 1545/16.043 = 96.3 ft·lbf/(lbm·R)? That seems too high? Let's recall: universal gas constant R = 1545 ft·lbf/(lbmol·°R). For methane M=16.04, R=96.3 ft·lbf/(lbm·°R). Ideal density = P/(R T) * M? Actually density = P M/(R_u T) = P/(R_specific T). R_specific = 1545/16.04 = 96.3 ft·lbf/(lbm·R). T=65F = 524.67 R. denominator R*T = 96.3*524.67 = 50500. P/(RT)=432000/50500=8.55 lbm/ft3 ideal. With Z<1, actual density = ideal/Z? Since PV=ZRT, rho = PM/(Z R_u T) = ideal/Z. If Z~0.82, rho~10.4. Option B 10.37. Good.\n\nVelocity: mass flow = rho * A * V. D=12 in =1 ft, A=pi/4=0.7854 ft2. mdot=70 lbm/s. V=70/(rho*0.7854). For rho=10.37, denominator=8.139, V=8.59 ft/s. Option B 8.6575. Yes.\n\nNeed final only letter. Ensure no extra.Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 16.22171959700063
+  },
+  "response": {
+    "id": "cmpl-b3752133ec441380",
+    "object": "text_completion",
+    "created": 1795416244,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer multiple choice. Need compute. Let's reason carefully.\n\nMethane: critical T 190.6 K? Tc = 190.56 K (-116.6 C), Pc = 4.599 MPa = 667.8 psi? Actually methane critical pressure 4.5992 MPa = 667.8 psi, critical temp 190.56 K = -82.6 C = -116.7 F? Wait -116.6 C = -182 F? Let's check: methane critical temp is 190.6 K = -82.6 °C = -116.7 °F. Yes.\n\nGiven P=3000 psi, T=65°F = 18.33°C = 291.48 K. Reduced T = 291.5/190.6 = 1.529. Reduced P = 3000/667.8 = 4.495. Generalized compressibility chart at Tr=1.53, Pr=4.5 gives Z maybe ~0.78? Need density.\n\nIdeal density = P M/(R T). Use lbm/ft3. P=3000 psi = 3000*144 = 432000 lbf/ft2. R for methane = 10.7316 ft·lbf/(lbm·R)? Universal gas constant 1545 ft·lbf/(lbmol·R), M=16.043 lbm/lbmol => R=96.3? Wait check: R = 1545/16.043 = 96.3 ft·lbf/(lbm·R)? That seems too high? Let's recall: universal gas constant R = 1545 ft·lbf/(lbmol·°R). For methane M=16.04, R=96.3 ft·lbf/(lbm·°R). Ideal density = P/(R T) * M? Actually density = P M/(R_u T) = P/(R_specific T). R_specific = 1545/16.04 = 96.3 ft·lbf/(lbm·R). T=65F = 524.67 R. denominator R*T = 96.3*524.67 = 50500. P/(RT)=432000/50500=8.55 lbm/ft3 ideal. With Z<1, actual density = ideal/Z? Since PV=ZRT, rho = PM/(Z R_u T) = ideal/Z. If Z~0.82, rho~10.4. Option B 10.37. Good.\n\nVelocity: mass flow = rho * A * V. D=12 in =1 ft, A=pi/4=0.7854 ft2. mdot=70 lbm/s. V=70/(rho*0.7854). For rho=10.37, denominator=8.139, V=8.59 ft/s. Option B 8.6575. Yes.\n\nNeed final only letter. Ensure no extra.Answer: B",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 300,
+      "total_tokens": 991,
+      "completion_tokens": 691,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

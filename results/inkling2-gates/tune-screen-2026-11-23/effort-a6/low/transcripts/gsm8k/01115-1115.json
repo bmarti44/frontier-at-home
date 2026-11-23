@@ -1,0 +1,60 @@
+{
+  "index": 1115,
+  "task_id": 1115,
+  "rendered_prompt_sha256": "ae826dff46e2d15c7fc7d4aa2933f7f7495afc703783c35dd9038649c659cad2",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Budget 16, spent 4 already, has 2 left. Bought 2 books today same amount. Total spent = 16 - 2 = 14. Already spent 4, so books cost 14 - 4 = 10 total. Each = 5. Need final numeric answer on own line form Answer: <number>. Brief maybe one sentence. Ensure final line exactly.Anna spent 16 − 2 = 14 total. Excluding the $4 already spent, the 2 books cost 14 − 4 = 10, so each cost 10 ÷ 2 = 5.\n\nAnswer: $5",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.199767839163542
+  },
+  "response": {
+    "id": "cmpl-8e70ac0eccb56b57",
+    "object": "text_completion",
+    "created": 1795415689,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Budget 16, spent 4 already, has 2 left. Bought 2 books today same amount. Total spent = 16 - 2 = 14. Already spent 4, so books cost 14 - 4 = 10 total. Each = 5. Need final numeric answer on own line form Answer: <number>. Brief maybe one sentence. Ensure final line exactly.Anna spent 16 − 2 = 14 total. Excluding the $4 already spent, the 2 books cost 14 − 4 = 10, so each cost 10 ÷ 2 = 5.\n\nAnswer: $5",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 106,
+      "total_tokens": 255,
+      "completion_tokens": 149,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": true
+}

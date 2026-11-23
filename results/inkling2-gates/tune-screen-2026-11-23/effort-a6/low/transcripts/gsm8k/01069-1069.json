@@ -1,0 +1,60 @@
+{
+  "index": 1069,
+  "task_id": 1069,
+  "rendered_prompt_sha256": "3f7155f3ec14d0fb75745cd8ca00fe09ea3baa0b34dae1c1bd051e43edb1d0e2",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Problem: 20 trucks, each carrying 20 tons. A quarter of number of lorries dispatched had mechanical failures. Quarter of 20 = 5 trucks failed. Remaining delivered = 15 trucks. Each 20 tons => 300 tons. Need final numeric answer on own line form Answer: <number>. They say think briefly if needed, then end with final numeric answer. We can provide brief calculation and final line. Ensure final answer line exactly. No extra after.A quarter of 20 trucks = 5 trucks failed, so 15 trucks delivered.  \n15 × 20 tons = 300 tons.\n\nAnswer: 300 tons",
+  "finish_reason": "stop",
+  "expected": "300",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.047747948206961
+  },
+  "response": {
+    "id": "cmpl-9591232dfe82de64",
+    "object": "text_completion",
+    "created": 1795415639,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Problem: 20 trucks, each carrying 20 tons. A quarter of number of lorries dispatched had mechanical failures. Quarter of 20 = 5 trucks failed. Remaining delivered = 15 trucks. Each 20 tons => 300 tons. Need final numeric answer on own line form Answer: <number>. They say think briefly if needed, then end with final numeric answer. We can provide brief calculation and final line. Ensure final answer line exactly. No extra after.A quarter of 20 trucks = 5 trucks failed, so 15 trucks delivered.  \n15 × 20 tons = 300 tons.\n\nAnswer: 300 tons",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 155,
+      "total_tokens": 310,
+      "completion_tokens": 155,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

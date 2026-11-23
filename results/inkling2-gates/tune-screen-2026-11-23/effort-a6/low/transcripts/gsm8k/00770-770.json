@@ -1,0 +1,60 @@
+{
+  "index": 770,
+  "task_id": 770,
+  "rendered_prompt_sha256": "842aabeeafaee540c229c67e46d0eaa780afd24015aaecc9ac3eb79a3f3313d8",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Problem: 4 vanilla scents, 8 fruity scents. They sell 5 of each vanilla scent and 2 of each fruity scent. Total vanilla sold = 4*5=20. Fruity = 8*2=16. Difference = 4 more vanilla. Need final with brief maybe one sentence and final line exact format. Ensure final numeric answer on its own line. Could include brief calculation then answer line. Need no extra after answer.Vanilla sales: 4 × 5 = 20. Fruity sales: 8 × 2 = 16. Difference: 20 − 16 = 4.\nAnswer: 4",
+  "finish_reason": "stop",
+  "expected": "4",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.866042688023299
+  },
+  "response": {
+    "id": "cmpl-a9f73ddbff573307",
+    "object": "text_completion",
+    "created": 1795415388,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Problem: 4 vanilla scents, 8 fruity scents. They sell 5 of each vanilla scent and 2 of each fruity scent. Total vanilla sold = 4*5=20. Fruity = 8*2=16. Difference = 4 more vanilla. Need final with brief maybe one sentence and final line exact format. Ensure final numeric answer on its own line. Could include brief calculation then answer line. Need no extra after answer.Vanilla sales: 4 × 5 = 20. Fruity sales: 8 × 2 = 16. Difference: 20 − 16 = 4.\nAnswer: 4",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 165,
+      "total_tokens": 325,
+      "completion_tokens": 160,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

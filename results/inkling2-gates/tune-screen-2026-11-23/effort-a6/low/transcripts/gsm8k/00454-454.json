@@ -1,0 +1,60 @@
+{
+  "index": 454,
+  "task_id": 454,
+  "rendered_prompt_sha256": "9142eb1470af20bb0aa1640fe9c887c1d35751b30da12d973228605c6b6ff08a",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Marin and Nancy each eat 4 apples/day, so together 8 apples/day. Over 30 days: 8*30 = 240. Need final line exactly Answer: 240. Ensure no extra after final line.Together they eat 4 + 4 = 8 apples per day. Over 30 days: 8 × 30 = 240.\n\nAnswer: 240",
+  "finish_reason": "stop",
+  "expected": "150",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='240' expected='150'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.020126916002482
+  },
+  "response": {
+    "id": "cmpl-a5a317e77ed8b4fc",
+    "object": "text_completion",
+    "created": 1795415424,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Marin and Nancy each eat 4 apples/day, so together 8 apples/day. Over 30 days: 8*30 = 240. Need final line exactly Answer: 240. Ensure no extra after final line.Together they eat 4 + 4 = 8 apples per day. Over 30 days: 8 × 30 = 240.\n\nAnswer: 240",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 67,
+      "total_tokens": 167,
+      "completion_tokens": 100,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

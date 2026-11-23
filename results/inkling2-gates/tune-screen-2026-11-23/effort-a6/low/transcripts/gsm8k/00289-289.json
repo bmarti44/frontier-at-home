@@ -1,0 +1,60 @@
+{
+  "index": 289,
+  "task_id": 289,
+  "rendered_prompt_sha256": "54c1117a782fff0b35c7f0109b0866c0b1b92cd689637efa573356e89e0fa37c",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a calculation. Fast lane speed = 60 mph. Slow lane speed = half = 30 mph. Fast lane traveled 480 miles. Time for fast lane = 480/60 = 8 hours. Slow lane same distance 480 miles at 30 mph = 480/30 = 16 hours. Need final numeric answer on its own line form Answer: <number>. They say calculate the time the car in the slow lane took to cover same distance. So answer 16 hours. Need brief. Ensure final line exactly. Could include brief calculation then final line.Slow lane speed = 60/2 = 30 mph. Time = 480/30 = 16 hours.\nAnswer: 16 hours",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.326571109704673
+  },
+  "response": {
+    "id": "cmpl-905e4ab5601214f0",
+    "object": "text_completion",
+    "created": 1795414931,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a calculation. Fast lane speed = 60 mph. Slow lane speed = half = 30 mph. Fast lane traveled 480 miles. Time for fast lane = 480/60 = 8 hours. Slow lane same distance 480 miles at 30 mph = 480/30 = 16 hours. Need final numeric answer on its own line form Answer: <number>. They say calculate the time the car in the slow lane took to cover same distance. So answer 16 hours. Need brief. Ensure final line exactly. Could include brief calculation then final line.Slow lane speed = 60/2 = 30 mph. Time = 480/30 = 16 hours.\nAnswer: 16 hours",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 101,
+      "total_tokens": 258,
+      "completion_tokens": 157,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

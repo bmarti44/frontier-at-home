@@ -1,0 +1,60 @@
+{
+  "index": 179,
+  "task_id": 179,
+  "rendered_prompt_sha256": "11d1d661b5ae2f86d4541b80324664d720cf401361f79f3df36764a85e762429",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Lloyd earns $10/hour. First week 5 hours = $50. Second week 8 hours = $80. Total = $130. Need final line exactly \"Answer: <number>\". Could include brief reasoning then final line. Ensure final numeric answer on its own line. No need for more tools.5 hours × $10 = $50; 8 hours × $10 = $80; total = $130.\nAnswer: 130",
+  "finish_reason": "stop",
+  "expected": "130",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.520109591074288
+  },
+  "response": {
+    "id": "cmpl-b4c7c57c758bee76",
+    "object": "text_completion",
+    "created": 1795415648,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Lloyd earns $10/hour. First week 5 hours = $50. Second week 8 hours = $80. Total = $130. Need final line exactly \"Answer: <number>\". Could include brief reasoning then final line. Ensure final numeric answer on its own line. No need for more tools.5 hours × $10 = $50; 8 hours × $10 = $80; total = $130.\nAnswer: 130",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 85,
+      "total_tokens": 195,
+      "completion_tokens": 110,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

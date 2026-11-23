@@ -1,0 +1,59 @@
+{
+  "index": 12009,
+  "task_id": 12234,
+  "rendered_prompt_sha256": "5fc396a164b3f0dee1b21795c3a6012642f393b5736bbaf51213b023e0b7980c",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer MCQ. Need compute bandwidth. Let's reason carefully.\n\nProblem: TV picture composed of approx 300,000 individual picture elements, each can attain ten different distinguishable brightness levels. For any picture element, probability of occurrence of ten brightness levels equal. 30 picture frames per second. Determine bandwidth of T.V. video signal. Assume SNR of 1000 (30 dB) required for proper reproduction of any picture.\n\nThis is Shannon-Hartley theorem: C = B log2(1+SNR). Need find C (bits/sec) required to transmit video. Each picture element has 10 levels equally likely => entropy per element = log2(10) bits (since equal probabilities). Number elements = 300,000. Frames per second = 30. So bit rate R = 300,000 * log2(10) * 30 bits/s. log2(10)=3.32192809489. 300,000*30=9,000,000. times 3.321928 = 29.897e6 bits/s ≈ 29.9 Mbps.\n\nSNR=1000 (30 dB). Shannon: C = B log2(1+1000) = B log2(1001). log2(1001) ≈ ln(1001)/ln2. ln(1001)=6.909? Let's compute: ln(1000)=6.907755279, ln(1001)=6.908755? Actually ln(1001)=ln(1000)+ln(1.001)=6.907755+0.0009995=6.9087548. /0.693147=9.967? 6.908755/0.693147 = 9.967? Since log2(1024)=10, 1001 is slightly less than 1024 by factor 0.977, log2 factor = log2(0.977)= -0.0345, so 9.9655. Yes ~9.966.\n\nB = 29.897e6 / 9.966 ≈ 3.000e6 Hz. Exactly? 29.897/9.966 = 3.000? 9.966*3 = 29.898. Yes B≈3 MHz. Option G.\n\nNeed ensure no alternative: Some textbook formula for TV bandwidth: B = (number of picture elements * frames/sec * log2(number levels))/(2 log2(1+SNR))? Let's examine. There may be factor 2 due to baseband vs passband? The question says bandwidth of T.V. video signal. Shannon-Hartley gives channel capacity C = B log2(1+S/N). For a noiseless? Let's recall known problem from communication engineering: \"A television picture is composed of approximately 300,000 individual picture elements, each of which can attain ten different and distinguishable brightness levels (such as black and shades of gray) for proper contrast. If, for any picture element, the probability of occurrence of the ten brightness levels are equal, and 30 picture frames are being transmitted per second, determine the bandwidth of the T.V. video signal. Assume that the signal-to-noise ratio of 1000 (30 db) is required for proper reproduction of any picture.\" This sounds from Haykin? They use Shannon-Hartley. Compute entropy per picture element = log2 10 = 3.32 bits. Total bits per frame = 300k*3.32 = 996k bits. Per second = 29.9 Mbit/s. SNR=1000, log2(1+1000)=~10. B=29.9M/10=2.99MHz. Option G 3MHz.\n\nNeed final only single letter in form Answer: <letter>. No explanation. Ensure exact format.Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 18.367152525112033
+  },
+  "response": {
+    "id": "cmpl-991a60c9d73d503f",
+    "object": "text_completion",
+    "created": 1795418021,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer MCQ. Need compute bandwidth. Let's reason carefully.\n\nProblem: TV picture composed of approx 300,000 individual picture elements, each can attain ten different distinguishable brightness levels. For any picture element, probability of occurrence of ten brightness levels equal. 30 picture frames per second. Determine bandwidth of T.V. video signal. Assume SNR of 1000 (30 dB) required for proper reproduction of any picture.\n\nThis is Shannon-Hartley theorem: C = B log2(1+SNR). Need find C (bits/sec) required to transmit video. Each picture element has 10 levels equally likely => entropy per element = log2(10) bits (since equal probabilities). Number elements = 300,000. Frames per second = 30. So bit rate R = 300,000 * log2(10) * 30 bits/s. log2(10)=3.32192809489. 300,000*30=9,000,000. times 3.321928 = 29.897e6 bits/s ≈ 29.9 Mbps.\n\nSNR=1000 (30 dB). Shannon: C = B log2(1+1000) = B log2(1001). log2(1001) ≈ ln(1001)/ln2. ln(1001)=6.909? Let's compute: ln(1000)=6.907755279, ln(1001)=6.908755? Actually ln(1001)=ln(1000)+ln(1.001)=6.907755+0.0009995=6.9087548. /0.693147=9.967? 6.908755/0.693147 = 9.967? Since log2(1024)=10, 1001 is slightly less than 1024 by factor 0.977, log2 factor = log2(0.977)= -0.0345, so 9.9655. Yes ~9.966.\n\nB = 29.897e6 / 9.966 ≈ 3.000e6 Hz. Exactly? 29.897/9.966 = 3.000? 9.966*3 = 29.898. Yes B≈3 MHz. Option G.\n\nNeed ensure no alternative: Some textbook formula for TV bandwidth: B = (number of picture elements * frames/sec * log2(number levels))/(2 log2(1+SNR))? Let's examine. There may be factor 2 due to baseband vs passband? The question says bandwidth of T.V. video signal. Shannon-Hartley gives channel capacity C = B log2(1+S/N). For a noiseless? Let's recall known problem from communication engineering: \"A television picture is composed of approximately 300,000 individual picture elements, each of which can attain ten different and distinguishable brightness levels (such as black and shades of gray) for proper contrast. If, for any picture element, the probability of occurrence of the ten brightness levels are equal, and 30 picture frames are being transmitted per second, determine the bandwidth of the T.V. video signal. Assume that the signal-to-noise ratio of 1000 (30 db) is required for proper reproduction of any picture.\" This sounds from Haykin? They use Shannon-Hartley. Compute entropy per picture element = log2 10 = 3.32 bits. Total bits per frame = 300k*3.32 = 996k bits. Per second = 29.9 Mbit/s. SNR=1000, log2(1+1000)=~10. B=29.9M/10=2.99MHz. Option G 3MHz.\n\nNeed final only single letter in form Answer: <letter>. No explanation. Ensure exact format.Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 219,
+      "total_tokens": 1090,
+      "completion_tokens": 871,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

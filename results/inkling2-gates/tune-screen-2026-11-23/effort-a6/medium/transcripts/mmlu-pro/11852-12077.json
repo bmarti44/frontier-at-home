@@ -1,0 +1,59 @@
+{
+  "index": 11852,
+  "task_id": 12077,
+  "rendered_prompt_sha256": "52587c34b067cac0c31f543161714a7e29eea93b04c08f093cb7dc915064d41a",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer single letter. Need compute unilateral Z transform of u[n]: F(z)=sum_{n=0}∞ 1*z^{-n} = sum_{n=0}∞ (z^{-1})^n = 1/(1 - z^{-1}) for |z|>1 = z/(z-1). Option I. Need ensure no trick: unilateral Z transform definition given. Yes. Final only Answer: I.Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.4995579100213945
+  },
+  "response": {
+    "id": "cmpl-9d1f8bb1d25a29f1",
+    "object": "text_completion",
+    "created": 1795417986,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer single letter. Need compute unilateral Z transform of u[n]: F(z)=sum_{n=0}∞ 1*z^{-n} = sum_{n=0}∞ (z^{-1})^n = 1/(1 - z^{-1}) for |z|>1 = z/(z-1). Option I. Need ensure no trick: unilateral Z transform definition given. Yes. Final only Answer: I.Answer: I",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 219,
+      "total_tokens": 340,
+      "completion_tokens": 121,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}
