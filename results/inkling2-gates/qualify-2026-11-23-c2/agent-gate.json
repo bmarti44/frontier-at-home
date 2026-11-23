@@ -1,0 +1,30 @@
+{
+ "when": "2026-11-23T08:34:24Z",
+ "base": "http://127.0.0.1:8018",
+ "results": [
+  {
+   "test": "prefix-cache",
+   "pass": true,
+   "detail": "repeat cache_n=21120/21158 (>=total-128: True); shared-prefix cache_n=21120 (checkpoint-bounded floor 11942: True)"
+  },
+  {
+   "test": "turn-continuation",
+   "pass": true,
+   "detail": "appended turn 2: prompt_n=16 cache_n=21184 (< 1628 required; a full re-prefill means in-slot reuse broke)"
+  },
+  {
+   "test": "slot-thrash",
+   "pass": true,
+   "detail": "turn-2 after utility call: prompt_n=54 cache_n=21120 (< 1628 required; single-slot server re-prefills ~20000)"
+  },
+  {
+   "test": "prefill-throughput",
+   "pass": true,
+   "detail": "novel prompt cache_n=0 (<100: True); prefill=3426 tok/s (>=350: True); prompt processing=6.2s (<=75: True); prompt time is client-measured TTFT; tuned ub/b=2048 profile measures ~434 tok/s \u2014 a failure here usually means the fast buffers were reverted (see docs/speed-tuning-2026-07-23.md)"
+  }
+ ],
+ "engine": "vllm",
+ "model": "inkling-2-mini",
+ "prefix_block_tokens": 64,
+ "spec_block_drop": true
+}

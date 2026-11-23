@@ -1,0 +1,411 @@
+{
+  "kind": "qualify-profile-manifest",
+  "schema_version": 1,
+  "kit": {
+    "script": "scripts/94_qualify_profile.py",
+    "sha256": "b2b17413a56c2eeb382550e71e4eb37a9fea46edf5299e1c354ec484d14a6278",
+    "argv": [
+      "/home/bmarti44/inkling2/scripts/94_qualify_profile.py",
+      "--profile",
+      "inkling-2-mini/cuda-spark-128g-1m",
+      "--host",
+      "/home/bmarti44/inkling2/results/inkling2-gates/smoke-2026-11-23/host-worktree.json",
+      "--port",
+      "8018",
+      "--no-launch",
+      "--out",
+      "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2",
+      "--cells",
+      "speed,toolcall,vision,context",
+      "--with-soak"
+    ]
+  },
+  "dry_run": false,
+  "no_launch": true,
+  "start_unix": 1795422865.0047226,
+  "start_iso": "2026-11-23T08:34:25.155731+00:00",
+  "profile": {
+    "profile_id": "inkling-2-mini/cuda-spark-128g-1m",
+    "model_slug": "inkling-2-mini",
+    "profile_file": "/home/bmarti44/inkling2/configs/profiles/inkling-2-mini/cuda-spark-128g-1m.json",
+    "profile_status": "estimated",
+    "profile_evidence": null,
+    "mechanism": "systemd-run",
+    "stack_label": "inkling-2-mini-cuda-spark-128g-1m",
+    "switch_alias": null,
+    "rendered_port": 8013,
+    "served_model": "inkling-2-mini",
+    "model_path": "/home/bmarti44/models/inkling-2-mini",
+    "tokenizer_path": "/home/bmarti44/models/inkling-2-mini/tokenizer.json",
+    "tokenizer_sha256": "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6",
+    "tokenizer_sha256_expected": "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6",
+    "slots": 4,
+    "tokens_per_slot": 262144,
+    "context_cap": 1048576,
+    "kill_floor_gib": 10,
+    "minimum_start_gib": 104,
+    "startup_timeout_seconds": 1800,
+    "safety": {
+      "kill_floor_gib": 10,
+      "minimum_start_gib": 104,
+      "sample_hz": 1,
+      "startup_timeout_seconds": 1800,
+      "note": "10 GiB whole-host floor, the AGENTS 1M gate's low point. minimum_start_gib 104 = ceil(projected peak 92.4 + 10) plus margin, an ESTIMATE until a run measures the peak; the switch also requires MemFree to cover it after its cache release. cgroup MemoryCurrent is blind to CUDA unified memory on GB10, so the external memwatch is the real guard. HostCacheReleaseWorker (scripts/lib/qwen38fn_worker.py, unchanged; its root list is read from QWEN38FN_HOST_RELEASE_ROOTS) evicts the checkpoint's read-once page cache during the load and refuses the 63.3 GiB arena unless MemFree covers it plus 2 GiB: smoke run2 left about 21 GiB of checkpoint pages cached (MemFree 47.9 GiB against MemAvailable 69.4 GiB at its low point). The roots add every Inkling runtime and the serving default's runtimes, which are still cached when this profile starts after it."
+    },
+    "serving": {
+      "parallel_slots": 4,
+      "request_context_cap": 262144,
+      "max_images": 4
+    },
+    "containment": {
+      "unit": "inkling2mini-engine",
+      "memory_high": "92G",
+      "memory_max": "96G",
+      "memory_swap_max": "0",
+      "oom_policy": "kill",
+      "kill_mode": "control-group"
+    },
+    "digest_checks": [
+      {
+        "path": "/home/bmarti44/.cache/inkling-2-mini/native-runtime-001/runtime/bin/python3.12",
+        "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+      },
+      {
+        "path": "/home/bmarti44/models/inkling-2-mini/model.safetensors.index.json",
+        "sha256": "c1631065b7b00787993522dddc66a68b3abee869192977fb3dcb796e63bc5838"
+      },
+      {
+        "path": "/home/bmarti44/models/inkling-2-mini/model-00001-of-00001.safetensors",
+        "sha256": "65e60f51aa1284d4fb022584908c315270334d991828bb774af60584523539d1"
+      },
+      {
+        "path": "/home/bmarti44/models/inkling-2-mini/mtp.safetensors",
+        "sha256": "7c3b651317f01f73bcf4e1dceba66ef8b7e1a1eac6bc171e882e690a4b10a1d2"
+      },
+      {
+        "path": "/home/bmarti44/models/inkling-2-mini/config.json",
+        "sha256": "a7a349601f0984c4abf999c480ef775d8567d21f5f84b4e8a3e035b44f288dc2"
+      },
+      {
+        "path": "/home/bmarti44/models/inkling-2-mini/hf_quant_config.json",
+        "sha256": "7c656207d3ce37879c7be209a036b0dde43bf01f78159bff06880b868ed57143"
+      },
+      {
+        "path": "/home/bmarti44/models/inkling-2-mini/tokenizer.json",
+        "sha256": "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6"
+      },
+      {
+        "path": "/home/bmarti44/models/inkling-2-mini/chat_template.jinja",
+        "sha256": "53a9035f3255945704b5857657cfb00c1165090c0641c4f782a0cbf268cc16dc"
+      },
+      {
+        "path": "/home/bmarti44/models/inkling-2-mini/processor_config.json",
+        "sha256": "d7350adce18c8be4b607f261c8f0f7eabbf720bb7aaf648a43d4f8372bbacc2d"
+      }
+    ],
+    "binary": "/home/bmarti44/.cache/inkling-2-mini/native-runtime-001/runtime/bin/python3.12",
+    "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+    "binary_sha256_expected": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+    "argv": [
+      "-B",
+      "-m",
+      "vllm.entrypoints.openai.api_server",
+      "--model",
+      "/home/bmarti44/models/inkling-2-mini",
+      "--served-model-name",
+      "inkling-2-mini",
+      "default",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "8013",
+      "--max-model-len",
+      "262144",
+      "--max-num-seqs",
+      "4",
+      "--kv-cache-dtype",
+      "auto",
+      "--gpu-memory-utilization",
+      "0.80",
+      "--kv-cache-memory-bytes",
+      "68000000000",
+      "--enable-prefix-caching",
+      "--enable-chunked-prefill",
+      "--max-num-batched-tokens",
+      "2048",
+      "--enable-auto-tool-choice",
+      "--tool-call-parser",
+      "inkling",
+      "--reasoning-parser",
+      "inkling",
+      "--enable-prompt-tokens-details",
+      "--limit-mm-per-prompt",
+      "{\"image\":4,\"video\":0}",
+      "--mm-processor-cache-gb",
+      "0",
+      "--default-chat-template-kwargs",
+      "{\"reasoning_effort\":\"low\"}",
+      "--worker-cls",
+      "qwen38fn_worker.HostCacheReleaseWorker",
+      "--speculative-config",
+      "{\"method\":\"dspark\",\"num_speculative_tokens\":7,\"draft_sample_method\":\"probabilistic\"}",
+      "--moe-backend",
+      "humming",
+      "--middleware",
+      "vllm_reasoning_compat.ReasoningContentMiddleware",
+      "--middleware",
+      "glm53_runtime_policy.SplitTerminalSseMiddleware",
+      "--logprobs-mode",
+      "raw_logprobs",
+      "--shutdown-timeout",
+      "10"
+    ],
+    "env": {
+      "HOME": "/home/bmarti44/.cache/inkling-2-mini/home",
+      "LANG": "C.UTF-8",
+      "PATH": "/home/bmarti44/.cache/inkling-2-mini/native-runtime-001/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+      "PYTHONPATH": "/home/bmarti44/inkling2/scripts/lib",
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "CUDA_HOME": "/usr/local/cuda-13.0",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+      "NVIDIA_TF32_OVERRIDE": "0",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1",
+      "VLLM_NO_USAGE_STATS": "1",
+      "DO_NOT_TRACK": "1",
+      "MAX_JOBS": "2",
+      "NVCC_THREADS": "1",
+      "FLASHINFER_NVCC_THREADS": "1",
+      "FLASHINFER_DISABLE_JIT": "1",
+      "TRITON_CACHE_DIR": "/home/bmarti44/.cache/inkling-2-mini/home/.triton/cache",
+      "INKLING2_VISION_ATTN": "triton",
+      "INKLING2_MAX_IMAGE_SIDE": "4096",
+      "QWEN38FN_HOST_RELEASE_ROOTS": "/home/bmarti44/.cache/inkling-2-mini:/home/bmarti44/.cache/qwen38-flash-next",
+      "INKLING2_MAX_CTAS_POW2": "1"
+    },
+    "check": {
+      "exit_code": 0,
+      "stdout": "{\n \"profile_id\": \"inkling-2-mini/cuda-spark-128g-1m\",\n \"status\": \"estimated\",\n \"feasibility\": {\n  \"weights_gib\": 19.0,\n  \"kv_gib\": 0.0,\n  \"fit_gib\": 92.4,\n  \"usable_gib\": 112,\n  \"verdict\": \"feasible\"\n },\n \"missing_artifacts\": []\n}",
+      "stderr": ""
+    },
+    "reference_logits": null,
+    "qualification_targets": {
+      "note": "qwen38fn (Qwen3.8-Flash-Next, candidate 10) README headline: Inkling must meet these and beat its holdout to replace the default (promotion rule, results/inkling2-gates). Misses are reported.",
+      "decode_tok_s_min": {
+        "0": 34.07,
+        "28672": 40.92
+      },
+      "prefill_tok_s_min": {
+        "28672": 2711.5
+      },
+      "context_pass": true,
+      "toolcall_min": 19,
+      "vision_min": 0.64
+    },
+    "speed_max_tokens_per_event": 8,
+    "qualification_options": {
+      "vision_max_tokens": 4096,
+      "speed_max_tokens_per_event": 8
+    },
+    "vision_thinking_mode": "chat",
+    "vision_max_tokens": 4096,
+    "encoder": "inkling2",
+    "config_hash": "inkling-2-mini-cuda-spark-128g-1m-7777da4ade3a"
+  },
+  "port": 8018,
+  "base_url": "http://127.0.0.1:8018",
+  "out": "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2",
+  "host": {
+    "uname": "Linux spark-aba1 6.17.0-1026-nvidia #26-Ubuntu SMP PREEMPT_DYNAMIC Thu Jun 25 00:57:17 UTC 2026 aarch64 aarch64",
+    "hostname": "spark-aba1",
+    "nproc": 20,
+    "python": "3.12.3",
+    "mem_total_kib": 125483616,
+    "mem_total_gib": 119.67,
+    "gpu_name": "NVIDIA GB10",
+    "gpu_driver": "580.159.03"
+  },
+  "git": {
+    "head": "4bb1f7e058a1d1e676a9c310a633ad79b7f4f53e",
+    "branch": "claim-model/inkling-2-mini/cuda",
+    "dirty": true
+  },
+  "scripts": {
+    "92_resolve_profile.py": "51d06e7b87d7e4542cbaf20784bf8abd1bbe5a794c30942e894462b97e6b6122",
+    "93_profile_serve.sh": "5816b2d44e04c5c76baa1c8ca87fc4f631ee197a12ba5a340674cdb8edb147f5",
+    "30_bench_speed.py": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "39_bench_toolcall.py": "70c5abd36694d953dff1890aad94c9af84923b216fa45b5399cde13082fe5797",
+    "38_bench_vision.py": "4260f8950e69025d930f319a654ddce07ff8525198fd419a25cc07542c8d3171",
+    "51_probe_media_max.py": "84d477dfd73ef21546c7ed18694732c5d9dbf1d4c4f1cded8396ae2ef473abd2",
+    "49_score_teacher_windows.py": "036cabca94c42aa0adf3a33ff967c064cb26c2d6f910ff39310e0eff5f28b759",
+    "31_bench_accuracy.py": "f80cb2735077d68258d8eddb54926bd62a67aee8abf09f33c392cef55245750f",
+    "50_probe_context.py": "758df9ee813f13093db801152c0bbba5c0b5b2498b0f61d1a0762faa94219f62",
+    "35_soak.py": "e6082aa9795beb9a5e0cea31fb22fd31ff104bea109c64d431d9e11a8d337d72",
+    "30_bench_speed_blocks.py": "f3d9fdf9d3308d4959b1e759b00e413ca5ea0560af65f5293fe34fe7ea6ac60b"
+  },
+  "cells_selected": [
+    "speed",
+    "toolcall",
+    "vision",
+    "context",
+    "soak"
+  ],
+  "cells_kept_from_previous_run": [],
+  "cells": {
+    "speed": {
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/30_bench_speed_blocks.py",
+        "--base-url",
+        "http://127.0.0.1:8018",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/speed/speed.json",
+        "--stack-label",
+        "inkling-2-mini-cuda-spark-128g-1m",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "inkling-2-mini",
+        "--max-tokens-per-event",
+        "8",
+        "--output-tokenizer-path",
+        "/home/bmarti44/models/inkling-2-mini/tokenizer.json",
+        "--output-tokenizer-sha256",
+        "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6"
+      ],
+      "skip_reason": null,
+      "evidence": "speed/speed.json",
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 97.29077189229429,
+      "start_unix": 1795422865.2054427,
+      "end_unix": 1795422962.4965277
+    },
+    "toolcall": {
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8018/v1",
+        "--model",
+        "inkling-2-mini",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "evidence": "toolcall/toolcall.json",
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 29.387747562024742,
+      "start_unix": 1795422962.496882,
+      "end_unix": 1795422991.8854277
+    },
+    "vision": {
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/38_bench_vision.py",
+        "--base-url",
+        "http://127.0.0.1:8018",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/vision",
+        "--thinking-mode",
+        "chat",
+        "--max-tokens",
+        "4096",
+        "--model-id",
+        "inkling-2-mini"
+      ],
+      "skip_reason": null,
+      "evidence": "vision/summary.json",
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 1154.109186529182,
+      "start_unix": 1795422991.8862076,
+      "end_unix": 1795424145.9957638
+    },
+    "context": {
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/50_probe_context.py",
+        "--base-url",
+        "http://127.0.0.1:8018",
+        "--model",
+        "inkling-2-mini",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/context",
+        "--stack-label",
+        "inkling-2-mini-cuda-spark-128g-1m",
+        "--slots",
+        "4",
+        "--tokens-per-slot",
+        "250128",
+        "--tokenizer-path",
+        "/home/bmarti44/models/inkling-2-mini/tokenizer.json",
+        "--tokenizer-sha256",
+        "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6",
+        "--phase",
+        "both",
+        "--profile-id",
+        "inkling-2-mini/cuda-spark-128g-1m",
+        "--mem-floor-gib",
+        "10"
+      ],
+      "skip_reason": null,
+      "evidence": "context/summary.json",
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 582.9413782898337,
+      "start_unix": 1795424145.9965994,
+      "end_unix": 1795424728.938168
+    },
+    "soak": {
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/35_soak.py",
+        "--base-url",
+        "http://127.0.0.1:8018",
+        "--stack-label",
+        "inkling-2-mini-cuda-spark-128g-1m",
+        "--config-hash",
+        "inkling-2-mini-cuda-spark-128g-1m-7777da4ade3a",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/soak/soak.json",
+        "--model",
+        "inkling-2-mini"
+      ],
+      "skip_reason": null,
+      "evidence": "soak/soak.json",
+      "status": "OK",
+      "exit_code": 0,
+      "wall_s": 1801.2542782640085,
+      "start_unix": 1795424728.9385257,
+      "end_unix": 1795426530.1941838
+    }
+  },
+  "served_models_listed": [
+    "inkling-2-mini",
+    "default"
+  ],
+  "end_unix": 1795426530.194475,
+  "end_iso": "2026-11-23T09:35:30.194478+00:00"
+}
