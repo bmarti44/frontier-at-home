@@ -18,7 +18,9 @@ RELAYS = ("https://api.drand.sh", "https://drand.cloudflare.com")
 
 
 def get(url: str) -> dict:
-    with urllib.request.urlopen(url, timeout=30) as response:
+    # drand.cloudflare.com answers 403 to urllib's default User-Agent (freeze 1's attempt).
+    request = urllib.request.Request(url, headers={"User-Agent": "drand-seed-fetch/1.0"})
+    with urllib.request.urlopen(request, timeout=30) as response:
         return json.loads(response.read())
 
 
