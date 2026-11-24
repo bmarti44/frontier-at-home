@@ -1,0 +1,61 @@
+{
+  "index": 243,
+  "task_id": 243,
+  "rendered_prompt_sha256": "7da0edd639c19f2fa2a841c6702ee93fdc2959cb5fce21c5b579cc7239675977",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "Jason has 1000 minutes per month.\nEvery day he has a 15-minute call with his boss. 30 days * 15 minutes = 450 minutes.\nHe's had 300 extra minutes to other people.\nTotal used = 450 + 300 = 750 minutes.\nLeft = 1000 - 750 = 250 minutes.\n\nNeed final numeric answer on its own line.Boss calls: 30 × 15 = 450 minutes.  \nTotal used: 450 + 300 = 750 minutes.  \nRemaining: 1000 − 750 = 250 minutes.\n\nAnswer: 250",
+  "finish_reason": "stop",
+  "expected": "250",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.987424783874303
+  },
+  "response": {
+    "id": "cmpl-b7fdcd42b9c6cced",
+    "object": "text_completion",
+    "created": 1795428767,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Jason has 1000 minutes per month.\nEvery day he has a 15-minute call with his boss. 30 days * 15 minutes = 450 minutes.\nHe's had 300 extra minutes to other people.\nTotal used = 450 + 300 = 750 minutes.\nLeft = 1000 - 750 = 250 minutes.\n\nNeed final numeric answer on its own line.Boss calls: 30 × 15 = 450 minutes.  \nTotal used: 450 + 300 = 750 minutes.  \nRemaining: 1000 − 750 = 250 minutes.\n\nAnswer: 250",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 100,
+      "total_tokens": 240,
+      "completion_tokens": 140,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|message_system|><|content_text|>Thinking effort level: 0.2<|end_message|><|message_user|><|content_text|>Jason has a phone plan of 1000 minutes per month. Every day he has a 15-minute call with his boss, and he's had 300 extra minutes of call this month to other people. How many minutes does Jason have left if this month has 30 days?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|end_message|>"
+}

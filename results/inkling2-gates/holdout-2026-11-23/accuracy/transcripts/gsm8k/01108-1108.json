@@ -1,0 +1,60 @@
+{
+  "index": 1108,
+  "task_id": 1108,
+  "rendered_prompt_sha256": "b29aa49b94999b5a1691d0d877e1f76bd4652060a2057fe0769d9dddbc6cddad",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Pots $19 + soil $26 = $45. Coupon $7 off => $38. Need final numeric answer on its own line in form Answer: <number>. Ensure final line exactly. Could include brief sentence then answer line. Need no extra after answer.$19 + $26 = $45; $45 - $7 = $38.\nAnswer: 38",
+  "finish_reason": "stop",
+  "expected": "38",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.9853166420944035
+  },
+  "response": {
+    "id": "cmpl-ba5981869b807145",
+    "object": "text_completion",
+    "created": 1795428967,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Pots $19 + soil $26 = $45. Coupon $7 off => $38. Need final numeric answer on its own line in form Answer: <number>. Ensure final line exactly. Could include brief sentence then answer line. Need no extra after answer.$19 + $26 = $45; $45 - $7 = $38.\nAnswer: 38",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 97,
+      "total_tokens": 190,
+      "completion_tokens": 93,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

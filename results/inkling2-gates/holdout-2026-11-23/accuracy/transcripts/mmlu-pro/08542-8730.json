@@ -1,0 +1,59 @@
+{
+  "index": 8542,
+  "task_id": 8730,
+  "rendered_prompt_sha256": "f7bb0eae7eba398ad9888adab7513d79563511ae3fcdfe30ab1083b412c2edca",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute number of proper colorings of cycle C5 with 3 colors. Formula for cycle chromatic polynomial: (k-1)^n + (-1)^n (k-1). For k=3,n=5: 2^5 + (-1)^5*2 = 32 -2 =30. Option C. Need final single letter form. Ensure no extra.Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.968376458156854
+  },
+  "response": {
+    "id": "cmpl-8bc32fca43753c3f",
+    "object": "text_completion",
+    "created": 1795431168,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute number of proper colorings of cycle C5 with 3 colors. Formula for cycle chromatic polynomial: (k-1)^n + (-1)^n (k-1). For k=3,n=5: 2^5 + (-1)^5*2 = 32 -2 =30. Option C. Need final single letter form. Ensure no extra.Answer: C",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 112,
+      "total_tokens": 214,
+      "completion_tokens": 102,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

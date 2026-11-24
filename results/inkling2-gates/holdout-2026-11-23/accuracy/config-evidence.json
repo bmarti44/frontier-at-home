@@ -1,0 +1,97 @@
+{
+  "kind": "qualify-profile-config-evidence",
+  "profile_id": "inkling-2-mini/cuda-spark-128g-1m",
+  "server_binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+  "files": [
+    {
+      "path": "/home/bmarti44/.cache/inkling-2-mini/native-runtime-001/runtime/bin/python3.12",
+      "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+    },
+    {
+      "path": "/home/bmarti44/models/inkling-2-mini/model.safetensors.index.json",
+      "sha256": "c1631065b7b00787993522dddc66a68b3abee869192977fb3dcb796e63bc5838"
+    },
+    {
+      "path": "/home/bmarti44/models/inkling-2-mini/model-00001-of-00001.safetensors",
+      "sha256": "65e60f51aa1284d4fb022584908c315270334d991828bb774af60584523539d1"
+    },
+    {
+      "path": "/home/bmarti44/models/inkling-2-mini/mtp.safetensors",
+      "sha256": "7c3b651317f01f73bcf4e1dceba66ef8b7e1a1eac6bc171e882e690a4b10a1d2"
+    },
+    {
+      "path": "/home/bmarti44/models/inkling-2-mini/config.json",
+      "sha256": "a7a349601f0984c4abf999c480ef775d8567d21f5f84b4e8a3e035b44f288dc2"
+    },
+    {
+      "path": "/home/bmarti44/models/inkling-2-mini/hf_quant_config.json",
+      "sha256": "7c656207d3ce37879c7be209a036b0dde43bf01f78159bff06880b868ed57143"
+    },
+    {
+      "path": "/home/bmarti44/models/inkling-2-mini/tokenizer.json",
+      "sha256": "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6"
+    },
+    {
+      "path": "/home/bmarti44/models/inkling-2-mini/chat_template.jinja",
+      "sha256": "53a9035f3255945704b5857657cfb00c1165090c0641c4f782a0cbf268cc16dc"
+    },
+    {
+      "path": "/home/bmarti44/models/inkling-2-mini/processor_config.json",
+      "sha256": "d7350adce18c8be4b607f261c8f0f7eabbf720bb7aaf648a43d4f8372bbacc2d"
+    }
+  ],
+  "argv": [
+    "-B",
+    "-m",
+    "vllm.entrypoints.openai.api_server",
+    "--model",
+    "/home/bmarti44/models/inkling-2-mini",
+    "--served-model-name",
+    "inkling-2-mini",
+    "default",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8013",
+    "--max-model-len",
+    "262144",
+    "--max-num-seqs",
+    "4",
+    "--kv-cache-dtype",
+    "auto",
+    "--gpu-memory-utilization",
+    "0.80",
+    "--kv-cache-memory-bytes",
+    "68000000000",
+    "--enable-prefix-caching",
+    "--enable-chunked-prefill",
+    "--max-num-batched-tokens",
+    "2048",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "inkling",
+    "--reasoning-parser",
+    "inkling",
+    "--enable-prompt-tokens-details",
+    "--limit-mm-per-prompt",
+    "{\"image\":4,\"video\":0}",
+    "--mm-processor-cache-gb",
+    "0",
+    "--default-chat-template-kwargs",
+    "{\"reasoning_effort\":\"low\"}",
+    "--worker-cls",
+    "qwen38fn_worker.HostCacheReleaseWorker",
+    "--speculative-config",
+    "{\"method\":\"dspark\",\"num_speculative_tokens\":7,\"draft_sample_method\":\"probabilistic\"}",
+    "--moe-backend",
+    "humming",
+    "--middleware",
+    "vllm_reasoning_compat.ReasoningContentMiddleware",
+    "--middleware",
+    "glm53_runtime_policy.SplitTerminalSseMiddleware",
+    "--logprobs-mode",
+    "raw_logprobs",
+    "--shutdown-timeout",
+    "10"
+  ]
+}

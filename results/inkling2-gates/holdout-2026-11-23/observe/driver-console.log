@@ -1,0 +1,59 @@
+{"freeze": "4bb1f7e058a1d1e676a9c310a633ad79b7f4f53e", "missing": []}
+ok   real-default  the readers on the default's own draw: {'gsm8k': 98, 'mmlu-pro': 218, 'humaneval': 138}
+ok   real-m3       m3() on candidate 2's committed bundle: {'speed': {'prefill_28672': 3332.4668812474793, 'decode_0': 36.14370862133438, 'decode_28672': 44.16184104226987}, 'mmmu': 77, 'toolcall': 20, 'ttft': {'0': 0.1704337145, '28672': 9.720130508}}
+ok   driver        run-holdout.sh logs the lines draw() requires
+ok   faster and more accurate: PROMOTE
+ok   sum equal to the default's 454: KEEP_DEFAULT
+ok   sum 455 with every suite near: PROMOTE
+ok   higher sum but MMLU-Pro significantly worse: KEEP_DEFAULT
+ok   decode @28K 40.91 misses 40.92: KEEP_DEFAULT
+ok   prefill 2,711.4 misses: KEEP_DEFAULT
+ok   decode @0 34.06 misses: KEEP_DEFAULT
+ok   MMMU 63: KEEP_DEFAULT
+ok   tool-call 18/20: KEEP_DEFAULT
+ok   a suite file missing: NO_RESULT
+ok   a dev split: NO_RESULT
+ok   a transcript short: NO_RESULT
+ok   a connection-refused row: NO_RESULT
+ok   a timed-out row is scored, not refused
+ok   a sandbox exit 1 is a wrong answer
+ok   a sandbox host timeout is a wrong answer
+ok   Docker exit 125: NO_RESULT
+ok   a sandbox launch failure: NO_RESULT
+ok   a row rendered at another effort: NO_RESULT
+ok   a HumanEval row sent through the chat wrapper: NO_RESULT
+ok   a kernel Xid: NO_RESULT
+ok   FAILED_ATTEMPT: NO_RESULT
+ok   no draw line: NO_RESULT
+ok   ledger without completed: NO_RESULT
+ok   kit accuracy cell failed: NO_RESULT
+ok   M3 not PASS: NO_RESULT
+ok   M3 speed level invalid: NO_RESULT
+ok   other questions than the default's: NO_RESULT
+ok   a dirty head: NO_RESULT
+ok   code differs from a freeze: NO_RESULT
+30 synthetic cases + 2 real-evidence checks + driver literals, all match
+{"freeze": "3aa7cd00e70a15246d514e10cfb20ea609abde70", "m3_freeze": "4bb1f7e058a1d1e676a9c310a633ad79b7f4f53e", "unchanged": true}
+humaneval runtime {'image': 'python:3.12-slim', 'repo_digest': 'python@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de', 'pin_path': 'configs/pins/humaneval-runtime.json', 'pin_sha256': '548912ac64a29b3dcaa30bf45616954d329c19862c781fe901b8bc18d7fe54f5'}
+2026-11-23T10:07:37Z head 3aa7cd00e70a15246d514e10cfb20ea609abde70 dirty=0
+2026-11-23T10:07:37Z prod-stop: sudo -n 52_engine_switch.sh stop
+STOPPED qwen38fn (active.json unchanged; '/home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh restore' restarts it)
+2026-11-23T10:07:40Z preload MemFree=118122404 MemAvailable=121206764 SwapFree=16595424
+interpreter match=True
+vllm-tree 5bcb020bc1e801e3 files=6525 after='patches 0001-0004' match=True
+patches 4 mismatches=[]
+packages freeze sha256_16 85a4f99d5e707f57 match=True
+weights files=14 bytes=20191643333 mismatches=0
+released 52 files under /home/bmarti44/models/qwen3.8-flash-next-nvfp4
+released 136225 files under /home/bmarti44/.cache/qwen38-flash-next
+released 30 files under /home/bmarti44/models/inkling-2-mini
+released 105669 files under /home/bmarti44/.cache/inkling-2-mini
+2026-11-23T10:08:15Z MemFree gate pass 118724792 kB, MemAvailable 121201660 kB (3 samples)
+2026-11-23T10:08:15Z launching in scope inkling2-holdout-3851165
+{"pass":true,"required_gib":29.0,"mem_available_gib":115.575,"stable_samples_observed":3}
+{"ok":true,"profile":"inkling-2-mini/cuda-spark-128g-1m","pid":3852188,"port":8018}
+2026-11-23T10:11:26Z ready after 191 s; idle MemAvailable=26806324 MemFree=23446372
+{"greedy": ["170c63d11040", "85f745a0d87f", "217aaabaf808"], "tokens_per_chunk": [4.0, 2.789473684210526, 3.6]}
+2026-11-23T10:11:49Z KV capacity 1238000 tokens at 262,144 per request
+2026-11-23T10:11:49Z probe identical to candidate 2 and KV covers 1M; drawing the holdout at effort low
+[accuracy] starting

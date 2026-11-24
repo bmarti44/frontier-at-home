@@ -1,0 +1,60 @@
+{
+  "index": 1212,
+  "task_id": 1212,
+  "rendered_prompt_sha256": "82973a404a7c10a60387cbc80b2e784a0fd3959e0c9700845b930b0a4f6ae2aa",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute carefully.\n\nAli teaches one class. Ali's class capacity 120. John has two classes in his school. Each class has 1/8 the capacity of Ali's class. So each John class capacity = 120/8 = 15. Two classes = 30. Combined capacity of both schools: Ali's school has one class capacity 120; John's school has two classes capacity 30; total = 150. Need final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: 150.Ali’s class capacity: 120  \nEach of John’s classes: 120 / 8 = 15  \nJohn’s two classes: 2 × 15 = 30  \nCombined: 120 + 30 = 150  \n\nAnswer: 150",
+  "finish_reason": "stop",
+  "expected": "150",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.969801645260304
+  },
+  "response": {
+    "id": "cmpl-b3d35ef9c7478311",
+    "object": "text_completion",
+    "created": 1795428746,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute carefully.\n\nAli teaches one class. Ali's class capacity 120. John has two classes in his school. Each class has 1/8 the capacity of Ali's class. So each John class capacity = 120/8 = 15. Two classes = 30. Combined capacity of both schools: Ali's school has one class capacity 120; John's school has two classes capacity 30; total = 150. Need final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: 150.Ali’s class capacity: 120  \nEach of John’s classes: 120 / 8 = 15  \nJohn’s two classes: 2 × 15 = 30  \nCombined: 120 + 30 = 150  \n\nAnswer: 150",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 108,
+      "total_tokens": 293,
+      "completion_tokens": 185,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

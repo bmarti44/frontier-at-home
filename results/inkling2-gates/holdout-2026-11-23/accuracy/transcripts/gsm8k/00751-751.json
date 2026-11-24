@@ -1,0 +1,60 @@
+{
+  "index": 751,
+  "task_id": 751,
+  "rendered_prompt_sha256": "2a181149cbf734e73675c4001ca7bcf8b4f8c27da3073272da3ce096def02bc8",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer arithmetic. Need compute carefully.\nStart 48. Arnold stole half: half of 48 = 24, remaining 24. Gunther added 25 -> 49. Arnold stole another 12 -> 37. Third day Gunther added 6 -> 43. Counting bananas: 43. Need final with brief maybe one sentence and final line exact. Ensure final numeric answer on own line.Gunther started with 48, lost 24, gained 25, lost 12, then gained 6: 48 − 24 + 25 − 12 + 6 = 43.\n\nAnswer: 43",
+  "finish_reason": "stop",
+  "expected": "43",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7231450602412224
+  },
+  "response": {
+    "id": "cmpl-90e12e818d111137",
+    "object": "text_completion",
+    "created": 1795429069,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer arithmetic. Need compute carefully.\nStart 48. Arnold stole half: half of 48 = 24, remaining 24. Gunther added 25 -> 49. Arnold stole another 12 -> 37. Third day Gunther added 6 -> 43. Counting bananas: 43. Need final with brief maybe one sentence and final line exact. Ensure final numeric answer on own line.Gunther started with 48, lost 24, gained 25, lost 12, then gained 6: 48 − 24 + 25 − 12 + 6 = 43.\n\nAnswer: 43",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 155,
+      "total_tokens": 297,
+      "completion_tokens": 142,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

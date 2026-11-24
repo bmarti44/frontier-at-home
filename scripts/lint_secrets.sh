@@ -26,7 +26,7 @@ readonly GLM53_PUBLIC_DIGEST_ALLOWLIST='^results/glm53-flash-gates/build-[a-z0-9
 # the tokenizer digest there is public (any interpreter, any gates bundle).
 readonly KIT_LOG_PUBLIC_DIGEST_ALLOWLIST='^results/[a-z0-9.-]+-gates/[0-9a-z.-]+/(speed|context)/log\.txt:1:\$ [^ ]+/python[0-9.]* [^ ]+/scripts/(30_bench_speed(_blocks)?|50_probe_context)\.py .*--(output-)?tokenizer-sha256 [0-9a-f]{64}( .*)?$'
 # Inkling 2 Mini screen and gate drivers log the public vLLM tree digest (build manifest vllm_tree).
-readonly INKLING2_TREE_DIGEST_ALLOWLIST='^results/inkling2-gates/[0-9a-z.-]+/[0-9a-z.-]+/driver\.log:[0-9]+:[0-9TZ:-]+ vllm_tree [0-9a-f]{64} files=[0-9]+$'
+readonly INKLING2_TREE_DIGEST_ALLOWLIST='^results/inkling2-gates/[0-9a-z.-]+/[0-9a-z.-]+/driver\.log:[0-9]+:[0-9TZ:-]+ vllm_tree [0-9a-f]{64} files=[0-9]+$|^results/inkling2-gates/holdout-[0-9a-z-]+/observe/driver-console\.log:[0-9]+:humaneval runtime \{.image.: .python:3\.12-slim., .repo_digest.: .python@sha256:[0-9a-f]{64}., .pin_path.: .configs/pins/humaneval-runtime\.json., .pin_sha256.: .[0-9a-f]{64}.\}$'
 readonly LINT_ALLOWLIST_FILE="$(
   cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
   pwd

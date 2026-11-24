@@ -1,0 +1,60 @@
+{
+  "index": 1293,
+  "task_id": 1293,
+  "rendered_prompt_sha256": "a02c7a299742ae0b2d250fad9c946c3f9d1389f39d4e2cb2c3dba4a9260bfe76",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Company produces 5000 bars/day. Sells all for $2/bar. Two weeks = 14 days. Bars = 5000*14 = 70,000. Money = 70,000*2 = 140,000. Need final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly. No need mention assumptions? Maybe assume every day in two weeks. Final concise.Two weeks = 14 days.  \nBars = 5000 × 14 = 70,000.  \nMoney = 70,000 × $2 = $140,000.\n\nAnswer: $140,000",
+  "finish_reason": "stop",
+  "expected": "140000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.63734916318208
+  },
+  "response": {
+    "id": "cmpl-adf99decd0402a6f",
+    "object": "text_completion",
+    "created": 1795428784,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Company produces 5000 bars/day. Sells all for $2/bar. Two weeks = 14 days. Bars = 5000*14 = 70,000. Money = 70,000*2 = 140,000. Need final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly. No need mention assumptions? Maybe assume every day in two weeks. Final concise.Two weeks = 14 days.  \nBars = 5000 × 14 = 70,000.  \nMoney = 70,000 × $2 = $140,000.\n\nAnswer: $140,000",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 90,
+      "total_tokens": 245,
+      "completion_tokens": 155,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": true
+}

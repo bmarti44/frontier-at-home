@@ -1,0 +1,60 @@
+{
+  "index": 1102,
+  "task_id": 1102,
+  "rendered_prompt_sha256": "27af65e38aafb2e26bdbb7ff69346fb232a52b73ea24b4d6dfb26913813b0fb8",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute carefully.\n\nInitial charge 85.00. Returned item cost 15.00 -> balance 70.00. Bought frying pan 20% off $20.00: discount 4.00, price 16.00. Towels 10% off $30.00: discount 3.00, price 27.00. Add 43.00 -> 113.00. Need final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly.After the return: $85.00 - $15.00 = $70.00  \nFrying pan: $20.00 × 0.80 = $16.00  \nTowels: $30.00 × 0.90 = $27.00  \nNew balance: $70.00 + $16.00 + $27.00 = $113.00\n\nAnswer: $113.00",
+  "finish_reason": "stop",
+  "expected": "113",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.133732608985156
+  },
+  "response": {
+    "id": "cmpl-b450e18a99f2d5e9",
+    "object": "text_completion",
+    "created": 1795429040,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute carefully.\n\nInitial charge 85.00. Returned item cost 15.00 -> balance 70.00. Bought frying pan 20% off $20.00: discount 4.00, price 16.00. Towels 10% off $30.00: discount 3.00, price 27.00. Add 43.00 -> 113.00. Need final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly.After the return: $85.00 - $15.00 = $70.00  \nFrying pan: $20.00 × 0.80 = $16.00  \nTowels: $30.00 × 0.90 = $27.00  \nNew balance: $70.00 + $16.00 + $27.00 = $113.00\n\nAnswer: $113.00",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 139,
+      "total_tokens": 350,
+      "completion_tokens": 211,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": true
+}

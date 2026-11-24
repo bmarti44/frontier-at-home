@@ -1,0 +1,60 @@
+{
+  "index": 342,
+  "task_id": 342,
+  "rendered_prompt_sha256": "9e61e4dad3f990732c9daae25c75129126e48edc7211092b81c4af756826cebf",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a math word problem. Need compute: friend gave 24. Baby shower received twice the amount of new baby outfits. Ambiguity: \"twice the amount\" likely twice the amount friend gave = 48. Then mom gifted 15. Total 24+48+15=87. Need final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: 87.Friend: 24 outfits. Baby shower: 2 × 24 = 48 outfits. Mom: 15 outfits. Total: 24 + 48 + 15 = 87.\n\nAnswer: 87",
+  "finish_reason": "stop",
+  "expected": "87",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.4612030116841197
+  },
+  "response": {
+    "id": "cmpl-a0fa5114a7191916",
+    "object": "text_completion",
+    "created": 1795428860,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a math word problem. Need compute: friend gave 24. Baby shower received twice the amount of new baby outfits. Ambiguity: \"twice the amount\" likely twice the amount friend gave = 48. Then mom gifted 15. Total 24+48+15=87. Need final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: 87.Friend: 24 outfits. Baby shower: 2 × 24 = 48 outfits. Mom: 15 outfits. Total: 24 + 48 + 15 = 87.\n\nAnswer: 87",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 109,
+      "total_tokens": 250,
+      "completion_tokens": 141,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}
