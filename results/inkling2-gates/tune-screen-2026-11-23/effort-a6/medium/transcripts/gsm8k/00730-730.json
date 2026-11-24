@@ -1,0 +1,60 @@
+{
+  "index": 730,
+  "task_id": 730,
+  "rendered_prompt_sha256": "0fea35029545366b8c00c21f87533a047a0bcfad70ff6bf372bb48974e32a5c6",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "Parker chews 4 pieces per day. Over 30 days: 4 * 30 = 120 pieces. Each pack has 15 pieces. 120 / 15 = 8 packs exactly. Need to ensure he needs to last him 30 days; 8 packs exactly. Final numeric answer on its own line.Parker needs 4 × 30 = 120 pieces of gum.  \nEach pack has 15 pieces, so 120 ÷ 15 = 8 packs.\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.7946968292817473
+  },
+  "response": {
+    "id": "cmpl-bd095070463ed864",
+    "object": "text_completion",
+    "created": 1795415078,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Parker chews 4 pieces per day. Over 30 days: 4 * 30 = 120 pieces. Each pack has 15 pieces. 120 / 15 = 8 packs exactly. Need to ensure he needs to last him 30 days; 8 packs exactly. Final numeric answer on its own line.Parker needs 4 × 30 = 120 pieces of gum.  \nEach pack has 15 pieces, so 120 ÷ 15 = 8 packs.\n\nAnswer: 8",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 85,
+      "total_tokens": 200,
+      "completion_tokens": 115,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,59 @@
+{
+  "index": 11368,
+  "task_id": 11592,
+  "rendered_prompt_sha256": "a5e0fd4f75823808af5ef13a227e7e695afd24db8ea2c04de4849dc6ab188488",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer single letter. Need compute saturation pressure of water vapor at -60 C, atmospheric pressure 100 kPa irrelevant. Need know saturation vapor pressure over ice at -60°C. Options include 0.00109 kPa likely. Let's estimate.\n\nAt -60°C, saturation vapor pressure over ice is very low. Known values: at -40°C, p_sat ice ~0.128 kPa? Let's recall: saturation vapor pressure over water at 0°C =0.611 kPa; at -10°C ice ~0.26 kPa; at -20°C ~0.103 kPa; at -30°C ~0.038 kPa; at -40°C ~0.0128 kPa; at -50°C ~0.0037 kPa; at -60°C ~0.0011 kPa. Yes option F 0.00109 kPa. Option B 0.0129 kPa is at -40°C. So F.\n\nNeed final only Answer: F. Ensure no extra.Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.43216462014243
+  },
+  "response": {
+    "id": "cmpl-aba3c8277441d4b1",
+    "object": "text_completion",
+    "created": 1795416291,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer single letter. Need compute saturation pressure of water vapor at -60 C, atmospheric pressure 100 kPa irrelevant. Need know saturation vapor pressure over ice at -60°C. Options include 0.00109 kPa likely. Let's estimate.\n\nAt -60°C, saturation vapor pressure over ice is very low. Known values: at -40°C, p_sat ice ~0.128 kPa? Let's recall: saturation vapor pressure over water at 0°C =0.611 kPa; at -10°C ice ~0.26 kPa; at -20°C ~0.103 kPa; at -30°C ~0.038 kPa; at -40°C ~0.0128 kPa; at -50°C ~0.0037 kPa; at -60°C ~0.0011 kPa. Yes option F 0.00109 kPa. Option B 0.0129 kPa is at -40°C. So F.\n\nNeed final only Answer: F. Ensure no extra.Answer: F",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 163,
+      "total_tokens": 406,
+      "completion_tokens": 243,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

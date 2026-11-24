@@ -1,0 +1,60 @@
+{
+  "index": 280,
+  "task_id": 280,
+  "rendered_prompt_sha256": "34c1b31b410d644bb670b3cbd85b29d950880d0e538ed0744b6a4e0972e2bc53",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "The user wants me to calculate total cost.\n\n20 popsicles at $0.25 each: 20 × 0.25 = $5.00\n4 ice cream bars at $0.50 each: 4 × 0.50 = $2.00\nTotal: $5.00 + $2.00 = $7.00\n\nFinal answer should be on its own line: Answer: 7 or Answer: 7.00. The form says <number>. I'll use 7.20 × $0.25 = $5.00  \n4 × $0.50 = $2.00  \nTotal = $5.00 + $2.00 = $7.00\n\nAnswer: 7",
+  "finish_reason": "stop",
+  "expected": "7",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.014988007955253
+  },
+  "response": {
+    "id": "cmpl-8dbdfbb9b237658a",
+    "object": "text_completion",
+    "created": 1795415312,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants me to calculate total cost.\n\n20 popsicles at $0.25 each: 20 × 0.25 = $5.00\n4 ice cream bars at $0.50 each: 4 × 0.50 = $2.00\nTotal: $5.00 + $2.00 = $7.00\n\nFinal answer should be on its own line: Answer: 7 or Answer: 7.00. The form says <number>. I'll use 7.20 × $0.25 = $5.00  \n4 × $0.50 = $2.00  \nTotal = $5.00 + $2.00 = $7.00\n\nAnswer: 7",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 80,
+      "total_tokens": 242,
+      "completion_tokens": 162,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

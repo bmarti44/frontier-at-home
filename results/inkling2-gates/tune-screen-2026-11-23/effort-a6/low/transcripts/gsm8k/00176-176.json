@@ -1,0 +1,60 @@
+{
+  "index": 176,
+  "task_id": 176,
+  "rendered_prompt_sha256": "f27dc2bcc1e8907cbb5815689869c3409e5d7c65c502685dd929f5c406250a79",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need parse problem carefully. Race with 240 Asians, 80 were Japanese, rest Chinese. So Chinese = 240-80=160. If number of boys on Chinese team was 60, how many girls on Chinese team? Assuming Chinese team consists only boys and girls, girls = 160-60=100. Need final numeric answer on own line. Could include brief reasoning. Ensure final line exactly Answer: 100.Chinese team size: 240 − 80 = 160.  \nGirls: 160 − 60 = 100.\n\nAnswer: 100",
+  "finish_reason": "stop",
+  "expected": "100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.226757140830159
+  },
+  "response": {
+    "id": "cmpl-bb942df4911bf96c",
+    "object": "text_completion",
+    "created": 1795415279,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need parse problem carefully. Race with 240 Asians, 80 were Japanese, rest Chinese. So Chinese = 240-80=160. If number of boys on Chinese team was 60, how many girls on Chinese team? Assuming Chinese team consists only boys and girls, girls = 160-60=100. Need final numeric answer on own line. Could include brief reasoning. Ensure final line exactly Answer: 100.Chinese team size: 240 − 80 = 160.  \nGirls: 160 − 60 = 100.\n\nAnswer: 100",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 83,
+      "total_tokens": 214,
+      "completion_tokens": 131,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

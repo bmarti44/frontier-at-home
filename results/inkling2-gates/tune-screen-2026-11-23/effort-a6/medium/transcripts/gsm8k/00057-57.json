@@ -1,0 +1,60 @@
+{
+  "index": 57,
+  "task_id": 57,
+  "rendered_prompt_sha256": "6f227d8f4a325dec881b6657d57ab38c8563dafeffbddd86ee3ece0ec4cbaa24",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Bridge limit 5000. Driver+empty truck 3755. Remaining capacity = 5000-3755=1245. Each box 15 lb. Max boxes = floor(1245/15). 15*83=1245? 15*80=1200, +45=3*15, yes 83 exactly. So 83. Need final with brief maybe. Ensure final numeric answer on own line form Answer: <number>. Could include short explanation then final line. Need not overdo. Check: 3755+83*15=3755+1245=5000 exactly. Good.Remaining capacity: 5000 − 3755 = 1245 pounds.  \nNumber of boxes: 1245 ÷ 15 = 83.\n\nAnswer: 83",
+  "finish_reason": "stop",
+  "expected": "83",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.468172817956656
+  },
+  "response": {
+    "id": "cmpl-a36a4201d17bec68",
+    "object": "text_completion",
+    "created": 1795414908,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Bridge limit 5000. Driver+empty truck 3755. Remaining capacity = 5000-3755=1245. Each box 15 lb. Max boxes = floor(1245/15). 15*83=1245? 15*80=1200, +45=3*15, yes 83 exactly. So 83. Need final with brief maybe. Ensure final numeric answer on own line form Answer: <number>. Could include short explanation then final line. Need not overdo. Check: 3755+83*15=3755+1245=5000 exactly. Good.Remaining capacity: 5000 − 3755 = 1245 pounds.  \nNumber of boxes: 1245 ÷ 15 = 83.\n\nAnswer: 83",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 115,
+      "total_tokens": 298,
+      "completion_tokens": 183,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,60 @@
+{
+  "index": 280,
+  "task_id": 280,
+  "rendered_prompt_sha256": "1f4fe1720f606233d97f627263767e24f2ff03cdf54be2dd791944d6fa7b19d9",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. 20 popsicles * $0.25 = $5.00. 4 ice cream bars * $0.50 = $2.00. Total = $7.00. Need final line exactly \"Answer: <number>\". Could include brief reasoning then final line. Ensure final numeric answer on its own line. Use 7 maybe $7? Form says <number>, so Answer: 7.20 × 0.25 = 5; 4 × 0.50 = 2; total = 7.\nAnswer: 7",
+  "finish_reason": "stop",
+  "expected": "7",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.384460030123591
+  },
+  "response": {
+    "id": "cmpl-bae47c2f317d3c8b",
+    "object": "text_completion",
+    "created": 1795415427,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. 20 popsicles * $0.25 = $5.00. 4 ice cream bars * $0.50 = $2.00. Total = $7.00. Need final line exactly \"Answer: <number>\". Could include brief reasoning then final line. Ensure final numeric answer on its own line. Use 7 maybe $7? Form says <number>, so Answer: 7.20 × 0.25 = 5; 4 × 0.50 = 2; total = 7.\nAnswer: 7",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 80,
+      "total_tokens": 212,
+      "completion_tokens": 132,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

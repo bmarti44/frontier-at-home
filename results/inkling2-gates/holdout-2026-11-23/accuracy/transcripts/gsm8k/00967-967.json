@@ -1,0 +1,60 @@
+{
+  "index": 967,
+  "task_id": 967,
+  "rendered_prompt_sha256": "22c9a0cd54e947686d1bcacd525804e10678967c695be4abe694a9ef7c5e8643",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "Nani is 8. Brother is twice his age = 16. Sister is 25% younger than him (Nani). 25% younger than 8 = 8 - 0.25*8 = 8 - 2 = 6. Total = 8+16+6 = 30. Need final line exactly Answer: 30. Brief reasoning okay.Nani: 8  \nBrother: 2 × 8 = 16  \nSister: 8 − 25% of 8 = 8 − 2 = 6  \nTotal: 8 + 16 + 6 = 30  \n\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.3271954231895506
+  },
+  "response": {
+    "id": "cmpl-abbd0fff9483d4aa",
+    "object": "text_completion",
+    "created": 1795428970,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Nani is 8. Brother is twice his age = 16. Sister is 25% younger than him (Nani). 25% younger than 8 = 8 - 0.25*8 = 8 - 2 = 6. Total = 8+16+6 = 30. Need final line exactly Answer: 30. Brief reasoning okay.Nani: 8  \nBrother: 2 × 8 = 16  \nSister: 8 − 25% of 8 = 8 − 2 = 6  \nTotal: 8 + 16 + 6 = 30  \n\nAnswer: 30",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 82,
+      "total_tokens": 226,
+      "completion_tokens": 144,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

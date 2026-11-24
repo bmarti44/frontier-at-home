@@ -1,0 +1,60 @@
+{
+  "index": 1214,
+  "task_id": 1214,
+  "rendered_prompt_sha256": "86340949220d3178d4ae1eae17a2e3833f046aa33910122859ba4ed9bf6a0b5f",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Jordan has 2 children, each requires 5 diaper changes per day. Total changes = 2*5=10 per day. Wife changes half = 5. Jordan changes other half = 5. Need final numeric answer on own line form Answer: <number>. We can briefly explain. Ensure final line exactly. No issue. Need maybe note diapers vs changes: each change uses one diaper presumably. Jordan changes 5 diapers per day. Final concise.Total changes: 2 children × 5 = 10. Jordan changes half: 10 ÷ 2 = 5.\n\nAnswer: 5",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.304024432785809
+  },
+  "response": {
+    "id": "cmpl-b468f12c524b75cd",
+    "object": "text_completion",
+    "created": 1795414903,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Jordan has 2 children, each requires 5 diaper changes per day. Total changes = 2*5=10 per day. Wife changes half = 5. Jordan changes other half = 5. Need final numeric answer on own line form Answer: <number>. We can briefly explain. Ensure final line exactly. No issue. Need maybe note diapers vs changes: each change uses one diaper presumably. Jordan changes 5 diapers per day. Final concise.Total changes: 2 children × 5 = 10. Jordan changes half: 10 ÷ 2 = 5.\n\nAnswer: 5",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 86,
+      "total_tokens": 232,
+      "completion_tokens": 146,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

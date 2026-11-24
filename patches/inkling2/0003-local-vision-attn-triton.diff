@@ -1,0 +1,59 @@
+--- a/vllm/models/inkling2/nvidia/vision.py
++++ b/vllm/models/inkling2/nvidia/vision.py
+@@ -7,6 +7,7 @@
+ `q_proj`/`k_proj`/`v_proj` load into one fused `qkv_proj`.
+ """
+ 
++import os
+ from collections import Counter
+ from collections.abc import Iterable, Mapping
+ from typing import Any, NamedTuple
+@@ -25,8 +26,22 @@
+     gather_patches,
+     scaled_residual_norm_,
+ )
++from vllm.logger import init_logger
+ from vllm.platforms import current_platform
+ 
++logger = init_logger(__name__)
++
++# Local gate (patches/inkling2/0003): read once at import, default "fa" (upstream).
++# "triton" runs the off-SM100 encoder attention through vLLM's Triton prefill kernel
++# instead of vllm_flash_attn FA2, whose wheel ships sm_80 SASS plus PTX ISA 9.2 only;
++# a CUDA 13.0 driver (r580) cannot JIT that PTX on SM12x.
++_VISION_ATTN = os.environ.get("INKLING2_VISION_ATTN", "fa")
++if _VISION_ATTN not in ("fa", "triton"):
++    raise ValueError(f"INKLING2_VISION_ATTN must be fa or triton, got {_VISION_ATTN!r}")
++VISION_TRITON_ATTN = _VISION_ATTN == "triton"
++if VISION_TRITON_ATTN:
++    logger.info("INKLING2_VISION_ATTN=triton: vision encoder attention via Triton prefill")
++
+ _CLIP_MEAN = (0.48145466, 0.4578275, 0.40821073)
+ _CLIP_STD = (0.26862954, 0.26130258, 0.27577711)
+ # The image processor's CLIP std (float32-rounded constants): pixels are first
+@@ -88,6 +103,25 @@
+             from vllm.third_party.tml_fa4 import flash_attn_varlen_func as fa4
+ 
+             out, _ = fa4(q, k, v, **kwargs)
++        elif VISION_TRITON_ATTN:
++            from vllm.v1.attention.ops.triton_prefill_attention import (
++                context_attention_fwd,
++            )
++
++            q, k, v = q.contiguous(), k.contiguous(), v.contiguous()
++            out = torch.empty_like(q)
++            cu_seqlens = metadata.cu_seqlens
++            context_attention_fwd(
++                q,
++                k,
++                v,
++                out,
++                b_start_loc=cu_seqlens[:-1],
++                b_seq_len=cu_seqlens[1:] - cu_seqlens[:-1],
++                max_input_len=int(metadata.max_seqlen),
++                is_causal=False,
++                softmax_scale=self.head_dim**-0.5,
++            )
+         else:
+             from vllm.vllm_flash_attn import flash_attn_varlen_func
+ 

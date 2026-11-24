@@ -1,0 +1,60 @@
+{
+  "index": 442,
+  "task_id": 442,
+  "rendered_prompt_sha256": "a5936bdd1425fad00a5eefa7f1976cc82b6d27006e717d31e4d5b0b6cc45d71e",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute carefully.\n\nInitial 40. Bakes 3 hours, every hour oven on raises house temp by 5 degrees. So +15 => 55. Then opens window for 30 minutes, house cools down 2 degrees for every 10 minutes window open. 30/10=3 intervals *2 =6 degrees cool. 55-6=49. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.After baking: 40 + 3×5 = 55.  \nWindow cooling: 30 minutes = 3×10 minutes, so 3×2 = 6 degrees.  \nFinal: 55 − 6 = 49.\n\nAnswer: 49",
+  "finish_reason": "stop",
+  "expected": "49",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.4824340413324535
+  },
+  "response": {
+    "id": "cmpl-ad7e065105971f35",
+    "object": "text_completion",
+    "created": 1795415531,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute carefully.\n\nInitial 40. Bakes 3 hours, every hour oven on raises house temp by 5 degrees. So +15 => 55. Then opens window for 30 minutes, house cools down 2 degrees for every 10 minutes window open. 30/10=3 intervals *2 =6 degrees cool. 55-6=49. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.After baking: 40 + 3×5 = 55.  \nWindow cooling: 30 minutes = 3×10 minutes, so 3×2 = 6 degrees.  \nFinal: 55 − 6 = 49.\n\nAnswer: 49",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 119,
+      "total_tokens": 289,
+      "completion_tokens": 170,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

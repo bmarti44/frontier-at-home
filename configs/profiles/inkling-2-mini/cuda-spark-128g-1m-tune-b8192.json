@@ -1,0 +1,151 @@
+{
+  "schema_version": 4,
+  "profile_id": "inkling-2-mini/cuda-spark-128g-1m-tune-b8192",
+  "model": "inkling-2-mini",
+  "backend": "cuda",
+  "hardware_class": "spark",
+  "ram_tier_gib": 128,
+  "purpose": "DIAGNOSTIC screen arm a2 (results/inkling2-gates/tune-screen-2026-11-23): cuda-spark-128g-1m plus one lever, --max-num-batched-tokens 8192. Dev serving only; never a headline, acceptance number or switch alias.",
+  "status": {
+    "state": "estimated",
+    "basis": "Lever screen arm; its measurements are diagnostic and decide only whether the lever joins the next acceptance candidate."
+  },
+  "engine": "vllm-inkling2-r001",
+  "artifact_roles": {
+    "model": "official-b85c3cfa"
+  },
+  "launch": {
+    "mechanism": "systemd-run",
+    "user": "bmarti44",
+    "log_name": "inkling2-tune-b8192",
+    "env": {
+      "HOME": "{cache_root}/inkling-2-mini/home",
+      "LANG": "C.UTF-8",
+      "PATH": "{cache_root}/inkling-2-mini/native-runtime-001/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+      "PYTHONPATH": "{repo}/scripts/lib",
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "CUDA_HOME": "/usr/local/cuda-13.0",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+      "NVIDIA_TF32_OVERRIDE": "0",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1",
+      "VLLM_NO_USAGE_STATS": "1",
+      "DO_NOT_TRACK": "1",
+      "MAX_JOBS": "2",
+      "NVCC_THREADS": "1",
+      "FLASHINFER_NVCC_THREADS": "1",
+      "FLASHINFER_DISABLE_JIT": "1",
+      "TRITON_CACHE_DIR": "{cache_root}/inkling-2-mini/home/.triton/cache",
+      "INKLING2_VISION_ATTN": "triton",
+      "INKLING2_MAX_IMAGE_SIDE": "4096",
+      "QWEN38FN_HOST_RELEASE_ROOTS": "{cache_root}/inkling-2-mini:{cache_root}/qwen38-flash-next"
+    },
+    "diagnostics_unset": [
+      "VLLM_LOGGING_LEVEL",
+      "VLLM_TRACE_FUNCTION",
+      "CUDA_LAUNCH_BLOCKING"
+    ],
+    "args": [
+      "-B",
+      "-m",
+      "vllm.entrypoints.openai.api_server",
+      "--model",
+      "{model}",
+      "--served-model-name",
+      "inkling-2-mini",
+      "default",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "{port}",
+      "--max-model-len",
+      "262144",
+      "--max-num-seqs",
+      "4",
+      "--kv-cache-dtype",
+      "auto",
+      "--gpu-memory-utilization",
+      "0.80",
+      "--kv-cache-memory-bytes",
+      "68000000000",
+      "--enable-prefix-caching",
+      "--enable-chunked-prefill",
+      "--max-num-batched-tokens",
+      "8192",
+      "--enable-auto-tool-choice",
+      "--tool-call-parser",
+      "inkling",
+      "--reasoning-parser",
+      "inkling",
+      "--enable-prompt-tokens-details",
+      "--limit-mm-per-prompt",
+      "{\"image\":4,\"video\":0}",
+      "--mm-processor-cache-gb",
+      "0",
+      "--default-chat-template-kwargs",
+      "{\"reasoning_effort\":\"low\"}",
+      "--worker-cls",
+      "qwen38fn_worker.HostCacheReleaseWorker",
+      "--middleware",
+      "vllm_reasoning_compat.ReasoningContentMiddleware",
+      "--middleware",
+      "glm53_runtime_policy.SplitTerminalSseMiddleware",
+      "--logprobs-mode",
+      "raw_logprobs",
+      "--shutdown-timeout",
+      "10"
+    ]
+  },
+  "containment": {
+    "unit": "inkling2-b8192",
+    "memory_high": "92G",
+    "memory_max": "96G",
+    "memory_swap_max": "0",
+    "oom_policy": "kill",
+    "kill_mode": "control-group"
+  },
+  "safety": {
+    "kill_floor_gib": 10,
+    "minimum_start_gib": 104,
+    "sample_hz": 1,
+    "startup_timeout_seconds": 1800,
+    "note": "10 GiB whole-host floor, the AGENTS 1M gate's low point. minimum_start_gib 104 = ceil(projected peak 92.4 + 10) plus margin, an ESTIMATE until a run measures the peak; the switch also requires MemFree to cover it after its cache release. cgroup MemoryCurrent is blind to CUDA unified memory on GB10, so the external memwatch is the real guard. HostCacheReleaseWorker (scripts/lib/qwen38fn_worker.py, unchanged; its root list is read from QWEN38FN_HOST_RELEASE_ROOTS) evicts the checkpoint's read-once page cache during the load and refuses the 63.3 GiB arena unless MemFree covers it plus 2 GiB: smoke run2 left about 21 GiB of checkpoint pages cached (MemFree 47.9 GiB against MemAvailable 69.4 GiB at its low point). The roots add every Inkling runtime and the serving default's runtimes, which are still cached when this profile starts after it."
+  },
+  "memory_model": {
+    "kv_bytes_per_token": 0,
+    "resident_weights_gib": 19,
+    "overhead_gib": 10,
+    "extra_gib": 63.4,
+    "floor_gib": 10,
+    "basis": "PROJECTION from smoke run2 (results/inkling2-gates/smoke-2026-11-23/run2; 2 x 131,072, 24e9-byte arena): vLLM reported 18.19 GiB of weights (resident_weights_gib rounds it up) and a group-aware capacity of 374,903 tokens = 2.86x at 131,072, where every sliding-window group is charged as if it held max_model_len. Four 262,144-token requests therefore need about 4 / (2.86 / 2) x 24e9 = 67.1e9 bytes; the fixed arena is 68e9 bytes (--kv-cache-memory-bytes, 63.33 GiB) = extra_gib. vLLM's startup log must show >= 4.0x at 262,144 or the arena is resized. Actual use is lower than that bound: decode held 5.3% of run2's pool for one ~29K-token request (about 44 KB per token), while each prefill transiently held about 18% of it regardless of prompt length. Run2 peaked at 46.22 GiB used (MemAvailable 115.61 -> 69.39) with a 22.35 GiB arena, so 23.87 GiB was not KV; overhead_gib 10 covers that 5.7 GiB above the weights plus four slots' larger CUDA graphs and prefill activations. Projected peak 19 + 10 + 63.4 = 92.4 GiB, so about 23 GiB available at the low point from a quiet 115.5 GiB start."
+  },
+  "serving": {
+    "parallel_slots": 4,
+    "request_context_cap": 262144,
+    "max_images": 4
+  },
+  "context_cap": 1048576,
+  "port_role": "production",
+  "bench": {
+    "stack_label": "inkling-2-mini-cuda-spark-128g-1m-tune-b8192"
+  },
+  "qualification_options": {
+    "vision_max_tokens": 4096
+  },
+  "qualification_targets": {
+    "note": "qwen38fn (Qwen3.8-Flash-Next, candidate 10) README headline: Inkling must meet these and beat its holdout to replace the default (promotion rule, results/inkling2-gates). Misses are reported.",
+    "decode_tok_s_min": {
+      "0": 34.07,
+      "28672": 40.92
+    },
+    "prefill_tok_s_min": {
+      "28672": 2711.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "vision_min": 0.64
+  }
+}

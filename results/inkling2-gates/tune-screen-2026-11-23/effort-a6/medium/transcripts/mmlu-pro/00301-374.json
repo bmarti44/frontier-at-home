@@ -1,0 +1,59 @@
+{
+  "index": 301,
+  "task_id": 374,
+  "rendered_prompt_sha256": "65a565930d73670c7e206e05c4b82b8e8dea78dd0941713d13ea30b034d7ba3d",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute carefully.\n\nProblem: net amount obtained from $4,500.00 successively discounted at 20%, 15% and 2(1/2)%. Successive discounts multiply by (1-0.20)(1-0.15)(1-0.025). 4500*0.8*0.85*0.975.\n0.8*0.85=0.68. 0.68*0.975 = 0.68*(1 -0.025)=0.68 -0.017 =0.663. 4500*0.663 = 4500*(0.600+0.063)=2700+283.5=2983.5. Or 0.663*45=29.835 *100 =2983.5. Option G $2,983.50. Need final only single letter form. Ensure no extra.Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.446799004916102
+  },
+  "response": {
+    "id": "cmpl-919b1886a3b6009f",
+    "object": "text_completion",
+    "created": 1795415218,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute carefully.\n\nProblem: net amount obtained from $4,500.00 successively discounted at 20%, 15% and 2(1/2)%. Successive discounts multiply by (1-0.20)(1-0.15)(1-0.025). 4500*0.8*0.85*0.975.\n0.8*0.85=0.68. 0.68*0.975 = 0.68*(1 -0.025)=0.68 -0.017 =0.663. 4500*0.663 = 4500*(0.600+0.063)=2700+283.5=2983.5. Or 0.663*45=29.835 *100 =2983.5. Option G $2,983.50. Need final only single letter form. Ensure no extra.Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 151,
+      "total_tokens": 369,
+      "completion_tokens": 218,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

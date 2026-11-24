@@ -1,0 +1,60 @@
+{
+  "index": 1135,
+  "task_id": 1135,
+  "rendered_prompt_sha256": "f60702b70c1492c7900d5ac16ce9dbf5cc07a2ae2ebef5c917833827e399f58e",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer arithmetic. Need compute: 3 trees each had 7 blue birds = 21. 2 different trees each had 4 = 8. 1 final tree had 3 = 3. Total 21+8+3=32. Need final line exactly Answer: 32. Brief maybe one sentence. Ensure final numeric answer on own line.3×7 = 21, 2×4 = 8, plus 3 = 32.\nAnswer: 32",
+  "finish_reason": "stop",
+  "expected": "32",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6602191617712379
+  },
+  "response": {
+    "id": "cmpl-8be3324ddc87ddb6",
+    "object": "text_completion",
+    "created": 1795428969,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer arithmetic. Need compute: 3 trees each had 7 blue birds = 21. 2 different trees each had 4 = 8. 1 final tree had 3 = 3. Total 21+8+3=32. Need final line exactly Answer: 32. Brief maybe one sentence. Ensure final numeric answer on own line.3×7 = 21, 2×4 = 8, plus 3 = 32.\nAnswer: 32",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 84,
+      "total_tokens": 194,
+      "completion_tokens": 110,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

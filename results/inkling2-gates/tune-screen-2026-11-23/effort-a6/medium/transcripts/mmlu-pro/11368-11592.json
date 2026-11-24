@@ -1,0 +1,59 @@
+{
+  "index": 11368,
+  "task_id": 11592,
+  "rendered_prompt_sha256": "a69f72d4359379cfc7aea42f180106ab98fc3ca9e7550047d6d048b9159071ba",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer multiple choice. Need compute saturation pressure of water vapor at -60°C, atmospheric pressure 100 kPa. Need be careful: saturation pressure over ice? At -60°C, saturation vapor pressure over ice is very low. Options include 0.00109 kPa maybe. Let's calculate.\n\nKnown saturation vapor pressure over ice: at -40°C ~0.128 kPa? Let's recall: saturation vapor pressure over water at 0°C = 0.611 kPa; at -10°C over ice ~0.26 kPa? at -20°C ~0.103 kPa; at -30°C ~0.038 kPa; at -40°C ~0.013 kPa? Hmm need exact.\n\nLet's use Murphy & Koop or Tetens. At -60°C, saturation vapor pressure over ice maybe ~0.0011 kPa? Option F 0.00109 kPa likely. Let's verify.\n\nKnown values: saturation vapor pressure over ice at -50°C is about 0.004 kPa? At -60°C maybe 0.0011 kPa. Yes option F.\n\nNeed answer single letter. Ensure no extra. Final: Answer: F.Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.186693251132965
+  },
+  "response": {
+    "id": "cmpl-b8386e26dd76b1bd",
+    "object": "text_completion",
+    "created": 1795417394,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer multiple choice. Need compute saturation pressure of water vapor at -60°C, atmospheric pressure 100 kPa. Need be careful: saturation pressure over ice? At -60°C, saturation vapor pressure over ice is very low. Options include 0.00109 kPa maybe. Let's calculate.\n\nKnown saturation vapor pressure over ice: at -40°C ~0.128 kPa? Let's recall: saturation vapor pressure over water at 0°C = 0.611 kPa; at -10°C over ice ~0.26 kPa? at -20°C ~0.103 kPa; at -30°C ~0.038 kPa; at -40°C ~0.013 kPa? Hmm need exact.\n\nLet's use Murphy & Koop or Tetens. At -60°C, saturation vapor pressure over ice maybe ~0.0011 kPa? Option F 0.00109 kPa likely. Let's verify.\n\nKnown values: saturation vapor pressure over ice at -50°C is about 0.004 kPa? At -60°C maybe 0.0011 kPa. Yes option F.\n\nNeed answer single letter. Ensure no extra. Final: Answer: F.Answer: F",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 163,
+      "total_tokens": 444,
+      "completion_tokens": 281,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

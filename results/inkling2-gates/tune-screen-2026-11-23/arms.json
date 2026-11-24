@@ -1,0 +1,49 @@
+{
+  "a0": {
+    "profile": "inkling-2-mini/cuda-spark-128g-1m",
+    "lever": null,
+    "base": null
+  },
+  "a1": {
+    "profile": "inkling-2-mini/cuda-spark-128g-1m-tune-b4096",
+    "lever": "batch4096",
+    "base": "a0"
+  },
+  "a2": {
+    "profile": "inkling-2-mini/cuda-spark-128g-1m-tune-b8192",
+    "lever": "batch8192",
+    "base": "a0"
+  },
+  "a3": {
+    "profile": "inkling-2-mini/cuda-spark-128g-1m-tune-pow2",
+    "lever": "max_ctas_pow2",
+    "base": "a0"
+  },
+  "a4": {
+    "profile": "inkling-2-mini/cuda-spark-128g-1m-tune-dspark",
+    "lever": "dspark7",
+    "base": "a0",
+    "min_concurrency": 3.0
+  },
+  "a5": {
+    "profile": "inkling-2-mini/cuda-spark-128g-1m-tune-humming",
+    "lever": "moe_humming",
+    "base": "a0"
+  },
+  "a0r": {
+    "profile": "inkling-2-mini/cuda-spark-128g-1m",
+    "lever": null,
+    "base": null,
+    "repeat_of": "a0"
+  },
+  "a6": {
+    "profile": "inkling-2-mini/cuda-spark-128g-1m-tune-dspark-humming-pow2",
+    "levers": [
+      "dspark7",
+      "moe_humming",
+      "max_ctas_pow2"
+    ],
+    "base": "a0",
+    "min_concurrency": 3.0
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "index": 1072,
+  "task_id": 1072,
+  "rendered_prompt_sha256": "56a105391aeb17affa5fcc78132a28eb0073c592e047beb29d5c65db1aedcee6",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "Maggie had $60, spent a quarter, so left with 3/4 * 60 = 45.\nRiza had $60, spent one-third, so left with 2/3 * 60 = 40.\nTotal left = 85.\nNeed final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: $85? They said numeric answer; form Answer: <number>. Use 85 maybe with dollar sign? Numeric answer likely $85. Do Answer: $85.Maggie has \\(60 \\times \\frac{3}{4} = 45\\) left. Riza has \\(60 \\times \\frac{2}{3} = 40\\) left. Total: \\(45 + 40 = 85\\).\n\nAnswer: $85",
+  "finish_reason": "stop",
+  "expected": "85",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.4000056558288634
+  },
+  "response": {
+    "id": "cmpl-86db1805e3588b51",
+    "object": "text_completion",
+    "created": 1795429019,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Maggie had $60, spent a quarter, so left with 3/4 * 60 = 45.\nRiza had $60, spent one-third, so left with 2/3 * 60 = 40.\nTotal left = 85.\nNeed final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: $85? They said numeric answer; form Answer: <number>. Use 85 maybe with dollar sign? Numeric answer likely $85. Do Answer: $85.Maggie has \\(60 \\times \\frac{3}{4} = 45\\) left. Riza has \\(60 \\times \\frac{2}{3} = 40\\) left. Total: \\(45 + 40 = 85\\).\n\nAnswer: $85",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 77,
+      "total_tokens": 259,
+      "completion_tokens": 182,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": true
+}

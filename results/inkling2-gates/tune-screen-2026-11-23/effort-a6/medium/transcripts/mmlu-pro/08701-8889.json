@@ -1,0 +1,59 @@
+{
+  "index": 8701,
+  "task_id": 8889,
+  "rendered_prompt_sha256": "c56aa81a66ebc2ed7b207c2c7e7c7a100e5fc37edb6b15fdf5f07a79714c5b24",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer arithmetic. Compute 2314 / 4. 4*500=2000 remainder314. 4*78=312 remainder2. So quotient 578 remainder2. Check 4*578=2312, remainder2. Option B. Need final only single letter form. Ensure no extra.Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.3676018612459302
+  },
+  "response": {
+    "id": "cmpl-aa0cb2d49b4742ea",
+    "object": "text_completion",
+    "created": 1795419978,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer arithmetic. Compute 2314 / 4. 4*500=2000 remainder314. 4*78=312 remainder2. So quotient 578 remainder2. Check 4*578=2312, remainder2. Option B. Need final only single letter form. Ensure no extra.Answer: B",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 111,
+      "total_tokens": 186,
+      "completion_tokens": 75,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

@@ -58,7 +58,7 @@ CONTROL_INSTALLER = ROOT / "scripts/53_install_switch_control.sh"
 FIXTURES = ROOT / "scripts/tests/fixtures/profile-conformance"
 SWITCH_ALIASES = (
     "dsv4", "glm52", "qwen38", "qwen38-1m", "laguna", "glm53-1m", "dsv41flash",
-    "qwen38fn",
+    "qwen38fn", "inkling2mini",
 )
 PRODUCTION_REPO = "/home/bmarti44/spark-deepseek-v4-flash"
 GLM53_PROFILE = ROOT / "configs" / "profiles" / "glm-5.3-flash" / "cuda-spark-128g-1m.json"
@@ -1791,6 +1791,233 @@ class EngineSwitchTests(unittest.TestCase):
                 json.loads((root / "active.json").read_text())["profile"], "dsv4"
             )
             self.assertFalse((root / "qwen38fn-running").exists())
+
+    # -- inkling2mini: Inkling 2 Mini on vLLM, a generic alias qualified by
+    # results/inkling2-gates/qualify-2026-11-23-c2. Most cases switch from the
+    # serving default qwen38fn, so rollback is generic to generic.
+
+    def inkling2mini_root(self, root: Path, *, hashes: bool = True) -> None:
+        (root / "active.json").write_text(
+            json.dumps({"schema_version": 1, "profile": "qwen38fn"})
+        )
+        (root / "qwen38fn-running").touch()
+        (root / "qwen38fn-hashes-valid").touch()
+        if hashes:
+            (root / "inkling2mini-hashes-valid").touch()
+
+    def test_inkling2mini_production_launcher_matches_the_profile(self):
+        snapshot = render_switch_snapshot("inkling2mini")
+        self.assertEqual(snapshot["mechanism"], "systemd-run")
+        self.assertEqual(
+            snapshot["binary"],
+            "/home/bmarti44/.cache/inkling-2-mini/native-runtime-001/"
+            "runtime/bin/python3.12",
+        )
+        argv = snapshot["argv"]
+        self.assertEqual(argv[:3], ["-B", "-m", "vllm.entrypoints.openai.api_server"])
+        self.assertEqual(argv[argv.index("--model") + 1],
+                         "/home/bmarti44/models/inkling-2-mini")
+        self.assertEqual(argv[argv.index("--served-model-name") + 1:
+                              argv.index("--served-model-name") + 3],
+                         ["inkling-2-mini", "default"])
+        self.assertEqual(argv[argv.index("--max-model-len") + 1], "262144")
+        self.assertEqual(argv[argv.index("--max-num-seqs") + 1], "4")
+        self.assertEqual(argv[argv.index("--port") + 1], "8013")
+        self.assertEqual(argv[argv.index("--kv-cache-dtype") + 1], "auto")
+        self.assertEqual(argv[argv.index("--limit-mm-per-prompt") + 1],
+                         '{"image":4,"video":0}')
+        self.assertEqual(argv[argv.index("--default-chat-template-kwargs") + 1],
+                         '{"reasoning_effort":"low"}')
+        systemd = snapshot["systemd"]
+        self.assertEqual(systemd["unit"], "inkling2mini-engine")
+        self.assertEqual(systemd["properties"]["User"], "bmarti44")
+        self.assertEqual(systemd["properties"]["MemorySwapMax"], "0")
+        self.assertEqual(systemd["properties"]["OOMPolicy"], "kill")
+        self.assertEqual(systemd["properties"]["KillMode"], "control-group")
+        self.assertEqual(
+            systemd["server_log"],
+            "/home/dsv4/ds4-project/engine-switch/inkling2mini.server.log",
+        )
+        self.assertEqual(snapshot["env"]["PYTHONPATH"],
+                         f"{PRODUCTION_REPO}/scripts/lib")
+        # The lever screen's carrier a6 and the release of every Inkling and
+        # Flash-Next runtime before the KV arena.
+        self.assertEqual(snapshot["env"]["INKLING2_MAX_CTAS_POW2"], "1")
+        self.assertEqual(snapshot["env"]["INKLING2_MAX_IMAGE_SIDE"], "4096")
+        self.assertEqual(snapshot["env"]["QWEN38FN_HOST_RELEASE_ROOTS"],
+                         "/home/bmarti44/.cache/inkling-2-mini:"
+                         "/home/bmarti44/.cache/qwen38-flash-next")
+        self.assertEqual(argv[argv.index("--speculative-config") + 1],
+                         '{"method":"dspark","num_speculative_tokens":7,'
+                         '"draft_sample_method":"probabilistic"}')
+        self.assertEqual(argv[argv.index("--moe-backend") + 1], "humming")
+
+    def test_inkling2mini_switches_from_qwen38fn_without_a_test_marker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.inkling2mini_root(root)
+            (root / "inkling2mini-unit-killed").touch()
+            result = self.run_switch(root, "inkling2mini")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "inkling2mini",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            self.assertLess(actions.index("HASHES inkling2mini"),
+                            actions.index("STOP qwen38fn"))
+            self.assertIn("SYSTEMCTL reset-failed inkling2mini-engine.service", actions)
+            launch = next(line for line in actions
+                          if line.startswith("SYSTEMD_RUN --unit=inkling2mini-engine"))
+            self.assertIn(
+                f"{root}/cache/inkling-2-mini/native-runtime-001/runtime/bin/"
+                "python3.12 -B -m vllm.entrypoints.openai.api_server --model "
+                f"{root}/models/inkling-2-mini --served-model-name "
+                "inkling-2-mini default --host 127.0.0.1 --port 8013",
+                launch,
+            )
+            self.assertIn("--property MemorySwapMax=0", launch)
+            self.assertIn(f"--setenv PYTHONPATH={ROOT}/scripts/lib", launch)
+            self.assertIn(
+                "--setenv QWEN38FN_HOST_RELEASE_ROOTS="
+                f"{root}/cache/inkling-2-mini:{root}/cache/qwen38-flash-next",
+                launch)
+            self.assertIn("/run/lock/frontier-at-home/inference.lock", launch)
+            self.assertIn(
+                f"--property StandardOutput=append:{root}/inkling2mini.server.log",
+                launch,
+            )
+            self.assertLess(actions.index("STOP qwen38fn"),
+                            actions.index(launch))
+            for step in ("START inkling2mini", "WAIT inkling2mini", "VERIFY inkling2mini"):
+                self.assertIn(step, actions)
+            self.assertFalse((root / "inkling2mini-unit-killed").exists())
+            self.assertFalse((root / "qwen38fn-running").exists())
+            self.assertTrue((root / "inkling2mini-running").exists())
+
+    def test_inkling2mini_hash_failure_is_rejected_before_the_default_is_stopped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.inkling2mini_root(root, hashes=False)
+            result = self.run_switch(root, "inkling2mini")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("inkling2mini test artifact hashes are not approved",
+                          result.stderr)
+            self.assertTrue((root / "qwen38fn-running").exists())
+            self.assertFalse((root / "actions.log").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+
+    def test_inkling2mini_startup_death_rolls_back_to_qwen38fn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.inkling2mini_root(root)
+            (root / "fail-inkling2mini-start").touch()
+            result = self.run_switch(root, "inkling2mini")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("inkling2mini transient unit failed to start", result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            self.assertNotIn("START inkling2mini", actions)
+            self.assertLess(actions.index("STOP inkling2mini"),
+                            actions.index("START qwen38fn"))
+            self.assertIn("VERIFY qwen38fn", actions)
+            self.assertTrue((root / "qwen38fn-running").exists())
+            self.assertFalse((root / "inkling2mini-running").exists())
+
+    def test_inkling2mini_wrong_model_identity_rolls_back_to_qwen38fn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.inkling2mini_root(root)
+            (root / "fail-inkling2mini-verify").touch()
+            result = self.run_switch(root, "inkling2mini")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            self.assertIn("START inkling2mini", actions)
+            self.assertLess(actions.index("VERIFY inkling2mini"),
+                            actions.index("STOP inkling2mini"))
+            self.assertLess(actions.index("STOP inkling2mini"),
+                            actions.index("START qwen38fn"))
+            self.assertIn("VERIFY qwen38fn", actions)
+            self.assertTrue((root / "qwen38fn-running").exists())
+            self.assertFalse((root / "inkling2mini-running").exists())
+
+    def test_switching_back_to_qwen38fn_stops_inkling2mini_first(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "inkling2mini"})
+            )
+            (root / "inkling2mini-running").touch()
+            (root / "qwen38fn-hashes-valid").touch()
+            (root / "inkling2mini-hashes-valid").touch()
+            result = self.run_switch(root, "qwen38fn")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "qwen38fn",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            self.assertLess(actions.index("HASHES qwen38fn"),
+                            actions.index("STOP inkling2mini"))
+            self.assertLess(actions.index("STOP inkling2mini"),
+                            actions.index("START qwen38fn"))
+            self.assertFalse((root / "inkling2mini-running").exists())
+            self.assertTrue((root / "qwen38fn-running").exists())
+
+    def test_status_and_stop_accept_inkling2mini(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "inkling2mini"})
+            )
+            result = self.run_switch(root, "status", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            status = json.loads(result.stdout)
+            self.assertEqual(status["active_profile"], "inkling2mini")
+            self.assertEqual(status["state"], "recorded")
+            (root / "inkling2mini-running").touch()
+            result = self.run_switch(root, "stop")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("STOPPED inkling2mini", result.stdout)
+            self.assertFalse((root / "inkling2mini-running").exists())
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "inkling2mini",
+            )
+
+    def test_reboot_restore_restarts_inkling2mini(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "active.json").write_text(
+                json.dumps({"schema_version": 1, "profile": "inkling2mini"})
+            )
+            (root / "inkling2mini-hashes-valid").touch()
+            result = self.run_switch(root, "restore")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                json.loads((root / "active.json").read_text())["profile"],
+                "inkling2mini",
+            )
+            actions = (root / "actions.log").read_text().splitlines()
+            for step in ("HASHES inkling2mini", "START inkling2mini", "VERIFY inkling2mini"):
+                self.assertIn(step, actions)
+            self.assertNotIn("DSV4 start", actions)
+            launch = next(line for line in actions
+                          if line.startswith("SYSTEMD_RUN --unit=inkling2mini-engine"))
+            self.assertIn(
+                "--setenv QWEN38FN_HOST_RELEASE_ROOTS="
+                f"{root}/cache/inkling-2-mini:{root}/cache/qwen38-flash-next",
+                launch)
 
     def test_generic_discovery_error_fails_closed(self):
         # An alias-shaped active profile that no profile resolves might still

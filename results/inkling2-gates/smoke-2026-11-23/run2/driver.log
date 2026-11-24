@@ -1,0 +1,37 @@
+2026-11-23T03:38:07Z run run2 profile inkling-2-mini/cuda-spark-128g-smoke stack inkling-2-mini-cuda-spark-128g-smoke
+2026-11-23T03:38:07Z head b451e1c3021b1ca058d440851047ab9b7e5fb058 dirty=0
+2026-11-23T03:38:07Z inference lock /run/lock/frontier-at-home/inference.lock held by the driver
+2026-11-23T03:38:07Z page cache released under /home/bmarti44/.cache/inkling-2-mini: 73077 files
+2026-11-23T03:38:07Z page cache released under /home/bmarti44/models/inkling-2-mini: 30 files
+2026-11-23T03:38:07Z page cache released under /home/bmarti44/.cache/qwen38-flash-next: 136225 files
+2026-11-23T03:38:07Z page cache released under /home/bmarti44/models/qwen3.8-flash-next-nvfp4: 52 files
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.609,"stable_samples_observed":3}
+2026-11-23T03:38:07Z preload MemFree:=120445568 MemAvailable:=121220360 SwapFree:=16595404 
+2026-11-23T03:38:07Z gpu self-test
+2026-11-23T03:38:15Z gpu self-test: {"torch": "2.14.0+cu130", "cuda": "13.0", "device": "NVIDIA GB10", "cc": [12, 1], "matmul_ok": true, "pageable_uses_host_page_tables": 1, "vllm": "0.34.0rc1.dev1133+g647a76866", "inkling2_use_sm100_kernels": false, "flashinfer": "0.7.4", "vision_triton_attn_max_abs_err_vs_fp32": [0.002184152603149414, 0.0010367929935455322, 0.0008735954761505127], "vision_triton_attn_ok": true}
+2026-11-23T03:38:17Z run2: launching in scope inkling2-smoke-run2-3547681
+{"pass":true,"required_gib":30.0,"mem_available_gib":115.62,"stable_samples_observed":3}
+{"ok":true,"profile":"inkling-2-mini/cuda-spark-128g-smoke","pid":3548077,"port":8018}
+2026-11-23T03:41:59Z run2: ready after 222 s
+2026-11-23T03:41:59Z idle_mem_available_kib=73969536
+serverlog (APIServer pid=3548077) INFO 11-22 22:39:00 [startup.py:96] non-default args: {'default_chat_template_kwargs': {'reasoning_effort': 'low'}, 'enable_auto_tool_choice': True, 'tool_call_parser': 'inkling', 'enable_prompt_tokens_details': True, 'host': '127.0.0.1', 'port': 8018, 'middleware': ['vllm_reasoning_compat.ReasoningContentMiddleware', 'glm53_runtime_policy.SplitTerminalSseMiddleware'], 'mod
+serverlog (EngineCore pid=3548413) INFO 11-22 22:41:08 [model_runner.py:461] Model loading took 18.19 GiB memory and 107.629924 seconds
+serverlog (EngineCore pid=3548413) INFO 11-22 22:41:21 [kv_cache_utils.py:1123] GPU KV cache size: 374,903 tokens, Maximum concurrency for 131,072 tokens per request: 2.86x
+serverlog (EngineCore pid=3548413) INFO 11-22 22:41:21 [kv_cache_utils.py:839] kv lcm block sizes 64
+serverlog (EngineCore pid=3548413) INFO 11-22 22:41:55 [breakable_cudagraph.py:302] Breakable CUDA graph enabled
+serverlog Capturing CUDA graphs (PIECEWISE):   0%|          | 0/3 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):  67%|██████▋   | 2/3 [00:00<00:00, 17.76it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 3/3 [00:00<00:00, 18.10it/s]
+serverlog Capturing CUDA graphs (FULL):   0%|          | 0/2 [00:00<?, ?it/s]Capturing CUDA graphs (FULL): 100%|██████████| 2/2 [00:00<00:00, 18.63it/s]Capturing CUDA graphs (FULL): 100%|██████████| 2/2 [00:00<00:00, 18.60it/s]
+{"greedy": ["170c63d11040", "c7fe1a930bcb", "217aaabaf808"], "tokens_per_chunk": [1.1531531531531531, 1.052910052910053, 1.0526315789473684]}
+{"sum_prompt_tokens": 122633, "sum_ttft_s": 56.74130069417879, "aggregate_prefill_tok_per_s": 2161.2652247956166}
+[19/20] id=choose-email-among-distractors passed=True
+[20/20] id=typed-composite passed=True
+{"ok": true, "out": "/home/bmarti44/inkling2/results/inkling2-gates/smoke-2026-11-23/run2/toolcall.json", "score": 1.0}
+[9/10] id=validation_Architecture_and_Engineering_1 correct=False parsed=None
+[10/10] id=validation_Architecture_and_Engineering_10 correct=False parsed=None
+{"ok": false, "summary": "/home/bmarti44/inkling2/results/inkling2-gates/smoke-2026-11-23/run2/vision/summary.json", "transcripts": "/home/bmarti44/inkling2/results/inkling2-gates/smoke-2026-11-23/run2/vision/transcripts.jsonl"}
+2026-11-23T03:48:17Z vision exit nonzero
+{"ok":true,"profile":"inkling-2-mini/cuda-spark-128g-smoke","stopped":true}
+2026-11-23T03:48:20Z run2: scope empty after stop
+2026-11-23T03:48:20Z postrun MemAvailable:=121341068 SwapFree:=16595404 
+ERROR: inkling-2-mini/cuda-spark-128g-smoke is not running (state file absent)
+2026-11-23T03:48:25Z driver exit

@@ -1,0 +1,61 @@
+{
+  "index": 126,
+  "task_id": 126,
+  "rendered_prompt_sha256": "bf3d6f9a2dfe2322172edb7ddb720a990e94720c726afe140a92fcd3b1dcbe80",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Chicken sausages = 38. Fish sausages = 6 more than chicken = 44. Total = 38 + 44 = 82. Need final line exactly Answer: 82. Ensure no extra after final line.Fish sausages: 38 + 6 = 44. Total: 38 + 44 = 82.\nAnswer: 82",
+  "finish_reason": "stop",
+  "expected": "82",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5381267638877034
+  },
+  "response": {
+    "id": "cmpl-8417c8a3fff16e34",
+    "object": "text_completion",
+    "created": 1795429108,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Chicken sausages = 38. Fish sausages = 6 more than chicken = 44. Total = 38 + 44 = 82. Need final line exactly Answer: 82. Ensure no extra after final line.Fish sausages: 38 + 6 = 44. Total: 38 + 44 = 82.\nAnswer: 82",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 96,
+      "total_tokens": 190,
+      "completion_tokens": 94,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|message_system|><|content_text|>Thinking effort level: 0.2<|end_message|><|message_user|><|content_text|>Dylan needed chicken sausages and fish sausages to make sausage buns at a party. He bought 38 chicken sausages and 6 more fish sausages than chicken sausages. How many sausages did Dylan buy in all?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|end_message|>"
+}

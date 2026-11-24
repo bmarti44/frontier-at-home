@@ -1,0 +1,60 @@
+{
+  "index": 346,
+  "task_id": 346,
+  "rendered_prompt_sha256": "6cae015caf78846ad158415a547d761844babd6f4bd5f1ff7cf6eeebd92ac130",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute carefully.\n\nJenny buys 1 bag of cookies a week. Bag has 36 cookies. She puts 4 cookies in son's lunch box 5 days a week. Son eats? It says she puts 4 cookies in son's lunch box 5 days a week. That's 4*5=20 cookies for son. Husband eats 1 cookie a day for 7 days =7. Jenny eats rest. Total 36 -20 -7 =9. Need ensure son's lunch box cookies are eaten by son? It implies she puts 4 cookies in son's lunch box 5 days a week; likely son eats them. Rest for Jenny. 36-20-7=9.\n\nNeed final with brief maybe one sentence and final line exactly Answer: 9. Ensure final numeric answer on own line. No extra after.Son: 4 × 5 = 20 cookies. Husband: 1 × 7 = 7 cookies. Jenny: 36 − 20 − 7 = 9.\nAnswer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.8538568699732423
+  },
+  "response": {
+    "id": "cmpl-a6196faa1ccd2946",
+    "object": "text_completion",
+    "created": 1795428909,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute carefully.\n\nJenny buys 1 bag of cookies a week. Bag has 36 cookies. She puts 4 cookies in son's lunch box 5 days a week. Son eats? It says she puts 4 cookies in son's lunch box 5 days a week. That's 4*5=20 cookies for son. Husband eats 1 cookie a day for 7 days =7. Jenny eats rest. Total 36 -20 -7 =9. Need ensure son's lunch box cookies are eaten by son? It implies she puts 4 cookies in son's lunch box 5 days a week; likely son eats them. Rest for Jenny. 36-20-7=9.\n\nNeed final with brief maybe one sentence and final line exactly Answer: 9. Ensure final numeric answer on own line. No extra after.Son: 4 × 5 = 20 cookies. Husband: 1 × 7 = 7 cookies. Jenny: 36 − 20 − 7 = 9.\nAnswer: 9",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 113,
+      "total_tokens": 358,
+      "completion_tokens": 245,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

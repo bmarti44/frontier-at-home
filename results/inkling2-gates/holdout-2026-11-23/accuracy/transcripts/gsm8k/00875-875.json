@@ -1,0 +1,61 @@
+{
+  "index": 875,
+  "task_id": 875,
+  "rendered_prompt_sha256": "26a921a7775854b5119dda6ac55374128da5ad378469d17953ef6386fd9524a1",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "Paul starts with 52 marbles. His friend gave him 28 marbles, so he has 52 + 28 = 80 marbles. Then he lost 1/4 of his marbles. 1/4 of 80 = 20. He has 80 - 20 = 60 marbles left.\n\nAnswer: 60Paul has 52 + 28 = 80 marbles. He loses 1/4 of 80 = 20 marbles, leaving 80 − 20 = 60.\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.635663831140846
+  },
+  "response": {
+    "id": "cmpl-8f4e6d016c10410f",
+    "object": "text_completion",
+    "created": 1795429030,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Paul starts with 52 marbles. His friend gave him 28 marbles, so he has 52 + 28 = 80 marbles. Then he lost 1/4 of his marbles. 1/4 of 80 = 20. He has 80 - 20 = 60 marbles left.\n\nAnswer: 60Paul has 52 + 28 = 80 marbles. He loses 1/4 of 80 = 20 marbles, leaving 80 − 20 = 60.\n\nAnswer: 60",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 83,
+      "total_tokens": 214,
+      "completion_tokens": 131,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|message_system|><|content_text|>Thinking effort level: 0.2<|end_message|><|message_user|><|content_text|>Paul has 52 marbles. His friend gave him 28 marbles. Then, he lost 1/4 of his marbles. How many marbles does Paul have left?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|end_message|>"
+}

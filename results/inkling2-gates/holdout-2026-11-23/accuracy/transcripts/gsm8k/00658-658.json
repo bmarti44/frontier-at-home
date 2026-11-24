@@ -1,0 +1,60 @@
+{
+  "index": 658,
+  "task_id": 658,
+  "rendered_prompt_sha256": "885d1bc6d66714f716944f0741aabf00cb77ae7e1d8972b834bcca7a0fd9ace7",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Rice 30 min. Pork took 20 more than rice => 50 min. Beans took half combined cooking time of pork and rice = (50+30)/2 = 40 min. Total = 30+50+40=120. Need final with brief explanation and final line exactly Answer: 120. Ensure no extra after final line.Rice: 30 minutes  \nPork: 30 + 20 = 50 minutes  \nBeans: (50 + 30) / 2 = 40 minutes  \nTotal: 30 + 50 + 40 = 120 minutes\n\nAnswer: 120",
+  "finish_reason": "stop",
+  "expected": "120",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.4009236730635166
+  },
+  "response": {
+    "id": "cmpl-9f2ae0a244a402bc",
+    "object": "text_completion",
+    "created": 1795428855,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Rice 30 min. Pork took 20 more than rice => 50 min. Beans took half combined cooking time of pork and rice = (50+30)/2 = 40 min. Total = 30+50+40=120. Need final with brief explanation and final line exactly Answer: 120. Ensure no extra after final line.Rice: 30 minutes  \nPork: 30 + 20 = 50 minutes  \nBeans: (50 + 30) / 2 = 40 minutes  \nTotal: 30 + 50 + 40 = 120 minutes\n\nAnswer: 120",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 118,
+      "total_tokens": 262,
+      "completion_tokens": 144,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

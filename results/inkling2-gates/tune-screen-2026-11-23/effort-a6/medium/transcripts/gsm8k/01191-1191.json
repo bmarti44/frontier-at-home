@@ -1,0 +1,60 @@
+{
+  "index": 1191,
+  "task_id": 1191,
+  "rendered_prompt_sha256": "49df8044c28d0d26ff257589d1e1af5c78e3a6818482239229bab6fa882f4d97",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Hair started at 10 inches and ended at 8 inches, so cut length = 2 inches. Cost of haircut = $30 per inch * 2 inches = $60. Color = $40. Total = $100.\n\nNeed to end with final numeric answer on its own line in form: Answer: <number>. Probably include dollar sign? They say numeric answer. Form: Answer: <number>. Could do Answer: $100. They said numeric answer; maybe \"100\". But costs in dollars. The form says <number>, so Answer: 100. Maybe include $? \"Answer: $100\" is not purely numeric. Use Answer: 100.\n\nNeed brief if needed. Provide concise explanation then final line.Hair cut length: 10 − 8 = 2 inches.  \nHaircut cost: 2 × $30 = $60.  \nTotal: $60 + $40 = $100.\n\nAnswer: 100",
+  "finish_reason": "stop",
+  "expected": "100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.992505153175443
+  },
+  "response": {
+    "id": "cmpl-9a98b48d1a9148bf",
+    "object": "text_completion",
+    "created": 1795415273,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Hair started at 10 inches and ended at 8 inches, so cut length = 2 inches. Cost of haircut = $30 per inch * 2 inches = $60. Color = $40. Total = $100.\n\nNeed to end with final numeric answer on its own line in form: Answer: <number>. Probably include dollar sign? They say numeric answer. Form: Answer: <number>. Could do Answer: $100. They said numeric answer; maybe \"100\". But costs in dollars. The form says <number>, so Answer: 100. Maybe include $? \"Answer: $100\" is not purely numeric. Use Answer: 100.\n\nNeed brief if needed. Provide concise explanation then final line.Hair cut length: 10 − 8 = 2 inches.  \nHaircut cost: 2 × $30 = $60.  \nTotal: $60 + $40 = $100.\n\nAnswer: 100",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 89,
+      "total_tokens": 307,
+      "completion_tokens": 218,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

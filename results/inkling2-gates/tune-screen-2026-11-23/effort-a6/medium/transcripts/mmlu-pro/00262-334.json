@@ -1,0 +1,59 @@
+{
+  "index": 262,
+  "task_id": 334,
+  "rendered_prompt_sha256": "b54bdd063a9ce757d9acb1bc1d45332a1a0aceb91ba3f06f0fd68c71d3840e8b",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute amount due. Loan $150, 90 days, interest rate 6%. Likely simple interest: I = P*r*t where t = 90/360? Bank loans often use 360-day year. I = 150*0.06*(90/360)=150*0.06*0.25=150*0.015=2.25. Amount=152.25. Option F. If using 365, I=150*.06*90/365=2.219, amount 152.22 not option. If 6% per 90 days? amount 159 option I. But bank loan 90 days interest rate 6% likely simple interest with 360-day year: 152.25. Need final only single letter form. Ensure no extra.Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.448879510629922
+  },
+  "response": {
+    "id": "cmpl-8a51ffbcb5a41a84",
+    "object": "text_completion",
+    "created": 1795415201,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute amount due. Loan $150, 90 days, interest rate 6%. Likely simple interest: I = P*r*t where t = 90/360? Bank loans often use 360-day year. I = 150*0.06*(90/360)=150*0.06*0.25=150*0.015=2.25. Amount=152.25. Option F. If using 365, I=150*.06*90/365=2.219, amount 152.22 not option. If 6% per 90 days? amount 159 option I. But bank loan 90 days interest rate 6% likely simple interest with 360-day year: 152.25. Need final only single letter form. Ensure no extra.Answer: F",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 141,
+      "total_tokens": 329,
+      "completion_tokens": 188,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

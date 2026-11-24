@@ -1,0 +1,60 @@
+{
+  "index": 1141,
+  "task_id": 1141,
+  "rendered_prompt_sha256": "d9174aae9df296410d406cdc91c0273a88d815b85bc340f4ec4bb14e6d9ea4bf",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a calculation. Chester eats 3 eggs/day for 30 days = 90 eggs. Then 5 eggs/day for 30 days = 150 eggs. Total = 240 eggs. Dozens = 240/12 = 20. Need final numeric answer on its own line in form Answer: <number>. Brief reasoning okay. Ensure final line exactly.3 × 30 = 90 eggs; 5 × 30 = 150 eggs; total = 240 eggs; 240 / 12 = 20 dozen.\n\nAnswer: 20",
+  "finish_reason": "stop",
+  "expected": "20",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.583411722909659
+  },
+  "response": {
+    "id": "cmpl-8a605e503afee61e",
+    "object": "text_completion",
+    "created": 1795415644,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a calculation. Chester eats 3 eggs/day for 30 days = 90 eggs. Then 5 eggs/day for 30 days = 150 eggs. Total = 240 eggs. Dozens = 240/12 = 20. Need final numeric answer on its own line in form Answer: <number>. Brief reasoning okay. Ensure final line exactly.3 × 30 = 90 eggs; 5 × 30 = 150 eggs; total = 240 eggs; 240 / 12 = 20 dozen.\n\nAnswer: 20",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 85,
+      "total_tokens": 215,
+      "completion_tokens": 130,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

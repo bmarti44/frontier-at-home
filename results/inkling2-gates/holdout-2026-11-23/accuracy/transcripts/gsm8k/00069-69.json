@@ -1,0 +1,61 @@
+{
+  "index": 69,
+  "task_id": 69,
+  "rendered_prompt_sha256": "a1f4eac34b45dcb358f133c602a08a7a096a0e088609d60a3943f99bfd0719d4",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "Bailey starts with x. Receives 5*8 = 40. Ends with 100. x+40=100, x=60. Need final numeric answer on own line. Brief reasoning okay. Ensure final line exactly Answer: 60 maybe with dollar sign? User says numeric answer. Use Answer: $60? They said form Answer: <number>. Numeric answer maybe 60. Do that.She earns 5 × 8 = $40 over 8 weeks. So she started with 100 − 40 = 60.\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.5356175280176103
+  },
+  "response": {
+    "id": "cmpl-a9d633bef43519df",
+    "object": "text_completion",
+    "created": 1795428775,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Bailey starts with x. Receives 5*8 = 40. Ends with 100. x+40=100, x=60. Need final numeric answer on own line. Brief reasoning okay. Ensure final line exactly Answer: 60 maybe with dollar sign? User says numeric answer. Use Answer: $60? They said form Answer: <number>. Numeric answer maybe 60. Do that.She earns 5 × 8 = $40 over 8 weeks. So she started with 100 − 40 = 60.\n\nAnswer: 60",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 92,
+      "total_tokens": 220,
+      "completion_tokens": 128,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|message_system|><|content_text|>Thinking effort level: 0.2<|end_message|><|message_user|><|content_text|>Bailey starts with a certain amount of money. Then she receives a weekly allowance of $5 for 8 weeks. At the end of the 8 weeks, if she has a total of $100, how much money did Bailey start with?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|end_message|>"
+}

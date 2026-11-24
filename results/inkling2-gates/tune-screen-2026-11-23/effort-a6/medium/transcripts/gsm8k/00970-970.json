@@ -1,0 +1,60 @@
+{
+  "index": 970,
+  "task_id": 970,
+  "rendered_prompt_sha256": "5925149bfdc42be4256a3676439acb7bda9b0aca8cc44b6132b24176f7a67dab",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "The user wants a math answer. Need think briefly. Carlton's team has 13 players. Zeke's team has 7 more than Carlton's: 13+7=20. Combined: 13+20=33. Need final numeric answer on its own line form Answer: <number>. We can include brief explanation then final line. Ensure final line exactly.Carlton’s team has 13 players. Zeke’s team has 13 + 7 = 20 players. Combined: 13 + 20 = 33.\n\nAnswer: 33",
+  "finish_reason": "stop",
+  "expected": "33",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.558550028130412
+  },
+  "response": {
+    "id": "cmpl-828e538229514771",
+    "object": "text_completion",
+    "created": 1795415435,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a math answer. Need think briefly. Carlton's team has 13 players. Zeke's team has 7 more than Carlton's: 13+7=20. Combined: 13+20=33. Need final numeric answer on its own line form Answer: <number>. We can include brief explanation then final line. Ensure final line exactly.Carlton’s team has 13 players. Zeke’s team has 13 + 7 = 20 players. Combined: 13 + 20 = 33.\n\nAnswer: 33",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 80,
+      "total_tokens": 212,
+      "completion_tokens": 132,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

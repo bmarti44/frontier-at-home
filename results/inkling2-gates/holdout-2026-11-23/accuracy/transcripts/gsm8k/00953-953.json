@@ -1,0 +1,60 @@
+{
+  "index": 953,
+  "task_id": 953,
+  "rendered_prompt_sha256": "7440d5478c8c4d4e87d41b2f3a9c26f07eaf5b25c31d0629a09cc17341666936",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need parse carefully. Kim usually sleeps 10 p.m. to 6 a.m. = 8 hours = 480 min. One day, after reviewing cameras, she finds that she woke up that day and was sleepwalking from 2:15 to 2:38 am. Also, that day she woke up 5 minutes earlier than usual to go to the bathroom. How many minutes did she sleep on her bed that day?\n\nNeed determine total sleep on bed that day. She woke up 5 minutes earlier than usual to go to bathroom. Usual wake 6:00, so woke at 5:55? But also woke up and was sleepwalking from 2:15 to 2:38. Sleepwalking means she was awake? She woke up and was sleepwalking from 2:15 to 2:38. During sleepwalking she is not sleeping on bed (she's out of bed). Need subtract 23 minutes from total time in bed? Let's reason.\n\nTimeline: goes to bed at 10 p.m. usual. Wakes 5 min earlier than usual to go to bathroom: usual wake 6:00, so 5:55. Total time in room/bed from 10pm to 5:55 = 7h55 = 475 min. During 2:15-2:38 (23 min) she woke up and was sleepwalking, presumably off bed, so not sleeping on bed. Also maybe she woke up 5 min earlier to go to bathroom at 5:55, that's wake time not sleep. So sleep on bed = 475 - 23 = 452 min. But check: \"she woke up that day and was sleepwalking from 2:15 to 2:38 am\" Could mean she woke up at 2:15 and was sleepwalking until 2:38, then went back to bed and slept until 5:55. Yes subtract 23.\n\nNeed final numeric answer only with brief. Ensure final line exact.Usual sleep time: 10 p.m. to 6 a.m. = 480 minutes.  \nThat day she woke 5 minutes earlier: 480 − 5 = 475 minutes in bed.  \nSleepwalking interval: 2:15 to 2:38 = 23 minutes, not sleeping on the bed.  \n475 − 23 = 452.\n\nAnswer: 452",
+  "finish_reason": "stop",
+  "expected": "452",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.525505065917969
+  },
+  "response": {
+    "id": "cmpl-b4dc6ab683da6f4c",
+    "object": "text_completion",
+    "created": 1795428715,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need parse carefully. Kim usually sleeps 10 p.m. to 6 a.m. = 8 hours = 480 min. One day, after reviewing cameras, she finds that she woke up that day and was sleepwalking from 2:15 to 2:38 am. Also, that day she woke up 5 minutes earlier than usual to go to the bathroom. How many minutes did she sleep on her bed that day?\n\nNeed determine total sleep on bed that day. She woke up 5 minutes earlier than usual to go to bathroom. Usual wake 6:00, so woke at 5:55? But also woke up and was sleepwalking from 2:15 to 2:38. Sleepwalking means she was awake? She woke up and was sleepwalking from 2:15 to 2:38. During sleepwalking she is not sleeping on bed (she's out of bed). Need subtract 23 minutes from total time in bed? Let's reason.\n\nTimeline: goes to bed at 10 p.m. usual. Wakes 5 min earlier than usual to go to bathroom: usual wake 6:00, so 5:55. Total time in room/bed from 10pm to 5:55 = 7h55 = 475 min. During 2:15-2:38 (23 min) she woke up and was sleepwalking, presumably off bed, so not sleeping on bed. Also maybe she woke up 5 min earlier to go to bathroom at 5:55, that's wake time not sleep. So sleep on bed = 475 - 23 = 452 min. But check: \"she woke up that day and was sleepwalking from 2:15 to 2:38 am\" Could mean she woke up at 2:15 and was sleepwalking until 2:38, then went back to bed and slept until 5:55. Yes subtract 23.\n\nNeed final numeric answer only with brief. Ensure final line exact.Usual sleep time: 10 p.m. to 6 a.m. = 480 minutes.  \nThat day she woke 5 minutes earlier: 480 − 5 = 475 minutes in bed.  \nSleepwalking interval: 2:15 to 2:38 = 23 minutes, not sleeping on the bed.  \n475 − 23 = 452.\n\nAnswer: 452",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 158,
+      "total_tokens": 699,
+      "completion_tokens": 541,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

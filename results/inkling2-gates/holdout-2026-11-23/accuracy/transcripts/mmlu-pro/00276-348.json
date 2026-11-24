@@ -1,0 +1,59 @@
+{
+  "index": 276,
+  "task_id": 348,
+  "rendered_prompt_sha256": "4aee180244f98111fa86ccdebc968634876ee60aacd4ae3bfa42ca8c83b5c4cb",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute carefully.\n\nProblem: Norman Stevens lives in town where 28% of property tax is passed along to county government. Home assessed for $17,400. Town tax rate $24.90 per $1,000. How much of his tax was passed along to county government?\n\nTax = assessed * rate per 1000 = 17,400/1000 * 24.90 = 17.4 * 24.90. 24.90*17 = 423.3; plus 24.90*0.4=9.96; total 433.26? Check 17.4*24.9 = 17.4*(25 -0.1)=435 -1.74=433.26. County share = 28% of tax = 0.28*433.26 = 121.3128? 433.26*0.28 = 433.26*(0.3 -0.02)=129.978 -8.6652=121.3128. Option F $121.31. Need final only single letter form. Ensure no extra.Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.4976929649710655
+  },
+  "response": {
+    "id": "cmpl-a41c7617efbe465a",
+    "object": "text_completion",
+    "created": 1795429396,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute carefully.\n\nProblem: Norman Stevens lives in town where 28% of property tax is passed along to county government. Home assessed for $17,400. Town tax rate $24.90 per $1,000. How much of his tax was passed along to county government?\n\nTax = assessed * rate per 1000 = 17,400/1000 * 24.90 = 17.4 * 24.90. 24.90*17 = 423.3; plus 24.90*0.4=9.96; total 433.26? Check 17.4*24.9 = 17.4*(25 -0.1)=435 -1.74=433.26. County share = 28% of tax = 0.28*433.26 = 121.3128? 433.26*0.28 = 433.26*(0.3 -0.02)=129.978 -8.6652=121.3128. Option F $121.31. Need final only single letter form. Ensure no extra.Answer: F",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 175,
+      "total_tokens": 430,
+      "completion_tokens": 255,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

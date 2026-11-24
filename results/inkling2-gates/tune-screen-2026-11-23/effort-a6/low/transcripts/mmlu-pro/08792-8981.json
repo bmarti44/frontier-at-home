@@ -1,0 +1,59 @@
+{
+  "index": 8792,
+  "task_id": 8981,
+  "rendered_prompt_sha256": "19191bb4337290db29f6f32e30459ef92ca213aeeda8edb2509562c5880f0293",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer single letter. Need evaluate statements.\n\nA false: correlation 1 perfect linear association not causation.\nB false: -1 perfect negative linear association not causation.\nC false: can be positive/zero/negative.\nD false: correlation coefficient (Pearson) applies to quantitative variables; categorical not equally.\nE false: correlation coefficient r and slope b = r * sy/sx, not equal generally.\nF false? r and slope of regression line: slope = r * (sy/sx). sy/sx positive, so same sign as r (unless zero). They cannot have opposite signs. False.\nG true: +0.87 and -0.87 have same absolute value, same degree of linear clustering around regression line (strength), opposite direction.\nH false: 0 no linear relationship.\nAnswer G. Need final only.Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.3057192992419
+  },
+  "response": {
+    "id": "cmpl-8db281d11437a8a5",
+    "object": "text_completion",
+    "created": 1795417367,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer single letter. Need evaluate statements.\n\nA false: correlation 1 perfect linear association not causation.\nB false: -1 perfect negative linear association not causation.\nC false: can be positive/zero/negative.\nD false: correlation coefficient (Pearson) applies to quantitative variables; categorical not equally.\nE false: correlation coefficient r and slope b = r * sy/sx, not equal generally.\nF false? r and slope of regression line: slope = r * (sy/sx). sy/sx positive, so same sign as r (unless zero). They cannot have opposite signs. False.\nG true: +0.87 and -0.87 have same absolute value, same degree of linear clustering around regression line (strength), opposite direction.\nH false: 0 no linear relationship.\nAnswer G. Need final only.Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 192,
+      "total_tokens": 386,
+      "completion_tokens": 194,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

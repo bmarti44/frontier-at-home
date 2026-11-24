@@ -1,0 +1,60 @@
+{
+  "index": 623,
+  "task_id": 623,
+  "rendered_prompt_sha256": "1b6f9ad67e883f5e3c3cdbb95e998fc5646dffcf44bed8308108fc9cb2b8c0c4",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user asks: Charmaine will be 16 years old in 12 years. How old will she be 4 years from now?\n\nIf in 12 years she is 16, then now she is 16 - 12 = 4. In 4 years from now, she will be 4 + 4 = 8. Alternatively, 16 - 12 + 4 = 8.\n\nNeed to think briefly then end with final numeric answer on its own line in form Answer: <number>.\n\nNeed ensure final line exactly. Could include brief reasoning. Final answer numeric 8.In 12 years she will be 16, so now she is 16 − 12 = 4. Four years from now: 4 + 4 = 8.\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.661103787831962
+  },
+  "response": {
+    "id": "cmpl-8ea0217607f86bed",
+    "object": "text_completion",
+    "created": 1795428813,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user asks: Charmaine will be 16 years old in 12 years. How old will she be 4 years from now?\n\nIf in 12 years she is 16, then now she is 16 - 12 = 4. In 4 years from now, she will be 4 + 4 = 8. Alternatively, 16 - 12 + 4 = 8.\n\nNeed to think briefly then end with final numeric answer on its own line in form Answer: <number>.\n\nNeed ensure final line exactly. Could include brief reasoning. Final answer numeric 8.In 12 years she will be 16, so now she is 16 − 12 = 4. Four years from now: 4 + 4 = 8.\n\nAnswer: 8",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 65,
+      "total_tokens": 241,
+      "completion_tokens": 176,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}
