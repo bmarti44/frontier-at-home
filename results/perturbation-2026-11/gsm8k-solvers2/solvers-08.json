@@ -1,0 +1,82 @@
+[
+ {
+  "row": 628,
+  "solver": "def solve(v):\n    need = 12 * v['feet'] - v['height']\n    assert need > 0\n    return Fraction(need, v['grow'])\n"
+ },
+ {
+  "row": 773,
+  "solver": "def solve(v):\n    n = v['n']\n    gave1 = Fraction(n * v['a'], v['b'])\n    assert gave1.denominator == 1\n    rem = n - gave1\n    gave2 = rem * v['c'] / v['d']\n    assert gave2.denominator == 1\n    kept = rem - gave2\n    assert kept >= 0\n    return kept\n"
+ },
+ {
+  "row": 910,
+  "solver": "def solve(v):\n    a = v['a']\n    return a + (2 * a + v['b'])\n"
+ },
+ {
+  "row": 1108,
+  "solver": "def solve(v):\n    total = v['pots'] + v['soil'] - v['coupon']\n    assert total >= 0\n    return total\n"
+ },
+ {
+  "row": 1135,
+  "solver": "def solve(v):\n    return v['t1'] * v['b1'] + v['t2'] * v['b2'] + v['b3']\n"
+ },
+ {
+  "row": 967,
+  "solver": "def solve(v):\n    age = v['age']\n    brother = 2 * age\n    sister = Fraction(age) * (100 - v['pct']) / 100\n    return age + brother + sister\n"
+ },
+ {
+  "row": 160,
+  "solver": "def solve(v):\n    tue = v['mon'] + v['more']\n    return Fraction(2 * tue, 3)\n"
+ },
+ {
+  "row": 585,
+  "solver": "def solve(v):\n    jill_hours = v['sat'] + 1\n    john_hours = 2 * v['sat'] + 3 * 1\n    return (john_hours - jill_hours) * v['rate']\n"
+ },
+ {
+  "row": 1210,
+  "solver": "def solve(v):\n    total = v['packs'] * v['per']\n    assert v['left'] <= total\n    return total - v['left']\n"
+ },
+ {
+  "row": 745,
+  "solver": "def solve(v):\n    revenue = v['c1'] + v['c2'] + v['n'] * v['avg']\n    cost = v['packs'] * v['cost']\n    return revenue - cost\n"
+ },
+ {
+  "row": 1281,
+  "solver": "def solve(v):\n    eaten = 5 * v['per'] * 2 * 7\n    left = v['total'] - eaten\n    assert left >= 0\n    return left\n"
+ },
+ {
+  "row": 328,
+  "solver": "def solve(v):\n    assert 0 <= v['pct'] < 100\n    minutes = (100 - v['pct']) * v['mins']\n    return Fraction(minutes, 60)\n"
+ },
+ {
+  "row": 796,
+  "solver": "def solve(v):\n    total = 0\n    staff = v['init']\n    for _ in range(3):\n        staff += v['hire']\n        total += staff * v['sal']\n    return total\n"
+ },
+ {
+  "row": 524,
+  "solver": "def solve(v):\n    red_rows = Fraction(v['rt'], v['rr'])\n    blue_rows = Fraction(v['bt'], v['br'])\n    return red_rows + blue_rows\n"
+ },
+ {
+  "row": 874,
+  "solver": "def solve(v):\n    rate = Fraction(v['earned'], v['hrs'])\n    return rate * v['target']\n"
+ },
+ {
+  "row": 1172,
+  "solver": "def solve(v):\n    total = 0\n    c = v['mon']\n    for _ in range(5):\n        total += c\n        c *= 2\n    return total\n"
+ },
+ {
+  "row": 738,
+  "solver": "def solve(v):\n    steven = Fraction(v['cb'], 2)\n    alice = steven + v['more']\n    return v['cb'] - alice\n"
+ },
+ {
+  "row": 1072,
+  "solver": "def solve(v):\n    m = Fraction(v['m'])\n    return (m - m / 4) + (m - m / 3)\n"
+ },
+ {
+  "row": 615,
+  "solver": "def solve(v):\n    return v['aq'] + v['bags'] * v['rock'] + v['coral'] * v['cp'] + v['fish'] * v['fp'] + v['food']\n"
+ },
+ {
+  "row": 845,
+  "solver": "def solve(v):\n    both = v['total'] - v['math_only'] - v['eng_only']\n    assert both >= 0\n    return v['math_only'] + both\n"
+ }
+]

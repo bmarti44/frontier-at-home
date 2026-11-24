@@ -1,0 +1,82 @@
+[
+ {
+  "row": 303,
+  "solver": "def solve(v):\n    first = 2 * v['cur']\n    third = v['cur']\n    sold_total = v['total'] - v['unsold']\n    second = sold_total - first - third\n    assert second >= 0\n    return second * v['price']\n"
+ },
+ {
+  "row": 535,
+  "solver": "def solve(v):\n    george_start = v['left'] + v['ate']\n    return 2 * george_start\n"
+ },
+ {
+  "row": 544,
+  "solver": "def solve(v):\n    brad = Fraction(v['total'], v['times'] + 1)\n    return v['times'] * brad\n"
+ },
+ {
+  "row": 374,
+  "solver": "def solve(v):\n    half = Fraction(v['sheep'], 2)\n    return half * v['a'] + half * v['b']\n"
+ },
+ {
+  "row": 387,
+  "solver": "def solve(v):\n    return v['eraser'] * v['n_erasers'] + v['pencil'] * v['n_pencils']\n"
+ },
+ {
+  "row": 434,
+  "solver": "def solve(v):\n    money_c = v['money'] * 100\n    left_c = Fraction(money_c * v['pct'], 100)\n    spent_c = money_c - left_c\n    candy_c = spent_c - v['n_chips'] * v['chips']\n    assert candy_c >= 0\n    return Fraction(candy_c) / v['candy']\n"
+ },
+ {
+  "row": 706,
+  "solver": "def solve(v):\n    rate = Fraction(v['raised'], v['hours'])\n    return Fraction(v['goal']) / rate\n"
+ },
+ {
+  "row": 347,
+  "solver": "def solve(v):\n    full = v['n'] * v['price']\n    return full * Fraction(100 - v['pct'], 100)\n"
+ },
+ {
+  "row": 811,
+  "solver": "def solve(v):\n    branches = Fraction(v['total']) / v['price']\n    return branches / 7\n"
+ },
+ {
+  "row": 35,
+  "solver": "def solve(v):\n    first = v['pts']\n    second = first * (1 + v['pct'] / 100)\n    return first + second\n"
+ },
+ {
+  "row": 892,
+  "solver": "def solve(v):\n    salad = v['salad']\n    yogurt = Fraction(salad, 2)\n    carrots = v['total'] - salad - yogurt\n    assert carrots >= 0\n    return carrots / 2\n"
+ },
+ {
+  "row": 314,
+  "solver": "def solve(v):\n    # d + 2d + d/2 = members\n    return Fraction(v['members']) / Fraction(7, 2)\n"
+ },
+ {
+  "row": 2,
+  "solver": "def solve(v):\n    cost = v['price'] + v['repairs']\n    new_value = v['price'] + Fraction(v['price'] * v['pct'], 100)\n    return new_value - cost\n"
+ },
+ {
+  "row": 944,
+  "solver": "def solve(v):\n    return v['n_yams'] * v['p_yam'] + v['n_sweet'] * v['p_sweet'] + v['n_carrots'] * v['p_carrot']\n"
+ },
+ {
+  "row": 687,
+  "solver": "def solve(v):\n    # 2*(t + diff) + 3*t = total\n    t = Fraction(v['total'] - 2 * v['diff'], 5)\n    assert t > 0\n    return t + v['diff']\n"
+ },
+ {
+  "row": 1184,
+  "solver": "def solve(v):\n    bags = Fraction(v['kilos'], v['bag'])\n    return bags * v['price']\n"
+ },
+ {
+  "row": 297,
+  "solver": "def solve(v):\n    sold = v['weekend'] + v['tue'] + v['wed'] + v['thu']\n    return v['target'] - sold\n"
+ },
+ {
+  "row": 1068,
+  "solver": "def solve(v):\n    ordered = 10 - v['less']\n    remaining = ordered - v['ate']\n    assert remaining >= 0\n    remaining += 3\n    return remaining * v['meat']\n"
+ },
+ {
+  "row": 792,
+  "solver": "def solve(v):\n    return v['caps'] * v['value'] * 30\n"
+ },
+ {
+  "row": 932,
+  "solver": "def solve(v):\n    initial = v['friends'] * v['each'] + 1\n    from_mom = (v['friends'] + 1) * v['more']\n    return initial + from_mom\n"
+ }
+]

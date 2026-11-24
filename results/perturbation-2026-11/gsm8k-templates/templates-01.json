@@ -1,0 +1,878 @@
+[
+ {
+  "row": 772,
+  "template": "{name} is deciding how much of her weekend she wants to spend playing soccer. She has {sat} hours on Saturday and {sun} hours on Sunday. She is dividing her time between soccer, video games, and reading. If she reads for {read} hours and plays video games for 1/{den} of the remaining time, what percentage of her weekend does she spend playing soccer?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Tatiana",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Sofia",
+     "Elena",
+     "Hannah",
+     "Grace",
+     "Chloe",
+     "Aisha",
+     "Leah",
+     "Nora"
+    ]
+   },
+   "sat": {
+    "kind": "int",
+    "original": 7,
+    "min": 3,
+    "max": 14,
+    "step": 1
+   },
+   "sun": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   },
+   "read": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "den": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 4,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['read'] < v['sat'] + v['sun']"
+  ],
+  "solver": "def solve(v):\n    total = v['sat'] + v['sun']\n    remaining = total - v['read']\n    assert remaining > 0\n    assert remaining % v['den'] == 0\n    games = remaining // v['den']\n    soccer = remaining - games\n    assert soccer > 0\n    return Fraction(soccer * 100, total)\n"
+ },
+ {
+  "row": 176,
+  "template": "In a race with {total} Asians, {japanese} were Japanese, and the rest were Chinese. If the number of boys on the Chinese team was {boys}, how many girls were on the Chinese team?",
+  "vars": {
+   "total": {
+    "kind": "int",
+    "original": 240,
+    "min": 120,
+    "max": 480,
+    "step": 10
+   },
+   "japanese": {
+    "kind": "int",
+    "original": 80,
+    "min": 30,
+    "max": 200,
+    "step": 10
+   },
+   "boys": {
+    "kind": "int",
+    "original": 60,
+    "min": 20,
+    "max": 200,
+    "step": 10
+   }
+  },
+  "constraints": [
+   "v['japanese'] < v['total']",
+   "v['boys'] < v['total'] - v['japanese']"
+  ],
+  "solver": "def solve(v):\n    chinese = v['total'] - v['japanese']\n    assert chinese > 0\n    girls = chinese - v['boys']\n    assert girls > 0\n    return girls\n"
+ },
+ {
+  "row": 15,
+  "template": "A merchant wants to make a choice of purchase between 2 purchase plans: jewelry worth ${jewelry} or electronic gadgets worth ${gadgets}. His financial advisor speculates that the jewelry market will go up {pj}% while the electronic gadgets market will rise {pg}% within the same month. If the merchant is looking to maximize profit at the end of this month by making a choice, how much profit would this be?",
+  "vars": {
+   "jewelry": {
+    "kind": "int",
+    "original": 5000,
+    "min": 2000,
+    "max": 12000,
+    "step": 1000,
+    "fmt": "comma"
+   },
+   "gadgets": {
+    "kind": "int",
+    "original": 8000,
+    "min": 3000,
+    "max": 15000,
+    "step": 1000,
+    "fmt": "comma"
+   },
+   "pj": {
+    "kind": "num_choice",
+    "original": "2.5",
+    "values": [
+     "1.5",
+     "1.8",
+     "2.2",
+     "3.5",
+     "4.5",
+     "3.2"
+    ]
+   },
+   "pg": {
+    "kind": "num_choice",
+    "original": "1.2",
+    "values": [
+     "0.8",
+     "1.5",
+     "2.4",
+     "1.6",
+     "3.5",
+     "2.8"
+    ]
+   }
+  },
+  "constraints": [
+   "v['jewelry'] * v['pj'] != v['gadgets'] * v['pg']"
+  ],
+  "solver": "def solve(v):\n    jewelry_profit = v['jewelry'] * v['pj'] / 100\n    gadgets_profit = v['gadgets'] * v['pg'] / 100\n    return max(jewelry_profit, gadgets_profit)\n"
+ },
+ {
+  "row": 66,
+  "template": "There are four schools competing at a basketball tournament. Each school has sent a girls’ basketball team and a boys’ basketball team and each team has {players} players each. Each school has also sent a coach for each team. In total, how many people have all of the schools sent?",
+  "vars": {
+   "players": {
+    "kind": "int",
+    "original": 5,
+    "min": 3,
+    "max": 15,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    schools = 4\n    teams_per_school = 2\n    players = teams_per_school * v['players']\n    coaches = teams_per_school * 1\n    return schools * (players + coaches)\n"
+ },
+ {
+  "row": 479,
+  "template": "{name} decides to give his wife an anniversary getaway.  The plane tickets cost ${ticket} each.  The hotel is {pct}% more expensive than normal because it is a busy weekend.  The normal price is ${normal} per day.  If they are there for {days} days how much did the trip cost?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Tom",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "ticket": {
+    "kind": "int",
+    "original": 5000,
+    "min": 2000,
+    "max": 10000,
+    "step": 500
+   },
+   "pct": {
+    "kind": "int",
+    "original": 20,
+    "min": 5,
+    "max": 60,
+    "step": 5
+   },
+   "normal": {
+    "kind": "int",
+    "original": 1500,
+    "min": 500,
+    "max": 4000,
+    "step": 100
+   },
+   "days": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 7,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    hotel_per_day = Fraction(v['normal'] * (100 + v['pct']), 100)\n    hotel = hotel_per_day * v['days']\n    tickets = 2 * v['ticket']\n    return tickets + hotel\n"
+ },
+ {
+  "row": 896,
+  "template": "{name} rents his car out {times} times a month for {hours} hours each time.  He gets paid ${rate} an hour.  If his car payment is ${payment}, how much profit does he make on his car?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "John",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "times": {
+    "kind": "int",
+    "original": 10,
+    "min": 4,
+    "max": 20,
+    "step": 1
+   },
+   "hours": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "rate": {
+    "kind": "int",
+    "original": 25,
+    "min": 10,
+    "max": 60,
+    "step": 5
+   },
+   "payment": {
+    "kind": "int",
+    "original": 500,
+    "min": 200,
+    "max": 1200,
+    "step": 50
+   }
+  },
+  "constraints": [
+   "v['times'] * v['hours'] * v['rate'] > v['payment']"
+  ],
+  "solver": "def solve(v):\n    revenue = v['times'] * v['hours'] * v['rate']\n    profit = revenue - v['payment']\n    assert profit > 0\n    return profit\n"
+ },
+ {
+  "row": 1122,
+  "template": "A toy manufacturer receives an order for {order} toys. 5 workers are available to work on the order. 2 of the workers produce {ra} toys an hour, and another 2 workers produce {rb} toys an hour. They all work on the order during their {shift}-hour shift, and by the end of their shift the manufacturer still needs another {short} toys to be able to ship the order. How many toys per hour does the fifth worker produce?",
+  "vars": {
+   "order": {
+    "kind": "int",
+    "original": 400,
+    "min": 200,
+    "max": 800,
+    "step": 10
+   },
+   "ra": {
+    "kind": "int",
+    "original": 6,
+    "min": 3,
+    "max": 12,
+    "step": 1
+   },
+   "rb": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "shift": {
+    "kind": "int",
+    "original": 10,
+    "min": 6,
+    "max": 12,
+    "step": 1
+   },
+   "short": {
+    "kind": "int",
+    "original": 20,
+    "min": 5,
+    "max": 60,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "v['short'] < v['order']",
+   "v['ra'] != v['rb']"
+  ],
+  "solver": "def solve(v):\n    first_group = 2 * v['ra'] * v['shift']\n    second_group = 2 * v['rb'] * v['shift']\n    produced = v['order'] - v['short']\n    fifth_total = produced - first_group - second_group\n    assert fifth_total > 0\n    assert fifth_total % v['shift'] == 0\n    return fifth_total // v['shift']\n"
+ },
+ {
+  "row": 1005,
+  "template": "The population of porcupines in a park is {pop}. The number of female porcupines is {num}/{den} of the total population. If each female porcupine gives birth to {babies} babies every month, how many porcupines will be in the park after a year?",
+  "vars": {
+   "pop": {
+    "kind": "int",
+    "original": 50,
+    "min": 20,
+    "max": 150,
+    "step": 5
+   },
+   "num": {
+    "kind": "int",
+    "original": 3,
+    "min": 1,
+    "max": 4,
+    "step": 1
+   },
+   "den": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "babies": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['num'] < v['den']"
+  ],
+  "solver": "def solve(v):\n    assert math.gcd(v['num'], v['den']) == 1\n    females = Fraction(v['num'] * v['pop'], v['den'])\n    assert females.denominator == 1 and females > 0\n    babies_per_month = females * v['babies']\n    months = 12\n    return v['pop'] + babies_per_month * months\n"
+ },
+ {
+  "row": 480,
+  "template": "{ben} has {blue} tubes of blue paint and {yellow} tubes of yellow paint. {jasper} has half as many tubes of blue paint as {ben}, and three times as many tubes of yellow paint as {ben}. How many tubes of paint does {jasper} have?",
+  "vars": {
+   "ben": {
+    "kind": "name",
+    "original": "Ben",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "jasper": {
+    "kind": "name",
+    "original": "Jasper",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "blue": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 16,
+    "step": 2
+   },
+   "yellow": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['blue'] % 2 == 0"
+  ],
+  "solver": "def solve(v):\n    assert v['blue'] % 2 == 0\n    jasper_blue = v['blue'] // 2\n    jasper_yellow = 3 * v['yellow']\n    return jasper_blue + jasper_yellow\n"
+ },
+ {
+  "row": 187,
+  "template": "{debtor} owes {lender} ${principal}. They agreed to have monthly interest of {rate}%. If {debtor} was able to pay it after {months} months, how much should she give to {lender}?",
+  "vars": {
+   "debtor": {
+    "kind": "name",
+    "original": "Mandy",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Sofia",
+     "Elena",
+     "Hannah",
+     "Grace",
+     "Chloe",
+     "Aisha",
+     "Leah",
+     "Nora"
+    ]
+   },
+   "lender": {
+    "kind": "name",
+    "original": "Benedict",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "principal": {
+    "kind": "int",
+    "original": 100,
+    "min": 50,
+    "max": 400,
+    "step": 50
+   },
+   "rate": {
+    "kind": "int",
+    "original": 2,
+    "min": 1,
+    "max": 8,
+    "step": 1
+   },
+   "months": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    monthly_interest = Fraction(v['principal'] * v['rate'], 100)\n    return v['principal'] + monthly_interest * v['months']\n"
+ },
+ {
+  "row": 275,
+  "template": "{name} is practicing for his role in a theater production. He has to memorize his lines for two scenes and the lyrics to one solo song. His solo song has {song} lines in the lyrics. The first scene has twice the number of lines, but only a third of them are his lines. The second scene has six more lines than the song, and four-fifths of them are his. How many lines does {name} have to memorize?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Sean",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "song": {
+    "kind": "int",
+    "original": 54,
+    "min": 24,
+    "max": 204,
+    "step": 15
+   }
+  },
+  "constraints": [
+   "(2 * v['song']) % 3 == 0",
+   "(v['song'] + 6) % 5 == 0"
+  ],
+  "solver": "def solve(v):\n    song = v['song']\n    scene1 = 2 * song\n    assert scene1 % 3 == 0\n    scene1_his = scene1 // 3\n    scene2 = song + 6\n    assert (scene2 * 4) % 5 == 0\n    scene2_his = scene2 * 4 // 5\n    return song + scene1_his + scene2_his\n"
+ },
+ {
+  "row": 868,
+  "template": "A three-ounce box of flavored jello makes {per_box} small jello cups.  {name} wants to make small jello cups for his son's outdoor birthday party.  There will be {kids} kids and he wants to have enough so that each kid can have {cups} jello cups.  Jello is currently on sale for ${price}.  How much will he spend on jello?",
+  "vars": {
+   "per_box": {
+    "kind": "int",
+    "original": 10,
+    "min": 5,
+    "max": 20,
+    "step": 1
+   },
+   "name": {
+    "kind": "name",
+    "original": "Greg",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "kids": {
+    "kind": "int",
+    "original": 30,
+    "min": 10,
+    "max": 60,
+    "step": 5
+   },
+   "cups": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "price": {
+    "kind": "num_choice",
+    "original": "1.25",
+    "values": [
+     "0.75",
+     "1.50",
+     "1.75",
+     "2.25",
+     "2.50",
+     "1.00",
+     "0.50"
+    ]
+   }
+  },
+  "constraints": [
+   "(v['kids'] * v['cups']) % v['per_box'] == 0"
+  ],
+  "solver": "def solve(v):\n    total_cups = v['kids'] * v['cups']\n    assert total_cups % v['per_box'] == 0\n    boxes = total_cups // v['per_box']\n    return boxes * v['price']\n"
+ },
+ {
+  "row": 921,
+  "template": "A loaf of bread has {slices} slices. If {abby} can eat {rate} slices a day while {josh} can eat twice as much, how many days will the loaf of bread last?",
+  "vars": {
+   "slices": {
+    "kind": "int",
+    "original": 24,
+    "min": 12,
+    "max": 48,
+    "step": 2
+   },
+   "abby": {
+    "kind": "name",
+    "original": "Abby",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Sofia",
+     "Elena",
+     "Hannah",
+     "Grace",
+     "Chloe",
+     "Aisha",
+     "Leah",
+     "Nora"
+    ]
+   },
+   "josh": {
+    "kind": "name",
+    "original": "Josh",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "rate": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 5,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['slices'] % (3 * v['rate']) == 0"
+  ],
+  "solver": "def solve(v):\n    abby = v['rate']\n    josh = 2 * v['rate']\n    per_day = abby + josh\n    assert v['slices'] % per_day == 0\n    return v['slices'] // per_day\n"
+ },
+ {
+  "row": 562,
+  "template": "The great pyramids sit at an angle of {angle} degrees from the ground when you stand at the entrance of {name}'s house. The sun is moving at {rate} degrees an hour straight upward from the pyramid relative to {name}'s house. If the sun starts at the tip of the pyramid and moves for {hours} hours, how many degrees will there be from the ground to the sun?",
+  "vars": {
+   "angle": {
+    "kind": "int",
+    "original": 32,
+    "min": 15,
+    "max": 60,
+    "step": 1
+   },
+   "rate": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   },
+   "hours": {
+    "kind": "int",
+    "original": 10,
+    "min": 3,
+    "max": 12,
+    "step": 1
+   },
+   "name": {
+    "kind": "name",
+    "original": "Sahir",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   }
+  },
+  "constraints": [
+   "v['angle'] + v['rate'] * v['hours'] <= 90"
+  ],
+  "solver": "def solve(v):\n    moved = v['rate'] * v['hours']\n    total = v['angle'] + moved\n    assert total <= 90\n    return total\n"
+ },
+ {
+  "row": 1082,
+  "template": "{name} decided to walk to the store.  When he got halfway there he realized he forgot something at home and had to walk back.  If his home is {dist} miles from the store and he walks {speed} miles per hour how long did it take him to reach the store?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "James",
+    "pool": [
+     "David",
+     "Marcus",
+     "Ethan",
+     "Omar",
+     "Lucas",
+     "Daniel",
+     "Ravi",
+     "Samuel",
+     "Owen",
+     "Victor"
+    ]
+   },
+   "dist": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "speed": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 6,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    d = Fraction(v['dist'])\n    walked = d / 2 + d / 2 + d\n    return walked / v['speed']\n"
+ },
+ {
+  "row": 172,
+  "template": "There are four birds at the Caboose. Sally Two is three years older than Granny Red. Granny Red is two times as old as Sally Four. If Sally Four is the same age as Sally Thirtytwo, and Sally Thirtytwo is {age} years old, what's the total age of the four birds?",
+  "vars": {
+   "age": {
+    "kind": "int",
+    "original": 8,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    thirtytwo = v['age']\n    four = thirtytwo\n    granny_red = 2 * four\n    two = granny_red + 3\n    return thirtytwo + four + granny_red + two\n"
+ },
+ {
+  "row": 770,
+  "template": "A perfume company is trying to create new scents. They already have {nv} vanilla scents and {nf} fruity scents available and they need to decide which kind of scent to focus on. They decide to focus on whichever scent sells the most and monitor their number of sales as part of their research. By the end of the day, they sell {sv} of each of the vanilla scents and {sf} of each of the fruity scents available. How many more vanilla scents sold compared with the fruity scents?",
+  "vars": {
+   "nv": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   },
+   "nf": {
+    "kind": "int",
+    "original": 8,
+    "min": 3,
+    "max": 16,
+    "step": 1
+   },
+   "sv": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "sf": {
+    "kind": "int",
+    "original": 2,
+    "min": 1,
+    "max": 6,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['nv'] * v['sv'] > v['nf'] * v['sf']"
+  ],
+  "solver": "def solve(v):\n    vanilla = v['nv'] * v['sv']\n    fruity = v['nf'] * v['sf']\n    assert vanilla > fruity\n    return vanilla - fruity\n"
+ },
+ {
+  "row": 1191,
+  "template": "{name} is getting her hair cut and colored. It costs ${color} for the color and ${rate} per inch of haircut. If her hair started at {start} inches and ended at {end}, how much did her cut and color cost?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "May",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Sofia",
+     "Elena",
+     "Hannah",
+     "Grace",
+     "Chloe",
+     "Aisha",
+     "Leah",
+     "Nora"
+    ]
+   },
+   "color": {
+    "kind": "int",
+    "original": 40,
+    "min": 20,
+    "max": 100,
+    "step": 5
+   },
+   "rate": {
+    "kind": "int",
+    "original": 30,
+    "min": 10,
+    "max": 60,
+    "step": 5
+   },
+   "start": {
+    "kind": "int",
+    "original": 10,
+    "min": 6,
+    "max": 24,
+    "step": 1
+   },
+   "end": {
+    "kind": "int",
+    "original": 8,
+    "min": 3,
+    "max": 20,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['end'] < v['start']"
+  ],
+  "solver": "def solve(v):\n    inches_cut = v['start'] - v['end']\n    assert inches_cut > 0\n    return v['color'] + v['rate'] * inches_cut\n"
+ },
+ {
+  "row": 413,
+  "template": "{name} makes homemade candles that she markets as {safe}% guaranteed not to explode. {smell}% of the more dangerous candles also have a defect that makes them smell like wet dog. If she makes {candles} candles, how many of them will both smell like wet dog and explode?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Marcy",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Sofia",
+     "Elena",
+     "Hannah",
+     "Grace",
+     "Chloe",
+     "Aisha",
+     "Leah",
+     "Nora"
+    ]
+   },
+   "safe": {
+    "kind": "int",
+    "original": 99,
+    "min": 90,
+    "max": 98,
+    "step": 1
+   },
+   "smell": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "candles": {
+    "kind": "int",
+    "original": 50000,
+    "min": 20000,
+    "max": 200000,
+    "step": 10000
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    explode = Fraction(100 - v['safe'], 100)\n    smell = Fraction(v['smell'], 100)\n    return v['candles'] * explode * smell\n"
+ },
+ {
+  "row": 537,
+  "template": "Four books are arranged on a shelf. The first book is {first} mm thick while the second book is {second} mm thick. The third book is {diff} mm less thick than the second book, and the fourth book is twice as thick as the first book. What is the total thickness of the four books?",
+  "vars": {
+   "first": {
+    "kind": "int",
+    "original": 31,
+    "min": 10,
+    "max": 80,
+    "step": 1
+   },
+   "second": {
+    "kind": "int",
+    "original": 50,
+    "min": 20,
+    "max": 120,
+    "step": 5
+   },
+   "diff": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['diff'] < v['second']"
+  ],
+  "solver": "def solve(v):\n    third = v['second'] - v['diff']\n    assert third > 0\n    fourth = 2 * v['first']\n    return v['first'] + v['second'] + third + fourth\n"
+ }
+]

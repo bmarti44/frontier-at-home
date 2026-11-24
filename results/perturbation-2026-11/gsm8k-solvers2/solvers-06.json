@@ -1,0 +1,78 @@
+[
+ {
+  "row": 1293,
+  "solver": "def solve(v):\n    days = 14\n    return v['bars'] * days * v['price']\n"
+ },
+ {
+  "row": 1054,
+  "solver": "def solve(v):\n    tile_area = v['side'] * v['side']\n    tiles = Fraction(v['area'], tile_area)\n    assert tiles.denominator == 1\n    return tiles * v['price']\n"
+ },
+ {
+  "row": 269,
+  "solver": "def solve(v):\n    golf = Fraction(v['balls'], 2)\n    blue = golf / 2\n    return blue\n"
+ },
+ {
+  "row": 812,
+  "solver": "def solve(v):\n    d = v['drop']\n    pairs = [(v['c1'], v['p1']), (v['c2'], v['p2']), (v['c3'], v['p3']), (v['c4'], v['p4'])]\n    total = 0\n    for c, p in pairs:\n        assert c - d >= 0\n        total += (c - d) * p\n    return total\n"
+ },
+ {
+  "row": 1143,
+  "solver": "def solve(v):\n    years = 10\n    return v['trees'] * v['lemons'] * years\n"
+ },
+ {
+  "row": 192,
+  "solver": "def solve(v):\n    net = v['plant'] - v['chop']\n    trees = v['start'] + net * v['years']\n    assert trees >= 0\n    return trees * Fraction(100 - v['pct'], 100)\n"
+ },
+ {
+  "row": 623,
+  "solver": "def solve(v):\n    now = v['age'] - v['ahead']\n    assert now >= 0\n    return now + v['later']\n"
+ },
+ {
+  "row": 678,
+  "solver": "def solve(v):\n    karen_rate = 2 * v['rate']\n    days = 2\n    return karen_rate * v['hours'] * days\n"
+ },
+ {
+  "row": 382,
+  "solver": "def solve(v):\n    axel = v['silver'] + v['gold']\n    anna = 2 * v['silver'] + (v['gold'] + v['more'])\n    return axel + anna\n"
+ },
+ {
+  "row": 207,
+  "solver": "def solve(v):\n    bar_w = v['weight']\n    apple_w = Fraction(bar_w, 2)\n    return v['bars'] * bar_w + v['apples'] * apple_w\n"
+ },
+ {
+  "row": 848,
+  "solver": "def solve(v):\n    white_no_collar = v['white'] - Fraction(v['white'], 2)\n    floral_no_buttons = v['floral'] - v['buttons']\n    assert floral_no_buttons >= 0\n    return floral_no_buttons - white_no_collar\n"
+ },
+ {
+  "row": 428,
+  "solver": "def solve(v):\n    planned = v['planned']\n    hotdogs = planned + Fraction(planned, 2)\n    came = v['came']\n    assert hotdogs >= came\n    seconds = hotdogs - came\n    if seconds > came:\n        seconds = Fraction(came)\n    return came - seconds\n"
+ },
+ {
+  "row": 622,
+  "solver": "def solve(v):\n    at_school = Fraction(v['school'], v['every'])\n    remaining = v['pack'] - at_school - 1 - 1\n    assert remaining >= 0\n    return remaining - remaining / 2\n"
+ },
+ {
+  "row": 1213,
+  "solver": "def solve(v):\n    owed = v['principal'] * Fraction(100 + v['pct'], 100)\n    paid = 11 * v['monthly']\n    return owed - paid\n"
+ },
+ {
+  "row": 847,
+  "solver": "def solve(v):\n    interest = Fraction(3, 4) * v['principal']\n    return v['principal'] + interest * v['years']\n"
+ },
+ {
+  "row": 44,
+  "solver": "def solve(v):\n    pounds = Fraction(v['candles'], v['per_lb'])\n    assert pounds.denominator == 1\n    supplies = pounds * v['cost']\n    revenue = v['candles'] * v['price']\n    return revenue - supplies\n"
+ },
+ {
+  "row": 658,
+  "solver": "def solve(v):\n    rice = v['rice']\n    pork = rice + v['more']\n    beans = Fraction(rice + pork, 2)\n    return rice + pork + beans\n"
+ },
+ {
+  "row": 591,
+  "solver": "def solve(v):\n    dach = 2 * v['aff']\n    pap = Fraction(dach, 4)\n    return v['mult'] * pap\n"
+ },
+ {
+  "row": 342,
+  "solver": "def solve(v):\n    shower = 2 * v['friend']\n    return v['friend'] + shower + v['mom']\n"
+ }
+]

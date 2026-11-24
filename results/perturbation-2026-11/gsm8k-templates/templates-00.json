@@ -1,0 +1,728 @@
+[
+ {
+  "row": 588,
+  "template": "{name} is trying to increase his typing speed. He starts with {a} words per minute (WPM). After some lessons the next time he tests his typing speed it has increased to {b} WPM. If he continues to increase his typing speed once more by {c} words, what will be the average of the three measurements?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Jared",
+    "pool": [
+     "Marcus",
+     "Ethan",
+     "Diego",
+     "Omar",
+     "Liam",
+     "Raj",
+     "Tobias",
+     "Kenji"
+    ]
+   },
+   "a": {
+    "kind": "int",
+    "original": 47,
+    "min": 20,
+    "max": 90,
+    "step": 1
+   },
+   "b": {
+    "kind": "int",
+    "original": 52,
+    "min": 25,
+    "max": 110,
+    "step": 1
+   },
+   "c": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['b'] > v['a']",
+   "v['b'] - v['a'] <= 30"
+  ],
+  "solver": "def solve(v):\n    a, b, c = v['a'], v['b'], v['c']\n    third = b + c\n    total = a + b + third\n    assert total % 3 == 0\n    return Fraction(total, 3)\n"
+ },
+ {
+  "row": 1214,
+  "template": "{name} has {k} children who wear diapers.  Each child requires {c} diaper changes per day.  {name}'s wife changes half of the diapers.  How many diapers does {name} change per day?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Jordan",
+    "pool": [
+     "Marcus",
+     "David",
+     "Carlos",
+     "Ahmed",
+     "Ryan",
+     "Wei",
+     "Samuel"
+    ]
+   },
+   "k": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 4,
+    "step": 1
+   },
+   "c": {
+    "kind": "int",
+    "original": 5,
+    "min": 3,
+    "max": 10,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    total = v['k'] * v['c']\n    assert total % 2 == 0\n    return total // 2\n"
+ },
+ {
+  "row": 57,
+  "template": "A wooden bridge can carry no more than {limit} pounds. A delivery truck filled with identical boxes, each weighing {w} pounds, will pass over the bridge. The combined weight of the driver and the empty truck is {truck} pounds. What is the maximum number of boxes which can be loaded onto the truck while not exceeding the bridge's weight limit?",
+  "vars": {
+   "limit": {
+    "kind": "int",
+    "original": 5000,
+    "min": 3000,
+    "max": 12000,
+    "step": 500
+   },
+   "w": {
+    "kind": "int",
+    "original": 15,
+    "min": 10,
+    "max": 40,
+    "step": 5
+   },
+   "truck": {
+    "kind": "int",
+    "original": 3755,
+    "min": 1500,
+    "max": 9000,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "v['limit'] > v['truck']",
+   "300 <= v['limit'] - v['truck'] <= 4000"
+  ],
+  "solver": "def solve(v):\n    spare = v['limit'] - v['truck']\n    assert spare > 0\n    assert spare % v['w'] == 0\n    boxes = spare // v['w']\n    assert boxes >= 2\n    return boxes\n"
+ },
+ {
+  "row": 906,
+  "template": "{name} has a box with {blue} blue shoe boxes and {red} red shoe boxes. If he uses {used} blue shoeboxes and 1/{d} red of his shoeboxes to go fishing, how many red and blue shoe boxes are left in {name}'s box?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Tim",
+    "pool": [
+     "Ben",
+     "Sam",
+     "Raul",
+     "Kofi",
+     "Max",
+     "Leo",
+     "Arjun"
+    ]
+   },
+   "blue": {
+    "kind": "int",
+    "original": 7,
+    "min": 4,
+    "max": 20,
+    "step": 1
+   },
+   "red": {
+    "kind": "int",
+    "original": 9,
+    "min": 6,
+    "max": 30,
+    "step": 1
+   },
+   "used": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   },
+   "d": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 5,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['used'] < v['blue']",
+   "v['red'] % v['d'] == 0"
+  ],
+  "solver": "def solve(v):\n    blue_left = v['blue'] - v['used']\n    assert blue_left > 0\n    assert v['red'] % v['d'] == 0\n    red_used = v['red'] // v['d']\n    red_left = v['red'] - red_used\n    return blue_left + red_left\n"
+ },
+ {
+  "row": 1252,
+  "template": "{name} went to his team's changing room and saw half as many robots as helmets and half as many helmets as footballs kept there. If there were {h} helmets, calculate the total number of items {name} saw.",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Dominick",
+    "pool": [
+     "Mateo",
+     "Tyrone",
+     "Lucas",
+     "Hiroshi",
+     "Nathan",
+     "Emeka",
+     "Felix"
+    ]
+   },
+   "h": {
+    "kind": "int",
+    "original": 20,
+    "min": 6,
+    "max": 80,
+    "step": 2
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    h = v['h']\n    assert h % 2 == 0\n    robots = h // 2\n    footballs = 2 * h\n    return robots + h + footballs\n"
+ },
+ {
+  "row": 618,
+  "template": "The school auditorium has {rows} rows of seats. There are {seats} seats in each row. One-fourth of the seats were occupied by the administrators. One-third of the remaining seats were occupied by the parents and the rest were occupied by the students. How many students were there in the school auditorium?",
+  "vars": {
+   "rows": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 16,
+    "step": 1
+   },
+   "seats": {
+    "kind": "int",
+    "original": 18,
+    "min": 6,
+    "max": 40,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "(v['rows'] * v['seats']) % 4 == 0"
+  ],
+  "solver": "def solve(v):\n    total = v['rows'] * v['seats']\n    assert total % 4 == 0\n    admins = total // 4\n    remaining = total - admins\n    assert remaining % 3 == 0\n    parents = remaining // 3\n    return remaining - parents\n"
+ },
+ {
+  "row": 599,
+  "template": "A pet store currently has {dogs} dogs, {cats} cats, and {birds} birds. How many legs in total do the pets in the store have?",
+  "vars": {
+   "dogs": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "cats": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "birds": {
+    "kind": "int",
+    "original": 10,
+    "min": 3,
+    "max": 40,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    return 4 * v['dogs'] + 4 * v['cats'] + 2 * v['birds']\n"
+ },
+ {
+  "row": 289,
+  "template": "A car in the fast lane is traveling at {s} miles/hour. A car in the slow lane is traveling at half that speed. If the car in the fast lane traveled for a total of {dist} miles, calculate the time the car in the slow lane took to cover the same distance?",
+  "vars": {
+   "s": {
+    "kind": "int",
+    "original": 60,
+    "min": 40,
+    "max": 80,
+    "step": 10
+   },
+   "dist": {
+    "kind": "int",
+    "original": 480,
+    "min": 120,
+    "max": 900,
+    "step": 10
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    slow = Fraction(v['s'], 2)\n    t = Fraction(v['dist']) / slow\n    assert t.denominator == 1\n    return t\n"
+ },
+ {
+  "row": 608,
+  "template": "{name} has ${money} to buy an outfit for his new field trip. There is a {pct}% off sale at the clothing store. The shirt he picks out has a price of ${shirt}. He also picks out a pair of shorts for ${shorts}. Assuming that sales tax is included, how much money will {name} have left after the purchase?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Joe",
+    "pool": [
+     "Sam",
+     "Luis",
+     "Kai",
+     "Ravi",
+     "Owen",
+     "Tariq",
+     "Jack"
+    ]
+   },
+   "money": {
+    "kind": "int",
+    "original": 50,
+    "min": 30,
+    "max": 150,
+    "step": 10
+   },
+   "pct": {
+    "kind": "int",
+    "original": 30,
+    "min": 10,
+    "max": 50,
+    "step": 5
+   },
+   "shirt": {
+    "kind": "int",
+    "original": 25,
+    "min": 10,
+    "max": 60,
+    "step": 5
+   },
+   "shorts": {
+    "kind": "int",
+    "original": 35,
+    "min": 10,
+    "max": 60,
+    "step": 5
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    before = v['shirt'] + v['shorts']\n    after = Fraction(before) * (100 - v['pct']) / 100\n    left = v['money'] - after\n    assert left > 0\n    return left\n"
+ },
+ {
+  "row": 400,
+  "template": "A glass of milk is {oz} ounces of milk.  {name} drinks {g} glasses of milk.  If milk has {cal} calories per ounce how many calories did he consume?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "John",
+    "pool": [
+     "Peter",
+     "Ahmed",
+     "Carlos",
+     "Mike",
+     "Daniel",
+     "Hassan",
+     "Ivan"
+    ]
+   },
+   "oz": {
+    "kind": "int",
+    "original": 8,
+    "min": 4,
+    "max": 16,
+    "step": 1
+   },
+   "g": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 6,
+    "step": 1
+   },
+   "cal": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    ounces = v['oz'] * v['g']\n    return ounces * v['cal']\n"
+ },
+ {
+  "row": 237,
+  "template": "{name} took his allowance of ${a} and added an extra ${b} to it.  He then invested this sum of money, which tripled in a year.  How much money did he have after a year?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Johnny",
+    "pool": [
+     "Tommy",
+     "Eddie",
+     "Andre",
+     "Pablo",
+     "Kevin",
+     "Yusuf",
+     "Danny"
+    ]
+   },
+   "a": {
+    "kind": "int",
+    "original": 20,
+    "min": 10,
+    "max": 60,
+    "step": 5
+   },
+   "b": {
+    "kind": "int",
+    "original": 10,
+    "min": 5,
+    "max": 30,
+    "step": 5
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    invested = v['a'] + v['b']\n    return 3 * invested\n"
+ },
+ {
+  "row": 616,
+  "template": "{name} planted a beanstalk in her backyard. After the first week, it was {a} inches tall. It doubled in height the second week. It grew another {b} inches in the third week. How tall was the beanstalk after 3 weeks?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Jane",
+    "pool": [
+     "Maria",
+     "Aisha",
+     "Emily",
+     "Sofia",
+     "Mei",
+     "Grace",
+     "Lucia"
+    ]
+   },
+   "a": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "b": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 16,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    week2 = 2 * v['a']\n    return week2 + v['b']\n"
+ },
+ {
+  "row": 672,
+  "exclude": "Every number in the question is written as a word (thirty, twelve, eight, three), so no numeric var can be templated without rewording the text."
+ },
+ {
+  "row": 1132,
+  "template": "{name} earns ${val} per month, 1/{d} of what her brother earns. If their mother earns twice their combined salary, what's the total amount of money they all have together?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Valerie",
+    "pool": [
+     "Rachel",
+     "Amara",
+     "Ingrid",
+     "Priya",
+     "Olivia",
+     "Carmen",
+     "Yuki"
+    ]
+   },
+   "val": {
+    "kind": "int",
+    "original": 5000,
+    "min": 2000,
+    "max": 10000,
+    "step": 500
+   },
+   "d": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 4,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    brother = v['d'] * v['val']\n    combined = v['val'] + brother\n    mother = 2 * combined\n    return combined + mother\n"
+ },
+ {
+  "row": 463,
+  "template": "{name}'s pizza delivery costs ${cost}. What is the total amount that {name} should give the delivery man if she wants to give a tip that is equal to 1/{d} of the amount she ordered?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Ashley",
+    "pool": [
+     "Megan",
+     "Fatima",
+     "Chloe",
+     "Rosa",
+     "Hannah",
+     "Leila",
+     "Nina"
+    ]
+   },
+   "cost": {
+    "kind": "int",
+    "original": 15,
+    "min": 8,
+    "max": 60,
+    "step": 1
+   },
+   "d": {
+    "kind": "int",
+    "original": 5,
+    "min": 3,
+    "max": 10,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['cost'] % v['d'] == 0"
+  ],
+  "solver": "def solve(v):\n    tip = Fraction(v['cost'], v['d'])\n    assert tip.denominator == 1\n    return v['cost'] + tip\n"
+ },
+ {
+  "row": 222,
+  "template": "{name} plants {g} geraniums and {f} fewer petunias that geraniums. How many flowers does he plant total?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Andy",
+    "pool": [
+     "Greg",
+     "Hector",
+     "Paul",
+     "Darius",
+     "Kenny",
+     "Victor",
+     "Jamal"
+    ]
+   },
+   "g": {
+    "kind": "int",
+    "original": 90,
+    "min": 30,
+    "max": 200,
+    "step": 10
+   },
+   "f": {
+    "kind": "int",
+    "original": 40,
+    "min": 10,
+    "max": 150,
+    "step": 10
+   }
+  },
+  "constraints": [
+   "v['g'] - v['f'] >= 10"
+  ],
+  "solver": "def solve(v):\n    petunias = v['g'] - v['f']\n    assert petunias >= 2\n    return v['g'] + petunias\n"
+ },
+ {
+  "row": 945,
+  "template": "{name} loves to go swimming and has to swim across a {lake}-mile lake.  He can swim at a pace of {s} miles per hour.  He swims {p}% of the distance.  After that, he stops on an island and rests for half as long as the swimming time.  He then finishes the remaining distance while going half the speed.  How long did it take him to get across the lake?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "James",
+    "pool": [
+     "Robert",
+     "Miguel",
+     "Alan",
+     "Chen",
+     "Patrick",
+     "Kwame",
+     "Erik"
+    ]
+   },
+   "lake": {
+    "kind": "int",
+    "original": 20,
+    "min": 10,
+    "max": 40,
+    "step": 2
+   },
+   "s": {
+    "kind": "num_choice",
+    "original": "2",
+    "values": [
+     "1.5",
+     "2.5",
+     "3"
+    ]
+   },
+   "p": {
+    "kind": "int",
+    "original": 60,
+    "min": 20,
+    "max": 90,
+    "step": 10
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    lake, s, p = v['lake'], v['s'], v['p']\n    first = Fraction(lake * p, 100)\n    t1 = first / s\n    rest = t1 / 2\n    remaining = lake - first\n    assert remaining > 0\n    t3 = remaining / (s / 2)\n    return t1 + rest + t3\n"
+ },
+ {
+  "row": 238,
+  "template": "{mary} is two years younger than {joan}, who is five years older than {jessa}. If {jessa} is {age} years old, what is the sum of the ages of the three girls?",
+  "vars": {
+   "mary": {
+    "kind": "name",
+    "original": "Mary",
+    "pool": [
+     "Anna",
+     "Rosa",
+     "Lily",
+     "Nora",
+     "Ella",
+     "Ruth"
+    ]
+   },
+   "joan": {
+    "kind": "name",
+    "original": "Joan",
+    "pool": [
+     "Clara",
+     "Ivy",
+     "Maya",
+     "Hana",
+     "Zoe",
+     "Leah"
+    ]
+   },
+   "jessa": {
+    "kind": "name",
+    "original": "Jessa",
+    "pool": [
+     "Tara",
+     "Gina",
+     "Lena",
+     "Iris",
+     "Mila",
+     "Dana"
+    ]
+   },
+   "age": {
+    "kind": "int",
+    "original": 20,
+    "min": 8,
+    "max": 30,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    jessa = v['age']\n    joan = jessa + 5\n    mary = joan - 2\n    return jessa + joan + mary\n"
+ },
+ {
+  "row": 730,
+  "template": "{name} chews {r} pieces of gum a day.  A pack of gum has {p} pieces of chewing gum per pack.  How many packs of gum will he need to last him {d} days?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Parker",
+    "pool": [
+     "Logan",
+     "Isaac",
+     "Mohammed",
+     "Felipe",
+     "Connor",
+     "Jin",
+     "Malik"
+    ]
+   },
+   "r": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   },
+   "p": {
+    "kind": "int",
+    "original": 15,
+    "min": 5,
+    "max": 30,
+    "step": 5
+   },
+   "d": {
+    "kind": "int",
+    "original": 30,
+    "min": 10,
+    "max": 90,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "(v['r'] * v['d']) % v['p'] == 0"
+  ],
+  "solver": "def solve(v):\n    pieces = v['r'] * v['d']\n    assert pieces % v['p'] == 0\n    return pieces // v['p']\n"
+ },
+ {
+  "row": 55,
+  "template": "{name} has {n} lollipops. {name} eats {e} of the lollipops. With the remaining lollipops, {name} wants to package {b} lollipops in one bag. How many bags can {name} fill?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Jean",
+    "pool": [
+     "Robin",
+     "Alex",
+     "Casey",
+     "Morgan",
+     "Jamie",
+     "Taylor",
+     "Riley"
+    ]
+   },
+   "n": {
+    "kind": "int",
+    "original": 30,
+    "min": 12,
+    "max": 100,
+    "step": 1
+   },
+   "e": {
+    "kind": "int",
+    "original": 2,
+    "min": 1,
+    "max": 8,
+    "step": 1
+   },
+   "b": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['e'] < v['n']",
+   "(v['n'] - v['e']) % v['b'] == 0"
+  ],
+  "solver": "def solve(v):\n    remaining = v['n'] - v['e']\n    assert remaining > 0\n    assert remaining % v['b'] == 0\n    return remaining // v['b']\n"
+ }
+]

@@ -1,0 +1,82 @@
+[
+ {
+  "row": 259,
+  "solver": "def solve(v):\n    a1 = v['andrea_apples']\n    a2 = a1 - v['diff_apples']\n    assert a2 >= 0\n    b2 = a2 + v['diff_bananas']\n    b1 = Fraction(b2, 2)\n    return a1 + a2 + b2 + b1\n"
+ },
+ {
+  "row": 90,
+  "solver": "def solve(v):\n    adult = v['adult_lbs']\n    child = Fraction(adult, 2)\n    return adult * v['adults'] + child * v['children']\n"
+ },
+ {
+  "row": 998,
+  "solver": "def solve(v):\n    cookies = v['guests'] * v['per_plate']\n    to_church = Fraction(cookies, v['den'])\n    return to_church / v['per_person']\n"
+ },
+ {
+  "row": 989,
+  "solver": "def solve(v):\n    n = v['total']\n    peel = Fraction(n, v['peel_rate'])\n    saute = Fraction(n * v['batch_min'], v['batch'])\n    return peel + saute\n"
+ },
+ {
+  "row": 22,
+  "solver": "def solve(v):\n    assert v['first'] + v['nxt'] + v['last'] == v['total']\n    return v['first'] * 1 + v['nxt'] * v['dvds'] + v['last'] * 0\n"
+ },
+ {
+  "row": 586,
+  "solver": "def solve(v):\n    burned = v['aero_h'] * v['aero_rate'] + 1 * v['run_rate']\n    return Fraction(burned, v['cal']) * v['ml']\n"
+ },
+ {
+  "row": 756,
+  "solver": "def solve(v):\n    m = v['members']\n    # favor = 2*against, favor + against = m\n    against = Fraction(m, 3)\n    assert against.denominator == 1\n    return 2 * against\n"
+ },
+ {
+  "row": 1261,
+  "solver": "def solve(v):\n    weekly = v['blouses'] * v['p_blouse'] + v['pants'] * v['p_pants'] + 1 * v['p_skirt']\n    return weekly * v['weeks']\n"
+ },
+ {
+  "row": 296,
+  "solver": "def solve(v):\n    per_day = v['rate'] * v['members'] * 2\n    per_week = per_day * 7\n    return Fraction(v['bag']) / per_week\n"
+ },
+ {
+  "row": 383,
+  "solver": "def solve(v):\n    total_cups = v['pitchers'] * v['cups']\n    revenue = total_cups * v['price']\n    profit = revenue - v['cost']\n    hours = Fraction(total_cups, v['rate'])\n    return profit / hours\n"
+ },
+ {
+  "row": 709,
+  "solver": "def solve(v):\n    h = v['total_h']\n    choc = Fraction(v['choc'] * h, v['choc_h'])\n    van = Fraction(v['van'] * h, v['van_h'])\n    return choc + van\n"
+ },
+ {
+  "row": 1069,
+  "solver": "def solve(v):\n    t = v['trucks']\n    failed = Fraction(t, 4)\n    assert failed.denominator == 1\n    return (t - failed) * v['tons']\n"
+ },
+ {
+  "row": 1141,
+  "solver": "def solve(v):\n    assert v['d1'] + v['d2'] == v['total_d']\n    eggs = v['e1'] * v['d1'] + v['e2'] * v['d2']\n    return Fraction(eggs, 12)\n"
+ },
+ {
+  "row": 179,
+  "solver": "def solve(v):\n    return v['rate'] * (v['h1'] + v['h2'])\n"
+ },
+ {
+  "row": 731,
+  "solver": "def solve(v):\n    need = v['kids'] * v['per_kid'] + v['adults'] * 1\n    per_box = v['per_sleeve'] * v['sleeves']\n    return -(-need // per_box)\n"
+ },
+ {
+  "row": 1241,
+  "solver": "def solve(v):\n    eggs = 5 * 12\n    cost = 5 * v['cost']\n    revenue = Fraction(eggs, v['group']) * v['price']\n    return revenue - cost\n"
+ },
+ {
+  "row": 371,
+  "solver": "def solve(v):\n    fri = v['friday']\n    sat = 2 * fri\n    sun = Fraction(sat, 2)\n    total = fri + sat + sun - 6\n    assert total >= 0\n    return total\n"
+ },
+ {
+  "row": 107,
+  "solver": "def solve(v):\n    s = v['short']\n    total = v['total_h'] * 60\n    other = 60 + 60 + (60 + s) + 2 * 60\n    wed = total - other\n    assert wed >= 0\n    return Fraction(wed, s)\n"
+ },
+ {
+  "row": 1115,
+  "solver": "def solve(v):\n    rem = v['budget'] - v['spent'] - v['left']\n    assert rem > 0\n    return Fraction(rem, 2)\n"
+ },
+ {
+  "row": 851,
+  "solver": "def solve(v):\n    return Fraction(v['yearly'], v['pairs'] * 12)\n"
+ }
+]

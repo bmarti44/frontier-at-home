@@ -1,0 +1,82 @@
+[
+ {
+  "row": 1259,
+  "solver": "def solve(v):\n    # June has 30 days; 12 doughnuts per dozen\n    return v['dozens'] * 12 * v['price'] * 30\n"
+ },
+ {
+  "row": 875,
+  "solver": "def solve(v):\n    total = v['a'] + v['b']\n    assert total % v['d'] == 0\n    lost = total // v['d']\n    return total - lost\n"
+ },
+ {
+  "row": 661,
+  "solver": "def solve(v):\n    per_pound = v['price'] * (1 + Fraction(v['pct'], 100))\n    coffee = per_pound * 7\n    return coffee + v['donut']\n"
+ },
+ {
+  "row": 1102,
+  "solver": "def solve(v):\n    assert v['ret'] <= v['charged']\n    pan = v['pan'] * (1 - Fraction(v['p1'], 100))\n    towel = v['towel'] * (1 - Fraction(v['p2'], 100))\n    return v['charged'] - v['ret'] + pan + towel\n"
+ },
+ {
+  "row": 640,
+  "solver": "def solve(v):\n    king = v['king']\n    leather = Fraction(king, 3)\n    boards = leather - v['diff']\n    assert boards >= 0\n    # towing package has no stated price\n    return v['base'] + king + leather + boards + v['light']\n"
+ },
+ {
+  "row": 134,
+  "solver": "def solve(v):\n    return v['washes'] * v['cost'] * 12\n"
+ },
+ {
+  "row": 188,
+  "solver": "def solve(v):\n    per_bag = v['sell'] - v['buy'] - v['transport']\n    assert per_bag > 0\n    bags = Fraction(v['profit'], per_bag)\n    assert bags.denominator == 1\n    return bags\n"
+ },
+ {
+  "row": 112,
+  "solver": "def solve(v):\n    return v['teachers'] * v['lessons'] * v['cleans']\n"
+ },
+ {
+  "row": 751,
+  "solver": "def solve(v):\n    assert v['b'] % 2 == 0\n    pile = v['b'] - v['b'] // 2\n    pile += v['add1']\n    assert v['steal'] <= pile\n    pile -= v['steal']\n    pile += v['add2']\n    return pile\n"
+ },
+ {
+  "row": 612,
+  "solver": "def solve(v):\n    # one pound = 16 ounces; vegetarian meals have no meat\n    return v['steak'] + v['tips'] * 1 + 16\n"
+ },
+ {
+  "row": 1301,
+  "solver": "def solve(v):\n    oat = v['oat'] - 1 - v['lunch']\n    choc = v['choc'] - 1\n    sugar = v['sugar'] - 1 - v['give']\n    assert oat >= 0 and choc >= 0 and sugar >= 0\n    return oat + choc + sugar + 3 * v['bake']\n"
+ },
+ {
+  "row": 1071,
+  "solver": "def solve(v):\n    guests = v['classmates'] + v['dance'] + v['family'] - v['absent']\n    assert guests >= 0\n    additional = max(0, guests - v['party'])\n    return v['fee'] + v['extra'] * additional\n"
+ },
+ {
+  "row": 32,
+  "solver": "def solve(v):\n    return v['dogs'] * v['hours'] * 7\n"
+ },
+ {
+  "row": 943,
+  "solver": "def solve(v):\n    assert v['sold'] <= v['n']\n    paid = v['n'] * v['cost'] * (1 - Fraction(v['pct'], 100))\n    return paid - v['sale']\n"
+ },
+ {
+  "row": 126,
+  "solver": "def solve(v):\n    fish = v['chicken'] + v['more']\n    return v['chicken'] + fish\n"
+ },
+ {
+  "row": 651,
+  "solver": "def solve(v):\n    red = v['red']\n    green = 2 * red\n    first = red + green\n    second = first * Fraction(v['num'], v['den'])\n    return first + second\n"
+ },
+ {
+  "row": 1014,
+  "solver": "def solve(v):\n    spent = v['pp'] * (v['peaches'] + v['pears']) + v['apple'] * v['apples'] + v['kiwi'] * v['kiwis']\n    left = v['budget'] - spent\n    assert left >= 0\n    return int(left // v['plum'])\n"
+ },
+ {
+  "row": 1163,
+  "solver": "def solve(v):\n    return 2 * 3 * v['days']\n"
+ },
+ {
+  "row": 846,
+  "solver": "def solve(v):\n    avail = v['hours'] * 60 - v['inter']\n    assert avail >= 0\n    per_group = v['enter'] + v['perform'] + v['leave']\n    return avail // per_group\n"
+ },
+ {
+  "row": 97,
+  "solver": "def solve(v):\n    raw = 2 * v['sauce']\n    cans = Fraction(raw, v['can'])\n    assert cans.denominator == 1\n    return cans * 3\n"
+ }
+]
