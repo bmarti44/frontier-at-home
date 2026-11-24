@@ -76,6 +76,11 @@ def expected(base: dict, lever: str) -> dict:
 
 
 IDENTITY = ("profile_id", "purpose", "status", "bench", "launch.log_name", "containment.unit")
+# M4 qualified the serving profile after the screen: its status, switch fields and the measured
+# admission and overhead changed. The screen's arm files stay as they ran, so these fields are
+# not compared between an arm and the serving profile.
+QUALIFICATION = ("switch_alias", "switch", "safety.minimum_start_gib", "safety.note",
+                 "memory_model.overhead_gib", "memory_model.basis")
 
 
 def screen_a0(serving: dict) -> dict:
@@ -100,6 +105,12 @@ def strip_identity(profile: dict) -> dict:
             p[outer].pop(inner)
         else:
             p.pop(key)
+    for key in QUALIFICATION:
+        if "." in key:
+            outer, inner = key.split(".")
+            p[outer].pop(inner, None)
+        else:
+            p.pop(key, None)
     return p
 
 
@@ -192,7 +203,8 @@ class Inkling2TuneArms(unittest.TestCase):
             with self.subTest(arm=arm):
                 profile = profile_resolver.load_profile(SLUG, f"{leaf}.json")
                 snapshot = profile_resolver.resolve(profile, model, host)
-                self.assertEqual(snapshot["status"], "estimated")
+                # The serving profile (arm a0's leaf) is qualified since M4; the screen arms are not.
+                self.assertEqual(snapshot["status"], "qualified" if leaf == BASE else "estimated")
 
 
 if __name__ == "__main__":

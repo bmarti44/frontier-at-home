@@ -345,11 +345,17 @@ class Inkling2OneMillionProfile(unittest.TestCase):
         self.assertEqual(env.pop("INKLING2_MAX_CTAS_POW2"), "1")
         self.assertEqual(env, self.smoke["launch"]["env"])
 
-    def test_estimated_without_a_switch_alias_until_qualified(self):
+    def test_qualified_as_the_inkling2mini_switch_alias(self):
+        # M4: qualified by M3 candidate 2; the holdout kept qwen38fn as the default.
         p = self.profile
-        self.assertEqual(p["status"]["state"], "estimated")
-        self.assertNotIn("switch_alias", p)
-        self.assertNotIn("switch", p)
+        self.assertEqual(p["status"]["state"], "qualified")
+        self.assertIn("results/inkling2-gates/qualify-2026-11-23-c2/RESULT.md", p["status"]["basis"])
+        self.assertIn("results/inkling2-gates/holdout-2026-11-23/RESULT.md", p["status"]["basis"])
+        self.assertEqual(p["switch_alias"], "inkling2mini")
+        self.assertEqual(p["switch"], {"mode": "generic", "served_model_id": "inkling-2-mini",
+                                       "health_path": "/health",
+                                       "context_check": {"kind": "model_card", "max_model_len": 262144}})
+        self.assertEqual(p["safety"]["minimum_start_gib"], 102)
         self.assertEqual(p["engine"], ENGINE)
         self.assertEqual(p["artifact_roles"], {"model": ARTIFACT})
         self.assertEqual(p["bench"]["stack_label"], "inkling-2-mini-cuda-spark-128g-1m")
@@ -379,7 +385,7 @@ class Inkling2OneMillionProfile(unittest.TestCase):
 
     def test_renders_feasible_on_this_host(self):
         snapshot = profile_resolver.resolve(self.profile, self.model, self.host)
-        self.assertEqual(snapshot["status"], "estimated")
+        self.assertEqual(snapshot["status"], "qualified")
         binary = self.host["paths"]["cache_root"] + "/inkling-2-mini/native-runtime-001/runtime/bin/python3.12"
         self.assertEqual(snapshot["binary"], binary)
 
