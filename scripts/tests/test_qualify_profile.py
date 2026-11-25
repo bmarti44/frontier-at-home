@@ -167,32 +167,40 @@ class DryRunGlmProfile(unittest.TestCase):
         # DFlash drafts block_size - 1 = 7 tokens, so one SSE event can carry
         # eight. MiMo's template has no effort levels: the operator passes
         # --reasoning-effort '' and every suite runs the mimo26 encoder.
-        out = self.tmp / "bundle-mimo"
-        proc = subprocess.run(
-            [sys.executable, str(SCRIPT), "--profile", "mimo-v2.6-flash/cuda-spark-128g-262k",
-             "--host", str(self.host), "--dry-run", "--out", str(out),
-             "--cells", "speed,accuracy", "--reasoning-effort", ""],
-            capture_output=True, text=True, check=False,
-        )
-        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
-        manifest = json.loads((out / "manifest.json").read_text())
-        self.assertEqual(manifest["profile"]["served_model"], "mimo-v2.6-flash")
-        speed = manifest["cells"]["speed"]["argv"]
-        self.assertTrue(speed[1].endswith("/30_bench_speed_blocks.py"))
-        self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "8")
-        # The TabbyAPI argv starts `-B -m tabby_launch`: the model is
-        # --model-name, never Python's -m module (smoke 2026-10-13 read
-        # `tabby_launch` as the model and passed a bare tokenizer.json).
-        model_root = json.loads(self.host.read_text())["paths"]["model_root"]
-        tokenizer = f"{model_root}/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json"
-        self.assertEqual(speed[speed.index("--output-tokenizer-path") + 1], tokenizer)
-        self.assertEqual(manifest["profile"]["tokenizer_path"], tokenizer)
-        suites = manifest["cells"]["accuracy"]["argv"]
-        self.assertEqual(sorted(suites), ["gsm8k", "humaneval", "mmlu-pro"])
-        for suite, suite_argv in suites.items():
-            with self.subTest(suite=suite):
-                self.assertEqual(suite_argv[suite_argv.index("--encoder") + 1], "mimo26")
-                self.assertNotIn("--reasoning-effort", suite_argv)
+        # The plan must not depend on the weights being on disk: CI has none
+        # (PR #24's CI resolved the tokenizer one directory too high).
+        absent = self.tmp / "host-weights-absent.json"
+        host_doc = json.loads(self.host.read_text())
+        host_doc["paths"]["model_root"] = str(self.tmp / "no-models-here")
+        absent.write_text(json.dumps(host_doc))
+        for label, host in (("this host", self.host), ("weights absent", absent)):
+            with self.subTest(host=label):
+                out = self.tmp / f"bundle-mimo-{absent == host}"
+                proc = subprocess.run(
+                    [sys.executable, str(SCRIPT), "--profile", "mimo-v2.6-flash/cuda-spark-128g-262k",
+                     "--host", str(host), "--dry-run", "--out", str(out),
+                     "--cells", "speed,accuracy", "--reasoning-effort", ""],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+                manifest = json.loads((out / "manifest.json").read_text())
+                self.assertEqual(manifest["profile"]["served_model"], "mimo-v2.6-flash")
+                speed = manifest["cells"]["speed"]["argv"]
+                self.assertTrue(speed[1].endswith("/30_bench_speed_blocks.py"))
+                self.assertEqual(speed[speed.index("--max-tokens-per-event") + 1], "8")
+                # The TabbyAPI argv starts `-B -m tabby_launch`: the model is
+                # --model-name, never Python's -m module (smoke 2026-10-13 read
+                # `tabby_launch` as the model and passed a bare tokenizer.json).
+                model_root = json.loads(host.read_text())["paths"]["model_root"]
+                tokenizer = f"{model_root}/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json"
+                self.assertEqual(speed[speed.index("--output-tokenizer-path") + 1], tokenizer)
+                self.assertEqual(manifest["profile"]["tokenizer_path"], tokenizer)
+                suites = manifest["cells"]["accuracy"]["argv"]
+                self.assertEqual(sorted(suites), ["gsm8k", "humaneval", "mmlu-pro"])
+                for suite, suite_argv in suites.items():
+                    self.assertEqual(suite_argv[suite_argv.index("--encoder") + 1], "mimo26",
+                                     suite)
+                    self.assertNotIn("--reasoning-effort", suite_argv)
 
     def test_every_profile_soaks_at_the_repository_floor(self) -> None:
         # One soak floor for every profile (owner, 2026-10-11): 35_soak.py's
