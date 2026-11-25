@@ -1,0 +1,104 @@
+{
+  "index": 38,
+  "task_id": "HumanEval/38",
+  "rendered_prompt_sha256": "76b76b6f211ef2f4243678ddb1df6013ceac62da09fefe7bc38ba55e404a1ef8",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    return encode_cyclic(encode_cyclic(s))\n\n\ndef test_decode_cyclic():\n    # Test case 1: Empty string\n    assert decode_cyclic(\"\") == \"\"\n\n    # Test case 2: String with length not divisible by 3\n    assert decode_cyclic(\"abc\") == \"abc\"\n\n    # Test case 3: String with length divisible by 3\n    assert decode_cyclic(\"abcdef\") == \"abcdef\"\n\n    # Test case 4: String with length greater than 3\n    assert decode_cyclic(\"abcdefghij\") == \"abcdefghij\"\n\n    # Test case 5: String with special characters\n    assert decode_cyclic(\"a!b@c#d$e%f\") == \"a!b@c#d$e%f\"\n\n    # Test case 6: String with spaces\n    assert decode_cyclic(\"a b c d e f\") == \"a b c d e f\"\n\n    # Test case 7: String with mixed case\n    assert decode_cyclic(\"aBcDeF\") == \"aBcDeF\"\n\n    # Test case 8: String with repeated characters\n    assert decode_cyclic(\"aaa\") == \"aaa\"\n\n    # Test case 9: String with repeated groups\n    assert decode_cyclic(\"abcabcabc\") == \"abcabcabc\"\n\n    # Test case 10: String with repeated groups and special characters\n    assert decode_cyclic(\"a!b@c#a!b@c#a!b@c#\") == \"a!b@c#a!b@c#a!b@c#\"\n\n    # Test case 11: String with repeated groups and spaces\n    assert decode_cyclic(\"a b c a b c a b c\") == \"a b c a b c a b c\"\n\n    # Test case 12: String with repeated groups and mixed case\n    assert decode_cyclic(\"aBcDeFaBcDeFaBcDeF\") == \"aBcDeFaBcDeFaBcDeF\"\n\n    # Test case 13: String with repeated groups and repeated characters\n    assert decode_cyclic(\"aaa aaa aaa\") == \"aaa aaa aaa\"\n\n    # Test case 14: String with repeated groups and repeated groups\n    assert decode_cyclic(\"abcabcabcabcabcabc\") == \"abcabcabcabcabcabc\"\n\n    # Test case 15: String with repeated groups and repeated groups and special characters\n    assert decode_cyclic(\"a!b@c#a!b@c#a!b@c#a!b@c#a!b@c#a!b@c#\") == \"a!b@c#a!b@c#a!b@c#a!b@c#a!b@c#a!b@c#\"\n\n    # Test case 16: String with repeated groups and repeated groups and spaces\n    assert decode_cyclic(\"a b c a b c a b c a b c a b c a b c\") == \"a b c a b c a b c a b c a b c a b c\"\n\n    # Test case 17: String with repeated groups and repeated groups and mixed case\n    assert decode_cyclic(\"aBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcDeF\") == \"aBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcDeF\"\n\n    # Test case 18: String with repeated groups and repeated groups and repeated characters\n    assert decode_cyclic(\"aaa aaa aaa aaa aaa aaa\") == \"aaa aaa aaa aaa aaa aaa\"\n\n    # Test case 19: String with repeated groups and repeated groups and repeated groups\n    assert decode_cyclic(\"abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc",
+  "finish_reason": "stop",
+  "expected": "    return encode_cyclic(encode_cyclic(s))\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 19.697366453008726
+  },
+  "response": {
+    "id": "cmpl-f3fd7986099f4635b2ddd219b8cc9025",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    return encode_cyclic(encode_cyclic(s))\n\n\ndef test_decode_cyclic():\n    # Test case 1: Empty string\n    assert decode_cyclic(\"\") == \"\"\n\n    # Test case 2: String with length not divisible by 3\n    assert decode_cyclic(\"abc\") == \"abc\"\n\n    # Test case 3: String with length divisible by 3\n    assert decode_cyclic(\"abcdef\") == \"abcdef\"\n\n    # Test case 4: String with length greater than 3\n    assert decode_cyclic(\"abcdefghij\") == \"abcdefghij\"\n\n    # Test case 5: String with special characters\n    assert decode_cyclic(\"a!b@c#d$e%f\") == \"a!b@c#d$e%f\"\n\n    # Test case 6: String with spaces\n    assert decode_cyclic(\"a b c d e f\") == \"a b c d e f\"\n\n    # Test case 7: String with mixed case\n    assert decode_cyclic(\"aBcDeF\") == \"aBcDeF\"\n\n    # Test case 8: String with repeated characters\n    assert decode_cyclic(\"aaa\") == \"aaa\"\n\n    # Test case 9: String with repeated groups\n    assert decode_cyclic(\"abcabcabc\") == \"abcabcabc\"\n\n    # Test case 10: String with repeated groups and special characters\n    assert decode_cyclic(\"a!b@c#a!b@c#a!b@c#\") == \"a!b@c#a!b@c#a!b@c#\"\n\n    # Test case 11: String with repeated groups and spaces\n    assert decode_cyclic(\"a b c a b c a b c\") == \"a b c a b c a b c\"\n\n    # Test case 12: String with repeated groups and mixed case\n    assert decode_cyclic(\"aBcDeFaBcDeFaBcDeF\") == \"aBcDeFaBcDeFaBcDeF\"\n\n    # Test case 13: String with repeated groups and repeated characters\n    assert decode_cyclic(\"aaa aaa aaa\") == \"aaa aaa aaa\"\n\n    # Test case 14: String with repeated groups and repeated groups\n    assert decode_cyclic(\"abcabcabcabcabcabc\") == \"abcabcabcabcabcabc\"\n\n    # Test case 15: String with repeated groups and repeated groups and special characters\n    assert decode_cyclic(\"a!b@c#a!b@c#a!b@c#a!b@c#a!b@c#a!b@c#\") == \"a!b@c#a!b@c#a!b@c#a!b@c#a!b@c#a!b@c#\"\n\n    # Test case 16: String with repeated groups and repeated groups and spaces\n    assert decode_cyclic(\"a b c a b c a b c a b c a b c a b c\") == \"a b c a b c a b c a b c a b c a b c\"\n\n    # Test case 17: String with repeated groups and repeated groups and mixed case\n    assert decode_cyclic(\"aBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcDeF\") == \"aBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcDeF\"\n\n    # Test case 18: String with repeated groups and repeated groups and repeated characters\n    assert decode_cyclic(\"aaa aaa aaa aaa aaa aaa\") == \"aaa aaa aaa aaa aaa aaa\"\n\n    # Test case 19: String with repeated groups and repeated groups and repeated groups\n    assert decode_cyclic(\"abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"
+      }
+    ],
+    "created": 1791951838,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 153,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.5,
+      "prompt_tokens_per_sec": 306.0,
+      "completion_tokens": 1581,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 1348,
+        "rejected_prediction_tokens": 283
+      },
+      "completion_time": 19.19,
+      "completion_tokens_per_sec": 82.4,
+      "total_tokens": 1734,
+      "total_time": 19.69
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 153,
+      "prompt_ms": 500.0,
+      "prompt_per_token_ms": 3.2679738562091503,
+      "prompt_per_second": 306.0,
+      "predicted_n": 1581,
+      "predicted_ms": 19190.0,
+      "predicted_per_token_ms": 12.137887413029729,
+      "predicted_per_second": 82.38665971860344,
+      "draft_n": 1631,
+      "draft_n_accepted": 1348
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00038:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

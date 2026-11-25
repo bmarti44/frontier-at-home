@@ -1,0 +1,68 @@
+{
+  "index": 6143,
+  "task_id": 6306,
+  "rendered_prompt_sha256": "27f2192c6f61e8e33d8c4dc1a8657a8d0d8b4cbed6d7354cf8bee54a693dff75",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The question: 19-year-old male hit from behind below the right knee while playing football. Gait analysis reveals lack of fluid motion. Standing flexion test negative. Cruciate and collateral ligaments intact. Foot drop on the right noted.\n\nFoot drop = peroneal nerve palsy. The common peroneal nerve wraps around the fibular neck. A blow to the fibular head/neck can injure the common peroneal nerve causing foot drop. So the diagnosis: posteriorly deviated fibular head (osteopathic diagnosis) — option G.\n\nStanding flexion test negative indicates no sacral shear (unilateral sacral shear would be positive standing flexion test). So D is out.\n\nAnswer: G.\n\nLet me double-check: The standing flexion test (one-legged standing flexion test) is positive for sacral shear. Negative → rules out sacral shear. Foot drop → common peroneal nerve compression at fibular neck → posteriorly deviated fibular head.\n\nAnswer: G.</think>**Answer: G**\n\n**Rationale:**\n\n- **Foot drop** localizes the injury to the **common (peroneal) fibular nerve**, which courses superficially around the **fibular neck** — a vulnerable spot where it can be compressed or stretched by a blow to the lateral/proximal leg.\n- The mechanism (impact from behind below the knee) is consistent with a **posteriorly deviated fibular head**, which displaces the fibular head into the nerve, producing a motor deficit in the anterior and lateral compartments (dorsiflexion and eversion) → foot drop.\n- **Standing flexion test is negative** → rules out **unilateral sacral shear (D)**, which would produce a positive test (ipsilateral ilium lags on forward bending).\n- **Cruciate and collateral ligaments are intact** → excludes **C (PCL tear)**, **H (ACL tear)**, **F (MCL sprain)**.\n- **Meniscus tear (A)**, **patellar dislocation (E)**, **tibial stress fracture (B)**, and **plantar flexed cuboid (I)** do not explain an isolated foot drop; **anteriorly deviated distal femur (J)** would not compress the peroneal nerve.\n\nThus, the diagnosis is a **posteriorly deviated fibular head** causing common peroneal nerve palsy.\n\nAnswer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 16.534649524022825
+  },
+  "response": {
+    "id": "cmpl-b60f2a8582a2486293d4e3ec9067bc9e",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The question: 19-year-old male hit from behind below the right knee while playing football. Gait analysis reveals lack of fluid motion. Standing flexion test negative. Cruciate and collateral ligaments intact. Foot drop on the right noted.\n\nFoot drop = peroneal nerve palsy. The common peroneal nerve wraps around the fibular neck. A blow to the fibular head/neck can injure the common peroneal nerve causing foot drop. So the diagnosis: posteriorly deviated fibular head (osteopathic diagnosis) — option G.\n\nStanding flexion test negative indicates no sacral shear (unilateral sacral shear would be positive standing flexion test). So D is out.\n\nAnswer: G.\n\nLet me double-check: The standing flexion test (one-legged standing flexion test) is positive for sacral shear. Negative → rules out sacral shear. Foot drop → common peroneal nerve compression at fibular neck → posteriorly deviated fibular head.\n\nAnswer: G.</think>**Answer: G**\n\n**Rationale:**\n\n- **Foot drop** localizes the injury to the **common (peroneal) fibular nerve**, which courses superficially around the **fibular neck** — a vulnerable spot where it can be compressed or stretched by a blow to the lateral/proximal leg.\n- The mechanism (impact from behind below the knee) is consistent with a **posteriorly deviated fibular head**, which displaces the fibular head into the nerve, producing a motor deficit in the anterior and lateral compartments (dorsiflexion and eversion) → foot drop.\n- **Standing flexion test is negative** → rules out **unilateral sacral shear (D)**, which would produce a positive test (ipsilateral ilium lags on forward bending).\n- **Cruciate and collateral ligaments are intact** → excludes **C (PCL tear)**, **H (ACL tear)**, **F (MCL sprain)**.\n- **Meniscus tear (A)**, **patellar dislocation (E)**, **tibial stress fracture (B)**, and **plantar flexed cuboid (I)** do not explain an isolated foot drop; **anteriorly deviated distal femur (J)** would not compress the peroneal nerve.\n\nThus, the diagnosis is a **posteriorly deviated fibular head** causing common peroneal nerve palsy.\n\nAnswer: G"
+      }
+    ],
+    "created": 1791944544,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 180,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.58,
+      "prompt_tokens_per_sec": 310.34,
+      "completion_tokens": 510,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 344,
+        "rejected_prediction_tokens": 818
+      },
+      "completion_time": 15.95,
+      "completion_tokens_per_sec": 31.97,
+      "total_tokens": 690,
+      "total_time": 16.54
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 180,
+      "prompt_ms": 580.0,
+      "prompt_per_token_ms": 3.2222222222222223,
+      "prompt_per_second": 310.34482758620686,
+      "predicted_n": 510,
+      "predicted_ms": 15950.0,
+      "predicted_per_token_ms": 31.274509803921568,
+      "predicted_per_second": 31.97492163009404,
+      "draft_n": 1162,
+      "draft_n_accepted": 344
+    }
+  }
+}

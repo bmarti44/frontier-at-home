@@ -1,0 +1,69 @@
+{
+  "index": 100,
+  "task_id": 100,
+  "rendered_prompt_sha256": "e028fdaf5738e6221b3e498af29cd5d08d2fc741cb9df14a13defe764d5b0802",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Friend 1: 20 times\nFriend 2: 20 + 1/4 * 20 = 20 + 5 = 25 times\nFriend 4: 60 times\nFriend 3: 60 + 10 = 70 times\n\nTotal: 20 + 25 + 70 + 60 = 175</think>Friend 1: 20 rings\nFriend 2: 20 + (1/4 × 20) = 20 + 5 = 25 rings\nFriend 4: 60 rings\nFriend 3: 60 + 10 = 70 rings\n\nTotal: 20 + 25 + 70 + 60 = 175\n\nAnswer: 175",
+  "finish_reason": "stop",
+  "expected": "175",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.9381802530260757
+  },
+  "response": {
+    "id": "cmpl-5e924745113e4db1a6a968fdb4046edb",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Friend 1: 20 times\nFriend 2: 20 + 1/4 * 20 = 20 + 5 = 25 times\nFriend 4: 60 times\nFriend 3: 60 + 10 = 70 times\n\nTotal: 20 + 25 + 70 + 60 = 175</think>Friend 1: 20 rings\nFriend 2: 20 + (1/4 × 20) = 20 + 5 = 25 rings\nFriend 4: 60 rings\nFriend 3: 60 + 10 = 70 rings\n\nTotal: 20 + 25 + 70 + 60 = 175\n\nAnswer: 175"
+      }
+    ],
+    "created": 1791926198,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 127,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.43,
+      "prompt_tokens_per_sec": 295.35,
+      "completion_tokens": 183,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 157,
+        "rejected_prediction_tokens": 25
+      },
+      "completion_time": 2.5,
+      "completion_tokens_per_sec": 73.13,
+      "total_tokens": 310,
+      "total_time": 2.93
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 127,
+      "prompt_ms": 430.0,
+      "prompt_per_token_ms": 3.3858267716535435,
+      "prompt_per_second": 295.34883720930236,
+      "predicted_n": 183,
+      "predicted_ms": 2500.0,
+      "predicted_per_token_ms": 13.66120218579235,
+      "predicted_per_second": 73.2,
+      "draft_n": 182,
+      "draft_n_accepted": 157
+    }
+  },
+  "used_fallback": false
+}

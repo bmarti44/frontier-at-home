@@ -1,0 +1,68 @@
+{
+  "index": 6607,
+  "task_id": 6773,
+  "rendered_prompt_sha256": "f7193b6a6c11a5c32c8ebd63306f165e7c0a690d47a8d80f7c1779cc2d44438c",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>A quasispecies is a concept in virology describing a population of closely related but genetically distinct variants that coexist. The key characteristic is the co-existence of innumerable genetic variants due to high mutation rates.\n\nThe answer is H.</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7417466990300454
+  },
+  "response": {
+    "id": "cmpl-28811139185540d98ff49bcb62619d4d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>A quasispecies is a concept in virology describing a population of closely related but genetically distinct variants that coexist. The key characteristic is the co-existence of innumerable genetic variants due to high mutation rates.\n\nThe answer is H.</think>Answer: H"
+      }
+    ],
+    "created": 1791944834,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 127,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.42,
+      "prompt_tokens_per_sec": 302.38,
+      "completion_tokens": 56,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 32,
+        "rejected_prediction_tokens": 136
+      },
+      "completion_time": 2.32,
+      "completion_tokens_per_sec": 24.14,
+      "total_tokens": 183,
+      "total_time": 2.74
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 127,
+      "prompt_ms": 420.0,
+      "prompt_per_token_ms": 3.3070866141732282,
+      "prompt_per_second": 302.38095238095235,
+      "predicted_n": 56,
+      "predicted_ms": 2320.0,
+      "predicted_per_token_ms": 41.42857142857143,
+      "predicted_per_second": 24.137931034482758,
+      "draft_n": 168,
+      "draft_n_accepted": 32
+    }
+  }
+}

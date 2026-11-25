@@ -1,0 +1,68 @@
+{
+  "index": 284,
+  "task_id": 356,
+  "rendered_prompt_sha256": "faa80513636f7273a4802227278d074f47516c572ee04bb028a521f8700b4b8a",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Fixed costs: $500 + $100 = $600 per week\nVariable cost per customer: $2\nRevenue per customer: $6\nContribution per customer: $6 - $2 = $4\n\nNeed profit of $1,000:\nTotal contribution needed = $600 + $1,000 = $1,600\nNumber of customers = $1,600 / $4 = 400</think>Answer: J",
+  "finish_reason": "stop",
+  "expected": "J",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.6728606190299615
+  },
+  "response": {
+    "id": "cmpl-5a36a739f30c46cd9cdf6fc116124cbe",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Fixed costs: $500 + $100 = $600 per week\nVariable cost per customer: $2\nRevenue per customer: $6\nContribution per customer: $6 - $2 = $4\n\nNeed profit of $1,000:\nTotal contribution needed = $600 + $1,000 = $1,600\nNumber of customers = $1,600 / $4 = 400</think>Answer: J"
+      }
+    ],
+    "created": 1791940438,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 203,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.61,
+      "prompt_tokens_per_sec": 332.79,
+      "completion_tokens": 106,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 84,
+        "rejected_prediction_tokens": 70
+      },
+      "completion_time": 2.06,
+      "completion_tokens_per_sec": 51.49,
+      "total_tokens": 309,
+      "total_time": 2.67
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 203,
+      "prompt_ms": 610.0,
+      "prompt_per_token_ms": 3.0049261083743843,
+      "prompt_per_second": 332.78688524590166,
+      "predicted_n": 106,
+      "predicted_ms": 2060.0,
+      "predicted_per_token_ms": 19.433962264150942,
+      "predicted_per_second": 51.456310679611654,
+      "draft_n": 154,
+      "draft_n_accepted": 84
+    }
+  }
+}

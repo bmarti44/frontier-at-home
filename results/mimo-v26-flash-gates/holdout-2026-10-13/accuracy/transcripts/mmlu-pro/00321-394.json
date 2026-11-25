@@ -1,0 +1,68 @@
+{
+  "index": 321,
+  "task_id": 394,
+  "rendered_prompt_sha256": "ce2e60f7cffca5178f8a3028d615f870718509a23b04579f631f7bde122825b1",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>I = P × r × t\n11.25 = P × 0.03 × (3/12)\n11.25 = P × 0.03 × 0.25\n11.25 = P × 0.0075\nP = 11.25 / 0.0075 = 1500</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.93832138099242
+  },
+  "response": {
+    "id": "cmpl-ff474e9fe87e4d99a0d3f54fe538841a",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>I = P × r × t\n11.25 = P × 0.03 × (3/12)\n11.25 = P × 0.03 × 0.25\n11.25 = P × 0.0075\nP = 11.25 / 0.0075 = 1500</think>Answer: D"
+      }
+    ],
+    "created": 1791940440,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 162,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.54,
+      "prompt_tokens_per_sec": 300.0,
+      "completion_tokens": 92,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 77,
+        "rejected_prediction_tokens": 28
+      },
+      "completion_time": 1.4,
+      "completion_tokens_per_sec": 65.87,
+      "total_tokens": 254,
+      "total_time": 1.94
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 162,
+      "prompt_ms": 540.0,
+      "prompt_per_token_ms": 3.3333333333333335,
+      "prompt_per_second": 300.0,
+      "predicted_n": 92,
+      "predicted_ms": 1400.0,
+      "predicted_per_token_ms": 15.217391304347826,
+      "predicted_per_second": 65.71428571428572,
+      "draft_n": 105,
+      "draft_n_accepted": 77
+    }
+  }
+}

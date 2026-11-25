@@ -1,0 +1,69 @@
+{
+  "index": 1299,
+  "task_id": 1299,
+  "rendered_prompt_sha256": "5ddb252e2e8db4550b0d77a42ef5f50fd8238d32928867f072289635a9e07785",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Spending: 3.50 + 7.50×2 + 8.50 = 3.50 + 15 + 8.50 = 27. Left: 40 - 27 = 13.</think>Total spent: $3.50 + (2 × $7.50) + $8.50 = $3.50 + $15.00 + $8.50 = $27.00\n\nLeft: $40 − $27 = $13\n\nAnswer: 13",
+  "finish_reason": "stop",
+  "expected": "13",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.6074484640266746
+  },
+  "response": {
+    "id": "cmpl-c5d83b057851413fab91257d030639cd",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Spending: 3.50 + 7.50×2 + 8.50 = 3.50 + 15 + 8.50 = 27. Left: 40 - 27 = 13.</think>Total spent: $3.50 + (2 × $7.50) + $8.50 = $3.50 + $15.00 + $8.50 = $27.00\n\nLeft: $40 − $27 = $13\n\nAnswer: 13"
+      }
+    ],
+    "created": 1791939321,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 92,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 242.11,
+      "completion_tokens": 130,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 106,
+        "rejected_prediction_tokens": 62
+      },
+      "completion_time": 2.23,
+      "completion_tokens_per_sec": 58.38,
+      "total_tokens": 222,
+      "total_time": 2.61
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 92,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 4.130434782608695,
+      "prompt_per_second": 242.10526315789474,
+      "predicted_n": 130,
+      "predicted_ms": 2230.0,
+      "predicted_per_token_ms": 17.153846153846153,
+      "predicted_per_second": 58.29596412556054,
+      "draft_n": 168,
+      "draft_n_accepted": 106
+    }
+  },
+  "used_fallback": false
+}

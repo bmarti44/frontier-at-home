@@ -1,0 +1,104 @@
+{
+  "index": 106,
+  "task_id": "HumanEval/106",
+  "rendered_prompt_sha256": "f9dee5694b9f6e2c5f39785ca58d27c74624ba052d3010d58eececbe949ce19d",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    if n == 0:\n        return []\n    elif n == 1:\n        return [1]\n    else:\n        if n % 2 == 0:\n            return f(n-1) + [f(n-1)[-1] * n]\n        else:\n            return f(n-1) + [sum(range(1, n+1))]\n\nassert f(0) == []\nassert f(1) == [1]\nassert f(5) == [1, 2, 6, 24, 15]\nassert f(6) == [1, 2, 6, 24, 15, 720]\nassert f(7) == [1, 2, 6, 24, 15, 720, 28]\nassert f(8) == [1, 2, 6, 24, 15, 720, 28, 40320]\nassert f(9) == [1, 2, 6, 24, 15, 720, 28, 40320, 45]\nassert f(10) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800]\nassert f(11) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66]\nassert f(12) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600]\nassert f(13) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91]\nassert f(14) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200]\nassert f(15) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120]\nassert f(16) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000]\nassert f(17) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153]\nassert f(18) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000]\nassert f(19) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190]\nassert f(20) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000]\nassert f(21) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231]\nassert f(22) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000]\nassert f(23) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276]\nassert f(24) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000]\nassert f(25) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325]\nassert f(26) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000]\nassert f(27) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000, 378]\nassert f(28) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000, 378, 1405006117752879898543142606244511569936384000000000]\nassert f(29) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000, 378, 1405006117752879898543142606244511569936384000000000, 435]\nassert f(30) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000, 378, 1405006117752879898543142606244511569936384000000000, 435, 2652528598121910586363084800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 0] 20  the \"100 1 fe\n,  0 a 1 0 the 0 the the1 the 2 the 0 the the the the the the  the the the  the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the",
+  "finish_reason": "stop",
+  "expected": "    ret = []\n    for i in range(1,n+1):\n        if i%2 == 0:\n            x = 1\n            for j in range(1,i+1): x *= j\n            ret += [x]\n        else:\n            x = 0\n            for j in range(1,i+1): x += j\n            ret += [x]\n    return ret\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 62.063325721013825
+  },
+  "response": {
+    "id": "cmpl-b5ba37c823cd457d8073cab45f7fb9d0",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    if n == 0:\n        return []\n    elif n == 1:\n        return [1]\n    else:\n        if n % 2 == 0:\n            return f(n-1) + [f(n-1)[-1] * n]\n        else:\n            return f(n-1) + [sum(range(1, n+1))]\n\nassert f(0) == []\nassert f(1) == [1]\nassert f(5) == [1, 2, 6, 24, 15]\nassert f(6) == [1, 2, 6, 24, 15, 720]\nassert f(7) == [1, 2, 6, 24, 15, 720, 28]\nassert f(8) == [1, 2, 6, 24, 15, 720, 28, 40320]\nassert f(9) == [1, 2, 6, 24, 15, 720, 28, 40320, 45]\nassert f(10) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800]\nassert f(11) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66]\nassert f(12) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600]\nassert f(13) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91]\nassert f(14) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200]\nassert f(15) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120]\nassert f(16) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000]\nassert f(17) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153]\nassert f(18) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000]\nassert f(19) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190]\nassert f(20) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000]\nassert f(21) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231]\nassert f(22) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000]\nassert f(23) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276]\nassert f(24) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000]\nassert f(25) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325]\nassert f(26) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000]\nassert f(27) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000, 378]\nassert f(28) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000, 378, 1405006117752879898543142606244511569936384000000000]\nassert f(29) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000, 378, 1405006117752879898543142606244511569936384000000000, 435]\nassert f(30) == [1, 2, 6, 24, 15, 720, 28, 40320, 45, 3628800, 66, 479001600, 91, 87178291200, 120, 20922789888000, 153, 6402373705728000, 190, 121645100408832000, 231, 1124000727777607680000, 276, 620448401733239439360000, 325, 403291461126605635584000000, 378, 1405006117752879898543142606244511569936384000000000, 435, 2652528598121910586363084800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 0] 20  the \"100 1 fe\n,  0 a 1 0 the 0 the the1 the 2 the 0 the the the the the the  the the the  the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the"
+      }
+    ],
+    "created": 1791958892,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 121,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 310.26,
+      "completion_tokens": 4826,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 4118,
+        "rejected_prediction_tokens": 838
+      },
+      "completion_time": 61.66,
+      "completion_tokens_per_sec": 78.27,
+      "total_tokens": 4947,
+      "total_time": 62.06
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 121,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.2231404958677685,
+      "prompt_per_second": 310.2564102564103,
+      "predicted_n": 4826,
+      "predicted_ms": 61660.0,
+      "predicted_per_token_ms": 12.776626605884791,
+      "predicted_per_second": 78.26792085630879,
+      "draft_n": 4956,
+      "draft_n_accepted": 4118
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00106:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 24, in <module>\n    assert f(6) == [1, 2, 6, 24, 15, 720]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

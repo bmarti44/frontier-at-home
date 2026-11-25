@@ -1,0 +1,30 @@
+{
+ "when": "2026-10-13T21:00:07Z",
+ "base": "http://127.0.0.1:8019",
+ "results": [
+  {
+   "test": "prefix-cache",
+   "pass": true,
+   "detail": "repeat cache_n=22272/22511 (>=total-256: True); shared-prefix cache_n=22272 (checkpoint-bounded floor 13295: True)"
+  },
+  {
+   "test": "turn-continuation",
+   "pass": true,
+   "detail": "appended turn 2: prompt_n=75 cache_n=22528 (< 1756 required; a full re-prefill means in-slot reuse broke)"
+  },
+  {
+   "test": "slot-thrash",
+   "pass": true,
+   "detail": "turn-2 after utility call: prompt_n=355 cache_n=22272 (< 1756 required; single-slot server re-prefills ~20000)"
+  },
+  {
+   "test": "prefill-throughput",
+   "pass": true,
+   "detail": "novel prompt cache_n=0 (<100: True); prefill=811 tok/s (>=350: True); prompt processing=27.8s (<=75: True); prompt time is client-measured TTFT; tuned ub/b=2048 profile measures ~434 tok/s \u2014 a failure here usually means the fast buffers were reverted (see docs/speed-tuning-2026-07-23.md)"
+  }
+ ],
+ "engine": "vllm",
+ "model": "mimo-v2.6-flash",
+ "prefix_block_tokens": 256,
+ "spec_block_drop": false
+}

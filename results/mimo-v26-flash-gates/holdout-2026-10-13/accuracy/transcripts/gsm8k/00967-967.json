@@ -1,0 +1,69 @@
+{
+  "index": 967,
+  "task_id": 967,
+  "rendered_prompt_sha256": "135a31d48a88f0216cf64d96b728af687f37e6dc91979a52f81e1e2167a63d17",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Nani: 8\nBrother: 16\nSister: 8 - 25% of 8 = 8 - 2 = 6\n\nTotal: 8 + 16 + 6 = 30</think>Nani is 8, his brother is 16 (twice his age), and his sister is 6 (25% younger than Nani: 8 − 2 = 6).\n\nTotal: 8 + 16 + 6 = 30\n\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.536076891992707
+  },
+  "response": {
+    "id": "cmpl-e7ac1557802c4a73b792b15d44238429",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Nani: 8\nBrother: 16\nSister: 8 - 25% of 8 = 8 - 2 = 6\n\nTotal: 8 + 16 + 6 = 30</think>Nani is 8, his brother is 16 (twice his age), and his sister is 6 (25% younger than Nani: 8 − 2 = 6).\n\nTotal: 8 + 16 + 6 = 30\n\nAnswer: 30"
+      }
+    ],
+    "created": 1791939475,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 73,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 208.57,
+      "completion_tokens": 117,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 94,
+        "rejected_prediction_tokens": 67
+      },
+      "completion_time": 2.18,
+      "completion_tokens_per_sec": 53.7,
+      "total_tokens": 190,
+      "total_time": 2.53
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 73,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.794520547945205,
+      "prompt_per_second": 208.57142857142858,
+      "predicted_n": 117,
+      "predicted_ms": 2180.0,
+      "predicted_per_token_ms": 18.632478632478634,
+      "predicted_per_second": 53.669724770642205,
+      "draft_n": 161,
+      "draft_n_accepted": 94
+    }
+  },
+  "used_fallback": false
+}

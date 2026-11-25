@@ -1,0 +1,68 @@
+{
+  "index": 3939,
+  "task_id": 4064,
+  "rendered_prompt_sha256": "053c41ae3c766575d5f2d7fff1c124b88af6ecbba67762da9d5b2b86744556c9",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>We need to use Arrhenius equation: k2/k1 = exp(Ea/R (1/T1 - 1/T2))\n\nGiven: rate doubles for 10°C rise.\n\nAt 27°C: T1 = 300 K, T2 = 310 K.\nln 2 = Ea/R (1/300 - 1/310) = Ea/R * (10/(300*310)) = Ea/R * (10/93000) = Ea/R * 1.07527e-4\n\nR = 1.987 cal/(mol·K)\nln2 = 0.6931\nEa = 0.6931 * 1.987 / 1.07527e-4 = 1.3772 / 1.07527e-4 = 12808 cal/mol ≈ 12.8 kcal/mol.\n\nAt 1000°C: T1 = 1273 K, T2 = 1283 K.\n1/1273 - 1/1283 = (1283-1273)/(1273*1283) = 10/(1633259) = 6.1227e-6\nEa = 0.6931*1.987/6.1227e-6 = 1.3772/6.1227e-6 = 224,930 cal/mol ≈ 225 kcal/mol.\n\nOption D: 12.8 kcal/mol and 226 kcal/mol. Close enough.\n\nAnswer: D.</think>## Setting Up the Problem\n\nThe Arrhenius equation relates the rate constant to temperature:\n\n$$\\frac{k_2}{k_1} = \\exp\\left[\\frac{E_a}{R}\\left(\\frac{1}{T_1}-\\frac{1}{T_2}\\right)\\right]$$\n\nGiven: a 10 °C rise doubles the rate, so $k_2/k_1 = 2$, and $\\ln 2 = 0.6931$.\n\n## Case 1: At 27 °C\n\n$T_1 = 300\\ \\text{K}$, $T_2 = 310\\ \\text{K}$\n\n$$\\frac{1}{T_1}-\\frac{1}{T_2} = \\frac{10}{300 \\times 310} = \\frac{10}{93000} = 1.0753\\times10^{-4}\\ \\text{K}^{-1}$$\n\n$$E_a = \\frac{0.6931 \\times 1.987\\ \\text{cal mol}^{-1}\\text{K}^{-1}}{1.0753\\times10^{-4}} = \\frac{1.3772}{1.0753\\times10^{-4}} \\approx 1.28\\times10^{4}\\ \\text{cal/mol}$$\n\n$$E_a \\approx 12.8\\ \\text{kcal/mol}$$\n\n## Case 2: At 1000 °C\n\n$T_1 = 1273\\ \\text{K}$, $T_2 = 1283\\ \\text{K}$\n\n$$\\frac{1}{T_1}-\\frac{1}{T_2} = \\frac{10}{1273 \\times 1283} = \\frac{10}{1{,}633{,}259} = 6.123\\times10^{-6}\\ \\text{K}^{-1}$$\n\n$$E_a = \\frac{1.3772}{6.123\\times10^{-6}} \\approx 2.25\\times10^{5}\\ \\text{cal/mol}$$\n\n$$E_a \\approx 225\\text{–}226\\ \\text{kcal/mol}$$\n\n## Interpretation\n\nThe same \"rule of thumb\" (10 °C → double rate) implies vastly different activation energies depending on the absolute temperature: at low temperature the required $E_a$ is modest (~12.8 kcal/mol), while at very high temperature the same relative sensitivity demands an enormous $E_a$ (~226 kcal/mol), since the temperature interval becomes a tiny fraction of the absolute temperature.\n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 20.76374271302484
+  },
+  "response": {
+    "id": "cmpl-ca190dbeb1f44e29a1b372e03412a84a",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>We need to use Arrhenius equation: k2/k1 = exp(Ea/R (1/T1 - 1/T2))\n\nGiven: rate doubles for 10°C rise.\n\nAt 27°C: T1 = 300 K, T2 = 310 K.\nln 2 = Ea/R (1/300 - 1/310) = Ea/R * (10/(300*310)) = Ea/R * (10/93000) = Ea/R * 1.07527e-4\n\nR = 1.987 cal/(mol·K)\nln2 = 0.6931\nEa = 0.6931 * 1.987 / 1.07527e-4 = 1.3772 / 1.07527e-4 = 12808 cal/mol ≈ 12.8 kcal/mol.\n\nAt 1000°C: T1 = 1273 K, T2 = 1283 K.\n1/1273 - 1/1283 = (1283-1273)/(1273*1283) = 10/(1633259) = 6.1227e-6\nEa = 0.6931*1.987/6.1227e-6 = 1.3772/6.1227e-6 = 224,930 cal/mol ≈ 225 kcal/mol.\n\nOption D: 12.8 kcal/mol and 226 kcal/mol. Close enough.\n\nAnswer: D.</think>## Setting Up the Problem\n\nThe Arrhenius equation relates the rate constant to temperature:\n\n$$\\frac{k_2}{k_1} = \\exp\\left[\\frac{E_a}{R}\\left(\\frac{1}{T_1}-\\frac{1}{T_2}\\right)\\right]$$\n\nGiven: a 10 °C rise doubles the rate, so $k_2/k_1 = 2$, and $\\ln 2 = 0.6931$.\n\n## Case 1: At 27 °C\n\n$T_1 = 300\\ \\text{K}$, $T_2 = 310\\ \\text{K}$\n\n$$\\frac{1}{T_1}-\\frac{1}{T_2} = \\frac{10}{300 \\times 310} = \\frac{10}{93000} = 1.0753\\times10^{-4}\\ \\text{K}^{-1}$$\n\n$$E_a = \\frac{0.6931 \\times 1.987\\ \\text{cal mol}^{-1}\\text{K}^{-1}}{1.0753\\times10^{-4}} = \\frac{1.3772}{1.0753\\times10^{-4}} \\approx 1.28\\times10^{4}\\ \\text{cal/mol}$$\n\n$$E_a \\approx 12.8\\ \\text{kcal/mol}$$\n\n## Case 2: At 1000 °C\n\n$T_1 = 1273\\ \\text{K}$, $T_2 = 1283\\ \\text{K}$\n\n$$\\frac{1}{T_1}-\\frac{1}{T_2} = \\frac{10}{1273 \\times 1283} = \\frac{10}{1{,}633{,}259} = 6.123\\times10^{-6}\\ \\text{K}^{-1}$$\n\n$$E_a = \\frac{1.3772}{6.123\\times10^{-6}} \\approx 2.25\\times10^{5}\\ \\text{cal/mol}$$\n\n$$E_a \\approx 225\\text{–}226\\ \\text{kcal/mol}$$\n\n## Interpretation\n\nThe same \"rule of thumb\" (10 °C → double rate) implies vastly different activation energies depending on the absolute temperature: at low temperature the required $E_a$ is modest (~12.8 kcal/mol), while at very high temperature the same relative sensitivity demands an enormous $E_a$ (~226 kcal/mol), since the temperature interval becomes a tiny fraction of the absolute temperature.\n\nAnswer: D"
+      }
+    ],
+    "created": 1791941046,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 283,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.82,
+      "prompt_tokens_per_sec": 345.12,
+      "completion_tokens": 1039,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 828,
+        "rejected_prediction_tokens": 649
+      },
+      "completion_time": 19.93,
+      "completion_tokens_per_sec": 52.12,
+      "total_tokens": 1322,
+      "total_time": 20.76
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 283,
+      "prompt_ms": 820.0,
+      "prompt_per_token_ms": 2.8975265017667846,
+      "prompt_per_second": 345.1219512195122,
+      "predicted_n": 1039,
+      "predicted_ms": 19930.0,
+      "predicted_per_token_ms": 19.181905678537056,
+      "predicted_per_second": 52.132463622679374,
+      "draft_n": 1477,
+      "draft_n_accepted": 828
+    }
+  }
+}

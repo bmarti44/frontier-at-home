@@ -1,0 +1,70 @@
+{
+  "index": 848,
+  "task_id": 848,
+  "rendered_prompt_sha256": "9f6cffa8a9480db68ec52afb3c65035e33587968c0c69b4dffb87edb14ecdf72",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>White shirts: 40 total, half have collars = 20 have collars, so 20 have no collars.\n\nFloral shirts: 50 total, 20 have buttons, so 30 have no buttons.\n\nDifference: 30 - 20 = 10.</think>**White shirts with no collars:** Half of 40 have collars (20), so 40 − 20 = **20** have no collars.\n\n**Floral shirts with no buttons:** 50 total − 20 with buttons = **30** have no buttons.\n\n**Difference:** 30 − 20 = 10\n\nAnswer: 10",
+  "finish_reason": "stop",
+  "expected": "10",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.4882792769931257
+  },
+  "response": {
+    "id": "cmpl-5d780f2c0249439b82245929aee9125d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>White shirts: 40 total, half have collars = 20 have collars, so 20 have no collars.\n\nFloral shirts: 50 total, 20 have buttons, so 30 have no buttons.\n\nDifference: 30 - 20 = 10.</think>**White shirts with no collars:** Half of 40 have collars (20), so 40 − 20 = **20** have no collars.\n\n**Floral shirts with no buttons:** 50 total − 20 with buttons = **30** have no buttons.\n\n**Difference:** 30 − 20 = 10\n\nAnswer: 10"
+      }
+    ],
+    "created": 1791939384,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 86,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 226.32,
+      "completion_tokens": 154,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 123,
+        "rejected_prediction_tokens": 94
+      },
+      "completion_time": 3.11,
+      "completion_tokens_per_sec": 49.59,
+      "total_tokens": 240,
+      "total_time": 3.49
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 86,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 4.4186046511627906,
+      "prompt_per_second": 226.31578947368422,
+      "predicted_n": 154,
+      "predicted_ms": 3110.0,
+      "predicted_per_token_ms": 20.194805194805195,
+      "predicted_per_second": 49.51768488745981,
+      "draft_n": 217,
+      "draft_n_accepted": 123
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nA clothing store has 40 white shirts and 50 floral shirts. Half of the white shirts have collars, and 20 of the floral shirts have buttons. How many more floral shirts with no buttons are there than white shirts with no collars?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

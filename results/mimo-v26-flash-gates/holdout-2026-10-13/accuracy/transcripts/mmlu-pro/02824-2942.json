@@ -1,0 +1,68 @@
+{
+  "index": 2824,
+  "task_id": 2942,
+  "rendered_prompt_sha256": "37bafcf293dcaee390177b3f8aa3a73f88074984c77d2b50e957bf0d14ff0b81",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The contractile vacuole's function is to eliminate excess water from the cell (osmoregulation).</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.236572806024924
+  },
+  "response": {
+    "id": "cmpl-220c3dcfcd4d41d2b2c62fb411cdf973",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The contractile vacuole's function is to eliminate excess water from the cell (osmoregulation).</think>Answer: G"
+      }
+    ],
+    "created": 1791939585,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 126,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.43,
+      "prompt_tokens_per_sec": 293.02,
+      "completion_tokens": 28,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 20,
+        "rejected_prediction_tokens": 36
+      },
+      "completion_time": 0.8,
+      "completion_tokens_per_sec": 34.84,
+      "total_tokens": 154,
+      "total_time": 1.23
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 126,
+      "prompt_ms": 430.0,
+      "prompt_per_token_ms": 3.4126984126984126,
+      "prompt_per_second": 293.0232558139535,
+      "predicted_n": 28,
+      "predicted_ms": 800.0,
+      "predicted_per_token_ms": 28.571428571428573,
+      "predicted_per_second": 35.0,
+      "draft_n": 56,
+      "draft_n_accepted": 20
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "index": 9113,
+  "task_id": 9302,
+  "rendered_prompt_sha256": "cc3ef850d18fe0da0f957013b78568df051ee6647b6e5b630c3cbaead3e62ea1",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The gravitational field at the surface: g = GM/R².\n\nMars: M_M = M_E/10, R_M = R_E/2.\n\ng_M/g_E = (1/10)/(1/4) = 4/10 = 0.4.\n\ng_E ≈ 9.8 N/kg ≈ 10 N/kg. So g_M ≈ 4 N/kg.\n\nAnswer: D.</think>The surface gravitational field is \\( g = \\frac{GM}{R^2} \\).\n\nWith \\( M_{\\text{Mars}} = \\frac{1}{10}M_{\\text{Earth}} \\) and \\( R_{\\text{Mars}} = \\frac{1}{2}R_{\\text{Earth}} \\):\n\n\\[\n\\frac{g_{\\text{Mars}}}{g_{\\text{Earth}}} = \\frac{1/10}{(1/2)^2} = \\frac{1/10}{1/4} = 0.4\n\\]\n\nTaking \\( g_{\\text{Earth}} \\approx 10 \\, \\text{N/kg} \\), we get \\( g_{\\text{Mars}} \\approx 4 \\, \\text{N/kg} \\).\n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.7666000300087035
+  },
+  "response": {
+    "id": "cmpl-dc7e37932da247a496e41f8975ee8478",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The gravitational field at the surface: g = GM/R².\n\nMars: M_M = M_E/10, R_M = R_E/2.\n\ng_M/g_E = (1/10)/(1/4) = 4/10 = 0.4.\n\ng_E ≈ 9.8 N/kg ≈ 10 N/kg. So g_M ≈ 4 N/kg.\n\nAnswer: D.</think>The surface gravitational field is \\( g = \\frac{GM}{R^2} \\).\n\nWith \\( M_{\\text{Mars}} = \\frac{1}{10}M_{\\text{Earth}} \\) and \\( R_{\\text{Mars}} = \\frac{1}{2}R_{\\text{Earth}} \\):\n\n\\[\n\\frac{g_{\\text{Mars}}}{g_{\\text{Earth}}} = \\frac{1/10}{(1/2)^2} = \\frac{1/10}{1/4} = 0.4\n\\]\n\nTaking \\( g_{\\text{Earth}} \\approx 10 \\, \\text{N/kg} \\), we get \\( g_{\\text{Mars}} \\approx 4 \\, \\text{N/kg} \\).\n\nAnswer: D"
+      }
+    ],
+    "created": 1791947495,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 143,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.45,
+      "prompt_tokens_per_sec": 317.78,
+      "completion_tokens": 279,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 222,
+        "rejected_prediction_tokens": 177
+      },
+      "completion_time": 5.31,
+      "completion_tokens_per_sec": 52.53,
+      "total_tokens": 422,
+      "total_time": 5.76
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 143,
+      "prompt_ms": 450.0,
+      "prompt_per_token_ms": 3.1468531468531467,
+      "prompt_per_second": 317.77777777777777,
+      "predicted_n": 279,
+      "predicted_ms": 5310.0,
+      "predicted_per_token_ms": 19.032258064516128,
+      "predicted_per_second": 52.54237288135593,
+      "draft_n": 399,
+      "draft_n_accepted": 222
+    }
+  }
+}

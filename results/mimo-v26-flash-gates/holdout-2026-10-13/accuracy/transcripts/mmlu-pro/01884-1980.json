@@ -1,0 +1,68 @@
+{
+  "index": 1884,
+  "task_id": 1980,
+  "rendered_prompt_sha256": "ddf2cc55f6f946191b921175dacf91bd82620e5fc1df7f04a01e3a12c71c6a70",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>This question is based on Robinson v. California, 370 U.S. 660 (1962), where the Supreme Court held that a California statute making it a crime to be addicted to narcotics was unconstitutional under the Eighth Amendment (as applied through the Fourteenth Amendment). The Court held that punishing a person for being a drug addict - for being ill - constituted cruel and unusual punishment.\n\nThe correct answer is G, which captures the reasoning of Robinson v. California: punishing someone for having a medical condition (addiction) is cruel and unusual punishment.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.288761485018767
+  },
+  "response": {
+    "id": "cmpl-5548c86915f845d59e36e274e201cd6d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>This question is based on Robinson v. California, 370 U.S. 660 (1962), where the Supreme Court held that a California statute making it a crime to be addicted to narcotics was unconstitutional under the Eighth Amendment (as applied through the Fourteenth Amendment). The Court held that punishing a person for being a drug addict - for being ill - constituted cruel and unusual punishment.\n\nThe correct answer is G, which captures the reasoning of Robinson v. California: punishing someone for having a medical condition (addiction) is cruel and unusual punishment.</think>Answer: G"
+      }
+    ],
+    "created": 1791945830,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 399,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 1.09,
+      "prompt_tokens_per_sec": 366.06,
+      "completion_tokens": 122,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 78,
+        "rejected_prediction_tokens": 230
+      },
+      "completion_time": 4.19,
+      "completion_tokens_per_sec": 29.08,
+      "total_tokens": 521,
+      "total_time": 5.29
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 399,
+      "prompt_ms": 1090.0,
+      "prompt_per_token_ms": 2.7318295739348373,
+      "prompt_per_second": 366.0550458715596,
+      "predicted_n": 122,
+      "predicted_ms": 4190.0,
+      "predicted_per_token_ms": 34.34426229508197,
+      "predicted_per_second": 29.116945107398568,
+      "draft_n": 308,
+      "draft_n_accepted": 78
+    }
+  }
+}

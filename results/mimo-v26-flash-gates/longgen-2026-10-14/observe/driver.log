@@ -1,0 +1,80 @@
+2026-10-14T08:18:11Z head d62ef1d18431214a9a2f9acb7dbb7c8d6b47b3b5 dirty=0
+2026-10-14T08:18:11Z prod-stop: sudo -n 52_engine_switch.sh stop
+STOPPED qwen38fn (active.json unchanged; '/home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh restore' restarts it)
+2026-10-14T08:18:15Z preload MemFree=119112844 MemAvailable=120993032 SwapFree=16544520
+runtime-src tabbyAPI 2636ef602b55b5343cf3740dd55a77f21e0a8003 a5a97dfca985a5f0cff36c8c5b6d127a965a1b3b dirty=0 match=True
+runtime-src exllamav3 f45b84512ba65bca77f7d394399d4b68821fc71b e272949487e45ac37165d4cab8e9f081a8c1e444 dirty=0 match=True
+runtime-wheel exllamav3 sha256_match=True files=629 mismatches=0
+weights model exl3-2.52-mikeroz files=25 bytes=101323582965 mismatches=0
+weights draft_model dflash-exl3-4.0 files=3 bytes=735192453 mismatches=0
+released 52 files under /home/bmarti44/models/qwen3.8-flash-next-nvfp4
+released 136225 files under /home/bmarti44/.cache/qwen38-flash-next
+released 25 files under /home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash
+released 3 files under /home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash
+released 300 files under /home/bmarti44/models/mimo-v2.6-flash-mopd
+released 56 files under /home/bmarti44/models/mimo-v2.6-flash-mopd-exl3-2.52-src
+released 8 files under /home/bmarti44/models/mimo-v2.6-flash-dflash-exl3-src
+released 67417 files under /home/bmarti44/.cache/mimo-v26-flash/native-runtime-001
+2026-10-14T08:19:04Z MemFree gate pass 119773020 kB, MemAvailable 120899812 kB (3 samples)
+2026-10-14T08:19:04Z arm a: launching mimo-v2.6-flash/cuda-spark-128g-262k in scope mimo26-longgen-a-2904549
+{"pass":true,"required_gib":104.0,"mem_available_gib":115.293,"stable_samples_observed":3}
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k","pid":2905566,"port":8019}
+2026-10-14T08:20:01Z arm a: ready after 57 s; idle MemAvailable=13114044 MemFree=10781896
+{"props": 200, "admin_status": 404, "greedy": ["c933d4cb1288", "afe5a8556aee", "68da9e93ac2f"], "tokens_per_chunk": [5.590909090909091, 2.4651162790697674, 4.857142857142857]}
+a count-raw: finish=length usage={'prompt_tokens': 692, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 1.52, 'prompt_tokens_per_sec': 455.26, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 5375, 'rejected_prediction_tokens': 8}, 'completion_time': 71.75, 'completion_tokens_per_sec': 85.63, 'total_tokens': 6836, 'total_time': 73.28} elapsed=74s error=None
+a count-chat: finish=length usage={'prompt_tokens': 32, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.23, 'prompt_tokens_per_sec': 139.13, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 5374, 'rejected_prediction_tokens': 16}, 'completion_time': 73.97, 'completion_tokens_per_sec': 83.06, 'total_tokens': 6176, 'total_time': 74.21} elapsed=75s error=None
+a holdout-06889: finish=length usage={'prompt_tokens': 124, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.42, 'prompt_tokens_per_sec': 295.24, 'completion_tokens': 5000, 'completion_tokens_details': {'accepted_prediction_tokens': 3833, 'rejected_prediction_tokens': 4336}, 'completion_time': 115.34, 'completion_tokens_per_sec': 43.35, 'total_tokens': 5124, 'total_time': 115.76} elapsed=116s error=None
+a holdout-08349: finish=length usage={'prompt_tokens': 142, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.47, 'prompt_tokens_per_sec': 302.13, 'completion_tokens': 5000, 'completion_tokens_details': {'accepted_prediction_tokens': 3909, 'rejected_prediction_tokens': 3728}, 'completion_time': 104.79, 'completion_tokens_per_sec': 47.71, 'total_tokens': 5142, 'total_time': 105.27} elapsed=105s error=None
+a essay-chat: finish=length usage={'prompt_tokens': 47, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.29, 'prompt_tokens_per_sec': 162.07, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 3912, 'rejected_prediction_tokens': 11712}, 'completion_time': 218.57, 'completion_tokens_per_sec': 28.11, 'total_tokens': 6191, 'total_time': 218.87} elapsed=219s error=None
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k","stopped":true}
+2026-10-14T08:30:12Z arm a: scope empty after stop
+2026-10-14T08:30:12Z arm a: closed; MemFree=118595508 MemAvailable=121054572 SwapFree=16544520
+released 52 files under /home/bmarti44/models/qwen3.8-flash-next-nvfp4
+released 136225 files under /home/bmarti44/.cache/qwen38-flash-next
+released 25 files under /home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash
+released 3 files under /home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash
+released 300 files under /home/bmarti44/models/mimo-v2.6-flash-mopd
+released 56 files under /home/bmarti44/models/mimo-v2.6-flash-mopd-exl3-2.52-src
+released 8 files under /home/bmarti44/models/mimo-v2.6-flash-dflash-exl3-src
+released 67418 files under /home/bmarti44/.cache/mimo-v26-flash/native-runtime-001
+2026-10-14T08:30:16Z MemFree gate pass 119629356 kB, MemAvailable 121053696 kB (3 samples)
+2026-10-14T08:30:16Z arm b: launching mimo-v2.6-flash/cuda-spark-128g-262k-longgen-b in scope mimo26-longgen-b-2904549
+{"pass":true,"required_gib":104.0,"mem_available_gib":115.407,"stable_samples_observed":3}
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k-longgen-b","pid":2916622,"port":8019}
+2026-10-14T08:31:12Z arm b: ready after 56 s; idle MemAvailable=13294660 MemFree=10566092
+{"props": 200, "admin_status": 404, "greedy": ["c933d4cb1288", "afe5a8556aee", "68da9e93ac2f"], "tokens_per_chunk": [5.590909090909091, 2.4651162790697674, 4.857142857142857]}
+b count-raw: finish=length usage={'prompt_tokens': 692, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 1.51, 'prompt_tokens_per_sec': 458.28, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 5375, 'rejected_prediction_tokens': 8}, 'completion_time': 72.8, 'completion_tokens_per_sec': 84.4, 'total_tokens': 6836, 'total_time': 74.31} elapsed=74s error=None
+b count-chat: finish=length usage={'prompt_tokens': 32, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.22, 'prompt_tokens_per_sec': 145.45, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 5374, 'rejected_prediction_tokens': 16}, 'completion_time': 74.97, 'completion_tokens_per_sec': 81.95, 'total_tokens': 6176, 'total_time': 75.19} elapsed=75s error=None
+b holdout-06889: finish=length usage={'prompt_tokens': 124, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.41, 'prompt_tokens_per_sec': 302.44, 'completion_tokens': 5000, 'completion_tokens_details': {'accepted_prediction_tokens': 3937, 'rejected_prediction_tokens': 3504}, 'completion_time': 108.33, 'completion_tokens_per_sec': 46.15, 'total_tokens': 5124, 'total_time': 108.75} elapsed=109s error=None
+b holdout-08349: finish=length usage={'prompt_tokens': 142, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.48, 'prompt_tokens_per_sec': 295.83, 'completion_tokens': 5000, 'completion_tokens_details': {'accepted_prediction_tokens': 4117, 'rejected_prediction_tokens': 2064}, 'completion_time': 90.06, 'completion_tokens_per_sec': 55.52, 'total_tokens': 5142, 'total_time': 90.54} elapsed=91s error=None
+b essay-chat: finish=length usage={'prompt_tokens': 47, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.29, 'prompt_tokens_per_sec': 162.07, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 4053, 'rejected_prediction_tokens': 10584}, 'completion_time': 209.77, 'completion_tokens_per_sec': 29.29, 'total_tokens': 6191, 'total_time': 210.06} elapsed=210s error=None
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k-longgen-b","stopped":true}
+2026-10-14T08:40:51Z arm b: scope empty after stop
+2026-10-14T08:40:51Z arm b: closed; MemFree=118194116 MemAvailable=121043212 SwapFree=16544520
+released 52 files under /home/bmarti44/models/qwen3.8-flash-next-nvfp4
+released 136225 files under /home/bmarti44/.cache/qwen38-flash-next
+released 25 files under /home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash
+released 3 files under /home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash
+released 300 files under /home/bmarti44/models/mimo-v2.6-flash-mopd
+released 56 files under /home/bmarti44/models/mimo-v2.6-flash-mopd-exl3-2.52-src
+released 8 files under /home/bmarti44/models/mimo-v2.6-flash-dflash-exl3-src
+released 67419 files under /home/bmarti44/.cache/mimo-v26-flash/native-runtime-001
+2026-10-14T08:40:54Z MemFree gate pass 119628280 kB, MemAvailable 121054092 kB (3 samples)
+2026-10-14T08:40:54Z arm c: launching mimo-v2.6-flash/cuda-spark-128g-262k-longgen-c in scope mimo26-longgen-c-2904549
+{"pass":true,"required_gib":104.0,"mem_available_gib":115.401,"stable_samples_observed":3}
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k-longgen-c","pid":2927124,"port":8019}
+2026-10-14T08:41:49Z arm c: ready after 55 s; idle MemAvailable=14062084 MemFree=11719268
+{"props": 200, "admin_status": 404, "greedy": ["c933d4cb1288", "db7e3ba4abfa", "20398086d642"], "tokens_per_chunk": [1.025, 1.0275229357798166, 1.06]}
+c count-raw: finish=length usage={'prompt_tokens': 692, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 2.73, 'prompt_tokens_per_sec': 253.48, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'rejected_prediction_tokens': 0}, 'completion_time': 215.04, 'completion_tokens_per_sec': 28.57, 'total_tokens': 6836, 'total_time': 217.78} elapsed=218s error=None
+c count-chat: finish=length usage={'prompt_tokens': 32, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.22, 'prompt_tokens_per_sec': 145.45, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'rejected_prediction_tokens': 0}, 'completion_time': 214.73, 'completion_tokens_per_sec': 28.61, 'total_tokens': 6176, 'total_time': 214.96} elapsed=216s error=None
+c holdout-06889: finish=stop usage={'prompt_tokens': 124, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.41, 'prompt_tokens_per_sec': 302.44, 'completion_tokens': 810, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'rejected_prediction_tokens': 0}, 'completion_time': 28.1, 'completion_tokens_per_sec': 28.82, 'total_tokens': 934, 'total_time': 28.52} elapsed=29s error=None
+c holdout-08349: finish=length usage={'prompt_tokens': 142, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.47, 'prompt_tokens_per_sec': 302.13, 'completion_tokens': 5000, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'rejected_prediction_tokens': 0}, 'completion_time': 174.44, 'completion_tokens_per_sec': 28.66, 'total_tokens': 5142, 'total_time': 174.92} elapsed=175s error=None
+c essay-chat: finish=length usage={'prompt_tokens': 47, 'prompt_tokens_details': {'cached_tokens': 0}, 'prompt_time': 0.28, 'prompt_tokens_per_sec': 167.86, 'completion_tokens': 6144, 'completion_tokens_details': {'accepted_prediction_tokens': 0, 'rejected_prediction_tokens': 0}, 'completion_time': 214.54, 'completion_tokens_per_sec': 28.64, 'total_tokens': 6191, 'total_time': 214.83} elapsed=215s error=None
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k-longgen-c","stopped":true}
+2026-10-14T08:56:30Z arm c: scope empty after stop
+2026-10-14T08:56:30Z arm c: closed; MemFree=118539640 MemAvailable=121028880 SwapFree=16544520
+2026-10-14T08:56:30Z window closed; postrun MemFree=118539640 MemAvailable=121028880 SwapFree=16544520
+2026-10-14T08:56:35Z kernel journal alive after the last engine stop
+2026-10-14T08:56:35Z restore attempt 1: MemAvailable=121028356 MemFree=118537748
+2026-10-14T09:07:44Z restore rc=0
+2026-10-14T09:07:49Z driver exit rc=0

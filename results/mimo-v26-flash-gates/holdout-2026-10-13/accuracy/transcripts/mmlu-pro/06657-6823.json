@@ -1,0 +1,68 @@
+{
+  "index": 6657,
+  "task_id": 6823,
+  "rendered_prompt_sha256": "3f483c644f8f4a19e1b2c8ea535b6553993dd73df24a92274477fb36ef25481d",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>During short-term intense activity such as sprinting, the main fuel for muscle contraction is muscle glycogen. During high-intensity exercise, the muscle relies heavily on its own glycogen stores because blood glucose delivery cannot keep up with the demand, and fatty acid oxidation is too slow for the rapid energy needs of sprinting.</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.0873162780189887
+  },
+  "response": {
+    "id": "cmpl-602c55c76ec1482696a9432a99d19640",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>During short-term intense activity such as sprinting, the main fuel for muscle contraction is muscle glycogen. During high-intensity exercise, the muscle relies heavily on its own glycogen stores because blood glucose delivery cannot keep up with the demand, and fatty acid oxidation is too slow for the rapid energy needs of sprinting.</think>Answer: G"
+      }
+    ],
+    "created": 1791944838,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 118,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 287.8,
+      "completion_tokens": 70,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 42,
+        "rejected_prediction_tokens": 154
+      },
+      "completion_time": 2.67,
+      "completion_tokens_per_sec": 26.21,
+      "total_tokens": 188,
+      "total_time": 3.08
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 118,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.4745762711864407,
+      "prompt_per_second": 287.8048780487805,
+      "predicted_n": 70,
+      "predicted_ms": 2670.0,
+      "predicted_per_token_ms": 38.142857142857146,
+      "predicted_per_second": 26.217228464419478,
+      "draft_n": 196,
+      "draft_n_accepted": 42
+    }
+  }
+}

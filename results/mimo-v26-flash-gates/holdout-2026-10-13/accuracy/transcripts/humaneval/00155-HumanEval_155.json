@@ -1,0 +1,104 @@
+{
+  "index": 155,
+  "task_id": "HumanEval/155",
+  "rendered_prompt_sha256": "8e85f42e3477e802ebd61afb54ef97ef1dd36e242780e51d22074ec019a3657f",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    even_count = 0\n    odd_count = 0\n    num = abs(num)\n    while num > 0:\n        digit = num % 10\n        if digit % 2 == 0:\n            even_count += 1\n        else:\n            odd_count += 1\n        num //= 10\n    return (even_count, odd_count)\n\nassert even_odd_count(123) == (1, 2)\nassert even_odd_count(-12) == (1, 1)\nassert even_odd_count(0) == (1, 0)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789)",
+  "finish_reason": "stop",
+  "expected": "    even_count = 0\n    odd_count = 0\n    for i in str(abs(num)):\n        if int(i)%2==0:\n            even_count +=1\n        else:\n            odd_count +=1\n    return (even_count, odd_count)\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 12.394466496014502
+  },
+  "response": {
+    "id": "cmpl-0bbf338b7fee40b28c86557af9572313",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    even_count = 0\n    odd_count = 0\n    num = abs(num)\n    while num > 0:\n        digit = num % 10\n        if digit % 2 == 0:\n            even_count += 1\n        else:\n            odd_count += 1\n        num //= 10\n    return (even_count, odd_count)\n\nassert even_odd_count(123) == (1, 2)\nassert even_odd_count(-12) == (1, 1)\nassert even_odd_count(0) == (1, 0)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789) == (4, 5)\nassert even_odd_count(-123456789) == (4, 5)\nassert even_odd_count(1234567890) == (5, 5)\nassert even_odd_count(-1234567890) == (5, 5)\nassert even_odd_count(1111111111) == (0, 10)\nassert even_odd_count(2222222222) == (10, 0)\nassert even_odd_count(123456789)"
+      }
+    ],
+    "created": 1791964311,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 63,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.28,
+      "prompt_tokens_per_sec": 225.0,
+      "completion_tokens": 923,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 798,
+        "rejected_prediction_tokens": 77
+      },
+      "completion_time": 12.1,
+      "completion_tokens_per_sec": 76.25,
+      "total_tokens": 986,
+      "total_time": 12.39
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 63,
+      "prompt_ms": 280.0,
+      "prompt_per_token_ms": 4.444444444444445,
+      "prompt_per_second": 225.0,
+      "predicted_n": 923,
+      "predicted_ms": 12100.0,
+      "predicted_per_token_ms": 13.109425785482124,
+      "predicted_per_second": 76.28099173553719,
+      "draft_n": 875,
+      "draft_n_accepted": 798
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00155:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 23, in <module>\n    assert even_odd_count(0) == (1, 0)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+}

@@ -249,3 +249,69 @@ class Ds4ServingTopology(unittest.TestCase):
         broken["serving"].pop("max_images")
         with self.assertRaises(ValueError):
             resolver.validate_serving_topology(broken)
+
+
+class TabbyServingTopology(unittest.TestCase):
+    """TabbyAPI (exllamav3) profiles: --max-seq-len is the per-request cap,
+    --max-batch-size the slot count, and --cache-size the explicit KV pool,
+    which must hold every slot's full context in 256-token pages."""
+
+    ARGS = ["-B", "-m", "tabby_launch", "--max-seq-len", "262144",
+            "--max-batch-size", "1", "--cache-size", "262144"]
+
+    def profile(self, args=None, slots=1, cap=262144, context_cap=262144) -> dict:
+        return {"launch": {"args": list(self.ARGS if args is None else args)},
+                "serving": {"parallel_slots": slots, "request_context_cap": cap},
+                "context_cap": context_cap}
+
+    def mutated(self, flag, value) -> list:
+        args = list(self.ARGS)
+        index = args.index(flag)
+        if value is None:
+            del args[index:index + 2]
+        else:
+            args[index + 1] = value
+        return args
+
+    def test_matching_topology_is_valid(self) -> None:
+        resolver.validate_serving_topology(self.profile())
+        resolver.validate_serving_topology(self.profile(
+            args=["--max-seq-len", "65536", "--max-batch-size", "4",
+                  "--cache-size", "262144"],
+            slots=4, cap=65536))
+
+    def test_max_seq_len_disagreeing_with_request_cap_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(
+                self.profile(args=self.mutated("--max-seq-len", "131072")))
+
+    def test_batch_size_must_be_explicit_and_match_slots(self) -> None:
+        for value in (None, "2"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    resolver.validate_serving_topology(
+                        self.profile(args=self.mutated("--max-batch-size", value)))
+
+    def test_cache_size_must_be_explicit_cover_all_slots_and_page_aligned(self) -> None:
+        for value in (None, "131072", "262300", "262145", "2e5"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    resolver.validate_serving_topology(
+                        self.profile(args=self.mutated("--cache-size", value)))
+
+    def test_aggregate_mismatch_and_equals_forms_are_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(self.profile(context_cap=1048576))
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(self.profile(
+                args=["--max-seq-len=262144", "--max-batch-size", "1",
+                      "--cache-size", "262144"]))
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(self.profile(
+                args=self.ARGS + ["--max-seq-len", "262144"]))
+
+    def test_tabby_profile_without_a_serving_block_is_rejected(self) -> None:
+        profile = self.profile()
+        del profile["serving"]
+        with self.assertRaises(ValueError):
+            resolver.validate_serving_topology(profile)

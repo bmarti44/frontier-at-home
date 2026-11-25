@@ -1,0 +1,68 @@
+{
+  "index": 10035,
+  "task_id": 10235,
+  "rendered_prompt_sha256": "1eeb2b0c637310ffe6988caded31fdc923c408e76e273965c24e14045d05aa5b",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The escape velocity from Earth is approximately 11.2 km/s = 1.12 × 10^4 m/s.</think>Answer: A",
+  "finish_reason": "stop",
+  "expected": "A",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.2437129680183716
+  },
+  "response": {
+    "id": "cmpl-4d3d9e11c1964295905e1506878b6ddc",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The escape velocity from Earth is approximately 11.2 km/s = 1.12 × 10^4 m/s.</think>Answer: A"
+      }
+    ],
+    "created": 1791947904,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 197,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.57,
+      "prompt_tokens_per_sec": 345.61,
+      "completion_tokens": 35,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 28,
+        "rejected_prediction_tokens": 21
+      },
+      "completion_time": 0.67,
+      "completion_tokens_per_sec": 52.35,
+      "total_tokens": 232,
+      "total_time": 1.24
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 197,
+      "prompt_ms": 570.0,
+      "prompt_per_token_ms": 2.8934010152284264,
+      "prompt_per_second": 345.6140350877193,
+      "predicted_n": 35,
+      "predicted_ms": 670.0,
+      "predicted_per_token_ms": 19.142857142857142,
+      "predicted_per_second": 52.23880597014926,
+      "draft_n": 49,
+      "draft_n_accepted": 28
+    }
+  }
+}

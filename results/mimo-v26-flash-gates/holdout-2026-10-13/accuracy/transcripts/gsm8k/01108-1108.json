@@ -1,0 +1,69 @@
+{
+  "index": 1108,
+  "task_id": 1108,
+  "rendered_prompt_sha256": "bf3cf2dd371b03e89117964d46c0c8c1264c1dfa9140d1857783937865f41e09",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>19 + 26 = 45, 45 - 7 = 38</think>19 + 26 = 45, then 45 - 7 = 38.\n\nAnswer: 38",
+  "finish_reason": "stop",
+  "expected": "38",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.1153031619614922
+  },
+  "response": {
+    "id": "cmpl-eeae9ab3ad384f0d8a091fa46bfe238b",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>19 + 26 = 45, 45 - 7 = 38</think>19 + 26 = 45, then 45 - 7 = 38.\n\nAnswer: 38"
+      }
+    ],
+    "created": 1791939471,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 85,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 229.73,
+      "completion_tokens": 52,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 44,
+        "rejected_prediction_tokens": 12
+      },
+      "completion_time": 0.74,
+      "completion_tokens_per_sec": 70.67,
+      "total_tokens": 137,
+      "total_time": 1.11
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 85,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.352941176470588,
+      "prompt_per_second": 229.7297297297297,
+      "predicted_n": 52,
+      "predicted_ms": 740.0,
+      "predicted_per_token_ms": 14.23076923076923,
+      "predicted_per_second": 70.27027027027027,
+      "draft_n": 56,
+      "draft_n_accepted": 44
+    }
+  },
+  "used_fallback": false
+}

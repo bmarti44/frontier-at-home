@@ -1,0 +1,68 @@
+{
+  "index": 8847,
+  "task_id": 9036,
+  "rendered_prompt_sha256": "caaf5fd812f22db05c720a94e32f60e05dba7de38090d4191d10108b9a0fe2e8",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Monthly payment formula: M = P * [r(1+r)^n] / [(1+r)^n - 1]\n\nP = 100,000, r = 0.09/12 = 0.0075, n = 360.\n\n(1.0075)^360: ln(1.0075) = 0.0074720... times 360 = 2.68992. e^2.68992 ≈ 14.730.\n\nM = 100000 * 0.0075 * 14.730 / (13.730) = 100000 * 0.110475/13.730 = 100000 * 0.0080462 = 804.62.\n\nAnswer D.</think>**Answer: D**\n\nThe monthly payment is computed with the standard amortization formula:\n\n$$M = P\\frac{r(1+r)^n}{(1+r)^n-1}$$\n\nwhere $P = 100{,}000$, $r = 0.09/12 = 0.0075$, and $n = 360$ months.\n\n- $(1.0075)^{360} \\approx 14.730$\n- $M = 100{,}000 \\times \\dfrac{0.0075 \\times 14.730}{13.730} \\approx 100{,}000 \\times 0.0080462 \\approx \\$804.62$\n\nAnswer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 7.561250565981027
+  },
+  "response": {
+    "id": "cmpl-1bbb9976c1ee4b3a8a688b4284b834d9",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Monthly payment formula: M = P * [r(1+r)^n] / [(1+r)^n - 1]\n\nP = 100,000, r = 0.09/12 = 0.0075, n = 360.\n\n(1.0075)^360: ln(1.0075) = 0.0074720... times 360 = 2.68992. e^2.68992 ≈ 14.730.\n\nM = 100000 * 0.0075 * 14.730 / (13.730) = 100000 * 0.110475/13.730 = 100000 * 0.0080462 = 804.62.\n\nAnswer D.</think>**Answer: D**\n\nThe monthly payment is computed with the standard amortization formula:\n\n$$M = P\\frac{r(1+r)^n}{(1+r)^n-1}$$\n\nwhere $P = 100{,}000$, $r = 0.09/12 = 0.0075$, and $n = 360$ months.\n\n- $(1.0075)^{360} \\approx 14.730$\n- $M = 100{,}000 \\times \\dfrac{0.0075 \\times 14.730}{13.730} \\approx 100{,}000 \\times 0.0080462 \\approx \\$804.62$\n\nAnswer: D"
+      }
+    ],
+    "created": 1791946679,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 166,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.53,
+      "prompt_tokens_per_sec": 313.21,
+      "completion_tokens": 414,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 337,
+        "rejected_prediction_tokens": 202
+      },
+      "completion_time": 7.02,
+      "completion_tokens_per_sec": 58.94,
+      "total_tokens": 580,
+      "total_time": 7.56
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 166,
+      "prompt_ms": 530.0,
+      "prompt_per_token_ms": 3.1927710843373496,
+      "prompt_per_second": 313.20754716981133,
+      "predicted_n": 414,
+      "predicted_ms": 7020.0,
+      "predicted_per_token_ms": 16.956521739130434,
+      "predicted_per_second": 58.97435897435898,
+      "draft_n": 539,
+      "draft_n_accepted": 337
+    }
+  }
+}

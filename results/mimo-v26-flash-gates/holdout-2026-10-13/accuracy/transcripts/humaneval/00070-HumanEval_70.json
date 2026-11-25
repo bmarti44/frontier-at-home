@@ -1,0 +1,105 @@
+{
+  "index": 70,
+  "task_id": "HumanEval/70",
+  "rendered_prompt_sha256": "431d1a56bd425ed0718c9996fd486badefa4547c69e80bc5e81526cec2abae70",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    if not lst:\n        return []\n    else:\n        min_val = min(lst)\n        max_val = max(lst)\n        if min_val == max_val:\n            return lst\n        else:\n            lst.remove(min_val)\n            lst.remove(max_val)\n            return [min_val, max_val] + strange_sort_list(lst)",
+  "finish_reason": "stop",
+  "expected": "    res, switch = [], True\n    while lst:\n        res.append(min(lst) if switch else max(lst))\n        lst.remove(res[-1])\n        switch = not switch\n    return res\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.68637781299185
+  },
+  "response": {
+    "id": "cmpl-5a184afd0ef840cdba529bc9b5dabd63",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "    if not lst:\n        return []\n    else:\n        min_val = min(lst)\n        max_val = max(lst)\n        if min_val == max_val:\n            return lst\n        else:\n            lst.remove(min_val)\n            lst.remove(max_val)\n            return [min_val, max_val] + strange_sort_list(lst)"
+      }
+    ],
+    "created": 1791954624,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 119,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 305.13,
+      "completion_tokens": 68,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 54,
+        "rejected_prediction_tokens": 44
+      },
+      "completion_time": 1.29,
+      "completion_tokens_per_sec": 52.73,
+      "total_tokens": 187,
+      "total_time": 1.68
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 119,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.277310924369748,
+      "prompt_per_second": 305.12820512820514,
+      "predicted_n": 68,
+      "predicted_ms": 1290.0,
+      "predicted_per_token_ms": 18.970588235294116,
+      "predicted_per_second": 52.713178294573645,
+      "draft_n": 98,
+      "draft_n_accepted": 54
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00070:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rendered_prompt": "\ndef strange_sort_list(lst):\n    '''\n    Given list of integers, return list in strange order.\n    Strange sorting, is when you start with the minimum value,\n    then maximum of the remaining integers, then minimum and so on.\n\n    Examples:\n    strange_sort_list([1, 2, 3, 4]) == [1, 4, 2, 3]\n    strange_sort_list([5, 5, 5, 5]) == [5, 5, 5, 5]\n    strange_sort_list([]) == []\n    '''\n"
+}

@@ -1,0 +1,70 @@
+{
+  "index": 126,
+  "task_id": 126,
+  "rendered_prompt_sha256": "e893780927bc296503a4e4554b3b6ec9f5785950e363de540dfd3f9c19b4e6f2",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Chicken sausages: 38\nFish sausages: 38 + 6 = 44\nTotal: 38 + 44 = 82</think>Chicken sausages: 38\nFish sausages: 38 + 6 = 44\nTotal: 38 + 44 = 82\n\nAnswer: 82",
+  "finish_reason": "stop",
+  "expected": "82",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5166634529596195
+  },
+  "response": {
+    "id": "cmpl-19973aae1e8e4f9fadd869e6311d5d72",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Chicken sausages: 38\nFish sausages: 38 + 6 = 44\nTotal: 38 + 44 = 82</think>Chicken sausages: 38\nFish sausages: 38 + 6 = 44\nTotal: 38 + 44 = 82\n\nAnswer: 82"
+      }
+    ],
+    "created": 1791939559,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 87,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 228.95,
+      "completion_tokens": 85,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 73,
+        "rejected_prediction_tokens": 11
+      },
+      "completion_time": 1.14,
+      "completion_tokens_per_sec": 74.78,
+      "total_tokens": 172,
+      "total_time": 1.52
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 87,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 4.367816091954023,
+      "prompt_per_second": 228.94736842105266,
+      "predicted_n": 85,
+      "predicted_ms": 1140.0,
+      "predicted_per_token_ms": 13.411764705882353,
+      "predicted_per_second": 74.56140350877193,
+      "draft_n": 84,
+      "draft_n_accepted": 73
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nDylan needed chicken sausages and fish sausages to make sausage buns at a party. He bought 38 chicken sausages and 6 more fish sausages than chicken sausages. How many sausages did Dylan buy in all?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

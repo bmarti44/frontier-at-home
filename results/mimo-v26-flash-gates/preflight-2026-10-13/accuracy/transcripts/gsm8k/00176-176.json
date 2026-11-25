@@ -1,0 +1,69 @@
+{
+  "index": 176,
+  "task_id": 176,
+  "rendered_prompt_sha256": "1d4913e8c9419edfc0ac483ba0548828e7409c8ae8a4414afce089fa952a358d",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Chinese team = 240 - 80 = 160\nGirls = 160 - 60 = 100</think>Chinese team: 240 - 80 = 160\nGirls: 160 - 60 = 100\n\nAnswer: 100",
+  "finish_reason": "stop",
+  "expected": "100",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.5078830739948899
+  },
+  "response": {
+    "id": "cmpl-898ddf3bc63f4b948b49acbec9e04293",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Chinese team = 240 - 80 = 160\nGirls = 160 - 60 = 100</think>Chinese team: 240 - 80 = 160\nGirls: 160 - 60 = 100\n\nAnswer: 100"
+      }
+    ],
+    "created": 1791919923,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 77,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 220.0,
+      "completion_tokens": 74,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 62,
+        "rejected_prediction_tokens": 22
+      },
+      "completion_time": 1.15,
+      "completion_tokens_per_sec": 64.34,
+      "total_tokens": 151,
+      "total_time": 1.5
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 77,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.545454545454546,
+      "prompt_per_second": 220.0,
+      "predicted_n": 74,
+      "predicted_ms": 1150.0,
+      "predicted_per_token_ms": 15.54054054054054,
+      "predicted_per_second": 64.34782608695652,
+      "draft_n": 84,
+      "draft_n_accepted": 62
+    }
+  },
+  "used_fallback": false
+}

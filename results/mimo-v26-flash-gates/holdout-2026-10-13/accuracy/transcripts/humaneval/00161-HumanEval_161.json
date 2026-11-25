@@ -1,0 +1,104 @@
+{
+  "index": 161,
+  "task_id": "HumanEval/161",
+  "rendered_prompt_sha256": "fa29d7f413a74f20646e32cd02cb87cdd6766bf4f81745a92db8bcd19d9734d2",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    if not s:\n        return s\n    if not any(c.isalpha() for c in s):\n        return s[::-1]\n    return \"\".join(c.swapcase() if c.isalpha() else c for c in s)\n\ndef check(candidate):\n    assert candidate(\"1234\") == \"4321\"\n    assert candidate(\"ab\") == \"AB\"\n    assert candidate(\"#a@C\") == \"#A@c\"\n    assert candidate(\"#HS@hs@g\") == \"#hS@HS@G\"\n    assert candidate(\"\") == \"\"\n    assert candidate(\"s\") == \"S\"\n    assert candidate(\"S\") == \"s\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n",
+  "finish_reason": "stop",
+  "expected": "    flg = 0\n    idx = 0\n    new_str = list(s)\n    for i in s:\n        if i.isalpha():\n            new_str[idx] = i.swapcase()\n            flg = 1\n        idx += 1\n    s = \"\"\n    for i in new_str:\n        s += i\n    if flg == 0:\n        return s[len(s)::-1]\n    return s\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 14.667797387985047
+  },
+  "response": {
+    "id": "cmpl-ed7ce527edfc4a719c4890668a88c74c",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    if not s:\n        return s\n    if not any(c.isalpha() for c in s):\n        return s[::-1]\n    return \"\".join(c.swapcase() if c.isalpha() else c for c in s)\n\ndef check(candidate):\n    assert candidate(\"1234\") == \"4321\"\n    assert candidate(\"ab\") == \"AB\"\n    assert candidate(\"#a@C\") == \"#A@c\"\n    assert candidate(\"#HS@hs@g\") == \"#hS@HS@G\"\n    assert candidate(\"\") == \"\"\n    assert candidate(\"s\") == \"S\"\n    assert candidate(\"S\") == \"s\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n    assert candidate(\"HS@hs@g\") == \"hs@HS@G\"\n"
+      }
+    ],
+    "created": 1791964678,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 106,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 271.79,
+      "completion_tokens": 934,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 794,
+        "rejected_prediction_tokens": 186
+      },
+      "completion_time": 14.27,
+      "completion_tokens_per_sec": 65.43,
+      "total_tokens": 1040,
+      "total_time": 14.67
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 106,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.6792452830188678,
+      "prompt_per_second": 271.7948717948718,
+      "predicted_n": 934,
+      "predicted_ms": 14270.0,
+      "predicted_per_token_ms": 15.278372591006423,
+      "predicted_per_second": 65.45199719691661,
+      "draft_n": 980,
+      "draft_n_accepted": 794
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00161:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

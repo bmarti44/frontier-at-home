@@ -1,0 +1,104 @@
+{
+  "index": 39,
+  "task_id": "HumanEval/39",
+  "rendered_prompt_sha256": "6dde5c311a83caad26ca80e7e914c596b9cb6e8467630530600e21c98d547c5a",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    fib = [0, 1]\n    while len(fib) <= n:\n        fib.append(fib[-1] + fib[-2])\n    for i in range(n):\n        if is_prime(fib[i]):\n            return fib[i]\n    return None\n\ndef is_prime(n: int):\n    \"\"\"\n    is_prime returns True if n is prime, False otherwise.\n    >>> is_prime(2)\n    True\n    >>> is_prime(3)\n    True\n    >>> is_prime(4)\n    False\n    >>> is_prime(5)\n    True\n    >>> is_prime(6)\n    False\n    \"\"\"\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\nif __name__ == \"__main__\":\n    import doctest\n    doctest.testmod()\n    n = int(input())\n    print(prime_fib(n))",
+  "finish_reason": "stop",
+  "expected": "    import math\n\n    def is_prime(p):\n        if p < 2:\n            return False\n        for k in range(2, min(int(math.sqrt(p)) + 1, p - 1)):\n            if p % k == 0:\n                return False\n        return True\n    f = [0, 1]\n    while True:\n        f.append(f[-1] + f[-2])\n        if is_prime(f[-1]):\n            n -= 1\n        if n == 0:\n            return f[-1]\n",
+  "scored_correct": false,
+  "reason": "sandbox failed with exit 1",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.286930965958163
+  },
+  "response": {
+    "id": "cmpl-6dcd4d4837f04fdc83df0ac9593e0af1",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "    fib = [0, 1]\n    while len(fib) <= n:\n        fib.append(fib[-1] + fib[-2])\n    for i in range(n):\n        if is_prime(fib[i]):\n            return fib[i]\n    return None\n\ndef is_prime(n: int):\n    \"\"\"\n    is_prime returns True if n is prime, False otherwise.\n    >>> is_prime(2)\n    True\n    >>> is_prime(3)\n    True\n    >>> is_prime(4)\n    False\n    >>> is_prime(5)\n    True\n    >>> is_prime(6)\n    False\n    \"\"\"\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\nif __name__ == \"__main__\":\n    import doctest\n    doctest.testmod()\n    n = int(input())\n    print(prime_fib(n))"
+      }
+    ],
+    "created": 1791951843,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 94,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.34,
+      "prompt_tokens_per_sec": 276.47,
+      "completion_tokens": 211,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 170,
+        "rejected_prediction_tokens": 117
+      },
+      "completion_time": 3.95,
+      "completion_tokens_per_sec": 53.47,
+      "total_tokens": 305,
+      "total_time": 4.29
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 94,
+      "prompt_ms": 340.0,
+      "prompt_per_token_ms": 3.617021276595745,
+      "prompt_per_second": 276.47058823529414,
+      "predicted_n": 211,
+      "predicted_ms": 3950.0,
+      "predicted_per_token_ms": 18.72037914691943,
+      "predicted_per_second": 53.41772151898734,
+      "draft_n": 287,
+      "draft_n_accepted": 170
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00039:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 1,
+    "stdout": "**********************************************************************\nFile \"/case/main.py\", line 6, in __main__.prime_fib\nFailed example:\n    prime_fib(1)\nExpected:\n    2\nGot nothing\n**********************************************************************\nFile \"/case/main.py\", line 8, in __main__.prime_fib\nFailed example:\n    prime_fib(2)\nExpected:\n    3\nGot nothing\n**********************************************************************\nFile \"/case/main.py\", line 10, in __main__.prime_fib\nFailed example:\n    prime_fib(3)\nExpected:\n    5\nGot nothing\n**********************************************************************\nFile \"/case/main.py\", line 12, in __main__.prime_fib\nFailed example:\n    prime_fib(4)\nExpected:\n    13\nGot:\n    2\n**********************************************************************\nFile \"/case/main.py\", line 14, in __main__.prime_fib\nFailed example:\n    prime_fib(5)\nExpected:\n    89\nGot:\n    2\n**********************************************************************\n1 items had failures:\n   5 of   5 in __main__.prime_fib\n***Test Failed*** 5 failures.\n",
+    "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 49, in <module>\n    n = int(input())\n            ^^^^^^^\nEOFError: EOF when reading a line\n"
+  }
+}

@@ -1,0 +1,133 @@
+{
+ "schema_version": 4,
+ "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k-longgen-c",
+ "purpose": "Long-generation diagnostic arm C: the qualified cuda-spark-128g-262k launch with no DFlash drafter (--draft-model-name/--draft-mode removed, draft_model role dropped).",
+ "model": "mimo-v2.6-flash",
+ "backend": "cuda",
+ "hardware_class": "spark",
+ "ram_tier_gib": 128,
+ "status": {
+  "state": "estimated",
+  "basis": "Diagnostic arm of results/mimo-v26-flash-gates/longgen-2026-10-14 (DIAGNOSTIC, never acceptance evidence): the qualified cuda-spark-128g-262k launch with one change, to locate the long-generation breakdown the holdout found at about 4,096 absolute tokens. Dev serving only: not a switch alias."
+ },
+ "engine": "tabby-exl3-mimo-r001",
+ "artifact_roles": {
+  "model": "exl3-2.52-mikeroz"
+ },
+ "launch": {
+  "mechanism": "systemd-run",
+  "user": "bmarti44",
+  "log_name": "mimo26-longgen-c",
+  "env": {
+   "HOME": "{cache_root}/mimo-v26-flash/home",
+   "LANG": "C.UTF-8",
+   "PATH": "{cache_root}/mimo-v26-flash/native-runtime-001/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+   "PYTHONPATH": "{repo}/scripts/lib",
+   "PYTHONNOUSERSITE": "1",
+   "PYTHONDONTWRITEBYTECODE": "1",
+   "CUDA_HOME": "/usr/local/cuda-13.0",
+   "CUDA_VISIBLE_DEVICES": "0",
+   "TOKENIZERS_PARALLELISM": "false",
+   "HF_HUB_OFFLINE": "1",
+   "TRANSFORMERS_OFFLINE": "1",
+   "DO_NOT_TRACK": "1",
+   "MAX_JOBS": "2",
+   "NVCC_THREADS": "1",
+   "TABBY_ROOT": "{cache_root}/mimo-v26-flash/native-runtime-001/src/tabbyAPI"
+  },
+  "diagnostics_unset": [
+   "CUDA_LAUNCH_BLOCKING",
+   "TABBY_LOGGING_LOG_PROMPT",
+   "TABBY_LOGGING_LOG_REQUESTS",
+   "TABBY_LOGGING_LOG_CHAT_COMPLETION_REQUESTS"
+  ],
+  "args": [
+   "-B",
+   "-m",
+   "tabby_launch",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "{port}",
+   "--disable-auth",
+   "true",
+   "--disable-fetch-requests",
+   "true",
+   "--model-name",
+   "{model}",
+   "--backend",
+   "exllamav3",
+   "--inline-model-loading",
+   "false",
+   "--max-seq-len",
+   "262144",
+   "--cache-size",
+   "262144",
+   "--max-batch-size",
+   "1",
+   "--cache-mode",
+   "8,8",
+   "--chunk-size",
+   "2048",
+   "--sysmem-recurrent-cache",
+   "512",
+   "--sysmem-multimodal-cache",
+   "256",
+   "--vision",
+   "true",
+   "--reasoning",
+   "true",
+   "--tool-format",
+   "qwen3_coder",
+   "--log-prompt",
+   "false",
+   "--log-generation-params",
+   "false",
+   "--log-requests",
+   "false",
+   "--log-chat-completion-requests",
+   "false"
+  ]
+ },
+ "containment": {
+  "unit": "mimo26-longgen-c-engine",
+  "memory_high": "8G",
+  "memory_max": "16G",
+  "memory_swap_max": "0",
+  "oom_policy": "kill",
+  "kill_mode": "control-group",
+  "extra_properties": {
+   "NoNewPrivileges": "yes"
+  }
+ },
+ "safety": {
+  "kill_floor_gib": 8,
+  "minimum_start_gib": 114,
+  "sample_hz": 1,
+  "startup_timeout_seconds": 1800,
+  "note": "8 GiB whole-host floor, the production precedent (qwen38fn). minimum_start_gib = ceil(peak + 8) from candidate 3's run (peak 105.71 GiB). CUDA allocations on GB10 are not charged to the memory cgroup, so MemoryHigh/MemoryMax bound only host-side pages (page cache of the 94 GiB pack read, the Python heap); the external memwatch floor is the binding control."
+ },
+ "memory_model": {
+  "kv_bytes_per_token": 14688,
+  "overhead_gib": 7.2,
+  "extra_gib": 0,
+  "floor_gib": 8,
+  "basis": "Measured by M3 candidate 3 (results/mimo-v26-flash-gates/qualify-2026-10-13-c1): peak use 105.71 GiB = 94.98 GiB of pack and drafter + 3.59 GiB of Q8 K/V at 262,144 (14,688 B/token: exllamav3 caches only the 9 global-attention layers; the 39 SWA-128 layers and the drafter's 5 SWA-1024 layers keep fixed per-slot rings) + overhead_gib, rounded up to 0.1 GiB. The overhead is the CUDA context, Q8 staging scratch, torch allocator slack, the vision tower and the TabbyAPI process, including the host-RAM caches capped at 512 MB of sliding-window checkpoints and 256 MB of image embeddings (scope anon peak 4.28 GB)."
+ },
+ "serving": {
+  "parallel_slots": 1,
+  "request_context_cap": 262144
+ },
+ "context_cap": 262144,
+ "port_role": "production",
+ "bench": {
+  "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k-longgen-c"
+ },
+ "qualification_options": {
+  "note": "vision_max_tokens: in chat mode MiMo answers MMMU with worked steps; at the bench's 256-token default 4 of 20 answers ran out of budget mid-calculation (finish_reason length; results/mimo-v26-flash-gates/preflight-2026-10-13/kit/vision). Thinking mode has no effort level here and would spend more.",
+  "speed_max_tokens_per_event": 8,
+  "vision_max_tokens": 4096
+ },
+ "qualification_targets": null,
+ "verify_on_hardware": null
+}

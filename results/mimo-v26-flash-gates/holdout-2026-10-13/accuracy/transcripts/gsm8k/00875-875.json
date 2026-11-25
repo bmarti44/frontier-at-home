@@ -1,0 +1,70 @@
+{
+  "index": 875,
+  "task_id": 875,
+  "rendered_prompt_sha256": "eeb69629804f0b5d3ec91abf1168ce11210e271197589830c2e340c6ee16578f",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>52 + 28 = 80\n80 - 80/4 = 80 - 20 = 60</think>Paul starts with 52 marbles and receives 28 more: 52 + 28 = 80 marbles.\n\nHe then loses 1/4 of them: 80 × 1/4 = 20 marbles lost.\n\n80 - 20 = 60 marbles remaining.\n\nAnswer: 60",
+  "finish_reason": "stop",
+  "expected": "60",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.373872185999062
+  },
+  "response": {
+    "id": "cmpl-79f7e108f6624d3a810d9841ca286645",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>52 + 28 = 80\n80 - 80/4 = 80 - 20 = 60</think>Paul starts with 52 marbles and receives 28 more: 52 + 28 = 80 marbles.\n\nHe then loses 1/4 of them: 80 × 1/4 = 20 marbles lost.\n\n80 - 20 = 60 marbles remaining.\n\nAnswer: 60"
+      }
+    ],
+    "created": 1791939518,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 72,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 205.71,
+      "completion_tokens": 108,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 87,
+        "rejected_prediction_tokens": 60
+      },
+      "completion_time": 2.02,
+      "completion_tokens_per_sec": 53.43,
+      "total_tokens": 180,
+      "total_time": 2.37
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 72,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.861111111111111,
+      "prompt_per_second": 205.71428571428572,
+      "predicted_n": 108,
+      "predicted_ms": 2020.0,
+      "predicted_per_token_ms": 18.703703703703702,
+      "predicted_per_second": 53.46534653465346,
+      "draft_n": 147,
+      "draft_n_accepted": 87
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nPaul has 52 marbles. His friend gave him 28 marbles. Then, he lost 1/4 of his marbles. How many marbles does Paul have left?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

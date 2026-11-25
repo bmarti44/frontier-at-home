@@ -1,0 +1,69 @@
+{
+  "index": 1241,
+  "task_id": 1241,
+  "rendered_prompt_sha256": "6351419cfd0d13f73ea218cb5b3e99950a7dc20e5a4b9f1a2d0b50dbee5ebea1",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Cost: 5 dozens × $2.40 = $12.00\n\nTotal eggs: 5 × 12 = 60 eggs\n\nSelling: $1 for 3 eggs → 60/3 = 20 groups → 20 × $1 = $20\n\nProfit: $20 - $12 = $8</think>**Cost:** 5 dozens × $2.40 = $12.00\n\n**Total eggs:** 5 × 12 = 60 eggs\n\n**Revenue:** 60 eggs ÷ 3 = 20 groups × $1 = $20.00\n\n**Profit:** $20.00 − $12.00 = $8.00\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.165473740955349
+  },
+  "response": {
+    "id": "cmpl-67517b90a06d49efba200b8cab85ffda",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Cost: 5 dozens × $2.40 = $12.00\n\nTotal eggs: 5 × 12 = 60 eggs\n\nSelling: $1 for 3 eggs → 60/3 = 20 groups → 20 × $1 = $20\n\nProfit: $20 - $12 = $8</think>**Cost:** 5 dozens × $2.40 = $12.00\n\n**Total eggs:** 5 × 12 = 60 eggs\n\n**Revenue:** 60 eggs ÷ 3 = 20 groups × $1 = $20.00\n\n**Profit:** $20.00 − $12.00 = $8.00\n\nAnswer: 8"
+      }
+    ],
+    "created": 1791920088,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 67,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.33,
+      "prompt_tokens_per_sec": 203.03,
+      "completion_tokens": 171,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 141,
+        "rejected_prediction_tokens": 69
+      },
+      "completion_time": 2.83,
+      "completion_tokens_per_sec": 60.49,
+      "total_tokens": 238,
+      "total_time": 3.16
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 67,
+      "prompt_ms": 330.0,
+      "prompt_per_token_ms": 4.925373134328358,
+      "prompt_per_second": 203.03030303030303,
+      "predicted_n": 171,
+      "predicted_ms": 2830.0,
+      "predicted_per_token_ms": 16.549707602339183,
+      "predicted_per_second": 60.42402826855124,
+      "draft_n": 210,
+      "draft_n_accepted": 141
+    }
+  },
+  "used_fallback": false
+}

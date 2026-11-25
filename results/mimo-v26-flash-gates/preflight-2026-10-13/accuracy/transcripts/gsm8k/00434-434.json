@@ -1,0 +1,69 @@
+{
+  "index": 434,
+  "task_id": 434,
+  "rendered_prompt_sha256": "dfad462f5ecaeb111ce9820a8ae21d6626a5ede60c1c3e379f8d22d85c174fcf",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>George spent $5 total.\n\nHe bought 3 bags of chips at 40 cents each = 120 cents = $1.20.\n\nHe had 1% of his money left. His money was $5, so 1% of $5 = $0.05.\n\nSo he spent $5 - $0.05 = $4.95.\n\nMoney spent on candy bars = $4.95 - $1.20 = $3.75.\n\nNumber of candy bars = $3.75 / $0.75 = 5.</think>Let me work through this:\n\n- George started with $5.\n- He had 1% of his money left: 1% × $5 = $0.05.\n- Total spent: $5 − $0.05 = $4.95.\n- Cost of 3 bags of chips: 3 × $0.40 = $1.20.\n- Money spent on candy bars: $4.95 − $1.20 = $3.75.\n- Number of candy bars: $3.75 ÷ $0.75 = 5.\n\nAnswer: 5",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.96729827101808
+  },
+  "response": {
+    "id": "cmpl-43354e455d1d483f9498ac82a2c02270",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>George spent $5 total.\n\nHe bought 3 bags of chips at 40 cents each = 120 cents = $1.20.\n\nHe had 1% of his money left. His money was $5, so 1% of $5 = $0.05.\n\nSo he spent $5 - $0.05 = $4.95.\n\nMoney spent on candy bars = $4.95 - $1.20 = $3.75.\n\nNumber of candy bars = $3.75 / $0.75 = 5.</think>Let me work through this:\n\n- George started with $5.\n- He had 1% of his money left: 1% × $5 = $0.05.\n- Total spent: $5 − $0.05 = $4.95.\n- Cost of 3 bags of chips: 3 × $0.40 = $1.20.\n- Money spent on candy bars: $4.95 − $1.20 = $3.75.\n- Number of candy bars: $3.75 ÷ $0.75 = 5.\n\nAnswer: 5"
+      }
+    ],
+    "created": 1791920117,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 80,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 222.22,
+      "completion_tokens": 258,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 210,
+        "rejected_prediction_tokens": 126
+      },
+      "completion_time": 4.6,
+      "completion_tokens_per_sec": 56.09,
+      "total_tokens": 338,
+      "total_time": 4.96
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 80,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.5,
+      "prompt_per_second": 222.22222222222223,
+      "predicted_n": 258,
+      "predicted_ms": 4600.0,
+      "predicted_per_token_ms": 17.829457364341085,
+      "predicted_per_second": 56.086956521739125,
+      "draft_n": 336,
+      "draft_n_accepted": 210
+    }
+  },
+  "used_fallback": false
+}

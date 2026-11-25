@@ -1,0 +1,37 @@
+2026-10-14T00:52:34Z head 12a2e5a791b2e9b4198fb6ed52be26236d29aad6 dirty=0
+2026-10-14T00:52:34Z render identical to candidate 3: config_hash mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f (status qualified)
+2026-10-14T00:52:34Z prod-stop: sudo -n 52_engine_switch.sh stop
+STOPPED qwen38fn (active.json unchanged; '/home/bmarti44/spark-deepseek-v4-flash/scripts/52_engine_switch.sh restore' restarts it)
+2026-10-14T00:52:37Z preload MemFree=117090200 MemAvailable=120890100 SwapFree=16543192
+runtime-src tabbyAPI 2636ef602b55b5343cf3740dd55a77f21e0a8003 a5a97dfca985a5f0cff36c8c5b6d127a965a1b3b dirty=0 match=True
+runtime-src exllamav3 f45b84512ba65bca77f7d394399d4b68821fc71b e272949487e45ac37165d4cab8e9f081a8c1e444 dirty=0 match=True
+runtime-wheel exllamav3 sha256_match=True files=629 mismatches=0
+weights model exl3-2.52-mikeroz files=25 bytes=101323582965 mismatches=0
+weights draft_model dflash-exl3-4.0 files=3 bytes=735192453 mismatches=0
+released 52 files under /home/bmarti44/models/qwen3.8-flash-next-nvfp4
+released 136225 files under /home/bmarti44/.cache/qwen38-flash-next
+released 25 files under /home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash
+released 3 files under /home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash
+released 300 files under /home/bmarti44/models/mimo-v2.6-flash-mopd
+released 56 files under /home/bmarti44/models/mimo-v2.6-flash-mopd-exl3-2.52-src
+released 8 files under /home/bmarti44/models/mimo-v2.6-flash-dflash-exl3-src
+released 67416 files under /home/bmarti44/.cache/mimo-v26-flash/native-runtime-001
+2026-10-14T00:53:27Z MemFree gate pass 118652300 kB, MemAvailable 120885920 kB (3 samples)
+2026-10-14T00:53:27Z launching in scope mimo26-holdout-2595281
+{"pass":true,"required_gib":104.0,"mem_available_gib":115.256,"stable_samples_observed":3}
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k","pid":2596026,"port":8019}
+2026-10-14T00:54:23Z ready after 56 s; idle MemAvailable=13111584 MemFree=9673240
+{"props": 200, "admin_status": 404, "greedy": ["c933d4cb1288", "afe5a8556aee", "68da9e93ac2f"], "tokens_per_chunk": [5.590909090909091, 2.4651162790697674, 4.857142857142857]}
+2026-10-14T00:54:40Z probe identical to candidate 3; drawing the holdout
+[accuracy] starting
+[accuracy] OK
+MEASURED: /home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/SUMMARY.md
+{"ok":true,"profile":"mimo-v2.6-flash/cuda-spark-128g-262k","stopped":true}
+2026-10-14T08:02:19Z scope empty after stop
+2026-10-14T08:02:19Z window closed; postrun MemFree=115933212 MemAvailable=121022640 SwapFree=16544520
+2026-10-14T08:02:24Z kernel journal alive after the engine stop
+ERROR: mimo-v2.6-flash/cuda-spark-128g-262k is not running (state file absent)
+Failed to stop mimo26-holdout-2595281.scope: Unit mimo26-holdout-2595281.scope not loaded.
+2026-10-14T08:02:24Z restore attempt 1: MemAvailable=120998304 MemFree=115908420
+2026-10-14T08:13:46Z restore rc=0
+2026-10-14T08:13:51Z driver exit rc=0

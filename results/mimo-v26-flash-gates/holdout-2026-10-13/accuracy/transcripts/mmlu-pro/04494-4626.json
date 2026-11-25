@@ -1,0 +1,68 @@
+{
+  "index": 4494,
+  "task_id": 4626,
+  "rendered_prompt_sha256": "3391c8ea7f5da514e91f2e65a549cc1f132039ccb002156082f77a5d6120b24a",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>log(0.0148) = log(1.48 × 10^-2) = log(1.48) + (-2)\n\nlog(1.48) ≈ 0.1703\n\nSo log(0.0148) ≈ 0.1703 - 2 = -1.8297</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.0353614119812846
+  },
+  "response": {
+    "id": "cmpl-a704d68b239d443c917ea0ef04a7954b",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>log(0.0148) = log(1.48 × 10^-2) = log(1.48) + (-2)\n\nlog(1.48) ≈ 0.1703\n\nSo log(0.0148) ≈ 0.1703 - 2 = -1.8297</think>Answer: F"
+      }
+    ],
+    "created": 1791941656,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 139,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.44,
+      "prompt_tokens_per_sec": 315.91,
+      "completion_tokens": 88,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 71,
+        "rejected_prediction_tokens": 48
+      },
+      "completion_time": 1.6,
+      "completion_tokens_per_sec": 55.15,
+      "total_tokens": 227,
+      "total_time": 2.04
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 139,
+      "prompt_ms": 440.0,
+      "prompt_per_token_ms": 3.1654676258992804,
+      "prompt_per_second": 315.90909090909093,
+      "predicted_n": 88,
+      "predicted_ms": 1600.0,
+      "predicted_per_token_ms": 18.181818181818183,
+      "predicted_per_second": 55.0,
+      "draft_n": 119,
+      "draft_n_accepted": 71
+    }
+  }
+}

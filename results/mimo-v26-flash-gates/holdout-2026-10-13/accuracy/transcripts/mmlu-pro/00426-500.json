@@ -1,0 +1,68 @@
+{
+  "index": 426,
+  "task_id": 500,
+  "rendered_prompt_sha256": "2562d856cecc548738d118d78ed055f8a39dd5e4e84d03bf73dbd27438fd7fd7",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The question describes how our perception of risk is greater if we are continually reminded of it than if we consider it only at the point of purchase. This is the availability heuristic - the tendency to judge the likelihood or frequency of events based on how easily examples come to mind. If we are continually reminded of a risk, it becomes more \"available\" in our minds, making us perceive it as more likely or greater.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='D' expected='C'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.2343421779805794
+  },
+  "response": {
+    "id": "cmpl-200fb841e50944a5a2e576888f7b0eb6",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The question describes how our perception of risk is greater if we are continually reminded of it than if we consider it only at the point of purchase. This is the availability heuristic - the tendency to judge the likelihood or frequency of events based on how easily examples come to mind. If we are continually reminded of a risk, it becomes more \"available\" in our minds, making us perceive it as more likely or greater.</think>Answer: D"
+      }
+    ],
+    "created": 1791940446,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 111,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 270.73,
+      "completion_tokens": 89,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 60,
+        "rejected_prediction_tokens": 143
+      },
+      "completion_time": 2.82,
+      "completion_tokens_per_sec": 31.6,
+      "total_tokens": 200,
+      "total_time": 3.23
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 111,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.6936936936936937,
+      "prompt_per_second": 270.7317073170732,
+      "predicted_n": 89,
+      "predicted_ms": 2820.0,
+      "predicted_per_token_ms": 31.685393258426966,
+      "predicted_per_second": 31.560283687943265,
+      "draft_n": 203,
+      "draft_n_accepted": 60
+    }
+  }
+}

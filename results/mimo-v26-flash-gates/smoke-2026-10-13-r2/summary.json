@@ -1,0 +1,276 @@
+{
+ "formula": "PREREG.md",
+ "checks": {
+  "clause1_kill_lines": [
+   "kernel-smoke.log: 2026-10-13T01:28:58-04:00 spark-aba1 kernel: NVRM: nvCheckOkFailedNoLog: Check failed: Out of memory [NV_ERR_NO_MEMORY] (0x00000051) returned from _memdescAllocInternal(pMemDesc) @ mem_desc.c:1359"
+  ],
+  "clause2_swap_growth_gib": 0.000118255615234375,
+  "launch_mem_available_gib": 115.5943374633789,
+  "clause3_load_peak_gib": 102.70009994506836,
+  "clause3_run_peak_gib": 104.76275253295898,
+  "mem_available_low_gib": 10.831584930419922,
+  "mem_free_low_during_load_gib": 1.1987533569335938,
+  "meminfo_samples": 1113,
+  "clause4_toolcall": {
+   "passed": 20,
+   "total": 20
+  },
+  "speed_record_only": {
+   "0": {
+    "eligible_reps": 2,
+    "reps": 2,
+    "detail": [
+     {
+      "decode": 23.936228056721333,
+      "prefill": 97.70806891907984,
+      "tokens": 382,
+      "events": 174
+     },
+     {
+      "decode": 19.923223939869644,
+      "prefill": 100.49507987508828,
+      "tokens": 382,
+      "events": 208
+     }
+    ],
+    "median_decode_block_aware": 21.92972599829549,
+    "median_prefill_lower_bound": 99.10157439708405
+   },
+   "28672": {
+    "eligible_reps": 2,
+    "reps": 2,
+    "detail": [
+     {
+      "decode": 35.76359305379651,
+      "prefill": 759.5046312445418,
+      "tokens": 382,
+      "events": 92
+     },
+     {
+      "decode": 36.766001489240516,
+      "prefill": 762.2785194334625,
+      "tokens": 382,
+      "events": 90
+     }
+    ],
+    "median_decode_block_aware": 36.26479727151852,
+    "median_prefill_lower_bound": 760.8915753390022
+   }
+  },
+  "clause5_both_ready": true,
+  "clause5_eligible_rep_ctx0": true,
+  "probe_start1": {
+   "props": [
+    200,
+    {
+     "total_slots": 1,
+     "model_path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash",
+     "chat_template": "{%- macro render_value(value) -%}\n    {%- if value is string -%}\n        {{- value -}}\n    {%- else -%}\n        {{- value | tojson(ensure_ascii=False) -}}\n    {%- endif -%}\n{%- endmacro -%}\n\n{%- macro render_content(message_content) -%}\n    {%- if message_content is string -%}\n        {{- message_content -}}\n    {%- elif message_content is iterable -%}\n        {%- for part in message_content -%}\n            {%- if part is not mapping -%}\n                {{- part -}}\n            {%- elif part['type'] == 'image' or 'image' in part or 'image_url' in part -%}\n                {{- '<|vision_start|><|image_pad|><|vision_end|>' -}}\n            {%- elif part['type'] == 'audio' or part['type'] == 'input_audio' or 'audio' in part or 'audio_url' in part or 'input_audio' in part -%}\n                {{- '<|mimo_audio_start|><|audio_pad|><|mimo_audio_end|>' -}}\n            {%- elif part['type'] == 'video' or 'video' in part or 'video_url' in part -%}\n                {{- '<|vision_start|><|video_pad|><|vision_end|>' -}}\n            {%- elif 'text' in part -%}\n                {{- part['text'] -}}\n            {%- endif -%}\n        {%- endfor -%}\n    {%- endif -%}\n{%- endmacro -%}\n\n{%- macro render_tools(tools) -%}\n    {{- 'You are provided with the following tools:\\n\\n<tools>' -}}\n    {%- for tool in tools -%}\n        {{- '\\n' ~ (tool | tojson(ensure_ascii=False)) -}}\n    {%- endfor -%}\n    {{- '\\n</tools>' -}}\n{%- endmacro -%}\n\n{%- macro render_tool_calls(tool_calls) -%}\n    {%- for tool_call in tool_calls -%}\n        {%- if tool_call.function is defined -%}\n            {%- set tool_call = tool_call.function -%}\n        {%- elif tool_call.custom is defined -%}\n            {%- set tool_call = tool_call.custom -%}\n        {%- endif -%}\n        {{- '<tool_call><function=' ~ tool_call.name ~ '>' -}}\n        {%- if tool_call.input is defined and tool_call.input is string -%}\n            {{- tool_call.input -}}\n        {%- elif tool_call.arguments -%}\n            {%- if tool_call.arguments is string -%}\n                {{- tool_call.arguments -}}\n            {%- else -%}\n                {%- for args_name, args_value in tool_call.arguments | items -%}\n                    {{- '<parameter=' ~ args_name ~ '>' ~ render_value(args_value) ~ '</parameter>' -}}\n                {%- endfor -%}\n            {%- endif -%}\n        {%- endif -%}\n        {{- '</function></tool_call>' -}}\n    {%- endfor -%}\n{%- endmacro -%}\n\n{%- macro render_assistant_message(message) -%}\n    {%- set content = render_content(message.content) -%}\n    {%- set reasoning = message.reasoning_content if message.reasoning_content is string else '' -%}\n    {{- '<|im_start|>assistant\\n<think>' ~ reasoning ~ '</think>' ~ content -}}\n    {%- if message.tool_calls is defined and message.tool_calls is iterable and message.tool_calls | length > 0 -%}\n        {{- render_tool_calls(message.tool_calls) -}}\n    {%- endif -%}\n    {{- '<|im_end|>' -}}\n{%- endmacro -%}\n\n{%- if tools is defined and tools is iterable and tools | length > 0 -%}\n    {{- '<|im_start|>system\\n' ~ render_tools(tools) ~ '<|im_end|>' -}}\n{%- endif -%}\n\n{%- for message in messages -%}\n    {%- if message.role == 'assistant' -%}\n        {{- render_assistant_message(message) -}}\n    {%- else -%}\n        {%- set body = render_content(message.content) -%}\n        {{- '<|im_start|>' ~ message.role ~ '\\n' ~ body -}}\n        {%- if message.tools is defined and message.tools is iterable and message.tools | length > 0 -%}\n            {%- if body -%}\n                {{- '\\n\\n' -}}\n            {%- endif -%}\n            {{- render_tools(message.tools) -}}\n        {%- endif -%}\n        {{- '<|im_end|>' -}}\n    {%- endif -%}\n{%- endfor -%}\n\n{%- if add_generation_prompt -%}\n    {{- '<|im_start|>assistant\\n' -}}\n    {%- if enable_thinking is false -%}\n        {{- '<think></think>' -}}\n    {%- endif -%}\n{%- endif -%}\n",
+     "default_generation_settings": {
+      "n_ctx": 262144
+     },
+     "modalities": {
+      "vision": true
+     }
+    }
+   ],
+   "models": [
+    200,
+    {
+     "object": "list",
+     "data": [
+      {
+       "id": "mimo-v2.6-flash",
+       "object": "model",
+       "created": 1791869341,
+       "owned_by": "tabbyAPI",
+       "logging": null,
+       "parameters": null,
+       "meta": {
+        "n_ctx_train": 1048576,
+        "n_ctx": null,
+        "n_vocab": 152576,
+        "n_embd": 4096,
+        "size": 0
+       }
+      }
+     ]
+    }
+   ],
+   "admin_model_list_status": 404,
+   "greedy": [
+    {
+     "prompt": "Write a Python function that merges two sorted lists in O(n). Code only.",
+     "sha256": "c933d4cb1288a41721c655f9488a0f7e3dd244370dc3b07ce87d35c53fd0c5ac",
+     "completion_tokens": 123,
+     "finish_reason": "stop",
+     "text": "The user wants a Python function that merges two sorted lists in O(n) time complexity.\u0000```python\ndef merge_sorted_lists(list1, list2):\n    merged = []\n    i, j = 0, 0\n    while i < len(list1) and j < len(list2):\n        if list1[i] <= list2[j]:\n            merged.append(list1[i])\n            i += 1\n        else:\n            merged.append(list2[j])\n            j += 1\n    merged.extend(list1[i:])\n    merged.extend(list2[j:])\n    return merged\n```"
+    },
+    {
+     "prompt": "Explain in three sentences what a race condition is.",
+     "sha256": "afe5a8556aeef08b0e272afdc2c0ae3b795ce138596d1961a845d49d08987111",
+     "completion_tokens": 106,
+     "finish_reason": "stop",
+     "text": "The user wants a concise three-sentence explanation of a race condition.\u0000A race condition occurs when two or more threads or processes access shared data concurrently, and the outcome depends on the unpredictable order in which they execute. Because the timing of these operations is non-deterministic, the final result may vary between runs, potentially leading to inconsistent or incorrect behavior. This problem is typically mitigated through synchronization mechanisms such as locks, mutexes, or atomic operations that ensure only one thread accesses the critical section at a time."
+    },
+    {
+     "prompt": "Return a JSON object with keys name, version, deps for a tiny npm package.",
+     "sha256": "68da9e93ac2ffd1ffd2dbfbc3d797fb48b82fa22268d945fdc61217525ac446a",
+     "completion_tokens": 68,
+     "finish_reason": "stop",
+     "text": "The user wants a JSON object representing a tiny npm package with keys: name, version, deps.\u0000```json\n{\n  \"name\": \"tiny-utils\",\n  \"version\": \"1.0.0\",\n  \"deps\": {\n    \"lodash\": \"^4.17.21\"\n  }\n}\n```"
+    }
+   ],
+   "granularity": [
+    {
+     "prompt": "Write a Python function that merges two sorted lists in O(n). Code only.",
+     "text_chunks": 22,
+     "completion_tokens": 123,
+     "tokens_per_chunk": 5.590909090909091,
+     "stream_seconds": 1.756956220982829
+    },
+    {
+     "prompt": "Explain in three sentences what a race condition is.",
+     "text_chunks": 43,
+     "completion_tokens": 106,
+     "tokens_per_chunk": 2.4651162790697674,
+     "stream_seconds": 3.7712315910030156
+    },
+    {
+     "prompt": "Return a JSON object with keys name, version, deps for a tiny npm package.",
+     "text_chunks": 14,
+     "completion_tokens": 68,
+     "tokens_per_chunk": 4.857142857142857,
+     "stream_seconds": 1.1623105999897234
+    }
+   ]
+  },
+  "probe_start2": {
+   "props": [
+    200,
+    {
+     "total_slots": 1,
+     "model_path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash",
+     "chat_template": "{%- macro render_value(value) -%}\n    {%- if value is string -%}\n        {{- value -}}\n    {%- else -%}\n        {{- value | tojson(ensure_ascii=False) -}}\n    {%- endif -%}\n{%- endmacro -%}\n\n{%- macro render_content(message_content) -%}\n    {%- if message_content is string -%}\n        {{- message_content -}}\n    {%- elif message_content is iterable -%}\n        {%- for part in message_content -%}\n            {%- if part is not mapping -%}\n                {{- part -}}\n            {%- elif part['type'] == 'image' or 'image' in part or 'image_url' in part -%}\n                {{- '<|vision_start|><|image_pad|><|vision_end|>' -}}\n            {%- elif part['type'] == 'audio' or part['type'] == 'input_audio' or 'audio' in part or 'audio_url' in part or 'input_audio' in part -%}\n                {{- '<|mimo_audio_start|><|audio_pad|><|mimo_audio_end|>' -}}\n            {%- elif part['type'] == 'video' or 'video' in part or 'video_url' in part -%}\n                {{- '<|vision_start|><|video_pad|><|vision_end|>' -}}\n            {%- elif 'text' in part -%}\n                {{- part['text'] -}}\n            {%- endif -%}\n        {%- endfor -%}\n    {%- endif -%}\n{%- endmacro -%}\n\n{%- macro render_tools(tools) -%}\n    {{- 'You are provided with the following tools:\\n\\n<tools>' -}}\n    {%- for tool in tools -%}\n        {{- '\\n' ~ (tool | tojson(ensure_ascii=False)) -}}\n    {%- endfor -%}\n    {{- '\\n</tools>' -}}\n{%- endmacro -%}\n\n{%- macro render_tool_calls(tool_calls) -%}\n    {%- for tool_call in tool_calls -%}\n        {%- if tool_call.function is defined -%}\n            {%- set tool_call = tool_call.function -%}\n        {%- elif tool_call.custom is defined -%}\n            {%- set tool_call = tool_call.custom -%}\n        {%- endif -%}\n        {{- '<tool_call><function=' ~ tool_call.name ~ '>' -}}\n        {%- if tool_call.input is defined and tool_call.input is string -%}\n            {{- tool_call.input -}}\n        {%- elif tool_call.arguments -%}\n            {%- if tool_call.arguments is string -%}\n                {{- tool_call.arguments -}}\n            {%- else -%}\n                {%- for args_name, args_value in tool_call.arguments | items -%}\n                    {{- '<parameter=' ~ args_name ~ '>' ~ render_value(args_value) ~ '</parameter>' -}}\n                {%- endfor -%}\n            {%- endif -%}\n        {%- endif -%}\n        {{- '</function></tool_call>' -}}\n    {%- endfor -%}\n{%- endmacro -%}\n\n{%- macro render_assistant_message(message) -%}\n    {%- set content = render_content(message.content) -%}\n    {%- set reasoning = message.reasoning_content if message.reasoning_content is string else '' -%}\n    {{- '<|im_start|>assistant\\n<think>' ~ reasoning ~ '</think>' ~ content -}}\n    {%- if message.tool_calls is defined and message.tool_calls is iterable and message.tool_calls | length > 0 -%}\n        {{- render_tool_calls(message.tool_calls) -}}\n    {%- endif -%}\n    {{- '<|im_end|>' -}}\n{%- endmacro -%}\n\n{%- if tools is defined and tools is iterable and tools | length > 0 -%}\n    {{- '<|im_start|>system\\n' ~ render_tools(tools) ~ '<|im_end|>' -}}\n{%- endif -%}\n\n{%- for message in messages -%}\n    {%- if message.role == 'assistant' -%}\n        {{- render_assistant_message(message) -}}\n    {%- else -%}\n        {%- set body = render_content(message.content) -%}\n        {{- '<|im_start|>' ~ message.role ~ '\\n' ~ body -}}\n        {%- if message.tools is defined and message.tools is iterable and message.tools | length > 0 -%}\n            {%- if body -%}\n                {{- '\\n\\n' -}}\n            {%- endif -%}\n            {{- render_tools(message.tools) -}}\n        {%- endif -%}\n        {{- '<|im_end|>' -}}\n    {%- endif -%}\n{%- endfor -%}\n\n{%- if add_generation_prompt -%}\n    {{- '<|im_start|>assistant\\n' -}}\n    {%- if enable_thinking is false -%}\n        {{- '<think></think>' -}}\n    {%- endif -%}\n{%- endif -%}\n",
+     "default_generation_settings": {
+      "n_ctx": 262144
+     },
+     "modalities": {
+      "vision": true
+     }
+    }
+   ],
+   "models": [
+    200,
+    {
+     "object": "list",
+     "data": [
+      {
+       "id": "mimo-v2.6-flash",
+       "object": "model",
+       "created": 1791869682,
+       "owned_by": "tabbyAPI",
+       "logging": null,
+       "parameters": null,
+       "meta": {
+        "n_ctx_train": 1048576,
+        "n_ctx": null,
+        "n_vocab": 152576,
+        "n_embd": 4096,
+        "size": 0
+       }
+      }
+     ]
+    }
+   ],
+   "admin_model_list_status": 404,
+   "greedy": [
+    {
+     "prompt": "Write a Python function that merges two sorted lists in O(n). Code only.",
+     "sha256": "c933d4cb1288a41721c655f9488a0f7e3dd244370dc3b07ce87d35c53fd0c5ac",
+     "completion_tokens": 123,
+     "finish_reason": "stop",
+     "text": "The user wants a Python function that merges two sorted lists in O(n) time complexity.\u0000```python\ndef merge_sorted_lists(list1, list2):\n    merged = []\n    i, j = 0, 0\n    while i < len(list1) and j < len(list2):\n        if list1[i] <= list2[j]:\n            merged.append(list1[i])\n            i += 1\n        else:\n            merged.append(list2[j])\n            j += 1\n    merged.extend(list1[i:])\n    merged.extend(list2[j:])\n    return merged\n```"
+    },
+    {
+     "prompt": "Explain in three sentences what a race condition is.",
+     "sha256": "afe5a8556aeef08b0e272afdc2c0ae3b795ce138596d1961a845d49d08987111",
+     "completion_tokens": 106,
+     "finish_reason": "stop",
+     "text": "The user wants a concise three-sentence explanation of a race condition.\u0000A race condition occurs when two or more threads or processes access shared data concurrently, and the outcome depends on the unpredictable order in which they execute. Because the timing of these operations is non-deterministic, the final result may vary between runs, potentially leading to inconsistent or incorrect behavior. This problem is typically mitigated through synchronization mechanisms such as locks, mutexes, or atomic operations that ensure only one thread accesses the critical section at a time."
+    },
+    {
+     "prompt": "Return a JSON object with keys name, version, deps for a tiny npm package.",
+     "sha256": "68da9e93ac2ffd1ffd2dbfbc3d797fb48b82fa22268d945fdc61217525ac446a",
+     "completion_tokens": 68,
+     "finish_reason": "stop",
+     "text": "The user wants a JSON object representing a tiny npm package with keys: name, version, deps.\u0000```json\n{\n  \"name\": \"tiny-utils\",\n  \"version\": \"1.0.0\",\n  \"deps\": {\n    \"lodash\": \"^4.17.21\"\n  }\n}\n```"
+    }
+   ],
+   "granularity": [
+    {
+     "prompt": "Write a Python function that merges two sorted lists in O(n). Code only.",
+     "text_chunks": 22,
+     "completion_tokens": 123,
+     "tokens_per_chunk": 5.590909090909091,
+     "stream_seconds": 1.7728560300020035
+    },
+    {
+     "prompt": "Explain in three sentences what a race condition is.",
+     "text_chunks": 43,
+     "completion_tokens": 106,
+     "tokens_per_chunk": 2.4651162790697674,
+     "stream_seconds": 3.789343289012322
+    },
+    {
+     "prompt": "Return a JSON object with keys name, version, deps for a tiny npm package.",
+     "text_chunks": 14,
+     "completion_tokens": 68,
+     "tokens_per_chunk": 4.857142857142857,
+     "stream_seconds": 1.1740037989802659
+    }
+   ]
+  },
+  "greedy_identity_record_only": [
+   true,
+   true,
+   true
+  ],
+  "cgroup_record_only": [
+   "2026-10-13T05:29:01Z start 1 ready memory.peak=17183375360 memory.current=4363948032",
+   "  anon 3084988416",
+   "  file 1050603520",
+   "  shmem 50794496",
+   "  file_mapped 412524544",
+   "2026-10-13T05:33:34Z start 1 before stop memory.peak=17183375360 memory.current=5190021120",
+   "  anon 3829239808",
+   "  file 1127444480",
+   "  shmem 50794496",
+   "  file_mapped 431837184",
+   "2026-10-13T05:34:42Z start 2 ready memory.peak=17132421120 memory.current=7290724352",
+   "  anon 3084902400",
+   "  file 3973472256",
+   "  shmem 50794496",
+   "  file_mapped 412426240",
+   "2026-10-13T05:34:58Z start 2 before stop memory.peak=17132421120 memory.current=7359848448",
+   "  anon 3145789440",
+   "  file 3980259328",
+   "  shmem 50794496",
+   "  file_mapped 417771520"
+  ],
+  "pack_weight_gib": 94.29577910527587,
+  "kernel_tail_lines_record_only": [],
+  "failed_attempt_lines": [],
+  "restore_failed_lines": []
+ },
+ "fidelity": {
+  "error": "the fidelity run did not finish cleanly (driver log)"
+ },
+ "fidelity_status": "NO_RESULT",
+ "m2_target_weights_gib": 93.53302657231688,
+ "missing": [],
+ "does_not_fit": [
+  "clause 1: kill/OOM/NVRM/Xid line"
+ ],
+ "verdict": "DOES_NOT_FIT"
+}

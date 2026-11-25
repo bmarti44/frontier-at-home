@@ -1,0 +1,68 @@
+{
+  "index": 6496,
+  "task_id": 6661,
+  "rendered_prompt_sha256": "18c2603220aac7d135584fc52814da0da32d54e9fe069ecce27b43ae12a55ea8",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The question describes a chain of events: renal agenesis → oligohydramnios → pulmonary hypoplasia. This is the classic Potter sequence (oligohydramnios sequence). A sequence is a chain of events, each of which is a consequence of the preceding one.\n\nAnswer: F</think>Answer: F",
+  "finish_reason": "stop",
+  "expected": "F",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.486620108014904
+  },
+  "response": {
+    "id": "cmpl-69fd7afc2488446cb4ef0f9854257cbd",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The question describes a chain of events: renal agenesis → oligohydramnios → pulmonary hypoplasia. This is the classic Potter sequence (oligohydramnios sequence). A sequence is a chain of events, each of which is a consequence of the preceding one.\n\nAnswer: F</think>Answer: F"
+      }
+    ],
+    "created": 1791944758,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 107,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 274.36,
+      "completion_tokens": 70,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 48,
+        "rejected_prediction_tokens": 106
+      },
+      "completion_time": 2.09,
+      "completion_tokens_per_sec": 33.48,
+      "total_tokens": 177,
+      "total_time": 2.48
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 107,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.6448598130841123,
+      "prompt_per_second": 274.35897435897436,
+      "predicted_n": 70,
+      "predicted_ms": 2090.0,
+      "predicted_per_token_ms": 29.857142857142858,
+      "predicted_per_second": 33.49282296650718,
+      "draft_n": 154,
+      "draft_n_accepted": 48
+    }
+  }
+}

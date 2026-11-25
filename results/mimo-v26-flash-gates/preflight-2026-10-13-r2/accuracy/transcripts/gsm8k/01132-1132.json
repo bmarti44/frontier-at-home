@@ -1,0 +1,70 @@
+{
+  "index": 1132,
+  "task_id": 1132,
+  "rendered_prompt_sha256": "2fba16ac150913607469c97be0b55bb76ddbfd91ba2af89bd93bc15f596d0db0",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Valerie earns $5000 per month.\nHer brother earns twice what Valerie earns: $10,000 per month.\nCombined salary: $5000 + $10,000 = $15,000.\nMother earns twice their combined salary: $30,000.\nTotal: $5000 + $10,000 + $30,000 = $45,000.</think>Valerie earns $5000/month. Her brother earns twice that: $10,000/month. Their combined salary is $15,000. Their mother earns twice that: $30,000. Total = $5000 + $10,000 + $30,000 = $45,000.\n\nAnswer: 45000",
+  "finish_reason": "stop",
+  "expected": "45000",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.45372278400464
+  },
+  "response": {
+    "id": "cmpl-1ffb5ab7056f44d6ae5c345b7e4c5999",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Valerie earns $5000 per month.\nHer brother earns twice what Valerie earns: $10,000 per month.\nCombined salary: $5000 + $10,000 = $15,000.\nMother earns twice their combined salary: $30,000.\nTotal: $5000 + $10,000 + $30,000 = $45,000.</think>Valerie earns $5000/month. Her brother earns twice that: $10,000/month. Their combined salary is $15,000. Their mother earns twice that: $30,000. Total = $5000 + $10,000 + $30,000 = $45,000.\n\nAnswer: 45000"
+      }
+    ],
+    "created": 1791926079,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 74,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 211.43,
+      "completion_tokens": 195,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 163,
+        "rejected_prediction_tokens": 61
+      },
+      "completion_time": 3.1,
+      "completion_tokens_per_sec": 62.99,
+      "total_tokens": 269,
+      "total_time": 3.45
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 74,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.72972972972973,
+      "prompt_per_second": 211.42857142857144,
+      "predicted_n": 195,
+      "predicted_ms": 3100.0,
+      "predicted_per_token_ms": 15.897435897435898,
+      "predicted_per_second": 62.90322580645161,
+      "draft_n": 224,
+      "draft_n_accepted": 163
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nValerie earns $5000 per month, 1/2 of what her brother earns. If their mother earns twice their combined salary, what's the total amount of money they all have together?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

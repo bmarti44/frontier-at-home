@@ -1,0 +1,68 @@
+{
+  "index": 2803,
+  "task_id": 2921,
+  "rendered_prompt_sha256": "175272434c8b72ca5f246f4e6390d149d0d48f1bc3d90b3cfebb520be1f3fe40",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Before Lyell and Darwin, the prevailing notion was that the Earth was young (a few thousand years old, based on biblical chronology) and that species were fixed/unchanging (created as they were). Lyell proposed an old Earth (millions of years) through uniformitarianism, and Darwin proposed that populations gradually change through natural selection.\n\nThe answer is D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.321090548997745
+  },
+  "response": {
+    "id": "cmpl-9fc5450ce17649c9a4747d4219dbbc11",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Before Lyell and Darwin, the prevailing notion was that the Earth was young (a few thousand years old, based on biblical chronology) and that species were fixed/unchanging (created as they were). Lyell proposed an old Earth (millions of years) through uniformitarianism, and Darwin proposed that populations gradually change through natural selection.\n\nThe answer is D.</think>Answer: D"
+      }
+    ],
+    "created": 1791939583,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 189,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.55,
+      "prompt_tokens_per_sec": 343.64,
+      "completion_tokens": 81,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 53,
+        "rejected_prediction_tokens": 143
+      },
+      "completion_time": 2.76,
+      "completion_tokens_per_sec": 29.31,
+      "total_tokens": 270,
+      "total_time": 3.32
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 189,
+      "prompt_ms": 550.0,
+      "prompt_per_token_ms": 2.9100529100529102,
+      "prompt_per_second": 343.6363636363636,
+      "predicted_n": 81,
+      "predicted_ms": 2760.0,
+      "predicted_per_token_ms": 34.074074074074076,
+      "predicted_per_second": 29.347826086956523,
+      "draft_n": 196,
+      "draft_n_accepted": 53
+    }
+  }
+}

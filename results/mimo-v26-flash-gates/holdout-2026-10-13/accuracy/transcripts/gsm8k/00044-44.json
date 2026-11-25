@@ -1,0 +1,69 @@
+{
+  "index": 44,
+  "task_id": 44,
+  "rendered_prompt_sha256": "f96ede3805b57381722a2a6129b4e9f70a1434a6aa3e5916db6aa26edde56ef6",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>20 candles = 2 pounds of beeswax. Supplies cost = 2 × $10 = $20. Revenue = 20 × $2 = $40. Profit = $40 - $20 = $20.</think>20 candles require 2 pounds of beeswax (since 10 candles per pound).\n\n**Supplies cost:** 2 pounds × $10.00 = $20.00\n**Revenue:** 20 candles × $2.00 = $40.00\n**Net profit:** $40.00 − $20.00 = $20.00\n\nAnswer: 20",
+  "finish_reason": "stop",
+  "expected": "20",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.1355970260337926
+  },
+  "response": {
+    "id": "cmpl-7c73932c17e243348e4e62afa81eed05",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>20 candles = 2 pounds of beeswax. Supplies cost = 2 × $10 = $20. Revenue = 20 × $2 = $40. Profit = $40 - $20 = $20.</think>20 candles require 2 pounds of beeswax (since 10 candles per pound).\n\n**Supplies cost:** 2 pounds × $10.00 = $20.00\n**Revenue:** 20 candles × $2.00 = $40.00\n**Net profit:** $40.00 − $20.00 = $20.00\n\nAnswer: 20"
+      }
+    ],
+    "created": 1791939403,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 109,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.42,
+      "prompt_tokens_per_sec": 259.52,
+      "completion_tokens": 150,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 121,
+        "rejected_prediction_tokens": 82
+      },
+      "completion_time": 2.71,
+      "completion_tokens_per_sec": 55.28,
+      "total_tokens": 259,
+      "total_time": 3.13
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 109,
+      "prompt_ms": 420.0,
+      "prompt_per_token_ms": 3.853211009174312,
+      "prompt_per_second": 259.5238095238095,
+      "predicted_n": 150,
+      "predicted_ms": 2710.0,
+      "predicted_per_token_ms": 18.066666666666666,
+      "predicted_per_second": 55.35055350553505,
+      "draft_n": 203,
+      "draft_n_accepted": 121
+    }
+  },
+  "used_fallback": false
+}

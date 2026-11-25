@@ -1,0 +1,69 @@
+{
+  "index": 749,
+  "task_id": 749,
+  "rendered_prompt_sha256": "3c5bb583a352afefcb9c676a4ee301a3b97a5fa1098b3f4c240c8b895031c777",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Fifty-four students into six groups of equal size: 54/6 = 9 students per group.\n\nActivity requires 12 groups: 12 × 9 = 108 students needed.\n\nBut we only have 54 students... Hmm, wait. Let me re-read.\n\n\"If the activity requires 12 groups, how many more groups are needed to form?\"\n\nSo we have 6 groups formed, and we need 12 groups total. So we need 12 - 6 = 6 more groups.\n\nAnswer: 6</think>We start with 6 groups formed from 54 students (9 students per group). The activity requires 12 groups total.\n\n12 − 6 = 6 more groups needed.\n\nAnswer: 6",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='6' expected='3'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.332259538990911
+  },
+  "response": {
+    "id": "cmpl-77c718a9b6e04ed3b8695105ea2a4e5d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Fifty-four students into six groups of equal size: 54/6 = 9 students per group.\n\nActivity requires 12 groups: 12 × 9 = 108 students needed.\n\nBut we only have 54 students... Hmm, wait. Let me re-read.\n\n\"If the activity requires 12 groups, how many more groups are needed to form?\"\n\nSo we have 6 groups formed, and we need 12 groups total. So we need 12 - 6 = 6 more groups.\n\nAnswer: 6</think>We start with 6 groups formed from 54 students (9 students per group). The activity requires 12 groups total.\n\n12 − 6 = 6 more groups needed.\n\nAnswer: 6"
+      }
+    ],
+    "created": 1791939357,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 69,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.34,
+      "prompt_tokens_per_sec": 202.94,
+      "completion_tokens": 162,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 122,
+        "rejected_prediction_tokens": 158
+      },
+      "completion_time": 3.98,
+      "completion_tokens_per_sec": 40.68,
+      "total_tokens": 231,
+      "total_time": 4.32
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 69,
+      "prompt_ms": 340.0,
+      "prompt_per_token_ms": 4.927536231884058,
+      "prompt_per_second": 202.94117647058826,
+      "predicted_n": 162,
+      "predicted_ms": 3980.0,
+      "predicted_per_token_ms": 24.567901234567902,
+      "predicted_per_second": 40.70351758793969,
+      "draft_n": 280,
+      "draft_n_accepted": 122
+    }
+  },
+  "used_fallback": false
+}

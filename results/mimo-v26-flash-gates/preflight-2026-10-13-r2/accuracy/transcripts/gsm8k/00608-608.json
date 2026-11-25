@@ -1,0 +1,69 @@
+{
+  "index": 608,
+  "task_id": 608,
+  "rendered_prompt_sha256": "4a58747eec22e403c94fd49e023b668d44e005339f9e638a290107acd73567b8",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Total before discount: $25 + $35 = $60\n30% off: $60 × 0.30 = $18\nAfter discount: $60 - $18 = $42\nMoney left: $50 - $42 = $8</think>Total cost before discount: $25 + $35 = $60\nDiscount: 30% of $60 = $18\nAfter discount: $60 - $18 = $42\nMoney left: $50 - $42 = $8\n\nAnswer: 8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.724284016992897
+  },
+  "response": {
+    "id": "cmpl-c4324ccc2c2f482db0703a85895f77e7",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Total before discount: $25 + $35 = $60\n30% off: $60 × 0.30 = $18\nAfter discount: $60 - $18 = $42\nMoney left: $50 - $42 = $8</think>Total cost before discount: $25 + $35 = $60\nDiscount: 30% of $60 = $18\nAfter discount: $60 - $18 = $42\nMoney left: $50 - $42 = $8\n\nAnswer: 8"
+      }
+    ],
+    "created": 1791926068,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 105,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 256.1,
+      "completion_tokens": 131,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 107,
+        "rejected_prediction_tokens": 61
+      },
+      "completion_time": 2.31,
+      "completion_tokens_per_sec": 56.7,
+      "total_tokens": 236,
+      "total_time": 2.72
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 105,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.9047619047619047,
+      "prompt_per_second": 256.0975609756097,
+      "predicted_n": 131,
+      "predicted_ms": 2310.0,
+      "predicted_per_token_ms": 17.633587786259543,
+      "predicted_per_second": 56.70995670995671,
+      "draft_n": 168,
+      "draft_n_accepted": 107
+    }
+  },
+  "used_fallback": false
+}

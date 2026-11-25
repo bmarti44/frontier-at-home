@@ -1,0 +1,69 @@
+{
+  "index": 439,
+  "task_id": 439,
+  "rendered_prompt_sha256": "5b311ac9a10525cf5ad6cb3e4c4e20c501b60d457bb4ac992f2b075d134b565a",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Wayne's drive: 4 minutes.\nBernadette's drive: 4 × 4 = 16 minutes.\nBernadette wants to arrive 5 minutes before Wayne.\nSo Bernadette should leave 16 + 5 - 4 = 17 minutes earlier than Wayne.</think>Wayne's drive takes 4 minutes. Bernadette's drive takes 4 × 4 = 16 minutes.\n\nBernadette wants to arrive 5 minutes before Wayne, so she needs to leave 16 + 5 − 4 = 17 minutes earlier than Wayne.\n\nAnswer: 17",
+  "finish_reason": "stop",
+  "expected": "17",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.825298384006601
+  },
+  "response": {
+    "id": "cmpl-0a0ae2378a00437ea8ebec6d84fed9c5",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Wayne's drive: 4 minutes.\nBernadette's drive: 4 × 4 = 16 minutes.\nBernadette wants to arrive 5 minutes before Wayne.\nSo Bernadette should leave 16 + 5 - 4 = 17 minutes earlier than Wayne.</think>Wayne's drive takes 4 minutes. Bernadette's drive takes 4 × 4 = 16 minutes.\n\nBernadette wants to arrive 5 minutes before Wayne, so she needs to leave 16 + 5 − 4 = 17 minutes earlier than Wayne.\n\nAnswer: 17"
+      }
+    ],
+    "created": 1791939419,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 141,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.46,
+      "prompt_tokens_per_sec": 306.52,
+      "completion_tokens": 131,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 107,
+        "rejected_prediction_tokens": 61
+      },
+      "completion_time": 2.36,
+      "completion_tokens_per_sec": 55.57,
+      "total_tokens": 272,
+      "total_time": 2.82
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 141,
+      "prompt_ms": 460.0,
+      "prompt_per_token_ms": 3.2624113475177303,
+      "prompt_per_second": 306.52173913043475,
+      "predicted_n": 131,
+      "predicted_ms": 2360.0,
+      "predicted_per_token_ms": 18.015267175572518,
+      "predicted_per_second": 55.50847457627118,
+      "draft_n": 168,
+      "draft_n_accepted": 107
+    }
+  },
+  "used_fallback": false
+}

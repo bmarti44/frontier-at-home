@@ -1,0 +1,69 @@
+{
+  "index": 773,
+  "task_id": 773,
+  "rendered_prompt_sha256": "3741baccc40431bf90a5551c2e133ae95748a9d24349f800d87aa941b800282f",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Anthony had 50 pencils.\n\nGave 1/2 to Brandon: 50/2 = 25, remaining = 25.\n\nGave 3/5 of remaining to Charlie: 25 × 3/5 = 15, remaining = 10.</think>Anthony started with 50 pencils.\n\nHe gave 1/2 to Brandon: 50 ÷ 2 = 25 pencils given away, leaving 25.\n\nHe gave 3/5 of the remaining 25 to Charlie: 25 × 3/5 = 15 pencils given away, leaving 10.\n\nAnswer: 10",
+  "finish_reason": "stop",
+  "expected": "10",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.104522778012324
+  },
+  "response": {
+    "id": "cmpl-09adefc575f84e5e928af8c123fa07e0",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Anthony had 50 pencils.\n\nGave 1/2 to Brandon: 50/2 = 25, remaining = 25.\n\nGave 3/5 of remaining to Charlie: 25 × 3/5 = 15, remaining = 10.</think>Anthony started with 50 pencils.\n\nHe gave 1/2 to Brandon: 50 ÷ 2 = 25 pencils given away, leaving 25.\n\nHe gave 3/5 of the remaining 25 to Charlie: 25 × 3/5 = 15 pencils given away, leaving 10.\n\nAnswer: 10"
+      }
+    ],
+    "created": 1791939468,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 78,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 216.67,
+      "completion_tokens": 143,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 115,
+        "rejected_prediction_tokens": 81
+      },
+      "completion_time": 2.74,
+      "completion_tokens_per_sec": 52.1,
+      "total_tokens": 221,
+      "total_time": 3.11
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 78,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.615384615384615,
+      "prompt_per_second": 216.66666666666666,
+      "predicted_n": 143,
+      "predicted_ms": 2740.0,
+      "predicted_per_token_ms": 19.16083916083916,
+      "predicted_per_second": 52.18978102189781,
+      "draft_n": 196,
+      "draft_n_accepted": 115
+    }
+  },
+  "used_fallback": false
+}

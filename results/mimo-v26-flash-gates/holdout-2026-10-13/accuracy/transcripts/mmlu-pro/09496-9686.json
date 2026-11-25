@@ -1,0 +1,68 @@
+{
+  "index": 9496,
+  "task_id": 9686,
+  "rendered_prompt_sha256": "e49ff4fa2c0c2cc863f760ea80b2e3bc2fe899414c2f99a3292482a9076e0f76",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Series capacitors: C_eq = (3×6)/(3+6) = 18/9 = 2 μF\n\nEnergy = ½ C V² = ½ × 2×10⁻⁶ × 300² = ½ × 2×10⁻⁶ × 90000 = 9×10⁻² = 0.09 J\n\nAnswer: H</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.505972535989713
+  },
+  "response": {
+    "id": "cmpl-8267f50490844692a061c85e2d4380b5",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Series capacitors: C_eq = (3×6)/(3+6) = 18/9 = 2 μF\n\nEnergy = ½ C V² = ½ × 2×10⁻⁶ × 300² = ½ × 2×10⁻⁶ × 90000 = 9×10⁻² = 0.09 J\n\nAnswer: H</think>Answer: H"
+      }
+    ],
+    "created": 1791947785,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 164,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.53,
+      "prompt_tokens_per_sec": 309.43,
+      "completion_tokens": 97,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 75,
+        "rejected_prediction_tokens": 79
+      },
+      "completion_time": 1.97,
+      "completion_tokens_per_sec": 49.22,
+      "total_tokens": 261,
+      "total_time": 2.5
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 164,
+      "prompt_ms": 530.0,
+      "prompt_per_token_ms": 3.231707317073171,
+      "prompt_per_second": 309.4339622641509,
+      "predicted_n": 97,
+      "predicted_ms": 1970.0,
+      "predicted_per_token_ms": 20.309278350515463,
+      "predicted_per_second": 49.23857868020304,
+      "draft_n": 154,
+      "draft_n_accepted": 75
+    }
+  }
+}

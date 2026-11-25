@@ -1,0 +1,68 @@
+{
+  "index": 5896,
+  "task_id": 6056,
+  "rendered_prompt_sha256": "bcd09c69ff2cea39d14898d7e071fed9b7385adf48b6c68717f9382908c28388",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The question asks which is NOT a non-coding RNA. mRNA (messenger RNA) is a coding RNA - it is translated into protein. All others (lncRNA, piRNA, rRNA, snRNA, tRNA, miRNA, siRNA, ribozyme, gRNA) are non-coding RNAs.</think>Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.338431121024769
+  },
+  "response": {
+    "id": "cmpl-315bfc72e9734c1786656be5d5e5038d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The question asks which is NOT a non-coding RNA. mRNA (messenger RNA) is a coding RNA - it is translated into protein. All others (lncRNA, piRNA, rRNA, snRNA, tRNA, miRNA, siRNA, ribozyme, gRNA) are non-coding RNAs.</think>Answer: I"
+      }
+    ],
+    "created": 1791944235,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 88,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 244.44,
+      "completion_tokens": 74,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 54,
+        "rejected_prediction_tokens": 86
+      },
+      "completion_time": 1.98,
+      "completion_tokens_per_sec": 37.45,
+      "total_tokens": 162,
+      "total_time": 2.34
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 88,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.090909090909091,
+      "prompt_per_second": 244.44444444444443,
+      "predicted_n": 74,
+      "predicted_ms": 1980.0,
+      "predicted_per_token_ms": 26.756756756756758,
+      "predicted_per_second": 37.37373737373738,
+      "draft_n": 140,
+      "draft_n_accepted": 54
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "index": 9472,
+  "task_id": 9662,
+  "rendered_prompt_sha256": "75ecf9586667c6096b5205e12907ab68d1383e9cbc14e260258b896777c6f78c",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The effective power of a lens at a distance from the eye is given by:\n\nP_eff = P / (1 - P × d)\n\nwhere P is the lens power and d is the distance from the eye in meters.\n\nP = -10.00 D, d = 0.012 m\n\nP_eff = -10 / (1 - (-10)(0.012))\nP_eff = -10 / (1 + 0.12)\nP_eff = -10 / 1.12\nP_eff = -8.93 D\n\nAnswer: G</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.304377968015615
+  },
+  "response": {
+    "id": "cmpl-ef381961913d4db0a579cb477ee7fabd",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The effective power of a lens at a distance from the eye is given by:\n\nP_eff = P / (1 - P × d)\n\nwhere P is the lens power and d is the distance from the eye in meters.\n\nP = -10.00 D, d = 0.012 m\n\nP_eff = -10 / (1 - (-10)(0.012))\nP_eff = -10 / (1 + 0.12)\nP_eff = -10 / 1.12\nP_eff = -8.93 D\n\nAnswer: G</think>Answer: G"
+      }
+    ],
+    "created": 1791947783,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 185,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.56,
+      "prompt_tokens_per_sec": 330.36,
+      "completion_tokens": 133,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 104,
+        "rejected_prediction_tokens": 99
+      },
+      "completion_time": 2.74,
+      "completion_tokens_per_sec": 48.47,
+      "total_tokens": 318,
+      "total_time": 3.31
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 185,
+      "prompt_ms": 560.0,
+      "prompt_per_token_ms": 3.027027027027027,
+      "prompt_per_second": 330.3571428571429,
+      "predicted_n": 133,
+      "predicted_ms": 2740.0,
+      "predicted_per_token_ms": 20.601503759398497,
+      "predicted_per_second": 48.54014598540146,
+      "draft_n": 203,
+      "draft_n_accepted": 104
+    }
+  }
+}

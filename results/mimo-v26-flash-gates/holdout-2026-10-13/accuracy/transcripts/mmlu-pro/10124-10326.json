@@ -1,0 +1,68 @@
+{
+  "index": 10124,
+  "task_id": 10326,
+  "rendered_prompt_sha256": "3c1155fb2baa9275ca434789b00b5be7564caeec4874c0f4e0a0f5e02430399e",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The block slides without friction, so all gravitational potential energy converts to translational kinetic energy. The sphere rolls without slipping, so some energy goes into rotational kinetic energy, meaning less translational kinetic energy, so it moves slower.\n\nAnswer: B</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.332570319995284
+  },
+  "response": {
+    "id": "cmpl-eb2615146de94f5aad1252ed4a7ca5ec",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The block slides without friction, so all gravitational potential energy converts to translational kinetic energy. The sphere rolls without slipping, so some energy goes into rotational kinetic energy, meaning less translational kinetic energy, so it moves slower.\n\nAnswer: B</think>Answer: B"
+      }
+    ],
+    "created": 1791947976,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 259,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 3.24,
+      "prompt_tokens_per_sec": 79.94,
+      "completion_tokens": 54,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 33,
+        "rejected_prediction_tokens": 114
+      },
+      "completion_time": 2.08,
+      "completion_tokens_per_sec": 25.92,
+      "total_tokens": 313,
+      "total_time": 5.33
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 259,
+      "prompt_ms": 3240.0,
+      "prompt_per_token_ms": 12.50965250965251,
+      "prompt_per_second": 79.93827160493827,
+      "predicted_n": 54,
+      "predicted_ms": 2080.0,
+      "predicted_per_token_ms": 38.51851851851852,
+      "predicted_per_second": 25.961538461538463,
+      "draft_n": 147,
+      "draft_n_accepted": 33
+    }
+  }
+}

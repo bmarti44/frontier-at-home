@@ -1,0 +1,68 @@
+{
+  "index": 9727,
+  "task_id": 9919,
+  "rendered_prompt_sha256": "4a557c9c4514f556c2c7200641ca7bfc60ccfb74015d18ff2f381cba7a696011",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Let me set up the equations.\n\nBack motorcycle: a = 3 ft/s², starts at x = 0\nFront motorcycle: a = 2 ft/s², starts at x = 24.5 ft\n\nPosition of back motorcycle: x₁ = ½(3)t² = 1.5t²\nPosition of front motorcycle: x₂ = 24.5 + ½(2)t² = 24.5 + t²\n\nOvertake when x₁ = x₂:\n1.5t² = 24.5 + t²\n0.5t² = 24.5\nt² = 49\nt = 7 sec\n\n(b) Distance: x₁ = 1.5(49) = 73.5 ft\n\n(c) Speeds: v₁ = 3(7) = 21 ft/s, v₂ = 2(7) = 14 ft/s\n\nAnswer: E</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.395854525035247
+  },
+  "response": {
+    "id": "cmpl-a7e63036a3b84df8a70d9ee4ac317454",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Let me set up the equations.\n\nBack motorcycle: a = 3 ft/s², starts at x = 0\nFront motorcycle: a = 2 ft/s², starts at x = 24.5 ft\n\nPosition of back motorcycle: x₁ = ½(3)t² = 1.5t²\nPosition of front motorcycle: x₂ = 24.5 + ½(2)t² = 24.5 + t²\n\nOvertake when x₁ = x₂:\n1.5t² = 24.5 + t²\n0.5t² = 24.5\nt² = 49\nt = 7 sec\n\n(b) Distance: x₁ = 1.5(49) = 73.5 ft\n\n(c) Speeds: v₁ = 3(7) = 21 ft/s, v₂ = 2(7) = 14 ft/s\n\nAnswer: E</think>Answer: E"
+      }
+    ],
+    "created": 1791947830,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 462,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 1.18,
+      "prompt_tokens_per_sec": 391.53,
+      "completion_tokens": 216,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 172,
+        "rejected_prediction_tokens": 136
+      },
+      "completion_time": 4.21,
+      "completion_tokens_per_sec": 51.3,
+      "total_tokens": 678,
+      "total_time": 5.39
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 462,
+      "prompt_ms": 1180.0,
+      "prompt_per_token_ms": 2.554112554112554,
+      "prompt_per_second": 391.52542372881356,
+      "predicted_n": 216,
+      "predicted_ms": 4210.0,
+      "predicted_per_token_ms": 19.49074074074074,
+      "predicted_per_second": 51.30641330166271,
+      "draft_n": 308,
+      "draft_n_accepted": 172
+    }
+  }
+}

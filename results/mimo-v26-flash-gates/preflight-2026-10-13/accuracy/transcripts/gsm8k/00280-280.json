@@ -1,0 +1,69 @@
+{
+  "index": 280,
+  "task_id": 280,
+  "rendered_prompt_sha256": "505267bff4ac1f7b1fb36b2ecf96d77425b7c810ef92a6903eb0f448a2fb1859",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>20 × 0.25 = 5.00\n4 × 0.50 = 2.00\nTotal = 7.00</think>20 popsicles × $0.25 = $5.00\n4 ice cream bars × $0.50 = $2.00\nTotal = $5.00 + $2.00 = $7.00\n\nAnswer: 7",
+  "finish_reason": "stop",
+  "expected": "7",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6404499179916456
+  },
+  "response": {
+    "id": "cmpl-68a8d8faf5b34b49845599f088319a11",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>20 × 0.25 = 5.00\n4 × 0.50 = 2.00\nTotal = 7.00</think>20 popsicles × $0.25 = $5.00\n4 ice cream bars × $0.50 = $2.00\nTotal = $5.00 + $2.00 = $7.00\n\nAnswer: 7"
+      }
+    ],
+    "created": 1791919984,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 73,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 208.57,
+      "completion_tokens": 97,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 83,
+        "rejected_prediction_tokens": 15
+      },
+      "completion_time": 1.29,
+      "completion_tokens_per_sec": 75.43,
+      "total_tokens": 170,
+      "total_time": 1.64
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 73,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.794520547945205,
+      "prompt_per_second": 208.57142857142858,
+      "predicted_n": 97,
+      "predicted_ms": 1290.0,
+      "predicted_per_token_ms": 13.29896907216495,
+      "predicted_per_second": 75.1937984496124,
+      "draft_n": 98,
+      "draft_n_accepted": 83
+    }
+  },
+  "used_fallback": false
+}

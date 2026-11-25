@@ -1,0 +1,70 @@
+{
+  "index": 172,
+  "task_id": 172,
+  "rendered_prompt_sha256": "d0ec47d6479c332c8aabf3b25d54b9885d5e6adbd9cb96798bb52c38001c6311",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Sally Thirtytwo = 8\nSally Four = 8\nGranny Red = 2 × 8 = 16\nSally Two = 16 + 3 = 19\n\nTotal = 8 + 8 + 16 + 19 = 51</think>Sally Thirtytwo is 8, so Sally Four is also 8. Granny Red is 2 × 8 = 16. Sally Two is 16 + 3 = 19. Total: 8 + 8 + 16 + 19 = 51.\n\nAnswer: 51",
+  "finish_reason": "stop",
+  "expected": "51",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7096629440202378
+  },
+  "response": {
+    "id": "cmpl-60ebe632f0c94ba09a482a225d6d11bb",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Sally Thirtytwo = 8\nSally Four = 8\nGranny Red = 2 × 8 = 16\nSally Two = 16 + 3 = 19\n\nTotal = 8 + 8 + 16 + 19 = 51</think>Sally Thirtytwo is 8, so Sally Four is also 8. Granny Red is 2 × 8 = 16. Sally Two is 16 + 3 = 19. Total: 8 + 8 + 16 + 19 = 51.\n\nAnswer: 51"
+      }
+    ],
+    "created": 1791919966,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 94,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 247.37,
+      "completion_tokens": 134,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 110,
+        "rejected_prediction_tokens": 58
+      },
+      "completion_time": 2.32,
+      "completion_tokens_per_sec": 57.65,
+      "total_tokens": 228,
+      "total_time": 2.71
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 94,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 4.042553191489362,
+      "prompt_per_second": 247.3684210526316,
+      "predicted_n": 134,
+      "predicted_ms": 2320.0,
+      "predicted_per_token_ms": 17.313432835820894,
+      "predicted_per_second": 57.75862068965517,
+      "draft_n": 168,
+      "draft_n_accepted": 110
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nThere are four birds at the Caboose. Sally Two is three years older than Granny Red. Granny Red is two times as old as Sally Four. If Sally Four is the same age as Sally Thirtytwo, and Sally Thirtytwo is 8 years old, what's the total age of the four birds?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

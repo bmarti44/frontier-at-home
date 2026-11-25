@@ -1,0 +1,69 @@
+{
+  "index": 143,
+  "task_id": 143,
+  "rendered_prompt_sha256": "6b44956ce13beed355834bb4e76fea54fc13726f08784609da267ed67bd85e82",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Food items: milk 2, eggs 3 → 5\nNonfood items: light bulbs 3, cups 3, roach traps 4 → 10, tax 10% → 1\nTotal: 5 + 10 + 1 = 16</think>Food items: milk ($2) + eggs ($3) = $5\n\nNonfood items: light bulbs ($3) + cups ($3) + roach traps ($4) = $10\nTax on nonfood: 10% of $10 = $1\n\nTotal: $5 + $10 + $1 = $16\n\nAnswer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7564455899992026
+  },
+  "response": {
+    "id": "cmpl-f80f36c84b2c4f4191c86aea36a8e12d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Food items: milk 2, eggs 3 → 5\nNonfood items: light bulbs 3, cups 3, roach traps 4 → 10, tax 10% → 1\nTotal: 5 + 10 + 1 = 16</think>Food items: milk ($2) + eggs ($3) = $5\n\nNonfood items: light bulbs ($3) + cups ($3) + roach traps ($4) = $10\nTax on nonfood: 10% of $10 = $1\n\nTotal: $5 + $10 + $1 = $16\n\nAnswer: 16"
+      }
+    ],
+    "created": 1791920036,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 89,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 234.21,
+      "completion_tokens": 144,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 119,
+        "rejected_prediction_tokens": 56
+      },
+      "completion_time": 2.37,
+      "completion_tokens_per_sec": 60.8,
+      "total_tokens": 233,
+      "total_time": 2.75
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 89,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 4.269662921348314,
+      "prompt_per_second": 234.21052631578948,
+      "predicted_n": 144,
+      "predicted_ms": 2370.0,
+      "predicted_per_token_ms": 16.458333333333332,
+      "predicted_per_second": 60.75949367088608,
+      "draft_n": 175,
+      "draft_n_accepted": 119
+    }
+  },
+  "used_fallback": false
+}

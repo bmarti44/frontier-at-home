@@ -1,0 +1,68 @@
+{
+  "index": 6325,
+  "task_id": 6489,
+  "rendered_prompt_sha256": "653bccae1d6b0efbb9714d895aa8bf224f7c42bebff1aa23bc6e05d1cd4f9364",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The findings: numbness/tingling in ring and small fingers, decreased sensation over medial half of ring finger and entire small finger, pain with palpation of elbow (Tinel's sign at elbow). This is ulnar nerve entrapment at the elbow (cubital tunnel). History of pitching — repetitive valgus stress.\n\nAnswer: C</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.537211913964711
+  },
+  "response": {
+    "id": "cmpl-02abc89755d34b69b79214c6a39279c4",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The findings: numbness/tingling in ring and small fingers, decreased sensation over medial half of ring finger and entire small finger, pain with palpation of elbow (Tinel's sign at elbow). This is ulnar nerve entrapment at the elbow (cubital tunnel). History of pitching — repetitive valgus stress.\n\nAnswer: C</think>Answer: C"
+      }
+    ],
+    "created": 1791944547,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 294,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.93,
+      "prompt_tokens_per_sec": 316.13,
+      "completion_tokens": 77,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 50,
+        "rejected_prediction_tokens": 139
+      },
+      "completion_time": 2.6,
+      "completion_tokens_per_sec": 29.67,
+      "total_tokens": 371,
+      "total_time": 3.53
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 294,
+      "prompt_ms": 930.0,
+      "prompt_per_token_ms": 3.163265306122449,
+      "prompt_per_second": 316.1290322580645,
+      "predicted_n": 77,
+      "predicted_ms": 2600.0,
+      "predicted_per_token_ms": 33.76623376623377,
+      "predicted_per_second": 29.615384615384617,
+      "draft_n": 189,
+      "draft_n_accepted": 50
+    }
+  }
+}

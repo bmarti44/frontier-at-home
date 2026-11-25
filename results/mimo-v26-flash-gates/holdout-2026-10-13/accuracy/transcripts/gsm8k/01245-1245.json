@@ -1,0 +1,69 @@
+{
+  "index": 1245,
+  "task_id": 1245,
+  "rendered_prompt_sha256": "b5de7c828970aaf6ded0fe0c573f35f0e3dc9c0014cb276060da4f3ed7e6a4d9",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Let s = strawberry cubes, b = blueberry cubes.\n\nb = 5s - 4\ns + b = 116\n\ns + 5s - 4 = 116\n6s = 120\ns = 20\nb = 5(20) - 4 = 96</think>Let s = number of strawberry cubes.\n\nBlueberry cubes = 5s − 4\n\nTotal: s + (5s − 4) = 116 → 6s − 4 = 116 → 6s = 120 → s = 20\n\nBlueberry cubes = 5(20) − 4 = 96\n\nAnswer: 96",
+  "finish_reason": "stop",
+  "expected": "96",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.4353444480220787
+  },
+  "response": {
+    "id": "cmpl-99fc53327f56485bbef0dfefe1499319",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Let s = strawberry cubes, b = blueberry cubes.\n\nb = 5s - 4\ns + b = 116\n\ns + 5s - 4 = 116\n6s = 120\ns = 20\nb = 5(20) - 4 = 96</think>Let s = number of strawberry cubes.\n\nBlueberry cubes = 5s − 4\n\nTotal: s + (5s − 4) = 116 → 6s − 4 = 116 → 6s = 120 → s = 20\n\nBlueberry cubes = 5(20) − 4 = 96\n\nAnswer: 96"
+      }
+    ],
+    "created": 1791939448,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 94,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 241.03,
+      "completion_tokens": 162,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 130,
+        "rejected_prediction_tokens": 94
+      },
+      "completion_time": 3.04,
+      "completion_tokens_per_sec": 53.25,
+      "total_tokens": 256,
+      "total_time": 3.43
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 94,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 4.148936170212766,
+      "prompt_per_second": 241.02564102564105,
+      "predicted_n": 162,
+      "predicted_ms": 3040.0,
+      "predicted_per_token_ms": 18.765432098765434,
+      "predicted_per_second": 53.28947368421053,
+      "draft_n": 224,
+      "draft_n_accepted": 130
+    }
+  },
+  "used_fallback": false
+}

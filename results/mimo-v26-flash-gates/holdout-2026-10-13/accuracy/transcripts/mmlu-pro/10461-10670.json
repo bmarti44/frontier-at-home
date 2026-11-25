@@ -1,0 +1,68 @@
+{
+  "index": 10461,
+  "task_id": 10670,
+  "rendered_prompt_sha256": "da42e0fc9bc1457db32dba32c2d4d8dbc18697d992c5c5358ef89c56e2c8a907",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The identity kernel for convolution is the one with 1 in the center and 0 elsewhere: [[0,0,0],[0,1,0],[0,0,0]]. That's option H.\n\nNote: convolution flips the kernel, but the center delta is symmetric so it works.\n\nAnswer: H</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.210987349972129
+  },
+  "response": {
+    "id": "cmpl-4fa4ecded90a456eb9260c71e94361d3",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The identity kernel for convolution is the one with 1 in the center and 0 elsewhere: [[0,0,0],[0,1,0],[0,0,0]]. That's option H.\n\nNote: convolution flips the kernel, but the center delta is symmetric so it works.\n\nAnswer: H</think>Answer: H"
+      }
+    ],
+    "created": 1791941727,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 546,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 1.08,
+      "prompt_tokens_per_sec": 505.56,
+      "completion_tokens": 69,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 47,
+        "rejected_prediction_tokens": 107
+      },
+      "completion_time": 2.12,
+      "completion_tokens_per_sec": 32.51,
+      "total_tokens": 615,
+      "total_time": 3.2
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 546,
+      "prompt_ms": 1080.0,
+      "prompt_per_token_ms": 1.978021978021978,
+      "prompt_per_second": 505.55555555555554,
+      "predicted_n": 69,
+      "predicted_ms": 2120.0,
+      "predicted_per_token_ms": 30.72463768115942,
+      "predicted_per_second": 32.54716981132076,
+      "draft_n": 154,
+      "draft_n_accepted": 47
+    }
+  }
+}

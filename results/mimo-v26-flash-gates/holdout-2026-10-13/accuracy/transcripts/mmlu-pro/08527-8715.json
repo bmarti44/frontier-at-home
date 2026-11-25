@@ -1,0 +1,68 @@
+{
+  "index": 8527,
+  "task_id": 8715,
+  "rendered_prompt_sha256": "3a1ad0ba9337aae0cfee1a98c99317293978f9c10c662407d6f49f530d218fec",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>25 mod 23 = 2. So 25^1059 ≡ 2^1059 mod 23.\n\n23 is prime, so 2^22 ≡ 1 mod 23 (Fermat).\n\n1059 mod 22: 22*48 = 1056, so 1059 = 1056 + 3, remainder 3.\n\n2^3 = 8.\n\nAnswer: I</think>Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.657467699958943
+  },
+  "response": {
+    "id": "cmpl-df16069128fb44c08e7c1a6c8c24df5f",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>25 mod 23 = 2. So 25^1059 ≡ 2^1059 mod 23.\n\n23 is prime, so 2^22 ≡ 1 mod 23 (Fermat).\n\n1059 mod 22: 22*48 = 1056, so 1059 = 1056 + 3, remainder 3.\n\n2^3 = 8.\n\nAnswer: I</think>Answer: I"
+      }
+    ],
+    "created": 1791946598,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 100,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 270.27,
+      "completion_tokens": 115,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 90,
+        "rejected_prediction_tokens": 85
+      },
+      "completion_time": 2.28,
+      "completion_tokens_per_sec": 50.33,
+      "total_tokens": 215,
+      "total_time": 2.66
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 100,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 3.7,
+      "prompt_per_second": 270.27027027027026,
+      "predicted_n": 115,
+      "predicted_ms": 2280.0,
+      "predicted_per_token_ms": 19.82608695652174,
+      "predicted_per_second": 50.43859649122807,
+      "draft_n": 175,
+      "draft_n_accepted": 90
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "index": 11154,
+  "task_id": 11376,
+  "rendered_prompt_sha256": "7324af4d4a693200f1043f78b96d69d1f1605e33879ae17ec34552df194da642",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The stagnation pressure formula: p = p0 + 0.5 * ρ * V^2\n\nV = 200 mph = 200 * 5280/3600 = 293.33 ft/s\n\n0.5 * 0.00238 * (293.33)^2 = 0.5 * 0.00238 * 86044.4 = 0.00119 * 86044.4 = 102.39 lb/ft^2 = 102.39/144 psi = 0.711 psi\n\n14.7 + 0.711 = 15.41 psi ≈ 15.42 psia\n\nAnswer: E</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.078245893993881
+  },
+  "response": {
+    "id": "cmpl-c5f755864ca7476ca320e9ecfa7e54eb",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The stagnation pressure formula: p = p0 + 0.5 * ρ * V^2\n\nV = 200 mph = 200 * 5280/3600 = 293.33 ft/s\n\n0.5 * 0.00238 * (293.33)^2 = 0.5 * 0.00238 * 86044.4 = 0.00119 * 86044.4 = 102.39 lb/ft^2 = 102.39/144 psi = 0.711 psi\n\n14.7 + 0.711 = 15.41 psi ≈ 15.42 psia\n\nAnswer: E</think>Answer: E"
+      }
+    ],
+    "created": 1791942183,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 177,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.54,
+      "prompt_tokens_per_sec": 327.78,
+      "completion_tokens": 194,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 155,
+        "rejected_prediction_tokens": 118
+      },
+      "completion_time": 3.53,
+      "completion_tokens_per_sec": 54.94,
+      "total_tokens": 371,
+      "total_time": 4.07
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 177,
+      "prompt_ms": 540.0,
+      "prompt_per_token_ms": 3.0508474576271185,
+      "prompt_per_second": 327.77777777777777,
+      "predicted_n": 194,
+      "predicted_ms": 3530.0,
+      "predicted_per_token_ms": 18.195876288659793,
+      "predicted_per_second": 54.95750708215297,
+      "draft_n": 273,
+      "draft_n_accepted": 155
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "index": 134,
+  "task_id": 134,
+  "rendered_prompt_sha256": "a71c8173eff5547ce62dcefe122431ca2dfac11bfa57a7d62d236422f536add2",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>4 washes/month × $15 = $60/month × 12 months = $720</think>4 car washes × $15 = $60 per month. $60 × 12 months = $720 per year.\n\nAnswer: 720",
+  "finish_reason": "stop",
+  "expected": "720",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6083368419785984
+  },
+  "response": {
+    "id": "cmpl-a0db70f9f8b84d3c9f67b1cbb876f0d4",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>4 washes/month × $15 = $60/month × 12 months = $720</think>4 car washes × $15 = $60 per month. $60 × 12 months = $720 per year.\n\nAnswer: 720"
+      }
+    ],
+    "created": 1791939536,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 60,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.31,
+      "prompt_tokens_per_sec": 193.55,
+      "completion_tokens": 63,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 49,
+        "rejected_prediction_tokens": 49
+      },
+      "completion_time": 1.29,
+      "completion_tokens_per_sec": 48.7,
+      "total_tokens": 123,
+      "total_time": 1.6
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 60,
+      "prompt_ms": 310.0,
+      "prompt_per_token_ms": 5.166666666666667,
+      "prompt_per_second": 193.54838709677418,
+      "predicted_n": 63,
+      "predicted_ms": 1290.0,
+      "predicted_per_token_ms": 20.476190476190474,
+      "predicted_per_second": 48.83720930232558,
+      "draft_n": 98,
+      "draft_n_accepted": 49
+    }
+  },
+  "used_fallback": false
+}

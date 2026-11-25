@@ -1,0 +1,112 @@
+{
+ "schema_version": 1,
+ "model": "mimo-v2.6-flash",
+ "identity_manifest": "weights/mimo-v2.6-flash/manifest.json",
+ "artifacts": {
+  "exl3-2.52-mikeroz": {
+   "kind": "exl3-dir",
+   "path": "{model_root}/mimo-v2.6-flash-serve/mimo-v2.6-flash",
+   "weights_gib": 94.3,
+   "note": "MikeRoz/MiMo-V2.6-Flash-MOPD-2.52bpw-h6-exl3 @ 21a3a088 (post out-scales fix), with the official b12f5573 preprocessor_config.json. weights_gib is the 13 .safetensors shards (94.30 GiB). The switch pins the metadata, tokenizer and template files; every file's sha256, including the shards, is in the identity manifest. The directory is alone in its parent: TabbyAPI lists every directory under model_dir as a model.",
+   "shards": [
+    {
+     "path": "{model}/model.safetensors.index.json",
+     "sha256": "773cd59f2a48d3cfa0bbd094a1145f8f066c0e59f4d30b632be765585a0e3c42"
+    },
+    {
+     "path": "{model}/config.json",
+     "sha256": "f45948486d0c52ccf5440807e9e4b102c33dd0f56b859b35cd9013f35d319302"
+    },
+    {
+     "path": "{model}/quantization_config.json",
+     "sha256": "2f5990e7d36b60c8eda92ee13c52316b3abe59beed371cc524286ff8069aa5d5"
+    },
+    {
+     "path": "{model}/tokenizer.json",
+     "sha256": "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e"
+    },
+    {
+     "path": "{model}/tokenizer_config.json",
+     "sha256": "413a7845f52943ccf4de0e5c838414507d16c44dbf573da9e20bc8902b384d06"
+    },
+    {
+     "path": "{model}/chat_template.jinja",
+     "sha256": "11ea52e156de38a458e6b7720ad45915d65b97d4ec979a09f55e3c9bd1b4d059"
+    },
+    {
+     "path": "{model}/generation_config.json",
+     "sha256": "eecf00d9701921271c904a916c425ba6db61bcd190902e200d0a322bfd5572dd"
+    },
+    {
+     "path": "{model}/preprocessor_config.json",
+     "sha256": "fbe073ccca943767c92ce3774f535dc8037e126f1594056f397ad3a4b1a1a7a4"
+    }
+   ]
+  },
+  "dflash-exl3-4.0": {
+   "kind": "exl3-dir",
+   "path": "{model_root}/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash",
+   "weights_gib": 0.68,
+   "note": "benthecarman/MiMo-V2.6-Flash-MOPD-exl3 @ 5d39883b dflash/: MiMo's official DFlash drafter at 4.0 bpw EXL3.",
+   "shards": [
+    {
+     "path": "{draft_model}/config.json",
+     "sha256": "fc1896087781e12c3d162314ab4c5ecfc9f8ed84e388c20f640d83d4f4b1a3e6"
+    },
+    {
+     "path": "{draft_model}/quantization_config.json",
+     "sha256": "f6a9cb5eb62ac199a7fdb1678b7b1a36b42d287e9f260ec3ecf6b6421fdc261c"
+    },
+    {
+     "path": "{draft_model}/model.safetensors",
+     "sha256": "a1e133f57bed80405386ce917a6f12b1f47d5fc5c69a74e32d84d976875390af"
+    }
+   ]
+  }
+ },
+ "engines": {
+  "tabby-exl3-mimo-r001": {
+   "binary_path": "{cache_root}/mimo-v26-flash/native-runtime-001/runtime/bin/python3.12",
+   "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+   "build_manifest": "configs/build-manifests/mimo-v26-flash-exl3-runtime-001.json",
+   "note": "Relocatable uv CPython 3.12.13 (the GLM-5.3 runtime's interpreter bytes) with exllamav3 1.6.1 (f45b8451, built on GB10) and TabbyAPI 2636ef60 run from source via scripts/lib/tabby_launch.py."
+  }
+ },
+ "backend_support": {
+  "cuda": {
+   "supported": true,
+   "hardware_class": [
+    "spark"
+   ],
+   "note": "exllamav3 EXL3 on GB10 (sm_121, CUDA 13.0) through TabbyAPI; one 262,144-token slot."
+  },
+  "apple-silicon": {
+   "supported": false,
+   "reason": "TabbyAPI + exllamav3 1.6.1 EXL3 kernels, built and validated only for CUDA on GB10"
+  },
+  "rocm": {
+   "supported": false,
+   "reason": "TabbyAPI + exllamav3 1.6.1 EXL3 kernels, built and validated only for CUDA on GB10"
+  },
+  "cpu": {
+   "supported": false,
+   "reason": "TabbyAPI + exllamav3 1.6.1 EXL3 kernels, built and validated only for CUDA on GB10"
+  },
+  "vulkan": {
+   "supported": false,
+   "reason": "TabbyAPI + exllamav3 1.6.1 EXL3 kernels, built and validated only for CUDA on GB10"
+  },
+  "intel-xe": {
+   "supported": false,
+   "reason": "TabbyAPI + exllamav3 1.6.1 EXL3 kernels, built and validated only for CUDA on GB10"
+  },
+  "qualcomm": {
+   "supported": false,
+   "reason": "TabbyAPI + exllamav3 1.6.1 EXL3 kernels, built and validated only for CUDA on GB10"
+  },
+  "tenstorrent": {
+   "supported": false,
+   "reason": "TabbyAPI + exllamav3 1.6.1 EXL3 kernels, built and validated only for CUDA on GB10"
+  }
+ }
+}

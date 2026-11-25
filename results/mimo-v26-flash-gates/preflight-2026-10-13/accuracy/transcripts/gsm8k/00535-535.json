@@ -1,0 +1,70 @@
+{
+  "index": 535,
+  "task_id": 535,
+  "rendered_prompt_sha256": "1e88455956bfe7ff99786fc87c56e21a1e7662d88ddebd410a2964de9e58dadc",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>George now has 3 candies after eating 5, so before eating he had 3 + 5 = 8 candies.\n\nNick had twice as many as George, so Nick has 2 × 8 = 16 candies.</think>George now has 3 candies after eating 5, so before eating he had 3 + 5 = 8 candies.\n\nNick had twice as many as George, so Nick has 2 × 8 = 16 candies.\n\nAnswer: 16",
+  "finish_reason": "stop",
+  "expected": "16",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.192449352995027
+  },
+  "response": {
+    "id": "cmpl-3f549dd9e2ee4251b4698d54d25033ef",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>George now has 3 candies after eating 5, so before eating he had 3 + 5 = 8 candies.\n\nNick had twice as many as George, so Nick has 2 × 8 = 16 candies.</think>George now has 3 candies after eating 5, so before eating he had 3 + 5 = 8 candies.\n\nNick had twice as many as George, so Nick has 2 × 8 = 16 candies.\n\nAnswer: 16"
+      }
+    ],
+    "created": 1791920105,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 63,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.31,
+      "prompt_tokens_per_sec": 203.23,
+      "completion_tokens": 104,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 85,
+        "rejected_prediction_tokens": 48
+      },
+      "completion_time": 1.87,
+      "completion_tokens_per_sec": 55.47,
+      "total_tokens": 167,
+      "total_time": 2.19
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 63,
+      "prompt_ms": 310.0,
+      "prompt_per_token_ms": 4.920634920634921,
+      "prompt_per_second": 203.2258064516129,
+      "predicted_n": 104,
+      "predicted_ms": 1870.0,
+      "predicted_per_token_ms": 17.98076923076923,
+      "predicted_per_second": 55.61497326203209,
+      "draft_n": 133,
+      "draft_n_accepted": 85
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nNick had twice as many candies as George. Then George ate 5 candies. Now George has 3 candies left. How many candies does Nick have?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

@@ -1,0 +1,69 @@
+{
+  "index": 998,
+  "task_id": 998,
+  "rendered_prompt_sha256": "b58844a46df4f9c6c767e44c2568cc887f3f023c920bf4653515cba9af69b16a",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Total cookies = 100 × 15 = 1500\nHalf given to church = 1500 / 2 = 750\nPeople in church = 750 / 15 = 50</think>Total cookies brought: 100 × 15 = 1500\n\nCookies given to the church: 1500 × 1/2 = 750\n\nPeople in the church: 750 ÷ 15 = 50\n\nAnswer: 50",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.528584529994987
+  },
+  "response": {
+    "id": "cmpl-99c69397ea9e42a18641299fca9e4a7b",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Total cookies = 100 × 15 = 1500\nHalf given to church = 1500 / 2 = 750\nPeople in church = 750 / 15 = 50</think>Total cookies brought: 100 × 15 = 1500\n\nCookies given to the church: 1500 × 1/2 = 750\n\nPeople in the church: 750 ÷ 15 = 50\n\nAnswer: 50"
+      }
+    ],
+    "created": 1791920052,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 112,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.41,
+      "prompt_tokens_per_sec": 273.17,
+      "completion_tokens": 121,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 99,
+        "rejected_prediction_tokens": 55
+      },
+      "completion_time": 2.11,
+      "completion_tokens_per_sec": 57.26,
+      "total_tokens": 233,
+      "total_time": 2.52
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 112,
+      "prompt_ms": 410.0,
+      "prompt_per_token_ms": 3.6607142857142856,
+      "prompt_per_second": 273.1707317073171,
+      "predicted_n": 121,
+      "predicted_ms": 2110.0,
+      "predicted_per_token_ms": 17.43801652892562,
+      "predicted_per_second": 57.345971563981045,
+      "draft_n": 154,
+      "draft_n_accepted": 99
+    }
+  },
+  "used_fallback": false
+}

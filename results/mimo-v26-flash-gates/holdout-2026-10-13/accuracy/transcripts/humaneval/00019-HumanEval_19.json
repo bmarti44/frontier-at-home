@@ -1,0 +1,104 @@
+{
+  "index": 19,
+  "task_id": "HumanEval/19",
+  "rendered_prompt_sha256": "61b0d963a0d3797bc5ef83253bf35a531d7e31eedbd18181ff117b0e07e5c940",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    # Define a mapping from number words to their integer values\n    number_map = {\n        'zero': 0,\n        'one': 1,\n        'two': 2,\n        'three': 3,\n        'four': 4,\n        'five': 5,\n        'six': 6,\n        'seven': 7,\n        'eight': 8,\n        'nine': 9\n    }\n\n    # Split the input string into individual number words\n    words = numbers.split()\n\n    # Convert each word to its integer value using the mapping\n    int_values = [number_map[word] for word in words]\n\n    # Sort the integer values\n    int_values.sort()\n\n    # Convert the sorted integer values back to their word representations\n    sorted_words = [word for word, value in number_map.items() if value in int_values]\n\n    # Join the sorted words into a single string\n    return ' '.join(sorted_words)",
+  "finish_reason": "stop",
+  "expected": "    value_map = {\n        'zero': 0,\n        'one': 1,\n        'two': 2,\n        'three': 3,\n        'four': 4,\n        'five': 5,\n        'six': 6,\n        'seven': 7,\n        'eight': 8,\n        'nine': 9\n    }\n    return ' '.join(sorted([x for x in numbers.split(' ') if x], key=lambda x: value_map[x]))\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.981982239987701
+  },
+  "response": {
+    "id": "cmpl-7bc07a0e8077408998be611fdf927e53",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "    # Define a mapping from number words to their integer values\n    number_map = {\n        'zero': 0,\n        'one': 1,\n        'two': 2,\n        'three': 3,\n        'four': 4,\n        'five': 5,\n        'six': 6,\n        'seven': 7,\n        'eight': 8,\n        'nine': 9\n    }\n\n    # Split the input string into individual number words\n    words = numbers.split()\n\n    # Convert each word to its integer value using the mapping\n    int_values = [number_map[word] for word in words]\n\n    # Sort the integer values\n    int_values.sort()\n\n    # Convert the sorted integer values back to their word representations\n    sorted_words = [word for word, value in number_map.items() if value in int_values]\n\n    # Join the sorted words into a single string\n    return ' '.join(sorted_words)"
+      }
+    ],
+    "created": 1791949594,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 99,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 275.0,
+      "completion_tokens": 200,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 163,
+        "rejected_prediction_tokens": 96
+      },
+      "completion_time": 3.61,
+      "completion_tokens_per_sec": 55.37,
+      "total_tokens": 299,
+      "total_time": 3.97
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 99,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 3.6363636363636362,
+      "prompt_per_second": 275.0,
+      "predicted_n": 200,
+      "predicted_ms": 3610.0,
+      "predicted_per_token_ms": 18.05,
+      "predicted_per_second": 55.4016620498615,
+      "draft_n": 259,
+      "draft_n_accepted": 163
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00019:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

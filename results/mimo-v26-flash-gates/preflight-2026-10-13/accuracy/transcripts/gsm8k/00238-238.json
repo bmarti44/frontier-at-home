@@ -1,0 +1,70 @@
+{
+  "index": 238,
+  "task_id": 238,
+  "rendered_prompt_sha256": "6577943c1b936f2f663a6746c667bfe4ece0a6fe4416953ff39360294b85d98d",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Jessa = 20, Joan = 25, Mary = 23. Sum = 68.</think>Jessa is 20. Joan is 5 years older than Jessa, so Joan is 25. Mary is 2 years younger than Joan, so Mary is 23.\n\nSum = 20 + 25 + 23 = 68\n\nAnswer: 68",
+  "finish_reason": "stop",
+  "expected": "68",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.0739367229980417
+  },
+  "response": {
+    "id": "cmpl-7dd5ed3d8c2e4476ae413e31d9916ac4",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Jessa = 20, Joan = 25, Mary = 23. Sum = 68.</think>Jessa is 20. Joan is 5 years older than Jessa, so Joan is 25. Mary is 2 years younger than Joan, so Mary is 23.\n\nSum = 20 + 25 + 23 = 68\n\nAnswer: 68"
+      }
+    ],
+    "created": 1791919914,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 71,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.34,
+      "prompt_tokens_per_sec": 208.82,
+      "completion_tokens": 91,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 73,
+        "rejected_prediction_tokens": 53
+      },
+      "completion_time": 1.73,
+      "completion_tokens_per_sec": 52.72,
+      "total_tokens": 162,
+      "total_time": 2.07
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 71,
+      "prompt_ms": 340.0,
+      "prompt_per_token_ms": 4.788732394366197,
+      "prompt_per_second": 208.82352941176472,
+      "predicted_n": 91,
+      "predicted_ms": 1730.0,
+      "predicted_per_token_ms": 19.01098901098901,
+      "predicted_per_second": 52.601156069364166,
+      "draft_n": 126,
+      "draft_n_accepted": 73
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nMary is two years younger than Joan, who is five years older than Jessa. If Jessa is 20 years old, what is the sum of the ages of the three girls?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

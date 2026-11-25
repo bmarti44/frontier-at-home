@@ -1,0 +1,68 @@
+{
+  "index": 8542,
+  "task_id": 8730,
+  "rendered_prompt_sha256": "a1f974489d10eb8b97f2fb8c0e1a4c423acdcaaa3fbbabdce210b90e2a1547ee",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The chromatic polynomial of a cycle C_n with k colors is (k-1)^n + (-1)^n (k-1).\n\nFor n=5, k=3: (2)^5 + (-1)^5 (2) = 32 - 2 = 30.\n\nAnswer: C.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.0581840130034834
+  },
+  "response": {
+    "id": "cmpl-e52a29ad53934183ae0e344e8fb43454",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The chromatic polynomial of a cycle C_n with k colors is (k-1)^n + (-1)^n (k-1).\n\nFor n=5, k=3: (2)^5 + (-1)^5 (2) = 32 - 2 = 30.\n\nAnswer: C.</think>Answer: C"
+      }
+    ],
+    "created": 1791946600,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 113,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 289.74,
+      "completion_tokens": 72,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 54,
+        "rejected_prediction_tokens": 72
+      },
+      "completion_time": 1.66,
+      "completion_tokens_per_sec": 43.31,
+      "total_tokens": 185,
+      "total_time": 2.05
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 113,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.4513274336283186,
+      "prompt_per_second": 289.7435897435898,
+      "predicted_n": 72,
+      "predicted_ms": 1660.0,
+      "predicted_per_token_ms": 23.055555555555557,
+      "predicted_per_second": 43.37349397590362,
+      "draft_n": 126,
+      "draft_n_accepted": 54
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "index": 706,
+  "task_id": 706,
+  "rendered_prompt_sha256": "7cb3214b11c9e6361476e66c24d12ee9f50100a95012189faf056dada4aa13eb",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Rate = 2100/3 = 700 per hour. Total hours = 6300/700 = 9.</think>They raised $2100 in 3 hours, so their rate is $2100 ÷ 3 = $700 per hour.\n\nTo reach $6300: $6300 ÷ $700 = 9 hours.\n\nAnswer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.1860405900515616
+  },
+  "response": {
+    "id": "cmpl-fb47a96bcba44c37ac0b12d06950578b",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Rate = 2100/3 = 700 per hour. Total hours = 6300/700 = 9.</think>They raised $2100 in 3 hours, so their rate is $2100 ÷ 3 = $700 per hour.\n\nTo reach $6300: $6300 ÷ $700 = 9 hours.\n\nAnswer: 9"
+      }
+    ],
+    "created": 1791926294,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 99,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.4,
+      "prompt_tokens_per_sec": 247.5,
+      "completion_tokens": 97,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 78,
+        "rejected_prediction_tokens": 55
+      },
+      "completion_time": 1.78,
+      "completion_tokens_per_sec": 54.52,
+      "total_tokens": 196,
+      "total_time": 2.18
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 99,
+      "prompt_ms": 400.0,
+      "prompt_per_token_ms": 4.040404040404041,
+      "prompt_per_second": 247.5,
+      "predicted_n": 97,
+      "predicted_ms": 1780.0,
+      "predicted_per_token_ms": 18.350515463917525,
+      "predicted_per_second": 54.49438202247191,
+      "draft_n": 133,
+      "draft_n_accepted": 78
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nThe local firefighters are doing a “fill the boot” fundraiser. Their goal is to raise $6300. After the first 3 hours, they have raised $2100.  For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

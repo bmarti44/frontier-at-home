@@ -1,0 +1,68 @@
+{
+  "index": 6551,
+  "task_id": 6717,
+  "rendered_prompt_sha256": "393353f1568711775045b92b705980ec54cfa1fdeabc78eaec0cdf5dc7e5209a",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The question asks about the world record for the mile race in 1886.\n\nWG George (Walter George) set the mile world record in 1886 with a time of 4:12.6.</think>Answer: C",
+  "finish_reason": "stop",
+  "expected": "C",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.64449906302616
+  },
+  "response": {
+    "id": "cmpl-39841fa36ace4f3bac1b55656473b903",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The question asks about the world record for the mile race in 1886.\n\nWG George (Walter George) set the mile world record in 1886 with a time of 4:12.6.</think>Answer: C"
+      }
+    ],
+    "created": 1791944777,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 100,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.38,
+      "prompt_tokens_per_sec": 263.16,
+      "completion_tokens": 54,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 41,
+        "rejected_prediction_tokens": 50
+      },
+      "completion_time": 1.25,
+      "completion_tokens_per_sec": 43.05,
+      "total_tokens": 154,
+      "total_time": 1.64
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 100,
+      "prompt_ms": 380.0,
+      "prompt_per_token_ms": 3.8,
+      "prompt_per_second": 263.15789473684214,
+      "predicted_n": 54,
+      "predicted_ms": 1250.0,
+      "predicted_per_token_ms": 23.14814814814815,
+      "predicted_per_second": 43.2,
+      "draft_n": 91,
+      "draft_n_accepted": 41
+    }
+  }
+}

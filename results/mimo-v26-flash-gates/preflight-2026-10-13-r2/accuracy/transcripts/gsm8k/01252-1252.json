@@ -1,0 +1,69 @@
+{
+  "index": 1252,
+  "task_id": 1252,
+  "rendered_prompt_sha256": "a74cb4f3c798dc00039737d929289dbfd2f87b9e0a806adf2a75527102e9102e",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Helmets = 20\nRobots = half as many as helmets = 10\nHelmets = half as many as footballs → footballs = 40\n\nTotal = 10 + 20 + 40 = 70</think>**Step-by-step:**\n\n- **Helmets:** 20\n- **Robots:** half as many as helmets → 20 ÷ 2 = **10**\n- **Footballs:** helmets are half as many as footballs → 20 × 2 = **40**\n\n**Total items:** 10 + 20 + 40 = **70**\n\nAnswer: 70",
+  "finish_reason": "stop",
+  "expected": "70",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.0850578629761003
+  },
+  "response": {
+    "id": "cmpl-6b5586a29f2b452795d3e0bd7751d375",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Helmets = 20\nRobots = half as many as helmets = 10\nHelmets = half as many as footballs → footballs = 40\n\nTotal = 10 + 20 + 40 = 70</think>**Step-by-step:**\n\n- **Helmets:** 20\n- **Robots:** half as many as helmets → 20 ÷ 2 = **10**\n- **Footballs:** helmets are half as many as footballs → 20 × 2 = **40**\n\n**Total items:** 10 + 20 + 40 = **70**\n\nAnswer: 70"
+      }
+    ],
+    "created": 1791926057,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 78,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 210.81,
+      "completion_tokens": 148,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 120,
+        "rejected_prediction_tokens": 76
+      },
+      "completion_time": 2.71,
+      "completion_tokens_per_sec": 54.67,
+      "total_tokens": 226,
+      "total_time": 3.08
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 78,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.743589743589744,
+      "prompt_per_second": 210.8108108108108,
+      "predicted_n": 148,
+      "predicted_ms": 2710.0,
+      "predicted_per_token_ms": 18.31081081081081,
+      "predicted_per_second": 54.61254612546126,
+      "draft_n": 196,
+      "draft_n_accepted": 120
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,104 @@
+{
+  "index": 58,
+  "task_id": "HumanEval/58",
+  "rendered_prompt_sha256": "1ea0b2ba5f5fa366f20d0edd79ce1af5dc42629807502c5868700fcb9117b8b0",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION\n\ndef common(l1: list, l2: list):\n    \"\"\"Return sorted unique common elements for two lists.\n    >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])\n    [1, 5, 653]\n    >>> common([5, 3, 2, 8], [3, 2])\n    [2, 3]\n\n    \"\"\"\n    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION\n\ndef common(l1: list, l2: list):\n    \"\"\"Return sorted unique common elements for two lists.\n    >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])\n    [1, 5, 653]\n    >>> common([5, 3, 2, 8], [3, 2])\n    [2, 3]\n\n    \"\"\"\n    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION\n\ndef common(l1: list, l2: list):\n    \"\"\"Return sorted unique common elements for two lists.\n    >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])\n    [1, 5, 653]\n    >>> common([5, 3, 2, 8], [3, 2])\n    [2, 3]\n\n    \"\"\"\n    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION\n\ndef common(l1: list, l2: list):\n    \"\"\"Return sorted unique common elements for two lists.\n    >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])\n    [1, 5, 653]\n    >>> common([5, 3, 2, 8], [3, 2])\n    [2, 3]\n\n    \"\"\"\n    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION\n\ndef common(l1: list, l2: list):\n    \"\"\"Return sorted unique common elements for two lists.\n    >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])\n    [1, 5, 653]\n    >>> common([5, 3, 2, 8], [3, 2])\n    [2, 3]\n\n    \"\"\"\n    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION\n\ndef common(l1: list, l2: list):\n    \"\"\"Return sorted unique common elements for two lists.\n    >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])\n    [1, 5, ",
+  "finish_reason": "stop",
+  "expected": "    ret = set()\n    for e1 in l1:\n        for e2 in l2:\n            if e1 == e2:\n                ret.add(e1)\n    return sorted(list(ret))\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 10.961310962971766
+  },
+  "response": {
+    "id": "cmpl-c7ce3914a637415a8ceebec44b2fc2f5",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION<rendered-prompt-redacted>    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION<rendered-prompt-redacted>    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION<rendered-prompt-redacted>    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION<rendered-prompt-redacted>    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION<rendered-prompt-redacted>    ### BEGIN SOLUTION\n    return sorted(set(l1) & set(l2))\n    ### END SOLUTION\n\ndef common(l1: list, l2: list):\n    \"\"\"Return sorted unique common elements for two lists.\n    >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])\n    [1, 5, "
+      }
+    ],
+    "created": 1791953641,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 118,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 318.92,
+      "completion_tokens": 800,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 695,
+        "rejected_prediction_tokens": 40
+      },
+      "completion_time": 10.58,
+      "completion_tokens_per_sec": 75.63,
+      "total_tokens": 918,
+      "total_time": 10.95
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 118,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 3.135593220338983,
+      "prompt_per_second": 318.9189189189189,
+      "predicted_n": 800,
+      "predicted_ms": 10580.0,
+      "predicted_per_token_ms": 13.225,
+      "predicted_per_second": 75.61436672967864,
+      "draft_n": 735,
+      "draft_n_accepted": 695
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00058:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

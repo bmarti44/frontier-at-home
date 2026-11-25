@@ -1,0 +1,104 @@
+{
+  "index": 158,
+  "task_id": "HumanEval/158",
+  "rendered_prompt_sha256": "c40e718aa330b51ea3bb37b1532061de990739b868af73c34faa3af0512626c3",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    max_word = \"\"\n    max_count = 0\n    for word in words:\n        count = len(set(word))\n        if count > max_count:\n            max_count = count\n            max_word = word\n        elif count == max_count:\n            if word < max_word:\n                max_word = word\n    return max_word\n\nassert find_max([\"name\", \"of\", \"string\"]) == \"string\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"aaaaaaa\", \"bb\" ,\"cc\"]) == \"aaaaaaa\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"",
+  "finish_reason": "stop",
+  "expected": "    return sorted(words, key = lambda x: (-len(set(x)), x))[0]\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 12.897304367041215
+  },
+  "response": {
+    "id": "cmpl-784a8ada02f54f5fa73a37e7934aa95a",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    max_word = \"\"\n    max_count = 0\n    for word in words:\n        count = len(set(word))\n        if count > max_count:\n            max_count = count\n            max_word = word\n        elif count == max_count:\n            if word < max_word:\n                max_word = word\n    return max_word\n\nassert find_max([\"name\", \"of\", \"string\"]) == \"string\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"aaaaaaa\", \"bb\" ,\"cc\"]) == \"aaaaaaa\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \"enam\", \"game\"]) == \"enam\"\nassert find_max([\"name\", \""
+      }
+    ],
+    "created": 1791964600,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 115,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 294.87,
+      "completion_tokens": 920,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 799,
+        "rejected_prediction_tokens": 48
+      },
+      "completion_time": 12.5,
+      "completion_tokens_per_sec": 73.6,
+      "total_tokens": 1035,
+      "total_time": 12.89
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 115,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 3.391304347826087,
+      "prompt_per_second": 294.8717948717949,
+      "predicted_n": 920,
+      "predicted_ms": 12500.0,
+      "predicted_per_token_ms": 13.58695652173913,
+      "predicted_per_second": 73.60000000000001,
+      "draft_n": 847,
+      "draft_n_accepted": 799
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00158:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "index": 8931,
+  "task_id": 9120,
+  "rendered_prompt_sha256": "f1eefa4fb9b104ad58ef8d62bcdc15b9fa78c78aa7de696767de626d7ff7e1bd",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The red glow in a neon tube is caused by neon atoms being excited (by electrical discharge) and then releasing photons as they return to lower energy states. This process of returning to a lower energy state and emitting light is called de-excitation.\n\nThe answer is D.</think>Answer: D",
+  "finish_reason": "stop",
+  "expected": "D",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7977242860361002
+  },
+  "response": {
+    "id": "cmpl-bb206f3bdf6b408c81e57646f3c1b7e2",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The red glow in a neon tube is caused by neon atoms being excited (by electrical discharge) and then releasing photons as they return to lower energy states. This process of returning to a lower energy state and emitting light is called de-excitation.\n\nThe answer is D.</think>Answer: D"
+      }
+    ],
+    "created": 1791947019,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 85,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 242.86,
+      "completion_tokens": 60,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 35,
+        "rejected_prediction_tokens": 140
+      },
+      "completion_time": 2.44,
+      "completion_tokens_per_sec": 24.64,
+      "total_tokens": 145,
+      "total_time": 2.79
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 85,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.117647058823529,
+      "prompt_per_second": 242.85714285714286,
+      "predicted_n": 60,
+      "predicted_ms": 2440.0,
+      "predicted_per_token_ms": 40.666666666666664,
+      "predicted_per_second": 24.59016393442623,
+      "draft_n": 175,
+      "draft_n_accepted": 35
+    }
+  }
+}

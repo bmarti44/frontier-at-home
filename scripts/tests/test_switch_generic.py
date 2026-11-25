@@ -136,6 +136,7 @@ class SwitchBlock(unittest.TestCase):
         good = (
             {"kind": "slots", "slots": 4, "n_ctx": 262144},
             {"kind": "model_card", "max_model_len": 262144},
+            {"kind": "props", "total_slots": 1, "n_ctx": 262144},
         )
         for spec in good:
             generic.validate_switch_block(
@@ -145,6 +146,10 @@ class SwitchBlock(unittest.TestCase):
                      {"kind": "model_card", "max_model_len": "1"},
                      {"kind": "mystery"},
                      {"kind": "slots", "slots": 1, "n_ctx": 1, "extra": 1},
+                     {"kind": "props", "total_slots": 1},
+                     {"kind": "props", "total_slots": 0, "n_ctx": 1},
+                     {"kind": "props", "total_slots": True, "n_ctx": 1},
+                     {"kind": "props", "slots": 1, "n_ctx": 1},
                      "slots"):
             with self.subTest(spec=spec):
                 with self.assertRaises(generic.SwitchError):
@@ -219,6 +224,44 @@ class ProductionPlan(unittest.TestCase):
                     "model.safetensors.index.json", "config.json",
                     "hf_quant_config.json", "tokenizer.json",
                     "chat_template.jinja")])
+
+    def test_mimo26flash_plan_carries_the_qualified_tabby_contract(self) -> None:
+        plan = production_plan("mimo26flash")
+        self.assertEqual(plan["alias"], "mimo26flash")
+        self.assertEqual(plan["status"], "qualified")
+        self.assertEqual(
+            plan["relpath"],
+            "configs/profiles/mimo-v2.6-flash/cuda-spark-128g-262k.json")
+        runtime = "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime"
+        self.assertEqual(plan["binary"], f"{runtime}/bin/python3.12")
+        model = "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash"
+        draft = "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash"
+        self.assertEqual((plan["model"], plan["mmproj"], plan["draft_model"]),
+                         (model, "", draft))
+        self.assertEqual(plan["unit"], "mimo26flash-engine.service")
+        self.assertEqual(plan["log_name"], "mimo26flash")
+        self.assertEqual(plan["floor_gib"], "8")
+        self.assertEqual(plan["served_model_id"], "mimo-v2.6-flash")
+        self.assertEqual(plan["health_path"], "/health")
+        self.assertEqual(json.loads(plan["context_check"]), {
+            "kind": "props", "total_slots": 1, "n_ctx": 262144})
+        self.assertEqual(plan["context_path"], "/props")
+        paths = [check["path"] for check in plan["digest_checks"]]
+        self.assertEqual(paths[0], f"{runtime}/bin/python3.12")
+        self.assertTrue(any(os.path.dirname(path) == model for path in paths))
+        self.assertTrue(any(os.path.dirname(path) == draft for path in paths))
+
+    @unittest.skipUnless(
+        os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0",
+        "host-bound: hashes the local runtime interpreter and model metadata")
+    def test_mimo26flash_artifacts_verify_on_this_host(self) -> None:
+        plan = production_plan("mimo26flash")
+        if not os.path.isfile(plan["binary"]):
+            self.skipTest("runtime not present on this host")
+        identities = generic.verify_artifacts(plan)
+        self.assertEqual(sorted(identities),
+                         sorted(check["path"] for check in plan["digest_checks"]))
+        generic.revalidate(plan, identities)
 
     @unittest.skipUnless(
         os.environ.get("FRONTIER_HOST_BOUND_TESTS", "1") != "0",
@@ -450,6 +493,31 @@ class ServingChecks(unittest.TestCase):
         bad = json.dumps({"data": [{"id": "glm-5.3-flash", "max_model_len": 4096}]})
         with self.assertRaises(generic.SwitchError):
             generic.check_context(spec, bad)
+
+    def test_props_context_check(self) -> None:
+        # TabbyAPI /props: total_slots is max_batch_size, n_ctx max_seq_len.
+        spec = json.dumps({"kind": "props", "total_slots": 1, "n_ctx": 262144})
+        good = {"total_slots": 1, "model_path": "/m/x", "chat_template": "t",
+                "default_generation_settings": {"n_ctx": 262144},
+                "modalities": {"vision": True}}
+        generic.check_context(spec, json.dumps(good))
+        for broken in (
+            {**good, "total_slots": 2},
+            {**good, "default_generation_settings": {"n_ctx": 131072}},
+            {**good, "default_generation_settings": {"n_ctx": "262144"}},
+            {**good, "total_slots": True},
+            {key: value for key, value in good.items() if key != "total_slots"},
+            {key: value for key, value in good.items()
+             if key != "default_generation_settings"},
+            [good],
+        ):
+            with self.subTest(body=broken):
+                with self.assertRaises(generic.SwitchError):
+                    generic.check_context(spec, json.dumps(broken))
+
+    def test_props_kind_reads_the_props_path(self) -> None:
+        self.assertEqual(generic.CONTEXT_KINDS["props"],
+                         ({"kind", "total_slots", "n_ctx"}, "/props"))
 
 
 if __name__ == "__main__":

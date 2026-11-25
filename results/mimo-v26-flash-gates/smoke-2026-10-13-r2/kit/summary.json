@@ -1,0 +1,204 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+  "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k",
+  "served_model": "mimo-v2.6-flash",
+  "out": "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/smoke-2026-10-13-r2/kit",
+  "start_unix": 1791869357.7963555,
+  "end_unix": 1791869614.3961225,
+  "start_iso": "2026-10-13T05:29:17.895805+00:00",
+  "end_iso": "2026-10-13T05:33:34.396125+00:00",
+  "targets": null,
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "OK",
+      "evidence": "speed/speed.json",
+      "start_unix": 1791869357.9448023,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/30_bench_speed_blocks.py",
+        "--base-url",
+        "http://127.0.0.1:8019",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/smoke-2026-10-13-r2/kit/speed/speed.json",
+        "--stack-label",
+        "mimo-v2.6-flash-cuda-spark-128g-262k",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "mimo-v2.6-flash",
+        "--max-tokens-per-event",
+        "8",
+        "--output-tokenizer-path",
+        "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json",
+        "--output-tokenizer-sha256",
+        "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 221.9040987730259,
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": 21.92972599829549,
+            "median_ttft_s": 0.6456459324999999,
+            "median_prefill_tok_s": 99.10157439708405,
+            "valid": true,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": 36.26479727151852,
+            "median_ttft_s": 45.318039634499996,
+            "median_prefill_tok_s": 760.8915753390022,
+            "valid": true,
+            "reps": 2
+          }
+        },
+        "suite_valid": true,
+        "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k"
+      },
+      "end_unix": 1791869579.8493803
+    },
+    "toolcall": {
+      "status": "OK",
+      "evidence": "toolcall/toolcall.json",
+      "start_unix": 1791869579.8497367,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/mimo26/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8019/v1",
+        "--model",
+        "mimo-v2.6-flash",
+        "--out",
+        "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/smoke-2026-10-13-r2/kit/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 34.545693421008764,
+      "result": {
+        "passed": 20,
+        "total": 20,
+        "score": 1.0,
+        "suite": "toolcall-v1"
+      },
+      "end_unix": 1791869614.395854
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": 21.92972599829549,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": 0.6456459324999999,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": 99.10157439708405,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": 36.26479727151852,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": 45.318039634499996,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": 760.8915753390022,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 20,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "MEASURED",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}

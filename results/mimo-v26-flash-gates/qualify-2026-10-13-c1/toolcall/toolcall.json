@@ -1,0 +1,1700 @@
+{
+  "suite": "toolcall-v1",
+  "pins_sha256": "286ed4b759d68ef5fc2d2fb4f53b9b6c52a7731ec290a5ef86fa3648631165ec",
+  "model": "mimo-v2.6-flash",
+  "base_url": "http://127.0.0.1:8019/v1",
+  "config_digest": "8b703327edca510b3772a6c6e31e4be50efbc7d1b2c58d3d9c51c48611051b81",
+  "per_case": [
+    {
+      "id": "typed-string",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Reykjavík"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Reykjavík"
+        }
+      },
+      "response": {
+        "id": "cmpl-d72bd1796f0e498382e5d68692ceb2a5",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to know the weather in Reykjavík.",
+              "tool_calls": [
+                {
+                  "id": "call_32f0963e13994afdbf90715b",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"Reykjavík\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929381,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 102,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.41,
+          "prompt_tokens_per_sec": 248.78,
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 31,
+            "rejected_prediction_tokens": 18
+          },
+          "completion_time": 0.71,
+          "completion_tokens_per_sec": 53.75,
+          "total_tokens": 140,
+          "total_time": 1.12
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 102,
+          "prompt_ms": 410.0,
+          "prompt_per_token_ms": 4.019607843137255,
+          "prompt_per_second": 248.78048780487805,
+          "predicted_n": 38,
+          "predicted_ms": 710.0,
+          "predicted_per_token_ms": 18.68421052631579,
+          "predicted_per_second": 53.52112676056338,
+          "draft_n": 49,
+          "draft_n_accepted": 31
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-integer",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "reserve_room",
+        "arguments": {
+          "room": "Cedar",
+          "attendees": 7
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "reserve_room",
+        "required_args": {
+          "room": "Cedar",
+          "attendees": 7
+        }
+      },
+      "response": {
+        "id": "cmpl-f67ce83ef993409ba5c38ea300a8dc0a",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to reserve conference room Cedar for exactly 7 people.",
+              "tool_calls": [
+                {
+                  "id": "call_32a39662cbe94a51aefadb1c",
+                  "function": {
+                    "name": "reserve_room",
+                    "arguments": "{\"room\": \"Cedar\", \"attendees\": 7}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929382,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 111,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.42,
+          "prompt_tokens_per_sec": 264.29,
+          "completion_tokens": 44,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 36,
+            "rejected_prediction_tokens": 20
+          },
+          "completion_time": 0.83,
+          "completion_tokens_per_sec": 53.09,
+          "total_tokens": 155,
+          "total_time": 1.25
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 111,
+          "prompt_ms": 420.0,
+          "prompt_per_token_ms": 3.7837837837837838,
+          "prompt_per_second": 264.2857142857143,
+          "predicted_n": 44,
+          "predicted_ms": 830.0,
+          "predicted_per_token_ms": 18.863636363636363,
+          "predicted_per_second": 53.01204819277109,
+          "draft_n": 56,
+          "draft_n_accepted": 36
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-boolean",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "set_light",
+        "arguments": {
+          "light": "porch",
+          "on": true
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "set_light",
+        "required_args": {
+          "light": "porch",
+          "on": true
+        }
+      },
+      "response": {
+        "id": "cmpl-75d5e58e0fba4daa9db6f1780720194a",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to turn on the porch light.",
+              "tool_calls": [
+                {
+                  "id": "call_91ff83217a34452c9d8b49f3",
+                  "function": {
+                    "name": "set_light",
+                    "arguments": "{\"light\": \"porch\", \"on\": true}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929384,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 106,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.41,
+          "prompt_tokens_per_sec": 258.54,
+          "completion_tokens": 38,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 30,
+            "rejected_prediction_tokens": 26
+          },
+          "completion_time": 0.82,
+          "completion_tokens_per_sec": 46.52,
+          "total_tokens": 144,
+          "total_time": 1.23
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 106,
+          "prompt_ms": 410.0,
+          "prompt_per_token_ms": 3.8679245283018866,
+          "prompt_per_second": 258.5365853658536,
+          "predicted_n": 38,
+          "predicted_ms": 820.0,
+          "predicted_per_token_ms": 21.57894736842105,
+          "predicted_per_second": 46.34146341463415,
+          "draft_n": 56,
+          "draft_n_accepted": 30
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-array",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "label_issue",
+        "arguments": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "label_issue",
+        "required_args": {
+          "issue": 418,
+          "labels": [
+            "bug",
+            "urgent",
+            "backend"
+          ]
+        }
+      },
+      "response": {
+        "id": "cmpl-10a1d13edbd14f30a99770b38f86165d",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to add labels to issue 418.",
+              "tool_calls": [
+                {
+                  "id": "call_535805e2ba44428593c3689b",
+                  "function": {
+                    "name": "label_issue",
+                    "arguments": "{\"issue\": 418, \"labels\": [\"bug\", \"urgent\", \"backend\"]}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929385,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 122,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.44,
+          "prompt_tokens_per_sec": 277.27,
+          "completion_tokens": 51,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 43,
+            "rejected_prediction_tokens": 13
+          },
+          "completion_time": 0.83,
+          "completion_tokens_per_sec": 61.75,
+          "total_tokens": 173,
+          "total_time": 1.27
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 122,
+          "prompt_ms": 440.0,
+          "prompt_per_token_ms": 3.6065573770491803,
+          "prompt_per_second": 277.2727272727273,
+          "predicted_n": 51,
+          "predicted_ms": 830.0,
+          "predicted_per_token_ms": 16.274509803921568,
+          "predicted_per_second": 61.445783132530124,
+          "draft_n": 56,
+          "draft_n_accepted": 43
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "choose-weather-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Nairobi"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Nairobi"
+        }
+      },
+      "response": {
+        "id": "cmpl-236a7bee638e4d58bb65c42ce00368b9",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to know if they need an umbrella in Nairobi today. I should check the current weather for Nairobi.",
+              "tool_calls": [
+                {
+                  "id": "call_b926c57613904c8fb5ed2e32",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"Nairobi\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929386,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 205,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.6,
+          "prompt_tokens_per_sec": 341.67,
+          "completion_tokens": 43,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 35,
+            "rejected_prediction_tokens": 21
+          },
+          "completion_time": 0.83,
+          "completion_tokens_per_sec": 51.81,
+          "total_tokens": 248,
+          "total_time": 1.43
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 205,
+          "prompt_ms": 600.0,
+          "prompt_per_token_ms": 2.926829268292683,
+          "prompt_per_second": 341.6666666666667,
+          "predicted_n": 43,
+          "predicted_ms": 830.0,
+          "predicted_per_token_ms": 19.302325581395348,
+          "predicted_per_second": 51.807228915662655,
+          "draft_n": 56,
+          "draft_n_accepted": 35
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "choose-calendar-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_calendar_event",
+        "arguments": {
+          "title": "Design Review",
+          "start": "2026-09-03T14:30:00Z"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_calendar_event",
+        "required_args": {
+          "title": "Design Review",
+          "start": "2026-09-03T14:30:00Z"
+        }
+      },
+      "response": {
+        "id": "cmpl-d2853209c0a343f998ff34934b30b2da",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to schedule a calendar event.",
+              "tool_calls": [
+                {
+                  "id": "call_5f555d2b596c409aafe0047c",
+                  "function": {
+                    "name": "create_calendar_event",
+                    "arguments": "{\"title\": \"Design Review\", \"start\": \"2026-09-03T14:30:00Z\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929388,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 228,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.63,
+          "prompt_tokens_per_sec": 361.9,
+          "completion_tokens": 56,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 47,
+            "rejected_prediction_tokens": 16
+          },
+          "completion_time": 0.92,
+          "completion_tokens_per_sec": 60.6,
+          "total_tokens": 284,
+          "total_time": 1.56
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 228,
+          "prompt_ms": 630.0,
+          "prompt_per_token_ms": 2.763157894736842,
+          "prompt_per_second": 361.90476190476187,
+          "predicted_n": 56,
+          "predicted_ms": 920.0,
+          "predicted_per_token_ms": 16.428571428571427,
+          "predicted_per_second": 60.8695652173913,
+          "draft_n": 63,
+          "draft_n_accepted": 47
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "parallel-weather",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_weather",
+        "arguments": {
+          "city": "Oslo"
+        },
+        "tool_call_count": 2
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_weather",
+        "required_args": {
+          "city": "Oslo"
+        }
+      },
+      "response": {
+        "id": "cmpl-d2e3df0b76d2441cb1b78bacd89e21b9",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants me to check weather in Oslo and Lima in parallel, Oslo first.",
+              "tool_calls": [
+                {
+                  "id": "call_b6c3d2ac9e3d4787b3092d9e",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"Oslo\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                },
+                {
+                  "id": "call_fdf7cfeb67824c149c3394a5",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"Lima\"}"
+                  },
+                  "type": "function",
+                  "index": 1
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929389,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 107,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.42,
+          "prompt_tokens_per_sec": 254.76,
+          "completion_tokens": 55,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 45,
+            "rejected_prediction_tokens": 25
+          },
+          "completion_time": 1.03,
+          "completion_tokens_per_sec": 53.43,
+          "total_tokens": 162,
+          "total_time": 1.45
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 107,
+          "prompt_ms": 420.0,
+          "prompt_per_token_ms": 3.925233644859813,
+          "prompt_per_second": 254.76190476190476,
+          "predicted_n": 55,
+          "predicted_ms": 1030.0,
+          "predicted_per_token_ms": 18.727272727272727,
+          "predicted_per_second": 53.398058252427184,
+          "draft_n": 70,
+          "draft_n_accepted": 45
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "parallel-inventory",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "check_inventory",
+        "arguments": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        },
+        "tool_call_count": 2
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "check_inventory",
+        "required_args": {
+          "sku": "AX-10",
+          "warehouse": "east"
+        }
+      },
+      "response": {
+        "id": "cmpl-e4681579990c442e95eea2ff259aaa27",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to check inventory for two SKUs in parallel, with AX-10 first. I can call both check_inventory functions in the same block since they're independent.",
+              "tool_calls": [
+                {
+                  "id": "call_2644e6928ea544fda1fb29c8",
+                  "function": {
+                    "name": "check_inventory",
+                    "arguments": "{\"sku\": \"AX-10\", \"warehouse\": \"east\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                },
+                {
+                  "id": "call_e6ab86e6172c4090b686745a",
+                  "function": {
+                    "name": "check_inventory",
+                    "arguments": "{\"sku\": \"BQ-22\", \"warehouse\": \"west\"}"
+                  },
+                  "type": "function",
+                  "index": 1
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929392,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 129,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.45,
+          "prompt_tokens_per_sec": 286.67,
+          "completion_tokens": 97,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 79,
+            "rejected_prediction_tokens": 47
+          },
+          "completion_time": 1.88,
+          "completion_tokens_per_sec": 51.55,
+          "total_tokens": 226,
+          "total_time": 2.33
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 129,
+          "prompt_ms": 450.0,
+          "prompt_per_token_ms": 3.488372093023256,
+          "prompt_per_second": 286.6666666666667,
+          "predicted_n": 97,
+          "predicted_ms": 1880.0,
+          "predicted_per_token_ms": 19.38144329896907,
+          "predicted_per_second": 51.59574468085106,
+          "draft_n": 126,
+          "draft_n_accepted": 79
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "multi-turn-weather-final",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "id": "cmpl-46967fdcf824407abec88dfdc49fa011",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": "The current temperature in Kyoto is **18°C** with clear skies.",
+              "reasoning_content": "Answer.",
+              "tool_calls": null,
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929393,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 137,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.48,
+          "prompt_tokens_per_sec": 285.42,
+          "completion_tokens": 20,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 15,
+            "rejected_prediction_tokens": 20
+          },
+          "completion_time": 0.52,
+          "completion_tokens_per_sec": 38.63,
+          "total_tokens": 157,
+          "total_time": 1.0
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 137,
+          "prompt_ms": 480.0,
+          "prompt_per_token_ms": 3.5036496350364965,
+          "prompt_per_second": 285.4166666666667,
+          "predicted_n": 20,
+          "predicted_ms": 520.0,
+          "predicted_per_token_ms": 26.0,
+          "predicted_per_second": 38.46153846153846,
+          "draft_n": 35,
+          "draft_n_accepted": 15
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "multi-turn-order-final",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "id": "cmpl-92a7e47fbed04c98a976f8c2d4aff38b",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": "Order **A-900** has been **shipped** and is expected to arrive by **2026-08-22**.",
+              "reasoning_content": "The order is shipped with an ETA.",
+              "tool_calls": null,
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929394,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 147,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.55,
+          "prompt_tokens_per_sec": 267.27,
+          "completion_tokens": 44,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 31,
+            "rejected_prediction_tokens": 60
+          },
+          "completion_time": 1.26,
+          "completion_tokens_per_sec": 34.99,
+          "total_tokens": 191,
+          "total_time": 1.81
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 147,
+          "prompt_ms": 550.0,
+          "prompt_per_token_ms": 3.741496598639456,
+          "prompt_per_second": 267.27272727272725,
+          "predicted_n": 44,
+          "predicted_ms": 1260.0,
+          "predicted_per_token_ms": 28.636363636363637,
+          "predicted_per_second": 34.92063492063492,
+          "draft_n": 91,
+          "draft_n_accepted": 31
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "no-tool-opinion",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "id": "cmpl-43804ddcd819463db155eb1a57b3ff7f",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": "'Hello' generally sounds friendlier. It's the everyday, casual greeting most people use in conversation, and it feels warm and approachable. 'Greetings' can sound a bit more formal or even stiff — it's less common in casual speech and sometimes comes across as old-fashioned or overly polite. So for a friendly tone, 'Hello' is the better choice.",
+              "reasoning_content": "The user is asking a simple question about which greeting sounds friendlier. They explicitly note that no offered tool applies — the only tool I have is get_weather, which is indeed irrelevant here. So I should just answer in text.",
+              "tool_calls": null,
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929399,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 103,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.41,
+          "prompt_tokens_per_sec": 251.22,
+          "completion_tokens": 123,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 76,
+            "rejected_prediction_tokens": 253
+          },
+          "completion_time": 4.58,
+          "completion_tokens_per_sec": 26.84,
+          "total_tokens": 226,
+          "total_time": 4.99
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 103,
+          "prompt_ms": 410.0,
+          "prompt_per_token_ms": 3.9805825242718447,
+          "prompt_per_second": 251.21951219512195,
+          "predicted_n": 123,
+          "predicted_ms": 4580.0,
+          "predicted_per_token_ms": 37.235772357723576,
+          "predicted_per_second": 26.85589519650655,
+          "draft_n": 329,
+          "draft_n_accepted": 76
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "no-tool-translation",
+      "passed": true,
+      "reason": "no tool calls",
+      "actual": {
+        "tool_call_count": 0
+      },
+      "expected": {
+        "type": "text",
+        "forbidden_call": true
+      },
+      "response": {
+        "id": "cmpl-998c20992c1640938c8b78fc18ec0bc0",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": "\"Good morning\" in Spanish is **\"Buenos días\"**.",
+              "reasoning_content": "The user wants a translation of \"good morning\" into Spanish.",
+              "tool_calls": null,
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929401,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 158,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.55,
+          "prompt_tokens_per_sec": 287.27,
+          "completion_tokens": 32,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 25,
+            "rejected_prediction_tokens": 24
+          },
+          "completion_time": 0.69,
+          "completion_tokens_per_sec": 46.42,
+          "total_tokens": 190,
+          "total_time": 1.24
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 158,
+          "prompt_ms": 550.0,
+          "prompt_per_token_ms": 3.481012658227848,
+          "prompt_per_second": 287.27272727272725,
+          "predicted_n": 32,
+          "predicted_ms": 690.0,
+          "predicted_per_token_ms": 21.5625,
+          "predicted_per_second": 46.3768115942029,
+          "draft_n": 49,
+          "draft_n_accepted": 25
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "long-context-ticket",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_ticket",
+        "arguments": {
+          "title": "Payments timeout",
+          "severity": 2,
+          "component": "checkout-api"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_ticket",
+        "required_args": {
+          "title": "Payments timeout",
+          "severity": 2,
+          "component": "checkout-api"
+        }
+      },
+      "response": {
+        "id": "cmpl-ad9988bd6e264a5eba757f8dcba7417b",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants me to create a support ticket with the specified details.",
+              "tool_calls": [
+                {
+                  "id": "call_b6b69719285541d3a0f781c4",
+                  "function": {
+                    "name": "create_ticket",
+                    "arguments": "{\"title\": \"Payments timeout\", \"severity\": 2, \"component\": \"checkout-api\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929402,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 180,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.61,
+          "prompt_tokens_per_sec": 295.08,
+          "completion_tokens": 51,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 42,
+            "rejected_prediction_tokens": 21
+          },
+          "completion_time": 0.94,
+          "completion_tokens_per_sec": 54.14,
+          "total_tokens": 231,
+          "total_time": 1.55
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 180,
+          "prompt_ms": 610.0,
+          "prompt_per_token_ms": 3.388888888888889,
+          "prompt_per_second": 295.08196721311475,
+          "predicted_n": 51,
+          "predicted_ms": 940.0,
+          "predicted_per_token_ms": 18.431372549019606,
+          "predicted_per_second": 54.25531914893617,
+          "draft_n": 63,
+          "draft_n_accepted": 42
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "long-context-reference",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "track_shipment",
+        "arguments": {
+          "reference": "ZX-8841-Q"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "track_shipment",
+        "required_args": {
+          "reference": "ZX-8841-Q"
+        }
+      },
+      "response": {
+        "id": "cmpl-84936f1f02da410fa874549b2098229d",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to track ZX-8841-Q.",
+              "tool_calls": [
+                {
+                  "id": "call_39426dd0b8f94e8f85e24deb",
+                  "function": {
+                    "name": "track_shipment",
+                    "arguments": "{\"reference\": \"ZX-8841-Q\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929403,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 155,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.58,
+          "prompt_tokens_per_sec": 267.24,
+          "completion_tokens": 41,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 35,
+            "rejected_prediction_tokens": 7
+          },
+          "completion_time": 0.63,
+          "completion_tokens_per_sec": 64.61,
+          "total_tokens": 196,
+          "total_time": 1.22
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 155,
+          "prompt_ms": 580.0,
+          "prompt_per_token_ms": 3.7419354838709675,
+          "prompt_per_second": 267.2413793103448,
+          "predicted_n": 41,
+          "predicted_ms": 630.0,
+          "predicted_per_token_ms": 15.365853658536585,
+          "predicted_per_second": 65.07936507936508,
+          "draft_n": 42,
+          "draft_n_accepted": 35
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "nested-json-shipment",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_shipment",
+        "arguments": {
+          "recipient": {
+            "name": "Ada Lovelace",
+            "address": {
+              "line1": "12 St James Square",
+              "city": "London",
+              "postal_code": "SW1Y 4LB",
+              "country": "GB"
+            }
+          },
+          "package": {
+            "dimensions_cm": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            },
+            "weight_kg": 2.5
+          }
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_shipment",
+        "required_args": {
+          "recipient": {
+            "name": "Ada Lovelace",
+            "address": {
+              "line1": "12 St James Square",
+              "city": "London",
+              "postal_code": "SW1Y 4LB",
+              "country": "GB"
+            }
+          },
+          "package": {
+            "dimensions_cm": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            },
+            "weight_kg": 2.5
+          }
+        }
+      },
+      "response": {
+        "id": "cmpl-b963df8c89b84472b8109404617e1e6c",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "Create shipment with given details.",
+              "tool_calls": [
+                {
+                  "id": "call_6c0bda294c3e4247ae0aaf1e",
+                  "function": {
+                    "name": "create_shipment",
+                    "arguments": "{\"recipient\": {\"name\": \"Ada Lovelace\", \"address\": {\"line1\": \"12 St James Square\", \"city\": \"London\", \"postal_code\": \"SW1Y 4LB\", \"country\": \"GB\"}}, \"package\": {\"dimensions_cm\": {\"length\": 30, \"width\": 20, \"height\": 10}, \"weight_kg\": 2.5}}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929406,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 322,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 1.04,
+          "prompt_tokens_per_sec": 309.62,
+          "completion_tokens": 112,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 95,
+            "rejected_prediction_tokens": 24
+          },
+          "completion_time": 1.75,
+          "completion_tokens_per_sec": 63.98,
+          "total_tokens": 434,
+          "total_time": 2.79
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 322,
+          "prompt_ms": 1040.0,
+          "prompt_per_token_ms": 3.229813664596273,
+          "prompt_per_second": 309.61538461538464,
+          "predicted_n": 112,
+          "predicted_ms": 1750.0,
+          "predicted_per_token_ms": 15.625,
+          "predicted_per_second": 64.0,
+          "draft_n": 119,
+          "draft_n_accepted": 95
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "nested-json-filter",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "search_products",
+        "arguments": {
+          "filter": {
+            "category": "laptops",
+            "price": {
+              "min": 800,
+              "max": 1500,
+              "currency": "USD"
+            },
+            "features": [
+              "wifi6",
+              "backlit-keyboard"
+            ]
+          }
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "search_products",
+        "required_args": {
+          "filter": {
+            "category": "laptops",
+            "price": {
+              "min": 800,
+              "max": 1500,
+              "currency": "USD"
+            },
+            "features": [
+              "wifi6",
+              "backlit-keyboard"
+            ]
+          }
+        }
+      },
+      "response": {
+        "id": "cmpl-a4467ed7586d4c8ca052fb8087c8cee7",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to search products with category laptops, price range 800-1500 USD, features wifi6 and backlit-keyboard.",
+              "tool_calls": [
+                {
+                  "id": "call_8eb15af67aad42beab89f983",
+                  "function": {
+                    "name": "search_products",
+                    "arguments": "{\"filter\": {\"category\": \"laptops\", \"price\": {\"min\": 800, \"max\": 1500, \"currency\": \"USD\"}, \"features\": [\"wifi6\", \"backlit-keyboard\"]}}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929408,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 210,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.62,
+          "prompt_tokens_per_sec": 338.71,
+          "completion_tokens": 96,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 82,
+            "rejected_prediction_tokens": 16
+          },
+          "completion_time": 1.41,
+          "completion_tokens_per_sec": 68.11,
+          "total_tokens": 306,
+          "total_time": 2.03
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 210,
+          "prompt_ms": 620.0,
+          "prompt_per_token_ms": 2.9523809523809526,
+          "prompt_per_second": 338.7096774193548,
+          "predicted_n": 96,
+          "predicted_ms": 1410.0,
+          "predicted_per_token_ms": 14.6875,
+          "predicted_per_second": 68.08510638297872,
+          "draft_n": 98,
+          "draft_n_accepted": 82
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "enum-unit",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "get_forecast",
+        "arguments": {
+          "city": "Toronto",
+          "unit": "fahrenheit"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "get_forecast",
+        "required_args": {
+          "city": "Toronto",
+          "unit": "fahrenheit"
+        }
+      },
+      "response": {
+        "id": "cmpl-bc414c2fcf5742c5a15ba47afb2331ea",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants the temperature forecast for Toronto in Fahrenheit.",
+              "tool_calls": [
+                {
+                  "id": "call_02bfd5d42a3844fca8ac40ef",
+                  "function": {
+                    "name": "get_forecast",
+                    "arguments": "{\"city\": \"Toronto\", \"unit\": \"fahrenheit\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929409,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 121,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.43,
+          "prompt_tokens_per_sec": 281.4,
+          "completion_tokens": 41,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 34,
+            "rejected_prediction_tokens": 15
+          },
+          "completion_time": 0.72,
+          "completion_tokens_per_sec": 57.22,
+          "total_tokens": 162,
+          "total_time": 1.15
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 121,
+          "prompt_ms": 430.0,
+          "prompt_per_token_ms": 3.553719008264463,
+          "prompt_per_second": 281.3953488372093,
+          "predicted_n": 41,
+          "predicted_ms": 720.0,
+          "predicted_per_token_ms": 17.5609756097561,
+          "predicted_per_second": 56.94444444444444,
+          "draft_n": 49,
+          "draft_n_accepted": 34
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "enum-priority",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "create_task",
+        "arguments": {
+          "title": "Rotate signing key",
+          "priority": "high"
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "create_task",
+        "required_args": {
+          "title": "Rotate signing key",
+          "priority": "high"
+        }
+      },
+      "response": {
+        "id": "cmpl-5f6dc30494f740e29e82bea0252f4aaf",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "Simple request.",
+              "tool_calls": [
+                {
+                  "id": "call_d660bcf3b907431bb03e0533",
+                  "function": {
+                    "name": "create_task",
+                    "arguments": "{\"title\": \"Rotate signing key\", \"priority\": \"high\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929410,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 120,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.43,
+          "prompt_tokens_per_sec": 279.07,
+          "completion_tokens": 32,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 26,
+            "rejected_prediction_tokens": 16
+          },
+          "completion_time": 0.62,
+          "completion_tokens_per_sec": 51.56,
+          "total_tokens": 152,
+          "total_time": 1.05
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 120,
+          "prompt_ms": 430.0,
+          "prompt_per_token_ms": 3.5833333333333335,
+          "prompt_per_second": 279.0697674418605,
+          "predicted_n": 32,
+          "predicted_ms": 620.0,
+          "predicted_per_token_ms": 19.375,
+          "predicted_per_second": 51.61290322580645,
+          "draft_n": 42,
+          "draft_n_accepted": 26
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "choose-email-among-distractors",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "send_email",
+        "arguments": {
+          "to": "dev@example.com",
+          "subject": "Build green",
+          "body": "Release can proceed."
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "send_email",
+        "required_args": {
+          "to": "dev@example.com",
+          "subject": "Build green",
+          "body": "Release can proceed."
+        }
+      },
+      "response": {
+        "id": "cmpl-c659ddefb2a14dcab7bb161245dec346",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to send an email. I have the send_email tool. Let me call it.",
+              "tool_calls": [
+                {
+                  "id": "call_6d9d7872128648719de27db8",
+                  "function": {
+                    "name": "send_email",
+                    "arguments": "{\"to\": \"dev@example.com\", \"subject\": \"Build green\", \"body\": \"Release can proceed.\"}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929412,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 229,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.62,
+          "prompt_tokens_per_sec": 369.35,
+          "completion_tokens": 62,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 51,
+            "rejected_prediction_tokens": 26
+          },
+          "completion_time": 1.13,
+          "completion_tokens_per_sec": 54.86,
+          "total_tokens": 291,
+          "total_time": 1.75
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 229,
+          "prompt_ms": 620.0,
+          "prompt_per_token_ms": 2.7074235807860263,
+          "prompt_per_second": 369.3548387096774,
+          "predicted_n": 62,
+          "predicted_ms": 1130.0,
+          "predicted_per_token_ms": 18.225806451612904,
+          "predicted_per_second": 54.86725663716815,
+          "draft_n": 77,
+          "draft_n_accepted": 51
+        }
+      },
+      "error": null
+    },
+    {
+      "id": "typed-composite",
+      "passed": true,
+      "reason": "matched",
+      "actual": {
+        "name": "deploy_service",
+        "arguments": {
+          "service": "ledger",
+          "version": "v4.2",
+          "replicas": 3,
+          "dry_run": true,
+          "notify": [
+            "alice",
+            "bob"
+          ]
+        },
+        "tool_call_count": 1
+      },
+      "expected": {
+        "type": "tool_call",
+        "name": "deploy_service",
+        "required_args": {
+          "service": "ledger",
+          "version": "v4.2",
+          "replicas": 3,
+          "dry_run": true,
+          "notify": [
+            "alice",
+            "bob"
+          ]
+        }
+      },
+      "response": {
+        "id": "cmpl-6c5b58a48f5b4bf381e13801c9b82646",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "tool_calls",
+            "eos_reason": "stop_token",
+            "stop_str": "<|im_end|>",
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "reasoning_content": "The user wants to deploy service \"ledger\" at version \"v4.2\" to 3 replicas, with dry_run enabled, and notify alice and bob.",
+              "tool_calls": [
+                {
+                  "id": "call_30e8a59218a34be9bcaf9282",
+                  "function": {
+                    "name": "deploy_service",
+                    "arguments": "{\"service\": \"ledger\", \"version\": \"v4.2\", \"replicas\": 3, \"dry_run\": true, \"notify\": [\"alice\", \"bob\"]}"
+                  },
+                  "type": "function",
+                  "index": 0
+                }
+              ],
+              "tool_call_id": null
+            },
+            "logprobs": null
+          }
+        ],
+        "created": 1791929414,
+        "model": "mimo-v2.6-flash",
+        "object": "chat.completion",
+        "usage": {
+          "prompt_tokens": 169,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_time": 0.57,
+          "prompt_tokens_per_sec": 296.49,
+          "completion_tokens": 94,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 80,
+            "rejected_prediction_tokens": 18
+          },
+          "completion_time": 1.45,
+          "completion_tokens_per_sec": 64.81,
+          "total_tokens": 263,
+          "total_time": 2.02
+        },
+        "timings": {
+          "cache_n": 0,
+          "prompt_n": 169,
+          "prompt_ms": 570.0,
+          "prompt_per_token_ms": 3.3727810650887573,
+          "prompt_per_second": 296.4912280701754,
+          "predicted_n": 94,
+          "predicted_ms": 1450.0,
+          "predicted_per_token_ms": 15.425531914893616,
+          "predicted_per_second": 64.82758620689656,
+          "draft_n": 98,
+          "draft_n_accepted": 80
+        }
+      },
+      "error": null
+    }
+  ],
+  "passed": 20,
+  "total": 20,
+  "score": 1.0
+}

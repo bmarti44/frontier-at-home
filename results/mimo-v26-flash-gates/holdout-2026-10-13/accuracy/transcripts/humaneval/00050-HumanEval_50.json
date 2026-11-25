@@ -1,0 +1,104 @@
+{
+  "index": 50,
+  "task_id": "HumanEval/50",
+  "rendered_prompt_sha256": "e887c2acd0e721f727626a0eb8e1dd45c88ec9f8fdbf1e5c2c637cf5cf2d907c",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    return \"\".join([chr(((ord(ch) - 5 - ord(\"a\")) % 26) + ord(\"a\")) for ch in s])\n\n\ndef test_encode_decode():\n    # Test case 1: Empty string\n    assert encode_shift(\"\") == \"\"\n    assert decode_shift(\"\") == \"\"\n\n    # Test case 2: Single character\n    assert encode_shift(\"a\") == \"f\"\n    assert decode_shift(\"f\") == \"a\"\n\n    # Test case 3: Multiple characters\n    assert encode_shift(\"abc\") == \"fgh\"\n    assert decode_shift(\"fgh\") == \"abc\"\n\n    # Test case 4: Mixed case characters\n    assert encode_shift(\"AbC\") == \"FgH\"\n    assert decode_shift(\"FgH\") == \"AbC\"\n\n    # Test case 5: Characters with special characters\n    assert encode_shift(\"a!b@c\") == \"f!g@h\"\n    assert decode_shift(\"f!g@h\") == \"a!b@c\"\n\n    # Test case 6: Characters with numbers\n    assert encode_shift(\"a1b2c3\") == \"f1g2h3\"\n    assert decode_shift(\"f1g2h3\") == \"a1b2c3\"\n\n    # Test case 7: Characters with spaces\n    assert encode_shift(\"a b c\") == \"f g h\"\n    assert decode_shift(\"f g h\") == \"a b c\"\n\n    # Test case 8: Characters with punctuation\n    assert encode_shift(\"a.b,c\") == \"f.g,h\"\n    assert decode_shift(\"f.g,h\") == \"a.b,c\"\n\n    # Test case 9: Characters with special characters and numbers\n    assert encode_shift(\"a!b@c1d2e3\") == \"f!g@h1i2j3\"\n    assert decode_shift(\"f!g@h1i2j3\") == \"a!b@c1d2e3\"\n\n    # Test case 10: Characters with spaces and punctuation\n    assert encode_shift(\"a b.c,d\") == \"f g.h,i\"\n    assert decode_shift(\"f g.h,i\") == \"a b.c,d\"\n\n    # Test case 11: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h\") == \"f!g@h1i2j3 k.l,m\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m\") == \"a!b@c1d2e3 f.g,h\"\n\n    # Test case 12: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p\"\n\n    # Test case 13: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x\"\n\n    # Test case 14: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e\"\n\n    # Test case 15: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m\"\n\n    # Test case 16: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u\"\n\n    # Test case 17: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c\"\n\n    # Test case 18: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k\"\n\n    # Test case 19: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s\"\n\n    # Test case 20: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[\"\n\n\ntest_encode_decode()\nprint(\"All test cases passed!\")",
+  "finish_reason": "stop",
+  "expected": "    return \"\".join([chr(((ord(ch) - 5 - ord(\"a\")) % 26) + ord(\"a\")) for ch in s])\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 47.55684654403012
+  },
+  "response": {
+    "id": "cmpl-f6a98d10f5ae4648927bdd3694d8f468",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "    return \"\".join([chr(((ord(ch) - 5 - ord(\"a\")) % 26) + ord(\"a\")) for ch in s])\n\n\ndef test_encode_decode():\n    # Test case 1: Empty string\n    assert encode_shift(\"\") == \"\"\n    assert decode_shift(\"\") == \"\"\n\n    # Test case 2: Single character\n    assert encode_shift(\"a\") == \"f\"\n    assert decode_shift(\"f\") == \"a\"\n\n    # Test case 3: Multiple characters\n    assert encode_shift(\"abc\") == \"fgh\"\n    assert decode_shift(\"fgh\") == \"abc\"\n\n    # Test case 4: Mixed case characters\n    assert encode_shift(\"AbC\") == \"FgH\"\n    assert decode_shift(\"FgH\") == \"AbC\"\n\n    # Test case 5: Characters with special characters\n    assert encode_shift(\"a!b@c\") == \"f!g@h\"\n    assert decode_shift(\"f!g@h\") == \"a!b@c\"\n\n    # Test case 6: Characters with numbers\n    assert encode_shift(\"a1b2c3\") == \"f1g2h3\"\n    assert decode_shift(\"f1g2h3\") == \"a1b2c3\"\n\n    # Test case 7: Characters with spaces\n    assert encode_shift(\"a b c\") == \"f g h\"\n    assert decode_shift(\"f g h\") == \"a b c\"\n\n    # Test case 8: Characters with punctuation\n    assert encode_shift(\"a.b,c\") == \"f.g,h\"\n    assert decode_shift(\"f.g,h\") == \"a.b,c\"\n\n    # Test case 9: Characters with special characters and numbers\n    assert encode_shift(\"a!b@c1d2e3\") == \"f!g@h1i2j3\"\n    assert decode_shift(\"f!g@h1i2j3\") == \"a!b@c1d2e3\"\n\n    # Test case 10: Characters with spaces and punctuation\n    assert encode_shift(\"a b.c,d\") == \"f g.h,i\"\n    assert decode_shift(\"f g.h,i\") == \"a b.c,d\"\n\n    # Test case 11: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h\") == \"f!g@h1i2j3 k.l,m\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m\") == \"a!b@c1d2e3 f.g,h\"\n\n    # Test case 12: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p\"\n\n    # Test case 13: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x\"\n\n    # Test case 14: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e\"\n\n    # Test case 15: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m\"\n\n    # Test case 16: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u\"\n\n    # Test case 17: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c\"\n\n    # Test case 18: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k\"\n\n    # Test case 19: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s\"\n\n    # Test case 20: Characters with special characters, numbers, spaces, and punctuation\n    assert encode_shift(\"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[\") == \"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e\"\n    assert decode_shift(\"f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[ a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e\") == \"a!b@c1d2e3 f.g,h i!j@k1l2m3 n.o,p q!r@s1t2u3 v.w,x y!z@1a2b3 c.d,e f!g@h1i2j3 k.l,m n!o@p1q2r3 s.t,u v!w@x1y2z3 a.b,c d!e@f1g2h3 i.j,k l!m@n1o2p3 q.r,s t!u@v1w2x3 y.z,[\"\n\n\ntest_encode_decode()\nprint(\"All test cases passed!\")"
+      }
+    ],
+    "created": 1791953208,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 86,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 245.71,
+      "completion_tokens": 3657,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 3147,
+        "rejected_prediction_tokens": 423
+      },
+      "completion_time": 47.2,
+      "completion_tokens_per_sec": 77.47,
+      "total_tokens": 3743,
+      "total_time": 47.56
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 86,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.069767441860465,
+      "prompt_per_second": 245.71428571428572,
+      "predicted_n": 3657,
+      "predicted_ms": 47200.0,
+      "predicted_per_token_ms": 12.906754170084769,
+      "predicted_per_second": 77.47881355932203,
+      "draft_n": 3570,
+      "draft_n_accepted": 3147
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00050:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

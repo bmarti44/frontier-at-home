@@ -1,0 +1,68 @@
+{
+  "index": 3028,
+  "task_id": 3148,
+  "rendered_prompt_sha256": "c348628bb78b93b3bda7201207b67c847cbf808d8b8e86a491d2ff620adf103c",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The dorsal root contains sensory (afferent) fibers, and the ventral root contains motor (efferent) fibers.\n\nSevering the dorsal root → loss of sensation and reflex action (since reflexes require sensory input).\nSevering the ventral root → inability to move the affected part (loss of motor function).\n\nThis matches option E.</think>Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8237058789818548
+  },
+  "response": {
+    "id": "cmpl-b539a252714044e784ca5b2315c9c188",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The dorsal root contains sensory (afferent) fibers, and the ventral root contains motor (efferent) fibers.\n\nSevering the dorsal root → loss of sensation and reflex action (since reflexes require sensory input).\nSevering the ventral root → inability to move the affected part (loss of motor function).\n\nThis matches option E.</think>Answer: E"
+      }
+    ],
+    "created": 1791939934,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 282,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.82,
+      "prompt_tokens_per_sec": 343.9,
+      "completion_tokens": 77,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 57,
+        "rejected_prediction_tokens": 83
+      },
+      "completion_time": 2.0,
+      "completion_tokens_per_sec": 38.45,
+      "total_tokens": 359,
+      "total_time": 2.82
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 282,
+      "prompt_ms": 820.0,
+      "prompt_per_token_ms": 2.9078014184397163,
+      "prompt_per_second": 343.9024390243902,
+      "predicted_n": 77,
+      "predicted_ms": 2000.0,
+      "predicted_per_token_ms": 25.974025974025974,
+      "predicted_per_second": 38.5,
+      "draft_n": 140,
+      "draft_n_accepted": 57
+    }
+  }
+}

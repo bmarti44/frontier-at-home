@@ -1,0 +1,68 @@
+{
+  "index": 6749,
+  "task_id": 6916,
+  "rendered_prompt_sha256": "cb2b841f159f0c577ec925e64631c375263f033cbf36168c9d2dfb28059b5896",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The question asks which test could be used as a test for autocorrelation up to third order (i.e., testing for autocorrelation up to lag 3).\n\nLet me consider each option:\n\nA. Dickey-Fuller test - tests for unit root (stationarity), not autocorrelation\nB. Jarque-Bera test - tests for normality of residuals\nC. White's test - tests for heteroskedasticity\nD. Augmented Dickey-Fuller test - tests for unit root\nE. Durbin Watson test - tests for first-order autocorrelation (up to lag 1)\nF. Kolmogorov-Smirnov test - tests for distributional properties\nG. Breusch-Godfrey test - tests for autocorrelation up to any specified order (can test up to lag 3)\nH. Phillips-Perron test - tests for unit root\nI. RESET test - tests for model specification (functional form)\n\nThe Breusch-Godfrey test can be used to test for autocorrelation up to any specified order, including third order. The Durbin-Watson test only tests for first-order autocorrelation.\n\nAnswer: G</think>Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.0047415209701285
+  },
+  "response": {
+    "id": "cmpl-753c166299f749c9ba66d3aad7954135",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The question asks which test could be used as a test for autocorrelation up to third order (i.e., testing for autocorrelation up to lag 3).\n\nLet me consider each option:\n\nA. Dickey-Fuller test - tests for unit root (stationarity), not autocorrelation\nB. Jarque-Bera test - tests for normality of residuals\nC. White's test - tests for heteroskedasticity\nD. Augmented Dickey-Fuller test - tests for unit root\nE. Durbin Watson test - tests for first-order autocorrelation (up to lag 1)\nF. Kolmogorov-Smirnov test - tests for distributional properties\nG. Breusch-Godfrey test - tests for autocorrelation up to any specified order (can test up to lag 3)\nH. Phillips-Perron test - tests for unit root\nI. RESET test - tests for model specification (functional form)\n\nThe Breusch-Godfrey test can be used to test for autocorrelation up to any specified order, including third order. The Durbin-Watson test only tests for first-order autocorrelation.\n\nAnswer: G</think>Answer: G"
+      }
+    ],
+    "created": 1791941756,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 127,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.43,
+      "prompt_tokens_per_sec": 295.35,
+      "completion_tokens": 251,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 197,
+        "rejected_prediction_tokens": 181
+      },
+      "completion_time": 5.57,
+      "completion_tokens_per_sec": 45.03,
+      "total_tokens": 378,
+      "total_time": 6.01
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 127,
+      "prompt_ms": 430.0,
+      "prompt_per_token_ms": 3.3858267716535435,
+      "prompt_per_second": 295.34883720930236,
+      "predicted_n": 251,
+      "predicted_ms": 5570.0,
+      "predicted_per_token_ms": 22.191235059760956,
+      "predicted_per_second": 45.062836624775585,
+      "draft_n": 378,
+      "draft_n_accepted": 197
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "index": 275,
+  "task_id": 275,
+  "rendered_prompt_sha256": "79a9e36be0ca93b75d8df13a61c492368087f649957b62b6aa8c643b8c579f56",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Song: 54 lines.\n\nFirst scene: twice the number of lines = 108 lines, but only a third are his = 36.\n\nSecond scene: six more than the song = 60 lines, four-fifths are his = 48.\n\nTotal: 54 + 36 + 48 = 138.</think>Let's work through each part:\n\n- **Solo song:** 54 lines.\n- **First scene:** twice the song's lines = 108 lines; Sean's lines = 108 ÷ 3 = 36 lines.\n- **Second scene:** 6 more than the song = 60 lines; Sean's lines = 60 × 4/5 = 48 lines.\n\nTotal: 54 + 36 + 48 = 138 lines.\n\nAnswer: 138",
+  "finish_reason": "stop",
+  "expected": "138",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.546922846988309
+  },
+  "response": {
+    "id": "cmpl-c9eb8e210702486b8742d5703f02850c",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Song: 54 lines.\n\nFirst scene: twice the number of lines = 108 lines, but only a third are his = 36.\n\nSecond scene: six more than the song = 60 lines, four-fifths are his = 48.\n\nTotal: 54 + 36 + 48 = 138.</think>Let's work through each part:\n\n- **Solo song:** 54 lines.\n- **First scene:** twice the song's lines = 108 lines; Sean's lines = 108 ÷ 3 = 36 lines.\n- **Second scene:** 6 more than the song = 60 lines; Sean's lines = 60 × 4/5 = 48 lines.\n\nTotal: 54 + 36 + 48 = 138 lines.\n\nAnswer: 138"
+      }
+    ],
+    "created": 1791926127,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 124,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.43,
+      "prompt_tokens_per_sec": 288.37,
+      "completion_tokens": 193,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 151,
+        "rejected_prediction_tokens": 143
+      },
+      "completion_time": 4.11,
+      "completion_tokens_per_sec": 46.92,
+      "total_tokens": 317,
+      "total_time": 4.55
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 124,
+      "prompt_ms": 430.0,
+      "prompt_per_token_ms": 3.467741935483871,
+      "prompt_per_second": 288.37209302325584,
+      "predicted_n": 193,
+      "predicted_ms": 4110.0,
+      "predicted_per_token_ms": 21.295336787564768,
+      "predicted_per_second": 46.95863746958638,
+      "draft_n": 294,
+      "draft_n_accepted": 151
+    }
+  },
+  "used_fallback": false
+}

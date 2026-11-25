@@ -1,0 +1,68 @@
+{
+  "index": 4176,
+  "task_id": 4303,
+  "rendered_prompt_sha256": "42558d5dc23608f1c76d4891cf85e74baa22e9511c8580b337fcb584dac90677",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The reaction produces CO₂ and 2H₂O. The mole ratio of CO₂ to H₂O is 1:2. Total moles of products = 1 + 2 = 3. Partial pressure of water vapor = (2/3) × 6.25 = 4.1667 torr ≈ 4.16 torr.</think>Answer: H",
+  "finish_reason": "stop",
+  "expected": "H",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8593942999723367
+  },
+  "response": {
+    "id": "cmpl-6ea26e4fb25f42db9329ab4b05094613",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The reaction produces CO₂ and 2H₂O. The mole ratio of CO₂ to H₂O is 1:2. Total moles of products = 1 + 2 = 3. Partial pressure of water vapor = (2/3) × 6.25 = 4.1667 torr ≈ 4.16 torr.</think>Answer: H"
+      }
+    ],
+    "created": 1791941245,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 203,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.59,
+      "prompt_tokens_per_sec": 344.07,
+      "completion_tokens": 86,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 62,
+        "rejected_prediction_tokens": 106
+      },
+      "completion_time": 2.27,
+      "completion_tokens_per_sec": 37.93,
+      "total_tokens": 289,
+      "total_time": 2.86
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 203,
+      "prompt_ms": 590.0,
+      "prompt_per_token_ms": 2.9064039408866993,
+      "prompt_per_second": 344.06779661016947,
+      "predicted_n": 86,
+      "predicted_ms": 2270.0,
+      "predicted_per_token_ms": 26.3953488372093,
+      "predicted_per_second": 37.88546255506608,
+      "draft_n": 168,
+      "draft_n_accepted": 62
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "index": 237,
+  "task_id": 237,
+  "rendered_prompt_sha256": "03a3bb7428acab594ebf288e1c3977a79f642450ddeb19dff0a59bfe21d5e0a6",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Johnny's total: $20 + $10 = $30. Tripled: $30 × 3 = $90.</think>Johnny started with $20 + $10 = $30. After tripling: $30 × 3 = $90.\n\nAnswer: 90",
+  "finish_reason": "stop",
+  "expected": "90",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6247233769972809
+  },
+  "response": {
+    "id": "cmpl-4dd93088ce8647feb4d23d45f27d0e9f",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Johnny's total: $20 + $10 = $30. Tripled: $30 × 3 = $90.</think>Johnny started with $20 + $10 = $30. After tripling: $30 × 3 = $90.\n\nAnswer: 90"
+      }
+    ],
+    "created": 1791919895,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 77,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 220.0,
+      "completion_tokens": 68,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 55,
+        "rejected_prediction_tokens": 36
+      },
+      "completion_time": 1.26,
+      "completion_tokens_per_sec": 53.99,
+      "total_tokens": 145,
+      "total_time": 1.61
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 77,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.545454545454546,
+      "prompt_per_second": 220.0,
+      "predicted_n": 68,
+      "predicted_ms": 1260.0,
+      "predicted_per_token_ms": 18.529411764705884,
+      "predicted_per_second": 53.96825396825397,
+      "draft_n": 91,
+      "draft_n_accepted": 55
+    }
+  },
+  "used_fallback": false
+}

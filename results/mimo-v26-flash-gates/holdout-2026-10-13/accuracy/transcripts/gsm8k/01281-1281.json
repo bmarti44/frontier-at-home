@@ -1,0 +1,69 @@
+{
+  "index": 1281,
+  "task_id": 1281,
+  "rendered_prompt_sha256": "148d7cdb5de67997f435cc8e004e7f65c9179d8a5156a4994e9c474494529a54",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Each pig eats 4 pounds twice a day = 8 pounds per day per pig.\n5 pigs × 8 pounds = 40 pounds per day.\n7 days × 40 = 280 pounds per week.\n300 - 280 = 20 pounds left.</think>Each pig eats 4 pounds × 2 times = 8 pounds per day.\n5 pigs × 8 pounds = 40 pounds per day.\nOver a week: 40 × 7 = 280 pounds.\n300 − 280 = 20 pounds left.\n\nAnswer: 20",
+  "finish_reason": "stop",
+  "expected": "20",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.0449862309615128
+  },
+  "response": {
+    "id": "cmpl-ed1a01a5560a448da692cb5825ed9500",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Each pig eats 4 pounds twice a day = 8 pounds per day per pig.\n5 pigs × 8 pounds = 40 pounds per day.\n7 days × 40 = 280 pounds per week.\n300 - 280 = 20 pounds left.</think>Each pig eats 4 pounds × 2 times = 8 pounds per day.\n5 pigs × 8 pounds = 40 pounds per day.\nOver a week: 40 × 7 = 280 pounds.\n300 − 280 = 20 pounds left.\n\nAnswer: 20"
+      }
+    ],
+    "created": 1791939487,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 73,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.36,
+      "prompt_tokens_per_sec": 202.78,
+      "completion_tokens": 133,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 105,
+        "rejected_prediction_tokens": 91
+      },
+      "completion_time": 2.69,
+      "completion_tokens_per_sec": 49.53,
+      "total_tokens": 206,
+      "total_time": 3.05
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 73,
+      "prompt_ms": 360.0,
+      "prompt_per_token_ms": 4.931506849315069,
+      "prompt_per_second": 202.77777777777777,
+      "predicted_n": 133,
+      "predicted_ms": 2690.0,
+      "predicted_per_token_ms": 20.225563909774436,
+      "predicted_per_second": 49.44237918215613,
+      "draft_n": 196,
+      "draft_n_accepted": 105
+    }
+  },
+  "used_fallback": false
+}

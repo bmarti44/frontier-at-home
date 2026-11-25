@@ -1,0 +1,69 @@
+{
+  "index": 1082,
+  "task_id": 1082,
+  "rendered_prompt_sha256": "952e7c4ff3f0cb7a6bd41c49db0b8a9446987d9e20d0604966ac9d8b5656abf7",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Home to store: 4 miles. Halfway: 2 miles. He walks 2 miles to halfway, then 2 miles back home, then 4 miles to store. Total: 2 + 2 + 4 = 8 miles. At 4 mph: 8/4 = 2 hours.</think>James walks 2 miles to the halfway point, then 2 miles back home, then 4 miles to the store: 2 + 2 + 4 = 8 miles total. At 4 miles per hour, that's 8 ÷ 4 = 2 hours.\n\nAnswer: 2",
+  "finish_reason": "stop",
+  "expected": "2",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.2341011929675005
+  },
+  "response": {
+    "id": "cmpl-273b78ef0a6b4ae1b39b97cdb8a0398a",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Home to store: 4 miles. Halfway: 2 miles. He walks 2 miles to halfway, then 2 miles back home, then 4 miles to store. Total: 2 + 2 + 4 = 8 miles. At 4 mph: 8/4 = 2 hours.</think>James walks 2 miles to the halfway point, then 2 miles back home, then 4 miles to the store: 2 + 2 + 4 = 8 miles total. At 4 miles per hour, that's 8 ÷ 4 = 2 hours.\n\nAnswer: 2"
+      }
+    ],
+    "created": 1791919963,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 89,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 240.54,
+      "completion_tokens": 132,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 102,
+        "rejected_prediction_tokens": 108
+      },
+      "completion_time": 2.86,
+      "completion_tokens_per_sec": 46.13,
+      "total_tokens": 221,
+      "total_time": 3.23
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 89,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.157303370786517,
+      "prompt_per_second": 240.54054054054055,
+      "predicted_n": 132,
+      "predicted_ms": 2860.0,
+      "predicted_per_token_ms": 21.666666666666668,
+      "predicted_per_second": 46.15384615384615,
+      "draft_n": 210,
+      "draft_n_accepted": 102
+    }
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,104 @@
+{
+  "index": 162,
+  "task_id": "HumanEval/162",
+  "rendered_prompt_sha256": "58845cc488ac0df5ed6876e026532380238c02e3035897db32428fa719bd4e38",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    if not text:\n        return None\n    import hashlib\n    return hashlib.md5(text.encode('utf-8')).hexdigest() or None\n\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\n",
+  "finish_reason": "stop",
+  "expected": "    import hashlib\n    return hashlib.md5(text.encode('ascii')).hexdigest() if text else None\n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 11.793871389993
+  },
+  "response": {
+    "id": "cmpl-806360c2036a4c8193b863b1e6a793ec",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    if not text:\n        return None\n    import hashlib\n    return hashlib.md5(text.encode('utf-8')).hexdigest() or None\n\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\nassert string_to_md5('') == None\nassert string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'\n"
+      }
+    ],
+    "created": 1791964690,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 81,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 231.43,
+      "completion_tokens": 830,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 718,
+        "rejected_prediction_tokens": 66
+      },
+      "completion_time": 11.44,
+      "completion_tokens_per_sec": 72.57,
+      "total_tokens": 911,
+      "total_time": 11.79
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 81,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.320987654320987,
+      "prompt_per_second": 231.42857142857144,
+      "predicted_n": 830,
+      "predicted_ms": 11440.0,
+      "predicted_per_token_ms": 13.783132530120483,
+      "predicted_per_second": 72.55244755244755,
+      "draft_n": 784,
+      "draft_n_accepted": 718
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00162:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

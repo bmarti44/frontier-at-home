@@ -1,0 +1,69 @@
+{
+  "index": 1157,
+  "task_id": 1157,
+  "rendered_prompt_sha256": "6653ba2c21f0bb3b6133977b40f48eabb5ace5ab6c2177197a2caaeb59e2036b",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Isabel = 7 feet\nNed = 7 - 2 = 5 feet\nCarl = 5 + 1 = 6 feet\nCane = 6 / 2 = 3 feet</think>Isabel is 7 feet tall. Ned is 2 feet shorter than Isabel, so Ned is 5 feet tall. Carl is 1 foot taller than Ned, so Carl is 6 feet tall. Carl's cane is half as long as he is tall, so the cane is 3 feet long.\n\nAnswer: 3",
+  "finish_reason": "stop",
+  "expected": "3",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.4137310970108956
+  },
+  "response": {
+    "id": "cmpl-0367716ad2aa41fab662d95d15150763",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Isabel = 7 feet\nNed = 7 - 2 = 5 feet\nCarl = 5 + 1 = 6 feet\nCane = 6 / 2 = 3 feet</think>Isabel is 7 feet tall. Ned is 2 feet shorter than Isabel, so Ned is 5 feet tall. Carl is 1 foot taller than Ned, so Carl is 6 feet tall. Carl's cane is half as long as he is tall, so the cane is 3 feet long.\n\nAnswer: 3"
+      }
+    ],
+    "created": 1791939346,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 90,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.37,
+      "prompt_tokens_per_sec": 243.24,
+      "completion_tokens": 114,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 93,
+        "rejected_prediction_tokens": 54
+      },
+      "completion_time": 2.04,
+      "completion_tokens_per_sec": 55.94,
+      "total_tokens": 204,
+      "total_time": 2.41
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 90,
+      "prompt_ms": 370.0,
+      "prompt_per_token_ms": 4.111111111111111,
+      "prompt_per_second": 243.24324324324323,
+      "predicted_n": 114,
+      "predicted_ms": 2040.0,
+      "predicted_per_token_ms": 17.894736842105264,
+      "predicted_per_second": 55.88235294117647,
+      "draft_n": 147,
+      "draft_n_accepted": 93
+    }
+  },
+  "used_fallback": false
+}

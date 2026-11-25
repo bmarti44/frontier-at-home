@@ -1,0 +1,104 @@
+{
+  "index": 146,
+  "task_id": "HumanEval/146",
+  "rendered_prompt_sha256": "310a71d2feca4b63bf4ab0279cac60820a61a57157a413efd62823e6c69eb917",
+  "rendering": "raw",
+  "encoder": "mimo26",
+  "completion": "    def is_odd_digit(n):\n        return n % 2 == 1\n\n    def first_last_digits_odd(n):\n        n = abs(n)\n        first_digit = n // (10 ** (len(str(n)) - 1))\n        last_digit = n % 10\n        return is_odd_digit(first_digit) and is_odd_digit(last_digit)\n\n    count = 0\n    for num in nums:\n        if num > 10 and first_last_digits_odd(num):\n            count += 1\n    return count\n\nassert specialFilter([15, -73, 14, -15]) == 1\nassert specialFilter([33, -2, -3, 45, 21, 109]) == 2\nassert specialFilter([10, 20, 30, 40, 50]) == 0\nassert specialFilter([11, 13, 15, 17, 19]) == 5\nassert specialFilter([12, 14, 16, 18, 20]) == 0\nassert specialFilter([101, 103, 105, 107, 109]) == 5\nassert specialFilter([102, 104, 106, 108, 110]) == 0\nassert specialFilter([111, 113, 115, 117, 119]) == 5\nassert specialFilter([112, 114, 116, 118, 120]) == 0\nassert specialFilter([1001, 1003, 1005, 1007, 1009]) == 5\nassert specialFilter([1002, 1004, 1006, 1008, 1010]) == 0\nassert specialFilter([1011, 1013, 1015, 1017, 1019]) == 5\nassert specialFilter([1012, 1014, 1016, 1018, 1020]) == 0\nassert specialFilter([10001, 10003, 10005, 10007, 10009]) == 5\nassert specialFilter([10002, 10004, 10006, 10008, 10010]) == 0\nassert specialFilter([10011, 10013, 10015, 10017, 10019]) == 5\nassert specialFilter([10012, 10014, 10016, 10018, 10020]) == 0\nassert specialFilter([100001, 100003, 100005, 100007, 100009]) == 5\nassert specialFilter([100002, 100004, 100006, 100008, 100010]) == 0\nassert specialFilter([100011, 100013, 100015, 100017, 100019]) == 5\nassert specialFilter([100012, 100014, 100016, 100018, 100020]) == 0\nassert specialFilter([1000001, 1000003, 1000005, 1000007, 1000009]) == 5\nassert specialFilter([1000002, 1000004, 1000006, 1000008, 1000010]) == 0\nassert specialFilter([1000011, 1000013, 1000015, 1000017, 1000019]) == 5\nassert specialFilter([1000012, 1000014, 1000016, 1000018, 1000020]) == 0\nassert specialFilter([10000001, 10000003, 10000005, 10000007, 10000009]) == 5\nassert specialFilter([10000002, 10000004, 10000006, 10000008, 10000010]) == 0\nassert specialFilter([10000011, 10000013, 10000015, 10000017, 10000019]) == 5\nassert specialFilter([10000012, 10000014, 10000016, 10000018, 10000020]) == 0\nassert specialFilter([100000001, 100000003, 100000005, 100000007, 100000009]) == 5\nassert specialFilter([100000002, 100000004, 100000006, 100000008, 100000010]) == 0\nassert specialFilter([100000011, 100000013, 100000015, 100000017, 100000019]) == 5\nassert specialFilter([100000012, 100000014, 100000016, 100000018, 100000020]) == 0\nassert specialFilter([1000000001, 1000000003, 1000000005, 1000000007, 1000000009]) == 5\nassert specialFilter([1000000002, 1000000004, 1000000006, 1000000008, 1000000010]) == 0\nassert specialFilter([1000000011, 1000000013, 1000000015, 1000000017, 1000000019]) == 5\nassert specialFilter([1000000012, 1000000014, 1000000016, 1000000018, 1000000020]) == 0\nassert specialFilter([10000000001, 10000000003, 10000000005, 10000000007, 10000000009]) == 5\nassert specialFilter([10000000002, 10000000004, 10000000006, 10000000008, 10000000010]) == 0\nassert specialFilter([10000000011, 10000000013, 10000000015, 10000000017, 10000000019]) == 5\nassert specialFilter([10000000012, 10000000014, 10000000016, 10000000018, 10000000020]) == 0\nassert specialFilter([100000000001, 100000000003, 100000000005, 100000000007, 100000000009]) == 5\nassert specialFilter([100000000002, 100000000004, 100000000006, 100000000008, 100000000010]) == 0\nassert specialFilter([100000000011, 100000000013, 100000000015, 100000000017, 100000000019]) == 5\nassert specialFilter([100000000012, 100000000014, 100000000016, 100000000018, 100000000020]) == 0\nassert specialFilter([1000000000001, 1000000000003, 1000000000005, 1000000000007, 1000000000009]) == 5\nassert specialFilter([1000000000002, 1000000000004, 1000000000006, 1000000000008, 1000000000010]) == 0\nassert specialFilter([1000000000011, 1000000000013, 1000000000015, 1000000000017, 1000000000019]) == 5\nassert specialFilter([1000000000012, 1000000000014, 1000000000016, 1000000000018, 1000000000020]) == 0\nassert specialFilter([10000000000001, 10000000000003, 10000000000005, 10000000000007, 10000000000009]) == 5\nassert specialFilter([10000000000002, 10000000000004, 10000000000006, 10000000000008, 10000000000010]) == 0\nassert specialFilter([10000000000011, 10000000000013, 10000000000015, 10000000000017, 10000000000019]) == 5\nassert specialFilter([10000000000012, 10000000000014, 10000000000016, 10000000000018, 10000000000020]) == 0\nassert specialFilter([100000000000001, 100000000000003, 100000000000005, 100000000000007, 100000000000009]) == 5\nassert specialFilter([100000000000002, 100000000000004, 100000000000006, 100000000000008, 100000000000010]) == 0\nassert specialFilter([100000000000011, 100000000000013, 100000000000015, 100000000000017, 100000000000019]) == 5\nassert specialFilter([100000000000012, 100000000000014, 100000000000016, 100000000000018, 100000000000020]) == 0\nassert specialFilter([1000000000000001, 1000000000000003, 1000000000000005, 1000000000000007, 1000000000000009]) == 5\nassert specialFilter([1000000000000002, 1000000000000004, 1000000000000006, 1000000000000008, 1000000000000010]) == 0\nassert specialFilter([1000000000000011, 1000000000000013, 1000000000000015, 1000000000000017, 1000000000000019]) == 5\nassert specialFilter([1000000000000012, 1000000000000014, 1000000000000016, 1000000000000018, 1000000000000020]) == 0\nassert specialFilter([10000000000000001, 10000000000000003, 10000000000000005, 10000000000000007, 10000000000000009]) == 5\nassert specialFilter([1000000000000\n10,: 1\n1 1,  the    first the first    the assert special(    the  1 the  the  1 the the   specialFilter the special  the 10   the  the the specialFilter special      special the  the the   the the the 1 the the the  the  the, the   the the the the  1,  10,  10,  10, 10,   109,  10 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,",
+  "finish_reason": "stop",
+  "expected": "    \n    count = 0\n    for num in nums:\n        if num > 10:\n            odd_digits = (1, 3, 5, 7, 9)\n            number_as_string = str(num)\n            if int(number_as_string[0]) in odd_digits and int(number_as_string[-1]) in odd_digits:\n                count += 1\n        \n    return count \n",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 66.00063088303432
+  },
+  "response": {
+    "id": "cmpl-db66221e099c45f8b057971e9c9ed571",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "loop_detected",
+        "logprobs": null,
+        "text": "    def is_odd_digit(n):\n        return n % 2 == 1\n\n    def first_last_digits_odd(n):\n        n = abs(n)\n        first_digit = n // (10 ** (len(str(n)) - 1))\n        last_digit = n % 10\n        return is_odd_digit(first_digit) and is_odd_digit(last_digit)\n\n    count = 0\n    for num in nums:\n        if num > 10 and first_last_digits_odd(num):\n            count += 1\n    return count\n\nassert specialFilter([15, -73, 14, -15]) == 1\nassert specialFilter([33, -2, -3, 45, 21, 109]) == 2\nassert specialFilter([10, 20, 30, 40, 50]) == 0\nassert specialFilter([11, 13, 15, 17, 19]) == 5\nassert specialFilter([12, 14, 16, 18, 20]) == 0\nassert specialFilter([101, 103, 105, 107, 109]) == 5\nassert specialFilter([102, 104, 106, 108, 110]) == 0\nassert specialFilter([111, 113, 115, 117, 119]) == 5\nassert specialFilter([112, 114, 116, 118, 120]) == 0\nassert specialFilter([1001, 1003, 1005, 1007, 1009]) == 5\nassert specialFilter([1002, 1004, 1006, 1008, 1010]) == 0\nassert specialFilter([1011, 1013, 1015, 1017, 1019]) == 5\nassert specialFilter([1012, 1014, 1016, 1018, 1020]) == 0\nassert specialFilter([10001, 10003, 10005, 10007, 10009]) == 5\nassert specialFilter([10002, 10004, 10006, 10008, 10010]) == 0\nassert specialFilter([10011, 10013, 10015, 10017, 10019]) == 5\nassert specialFilter([10012, 10014, 10016, 10018, 10020]) == 0\nassert specialFilter([100001, 100003, 100005, 100007, 100009]) == 5\nassert specialFilter([100002, 100004, 100006, 100008, 100010]) == 0\nassert specialFilter([100011, 100013, 100015, 100017, 100019]) == 5\nassert specialFilter([100012, 100014, 100016, 100018, 100020]) == 0\nassert specialFilter([1000001, 1000003, 1000005, 1000007, 1000009]) == 5\nassert specialFilter([1000002, 1000004, 1000006, 1000008, 1000010]) == 0\nassert specialFilter([1000011, 1000013, 1000015, 1000017, 1000019]) == 5\nassert specialFilter([1000012, 1000014, 1000016, 1000018, 1000020]) == 0\nassert specialFilter([10000001, 10000003, 10000005, 10000007, 10000009]) == 5\nassert specialFilter([10000002, 10000004, 10000006, 10000008, 10000010]) == 0\nassert specialFilter([10000011, 10000013, 10000015, 10000017, 10000019]) == 5\nassert specialFilter([10000012, 10000014, 10000016, 10000018, 10000020]) == 0\nassert specialFilter([100000001, 100000003, 100000005, 100000007, 100000009]) == 5\nassert specialFilter([100000002, 100000004, 100000006, 100000008, 100000010]) == 0\nassert specialFilter([100000011, 100000013, 100000015, 100000017, 100000019]) == 5\nassert specialFilter([100000012, 100000014, 100000016, 100000018, 100000020]) == 0\nassert specialFilter([1000000001, 1000000003, 1000000005, 1000000007, 1000000009]) == 5\nassert specialFilter([1000000002, 1000000004, 1000000006, 1000000008, 1000000010]) == 0\nassert specialFilter([1000000011, 1000000013, 1000000015, 1000000017, 1000000019]) == 5\nassert specialFilter([1000000012, 1000000014, 1000000016, 1000000018, 1000000020]) == 0\nassert specialFilter([10000000001, 10000000003, 10000000005, 10000000007, 10000000009]) == 5\nassert specialFilter([10000000002, 10000000004, 10000000006, 10000000008, 10000000010]) == 0\nassert specialFilter([10000000011, 10000000013, 10000000015, 10000000017, 10000000019]) == 5\nassert specialFilter([10000000012, 10000000014, 10000000016, 10000000018, 10000000020]) == 0\nassert specialFilter([100000000001, 100000000003, 100000000005, 100000000007, 100000000009]) == 5\nassert specialFilter([100000000002, 100000000004, 100000000006, 100000000008, 100000000010]) == 0\nassert specialFilter([100000000011, 100000000013, 100000000015, 100000000017, 100000000019]) == 5\nassert specialFilter([100000000012, 100000000014, 100000000016, 100000000018, 100000000020]) == 0\nassert specialFilter([1000000000001, 1000000000003, 1000000000005, 1000000000007, 1000000000009]) == 5\nassert specialFilter([1000000000002, 1000000000004, 1000000000006, 1000000000008, 1000000000010]) == 0\nassert specialFilter([1000000000011, 1000000000013, 1000000000015, 1000000000017, 1000000000019]) == 5\nassert specialFilter([1000000000012, 1000000000014, 1000000000016, 1000000000018, 1000000000020]) == 0\nassert specialFilter([10000000000001, 10000000000003, 10000000000005, 10000000000007, 10000000000009]) == 5\nassert specialFilter([10000000000002, 10000000000004, 10000000000006, 10000000000008, 10000000000010]) == 0\nassert specialFilter([10000000000011, 10000000000013, 10000000000015, 10000000000017, 10000000000019]) == 5\nassert specialFilter([10000000000012, 10000000000014, 10000000000016, 10000000000018, 10000000000020]) == 0\nassert specialFilter([100000000000001, 100000000000003, 100000000000005, 100000000000007, 100000000000009]) == 5\nassert specialFilter([100000000000002, 100000000000004, 100000000000006, 100000000000008, 100000000000010]) == 0\nassert specialFilter([100000000000011, 100000000000013, 100000000000015, 100000000000017, 100000000000019]) == 5\nassert specialFilter([100000000000012, 100000000000014, 100000000000016, 100000000000018, 100000000000020]) == 0\nassert specialFilter([1000000000000001, 1000000000000003, 1000000000000005, 1000000000000007, 1000000000000009]) == 5\nassert specialFilter([1000000000000002, 1000000000000004, 1000000000000006, 1000000000000008, 1000000000000010]) == 0\nassert specialFilter([1000000000000011, 1000000000000013, 1000000000000015, 1000000000000017, 1000000000000019]) == 5\nassert specialFilter([1000000000000012, 1000000000000014, 1000000000000016, 1000000000000018, 1000000000000020]) == 0\nassert specialFilter([10000000000000001, 10000000000000003, 10000000000000005, 10000000000000007, 10000000000000009]) == 5\nassert specialFilter([1000000000000\n10,: 1\n1 1,  the    first the first    the assert special(    the  1 the  the  1 the the   specialFilter the special  the 10   the  the the specialFilter special      special the  the the   the the the 1 the the the  the  the, the   the the the the  1,  10,  10,  10, 10,   109,  10 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,"
+      }
+    ],
+    "created": 1791963423,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 124,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.4,
+      "prompt_tokens_per_sec": 310.0,
+      "completion_tokens": 4901,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 4195,
+        "rejected_prediction_tokens": 747
+      },
+      "completion_time": 65.59,
+      "completion_tokens_per_sec": 74.72,
+      "total_tokens": 5025,
+      "total_time": 66.0
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 124,
+      "prompt_ms": 400.0,
+      "prompt_per_token_ms": 3.225806451612903,
+      "prompt_per_second": 310.0,
+      "predicted_n": 4901,
+      "predicted_ms": 65590.0,
+      "predicted_per_token_ms": 13.382983064680678,
+      "predicted_per_second": 74.72175636529958,
+      "draft_n": 4942,
+      "draft_n_accepted": 4195
+    }
+  },
+  "execution": {
+    "command": [
+      "docker",
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "128",
+      "--cpus",
+      "1",
+      "--read-only",
+      "--tmpfs",
+      "/tmp",
+      "-u",
+      "65534:65534",
+      "-v",
+      "/tmp/dsv4-humaneval-0txsaxrn/case-00146:/case:ro",
+      "python:3.12-slim",
+      "timeout",
+      "10",
+      "python",
+      "/case/main.py"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

@@ -1,0 +1,340 @@
+{
+  "kind": "qualify-profile-manifest",
+  "schema_version": 1,
+  "kit": {
+    "script": "scripts/94_qualify_profile.py",
+    "sha256": "ab8dfac09774549a553f29294184d48aa3078105653f1adee219cb15b30ba796",
+    "argv": [
+      "/home/bmarti44/mimo26/scripts/94_qualify_profile.py",
+      "--profile",
+      "mimo-v2.6-flash/cuda-spark-128g-262k",
+      "--host",
+      "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/smoke-2026-10-13/host-worktree.json",
+      "--port",
+      "8019",
+      "--no-launch",
+      "--out",
+      "/tmp/tmp.jpLwZCda9r",
+      "--dry-run",
+      "--cells",
+      "accuracy",
+      "--accuracy-split",
+      "holdout",
+      "--reasoning-effort",
+      ""
+    ]
+  },
+  "dry_run": true,
+  "no_launch": true,
+  "start_unix": 1791939154.0237858,
+  "start_iso": "2026-10-14T00:52:34.090427+00:00",
+  "profile": {
+    "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+    "model_slug": "mimo-v2.6-flash",
+    "profile_file": "/home/bmarti44/mimo26/configs/profiles/mimo-v2.6-flash/cuda-spark-128g-262k.json",
+    "profile_status": "qualified",
+    "profile_evidence": null,
+    "mechanism": "systemd-run",
+    "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k",
+    "switch_alias": "mimo26flash",
+    "rendered_port": 8013,
+    "served_model": "mimo-v2.6-flash",
+    "model_path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash",
+    "tokenizer_path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json",
+    "tokenizer_sha256": "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e",
+    "tokenizer_sha256_expected": "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e",
+    "slots": 1,
+    "tokens_per_slot": 262144,
+    "context_cap": 262144,
+    "kill_floor_gib": 8,
+    "minimum_start_gib": 114,
+    "startup_timeout_seconds": 1800,
+    "safety": {
+      "kill_floor_gib": 8,
+      "minimum_start_gib": 114,
+      "sample_hz": 1,
+      "startup_timeout_seconds": 1800,
+      "note": "8 GiB whole-host floor, the production precedent (qwen38fn). minimum_start_gib = ceil(peak + 8) from candidate 3's run (peak 105.71 GiB). CUDA allocations on GB10 are not charged to the memory cgroup, so MemoryHigh/MemoryMax bound only host-side pages (page cache of the 94 GiB pack read, the Python heap); the external memwatch floor is the binding control."
+    },
+    "serving": {
+      "parallel_slots": 1,
+      "request_context_cap": 262144
+    },
+    "containment": {
+      "unit": "mimo26flash-engine",
+      "memory_high": "8G",
+      "memory_max": "16G",
+      "memory_swap_max": "0",
+      "oom_policy": "kill",
+      "kill_mode": "control-group",
+      "extra_properties": {
+        "NoNewPrivileges": "yes"
+      }
+    },
+    "digest_checks": [
+      {
+        "path": "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime/bin/python3.12",
+        "sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/model.safetensors.index.json",
+        "sha256": "773cd59f2a48d3cfa0bbd094a1145f8f066c0e59f4d30b632be765585a0e3c42"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/config.json",
+        "sha256": "f45948486d0c52ccf5440807e9e4b102c33dd0f56b859b35cd9013f35d319302"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/quantization_config.json",
+        "sha256": "2f5990e7d36b60c8eda92ee13c52316b3abe59beed371cc524286ff8069aa5d5"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer.json",
+        "sha256": "ff15eb925890d6b71b5160de4b846fbd13178438ab463b38ecc953e8cd1dcb3e"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/tokenizer_config.json",
+        "sha256": "413a7845f52943ccf4de0e5c838414507d16c44dbf573da9e20bc8902b384d06"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/chat_template.jinja",
+        "sha256": "11ea52e156de38a458e6b7720ad45915d65b97d4ec979a09f55e3c9bd1b4d059"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/generation_config.json",
+        "sha256": "eecf00d9701921271c904a916c425ba6db61bcd190902e200d0a322bfd5572dd"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash/preprocessor_config.json",
+        "sha256": "fbe073ccca943767c92ce3774f535dc8037e126f1594056f397ad3a4b1a1a7a4"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash/config.json",
+        "sha256": "fc1896087781e12c3d162314ab4c5ecfc9f8ed84e388c20f640d83d4f4b1a3e6"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash/quantization_config.json",
+        "sha256": "f6a9cb5eb62ac199a7fdb1678b7b1a36b42d287e9f260ec3ecf6b6421fdc261c"
+      },
+      {
+        "path": "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash/model.safetensors",
+        "sha256": "a1e133f57bed80405386ce917a6f12b1f47d5fc5c69a74e32d84d976875390af"
+      }
+    ],
+    "binary": "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime/bin/python3.12",
+    "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+    "binary_sha256_expected": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+    "argv": [
+      "-B",
+      "-m",
+      "tabby_launch",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "8013",
+      "--disable-auth",
+      "true",
+      "--disable-fetch-requests",
+      "true",
+      "--model-name",
+      "/home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-flash",
+      "--backend",
+      "exllamav3",
+      "--inline-model-loading",
+      "false",
+      "--max-seq-len",
+      "262144",
+      "--cache-size",
+      "262144",
+      "--max-batch-size",
+      "1",
+      "--cache-mode",
+      "8,8",
+      "--chunk-size",
+      "2048",
+      "--sysmem-recurrent-cache",
+      "512",
+      "--sysmem-multimodal-cache",
+      "256",
+      "--vision",
+      "true",
+      "--reasoning",
+      "true",
+      "--tool-format",
+      "qwen3_coder",
+      "--draft-model-name",
+      "/home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-flash-dflash",
+      "--draft-mode",
+      "model",
+      "--log-prompt",
+      "false",
+      "--log-generation-params",
+      "false",
+      "--log-requests",
+      "false",
+      "--log-chat-completion-requests",
+      "false"
+    ],
+    "env": {
+      "HOME": "/home/bmarti44/.cache/mimo-v26-flash/home",
+      "LANG": "C.UTF-8",
+      "PATH": "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/runtime/bin:/usr/local/cuda-13.0/bin:/usr/bin:/bin",
+      "PYTHONPATH": "/home/bmarti44/mimo26/scripts/lib",
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "CUDA_HOME": "/usr/local/cuda-13.0",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1",
+      "DO_NOT_TRACK": "1",
+      "MAX_JOBS": "2",
+      "NVCC_THREADS": "1",
+      "TABBY_ROOT": "/home/bmarti44/.cache/mimo-v26-flash/native-runtime-001/src/tabbyAPI"
+    },
+    "check": {
+      "exit_code": 0,
+      "stdout": "{\n \"profile_id\": \"mimo-v2.6-flash/cuda-spark-128g-262k\",\n \"status\": \"qualified\",\n \"feasibility\": {\n  \"weights_gib\": 94.98,\n  \"kv_gib\": 3.59,\n  \"fit_gib\": 105.77,\n  \"usable_gib\": 114,\n  \"verdict\": \"feasible\"\n },\n \"missing_artifacts\": []\n}",
+      "stderr": ""
+    },
+    "reference_logits": null,
+    "qualification_targets": null,
+    "speed_max_tokens_per_event": 8,
+    "qualification_options": {
+      "note": "vision_max_tokens: in chat mode MiMo answers MMMU with worked steps; at the bench's 256-token default 4 of 20 answers ran out of budget mid-calculation (finish_reason length; results/mimo-v26-flash-gates/preflight-2026-10-13/kit/vision). Thinking mode has no effort level here and would spend more.",
+      "speed_max_tokens_per_event": 8,
+      "vision_max_tokens": 4096
+    },
+    "vision_thinking_mode": "chat",
+    "vision_max_tokens": 4096,
+    "encoder": "mimo26",
+    "config_hash": "mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f"
+  },
+  "port": 8019,
+  "base_url": "http://127.0.0.1:8019",
+  "out": "/tmp/tmp.jpLwZCda9r",
+  "host": {
+    "uname": "Linux spark-aba1 6.17.0-1026-nvidia #26-Ubuntu SMP PREEMPT_DYNAMIC Thu Jun 25 00:57:17 UTC 2026 aarch64 aarch64",
+    "hostname": "spark-aba1",
+    "nproc": 20,
+    "python": "3.12.3",
+    "mem_total_kib": 125483616,
+    "mem_total_gib": 119.67,
+    "gpu_name": "NVIDIA GB10",
+    "gpu_driver": "580.159.03"
+  },
+  "git": {
+    "head": "12a2e5a791b2e9b4198fb6ed52be26236d29aad6",
+    "branch": "claim-model/mimo-v2.6-flash/cuda",
+    "dirty": false
+  },
+  "scripts": {
+    "92_resolve_profile.py": "51d06e7b87d7e4542cbaf20784bf8abd1bbe5a794c30942e894462b97e6b6122",
+    "93_profile_serve.sh": "5816b2d44e04c5c76baa1c8ca87fc4f631ee197a12ba5a340674cdb8edb147f5",
+    "30_bench_speed.py": "247c60f50b439fdd300346915e1c20904270d43e9b36d424174d7bc6a6c3dc4d",
+    "39_bench_toolcall.py": "70c5abd36694d953dff1890aad94c9af84923b216fa45b5399cde13082fe5797",
+    "38_bench_vision.py": "4260f8950e69025d930f319a654ddce07ff8525198fd419a25cc07542c8d3171",
+    "51_probe_media_max.py": "84d477dfd73ef21546c7ed18694732c5d9dbf1d4c4f1cded8396ae2ef473abd2",
+    "49_score_teacher_windows.py": "036cabca94c42aa0adf3a33ff967c064cb26c2d6f910ff39310e0eff5f28b759",
+    "31_bench_accuracy.py": "0371882c6ae2a884928d6e05ca76cce81cd4ec9ad53af6f6b0b008e3688da730",
+    "50_probe_context.py": "758df9ee813f13093db801152c0bbba5c0b5b2498b0f61d1a0762faa94219f62",
+    "35_soak.py": "e6082aa9795beb9a5e0cea31fb22fd31ff104bea109c64d431d9e11a8d337d72",
+    "30_bench_speed_blocks.py": "f3d9fdf9d3308d4959b1e759b00e413ca5ea0560af65f5293fe34fe7ea6ac60b"
+  },
+  "cells_selected": [
+    "accuracy"
+  ],
+  "cells_kept_from_previous_run": [],
+  "cells": {
+    "accuracy": {
+      "argv": {
+        "gsm8k": [
+          "/usr/bin/python3",
+          "/home/bmarti44/mimo26/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8019",
+          "--out",
+          "/tmp/tmp.jpLwZCda9r/accuracy/acc-gsm8k.json",
+          "--stack-label",
+          "mimo-v2.6-flash-cuda-spark-128g-262k",
+          "--suite",
+          "gsm8k",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/tmp/tmp.jpLwZCda9r/accuracy/transcripts/gsm8k",
+          "--encoder",
+          "mimo26",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "mimo-v2.6-flash/cuda-spark-128g-262k",
+          "--config-hash",
+          "mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f",
+          "--config-evidence",
+          "/tmp/tmp.jpLwZCda9r/accuracy/config-evidence.json"
+        ],
+        "mmlu-pro": [
+          "/usr/bin/python3",
+          "/home/bmarti44/mimo26/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8019",
+          "--out",
+          "/tmp/tmp.jpLwZCda9r/accuracy/acc-mmlu-pro.json",
+          "--stack-label",
+          "mimo-v2.6-flash-cuda-spark-128g-262k",
+          "--suite",
+          "mmlu-pro",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/tmp/tmp.jpLwZCda9r/accuracy/transcripts/mmlu-pro",
+          "--encoder",
+          "mimo26",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "mimo-v2.6-flash/cuda-spark-128g-262k",
+          "--config-hash",
+          "mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f",
+          "--config-evidence",
+          "/tmp/tmp.jpLwZCda9r/accuracy/config-evidence.json"
+        ],
+        "humaneval": [
+          "/usr/bin/python3",
+          "/home/bmarti44/mimo26/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8019",
+          "--out",
+          "/tmp/tmp.jpLwZCda9r/accuracy/acc-humaneval.json",
+          "--stack-label",
+          "mimo-v2.6-flash-cuda-spark-128g-262k",
+          "--suite",
+          "humaneval",
+          "--split",
+          "all",
+          "--transcripts-dir",
+          "/tmp/tmp.jpLwZCda9r/accuracy/transcripts/humaneval",
+          "--encoder",
+          "mimo26",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "mimo-v2.6-flash/cuda-spark-128g-262k",
+          "--config-hash",
+          "mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f",
+          "--config-evidence",
+          "/tmp/tmp.jpLwZCda9r/accuracy/config-evidence.json"
+        ]
+      },
+      "skip_reason": null,
+      "evidence": "accuracy/acc-<suite>.json"
+    }
+  }
+}

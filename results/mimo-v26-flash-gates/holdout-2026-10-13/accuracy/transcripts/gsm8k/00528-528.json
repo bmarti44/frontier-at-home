@@ -1,0 +1,69 @@
+{
+  "index": 528,
+  "task_id": 528,
+  "rendered_prompt_sha256": "8e13c17061425ddb8f21e34b9b96a73e66ed5f9050e0d00cc259fb28ca4c06ca",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Ophelia has 20 sofas. She has 2 fewer sofas than chairs, so she has 22 chairs.\n\nJenna has 3 times as many chairs as Ophelia: 3 × 22 = 66 chairs.\nJenna has 2 fewer sofas than chairs: 66 - 2 = 64 sofas.\n\nTotal sofas: 20 + 64 = 84\nTotal chairs: 22 + 66 = 88\nTotal: 84 + 88 = 172</think>**Ophelia:**\n- Sofas: 20\n- Chairs: 20 + 2 = 22\n\n**Jenna:**\n- Chairs: 3 × 22 = 66\n- Sofas: 66 - 2 = 64\n\n**Totals:**\n- Sofas: 20 + 64 = 84\n- Chairs: 22 + 66 = 88\n- Grand total: 84 + 88 = 172\n\nAnswer: 172",
+  "finish_reason": "stop",
+  "expected": "172",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.093562665977515
+  },
+  "response": {
+    "id": "cmpl-ad211c758688490a8b92baa1dcc9217b",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Ophelia has 20 sofas. She has 2 fewer sofas than chairs, so she has 22 chairs.\n\nJenna has 3 times as many chairs as Ophelia: 3 × 22 = 66 chairs.\nJenna has 2 fewer sofas than chairs: 66 - 2 = 64 sofas.\n\nTotal sofas: 20 + 64 = 84\nTotal chairs: 22 + 66 = 88\nTotal: 84 + 88 = 172</think>**Ophelia:**\n- Sofas: 20\n- Chairs: 20 + 2 = 22\n\n**Jenna:**\n- Chairs: 3 × 22 = 66\n- Sofas: 66 - 2 = 64\n\n**Totals:**\n- Sofas: 20 + 64 = 84\n- Chairs: 22 + 66 = 88\n- Grand total: 84 + 88 = 172\n\nAnswer: 172"
+      }
+    ],
+    "created": 1791939317,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 90,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.39,
+      "prompt_tokens_per_sec": 230.77,
+      "completion_tokens": 242,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 204,
+        "rejected_prediction_tokens": 62
+      },
+      "completion_time": 3.7,
+      "completion_tokens_per_sec": 65.36,
+      "total_tokens": 332,
+      "total_time": 4.09
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 90,
+      "prompt_ms": 390.0,
+      "prompt_per_token_ms": 4.333333333333333,
+      "prompt_per_second": 230.7692307692308,
+      "predicted_n": 242,
+      "predicted_ms": 3700.0,
+      "predicted_per_token_ms": 15.289256198347108,
+      "predicted_per_second": 65.4054054054054,
+      "draft_n": 266,
+      "draft_n_accepted": 204
+    }
+  },
+  "used_fallback": false
+}

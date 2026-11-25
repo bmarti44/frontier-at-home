@@ -1,0 +1,69 @@
+{
+  "index": 615,
+  "task_id": 615,
+  "rendered_prompt_sha256": "e46f1fcb619fca8053a57186e6203889569ee59a15dd65041426772492e112f4",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Aquarium: $10.00\n2 bags of rocks: 2 × $2.50 = $5.00\n3 pieces of coral: 3 × $2.00 = $6.00\n20 fish: 20 × $0.50 = $10.00\nFish food: $2.00\n\nTotal: 10 + 5 + 6 + 10 + 2 = $33.00</think>Let me add up all the costs:\n\n- Aquarium: $10.00\n- 2 bags of rocks: 2 × $2.50 = $5.00\n- 3 pieces of coral: 3 × $2.00 = $6.00\n- 20 fish: 20 × $0.50 = $10.00\n- Fish food: $2.00\n\nTotal: $10.00 + $5.00 + $6.00 + $10.00 + $2.00 = $33.00\n\nAnswer: 33",
+  "finish_reason": "stop",
+  "expected": "33",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.9456753649865277
+  },
+  "response": {
+    "id": "cmpl-7a9283ae1ebb4e1baf70caebf1097365",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Aquarium: $10.00\n2 bags of rocks: 2 × $2.50 = $5.00\n3 pieces of coral: 3 × $2.00 = $6.00\n20 fish: 20 × $0.50 = $10.00\nFish food: $2.00\n\nTotal: 10 + 5 + 6 + 10 + 2 = $33.00</think>Let me add up all the costs:\n\n- Aquarium: $10.00\n- 2 bags of rocks: 2 × $2.50 = $5.00\n- 3 pieces of coral: 3 × $2.00 = $6.00\n- 20 fish: 20 × $0.50 = $10.00\n- Fish food: $2.00\n\nTotal: $10.00 + $5.00 + $6.00 + $10.00 + $2.00 = $33.00\n\nAnswer: 33"
+      }
+    ],
+    "created": 1791939511,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 118,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.42,
+      "prompt_tokens_per_sec": 280.95,
+      "completion_tokens": 249,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 212,
+        "rejected_prediction_tokens": 47
+      },
+      "completion_time": 3.52,
+      "completion_tokens_per_sec": 70.68,
+      "total_tokens": 367,
+      "total_time": 3.94
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 118,
+      "prompt_ms": 420.0,
+      "prompt_per_token_ms": 3.559322033898305,
+      "prompt_per_second": 280.95238095238096,
+      "predicted_n": 249,
+      "predicted_ms": 3520.0,
+      "predicted_per_token_ms": 14.136546184738956,
+      "predicted_per_second": 70.73863636363637,
+      "draft_n": 259,
+      "draft_n_accepted": 212
+    }
+  },
+  "used_fallback": false
+}

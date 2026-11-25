@@ -1,0 +1,188 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "mimo-v2.6-flash/cuda-spark-128g-262k",
+  "stack_label": "mimo-v2.6-flash-cuda-spark-128g-262k",
+  "served_model": "mimo-v2.6-flash",
+  "out": "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13",
+  "start_unix": 1791939280.4938107,
+  "end_unix": 1791964936.366437,
+  "start_iso": "2026-10-14T00:54:40.575622+00:00",
+  "end_iso": "2026-10-14T08:02:16.366441+00:00",
+  "targets": null,
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "accuracy": {
+      "status": "OK",
+      "evidence": "accuracy/acc-<suite>.json",
+      "start_unix": 1791939280.6355,
+      "argv": {
+        "gsm8k": [
+          "/usr/bin/python3",
+          "/home/bmarti44/mimo26/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8019",
+          "--out",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/acc-gsm8k.json",
+          "--stack-label",
+          "mimo-v2.6-flash-cuda-spark-128g-262k",
+          "--suite",
+          "gsm8k",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/transcripts/gsm8k",
+          "--encoder",
+          "mimo26",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "mimo-v2.6-flash/cuda-spark-128g-262k",
+          "--config-hash",
+          "mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f",
+          "--config-evidence",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/config-evidence.json"
+        ],
+        "mmlu-pro": [
+          "/usr/bin/python3",
+          "/home/bmarti44/mimo26/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8019",
+          "--out",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/acc-mmlu-pro.json",
+          "--stack-label",
+          "mimo-v2.6-flash-cuda-spark-128g-262k",
+          "--suite",
+          "mmlu-pro",
+          "--split",
+          "holdout",
+          "--transcripts-dir",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/transcripts/mmlu-pro",
+          "--encoder",
+          "mimo26",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "mimo-v2.6-flash/cuda-spark-128g-262k",
+          "--config-hash",
+          "mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f",
+          "--config-evidence",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/config-evidence.json"
+        ],
+        "humaneval": [
+          "/usr/bin/python3",
+          "/home/bmarti44/mimo26/scripts/31_bench_accuracy.py",
+          "--base-url",
+          "http://127.0.0.1:8019",
+          "--out",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/acc-humaneval.json",
+          "--stack-label",
+          "mimo-v2.6-flash-cuda-spark-128g-262k",
+          "--suite",
+          "humaneval",
+          "--split",
+          "all",
+          "--transcripts-dir",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/transcripts/humaneval",
+          "--encoder",
+          "mimo26",
+          "--max-tokens",
+          "16384",
+          "--request-timeout",
+          "2700",
+          "--profile-id",
+          "mimo-v2.6-flash/cuda-spark-128g-262k",
+          "--config-hash",
+          "mimo-v2.6-flash-cuda-spark-128g-262k-eac45232288f",
+          "--config-evidence",
+          "/home/bmarti44/mimo26/results/mimo-v26-flash-gates/holdout-2026-10-13/accuracy/config-evidence.json"
+        ]
+      },
+      "skip_reason": null,
+      "exit_code": {
+        "gsm8k": 0,
+        "mmlu-pro": 0,
+        "humaneval": 0
+      },
+      "wall_s": 25655.72952899401,
+      "suites_kept_from_previous_run": [],
+      "suites_not_run_after_failure": [],
+      "result": {
+        "suites": {
+          "gsm8k": {
+            "accuracy": 0.97,
+            "n": 100,
+            "correct": 97,
+            "invalid_count": 0,
+            "split": "holdout",
+            "wilson95": [
+              0.9154806357094724,
+              0.9897454759759611
+            ]
+          },
+          "mmlu-pro": {
+            "accuracy": 0.805668016194332,
+            "n": 247,
+            "correct": 199,
+            "invalid_count": 18,
+            "split": "holdout",
+            "wilson95": [
+              0.751797233572884,
+              0.8501766215861131
+            ]
+          },
+          "humaneval": {
+            "accuracy": 0.7073170731707317,
+            "n": 164,
+            "correct": 116,
+            "invalid_count": 1,
+            "split": "all",
+            "wilson95": [
+              0.63357457650857,
+              0.7715696618565454
+            ]
+          }
+        }
+      },
+      "end_unix": 1791964936.3659792
+    }
+  },
+  "rows": [
+    {
+      "cell": "accuracy",
+      "metric": "gsm8k",
+      "measured": 0.97,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "humaneval",
+      "measured": 0.7073170731707317,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "accuracy",
+      "metric": "mmlu-pro",
+      "measured": 0.805668016194332,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "MEASURED",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}

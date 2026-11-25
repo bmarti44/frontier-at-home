@@ -1,0 +1,68 @@
+{
+  "index": 3404,
+  "task_id": 3525,
+  "rendered_prompt_sha256": "5771b92e40735480a9f27ea828b003935fc7cb544051c5603aa9f9f6f71a5ff3",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>The correct answer is B.</think>Answer: B",
+  "finish_reason": "stop",
+  "expected": "B",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 0.9967025609803386
+  },
+  "response": {
+    "id": "cmpl-3d0c72844ba149bb820da51bce61044d",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>The correct answer is B.</think>Answer: B"
+      }
+    ],
+    "created": 1791939967,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 224,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.61,
+      "prompt_tokens_per_sec": 367.21,
+      "completion_tokens": 12,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 8,
+        "rejected_prediction_tokens": 20
+      },
+      "completion_time": 0.38,
+      "completion_tokens_per_sec": 31.55,
+      "total_tokens": 236,
+      "total_time": 0.99
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 224,
+      "prompt_ms": 610.0,
+      "prompt_per_token_ms": 2.7232142857142856,
+      "prompt_per_second": 367.21311475409834,
+      "predicted_n": 12,
+      "predicted_ms": 380.0,
+      "predicted_per_token_ms": 31.666666666666668,
+      "predicted_per_second": 31.578947368421055,
+      "draft_n": 28,
+      "draft_n_accepted": 8
+    }
+  }
+}

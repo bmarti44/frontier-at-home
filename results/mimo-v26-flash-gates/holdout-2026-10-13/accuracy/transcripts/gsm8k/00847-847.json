@@ -1,0 +1,70 @@
+{
+  "index": 847,
+  "task_id": 847,
+  "rendered_prompt_sha256": "c40f2875c038d9d65aae47d52b05623557cea6f9516d713fc4be68fbc07b0eb8",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Simple interest: rate = 3/4 of original amount per year = 0.75 × 300 = 225 per year.\n\nInterest for 3 years = 225 × 3 = 675.\n\nTotal = 300 + 675 = 975.</think>Simple interest per year = ¾ × $300 = $225\n\nInterest over 3 years = $225 × 3 = $675\n\nTotal = $300 + $675 = $975\n\nAnswer: 975",
+  "finish_reason": "stop",
+  "expected": "975",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.336937085026875
+  },
+  "response": {
+    "id": "cmpl-5364ad57cffa40528c4a777429dae56f",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Simple interest: rate = 3/4 of original amount per year = 0.75 × 300 = 225 per year.\n\nInterest for 3 years = 225 × 3 = 675.\n\nTotal = 300 + 675 = 975.</think>Simple interest per year = ¾ × $300 = $225\n\nInterest over 3 years = $225 × 3 = $675\n\nTotal = $300 + $675 = $975\n\nAnswer: 975"
+      }
+    ],
+    "created": 1791939400,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 73,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 208.57,
+      "completion_tokens": 132,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 111,
+        "rejected_prediction_tokens": 36
+      },
+      "completion_time": 1.98,
+      "completion_tokens_per_sec": 66.68,
+      "total_tokens": 205,
+      "total_time": 2.33
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 73,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 4.794520547945205,
+      "prompt_per_second": 208.57142857142858,
+      "predicted_n": 132,
+      "predicted_ms": 1980.0,
+      "predicted_per_token_ms": 15.0,
+      "predicted_per_second": 66.66666666666667,
+      "draft_n": 147,
+      "draft_n_accepted": 111
+    }
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|im_start|>user\nBrenda invested $300 into a scheme that accumulates simple interest at the rate of three-quarters of the original amount per year. How much in total will she have after 3 years?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|im_end|><|im_start|>assistant\n"
+}

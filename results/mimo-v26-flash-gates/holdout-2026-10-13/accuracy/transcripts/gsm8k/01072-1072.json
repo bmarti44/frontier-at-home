@@ -1,0 +1,69 @@
+{
+  "index": 1072,
+  "task_id": 1072,
+  "rendered_prompt_sha256": "c92f0557cde13fd88e105e5dffb3259755c178f502acce7e851ee91e48c31bf2",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Maggie spent a quarter of her money, so she has 3/4 left = $60. Her original money = $60 / (3/4) = $80. She spent $20.\n\nRiza spent one-third of her money, so she has 2/3 left = $60. Her original money = $60 / (2/3) = $90. She spent $30.\n\nTotal left = $60 + $60 = $120.</think>**Maggie:** She spent ¼ of her money, so she has ¾ left = $60. Her original amount was $60 ÷ ¾ = $80.\n\n**Riza:** She spent ⅓ of her money, so she has ⅔ left = $60. Her original amount was $60 ÷ ⅔ = $90.\n\n**Total left:** $60 + $60 = $120\n\nAnswer: 120",
+  "finish_reason": "stop",
+  "expected": "85",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='120' expected='85'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.744994363980368
+  },
+  "response": {
+    "id": "cmpl-bd98195238f145c3aa09be566705daf8",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Maggie spent a quarter of her money, so she has 3/4 left = $60. Her original money = $60 / (3/4) = $80. She spent $20.\n\nRiza spent one-third of her money, so she has 2/3 left = $60. Her original money = $60 / (2/3) = $90. She spent $30.\n\nTotal left = $60 + $60 = $120.</think>**Maggie:** She spent ¼ of her money, so she has ¾ left = $60. Her original amount was $60 ÷ ¾ = $80.\n\n**Riza:** She spent ⅓ of her money, so she has ⅔ left = $60. Her original amount was $60 ÷ ⅔ = $90.\n\n**Total left:** $60 + $60 = $120\n\nAnswer: 120"
+      }
+    ],
+    "created": 1791939507,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 70,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.35,
+      "prompt_tokens_per_sec": 200.0,
+      "completion_tokens": 217,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 172,
+        "rejected_prediction_tokens": 143
+      },
+      "completion_time": 4.39,
+      "completion_tokens_per_sec": 49.42,
+      "total_tokens": 287,
+      "total_time": 4.74
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 70,
+      "prompt_ms": 350.0,
+      "prompt_per_token_ms": 5.0,
+      "prompt_per_second": 200.0,
+      "predicted_n": 217,
+      "predicted_ms": 4390.0,
+      "predicted_per_token_ms": 20.23041474654378,
+      "predicted_per_second": 49.430523917995444,
+      "draft_n": 315,
+      "draft_n_accepted": 172
+    }
+  },
+  "used_fallback": false
+}

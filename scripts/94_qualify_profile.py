@@ -70,6 +70,7 @@ MODEL_ENCODERS = {
     # Chat template and tokenizer are byte-identical to Qwen3.8-27B.
     "qwen3.8-flash-next": "qwen38",
     "inkling-2-mini": "inkling2",
+    "mimo-v2.6-flash": "mimo26",
 }
 
 SPEED_CONTEXT_LEVELS = "0,28672"
@@ -215,7 +216,9 @@ def resolve_profile(args: argparse.Namespace) -> dict:
     if served is None:
         # Generic switch profiles declare the id their server reports.
         served = (raw_profile.get("switch") or {}).get("served_model_id")
-    model_path = argv_value(argv, "--model") or argv_value(argv, "-m")
+    # TabbyAPI names the model --model-name; its argv's -m is Python's module flag.
+    model_path = (argv_value(argv, "--model") or argv_value(argv, "--model-name")
+                  or argv_value(argv, "-m"))
     tokenizer_path = None
     tokenizer_sha = None
     if model_path:
@@ -228,11 +231,17 @@ def resolve_profile(args: argparse.Namespace) -> dict:
         tokenizer_sha = sha256_file(candidate)
     # Expected tokenizer digest from model.json if the file itself is absent.
     expected_tokenizer_sha = None
+    declared_tokenizer = None
     for check_entry in snapshot.get("digest_checks", []):
         if str(check_entry.get("path", "")).endswith("tokenizer.json"):
             expected_tokenizer_sha = check_entry.get("sha256")
-            if tokenizer_path is None:
-                tokenizer_path = check_entry["path"]
+            if declared_tokenizer is None:
+                declared_tokenizer = check_entry["path"]
+    # A guess that is not on disk (no weights here, so a model directory cannot
+    # be told from a file) yields to the profile's declared tokenizer.
+    if declared_tokenizer is not None and tokenizer_sha is None:
+        tokenizer_path = declared_tokenizer
+        tokenizer_sha = sha256_file(Path(declared_tokenizer))
 
     serving = snapshot.get("serving") or raw_profile.get("serving") or {}
     slots = serving.get("parallel_slots")

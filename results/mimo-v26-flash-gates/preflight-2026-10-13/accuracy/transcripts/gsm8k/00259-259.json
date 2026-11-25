@@ -1,0 +1,69 @@
+{
+  "index": 259,
+  "task_id": 259,
+  "rendered_prompt_sha256": "8e9cce5252749bb5d2e37af2b09e98cf4e7410c1e0cb870c3861d714102b58f2",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Andrea has 52 apples.\nAndrea has 8 more apples than Jamal: Jamal has 52 - 8 = 44 apples.\nJamal has 4 more bananas than apples: Jamal has 44 + 4 = 48 bananas.\nAndrea has half as many bananas as Jamal: Andrea has 48/2 = 24 bananas.\n\nTotal fruits: 52 + 44 + 48 + 24 = 168.</think>Andrea has 52 apples.\n\n**Jamal's apples:** Andrea has 8 more apples than Jamal, so Jamal has 52 − 8 = **44 apples**.\n\n**Jamal's bananas:** Jamal has 4 more bananas than apples, so Jamal has 44 + 4 = **48 bananas**.\n\n**Andrea's bananas:** Andrea has half as many bananas as Jamal, so Andrea has 48 ÷ 2 = **24 bananas**.\n\n**Total fruits:** 52 + 44 + 48 + 24 = **168**\n\nAnswer: 168",
+  "finish_reason": "stop",
+  "expected": "168",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.199002216977533
+  },
+  "response": {
+    "id": "cmpl-588ee40bad264df2b630c8606bc9e2d2",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Andrea has 52 apples.\nAndrea has 8 more apples than Jamal: Jamal has 52 - 8 = 44 apples.\nJamal has 4 more bananas than apples: Jamal has 44 + 4 = 48 bananas.\nAndrea has half as many bananas as Jamal: Andrea has 48/2 = 24 bananas.\n\nTotal fruits: 52 + 44 + 48 + 24 = 168.</think>Andrea has 52 apples.\n\n**Jamal's apples:** Andrea has 8 more apples than Jamal, so Jamal has 52 − 8 = **44 apples**.\n\n**Jamal's bananas:** Jamal has 4 more bananas than apples, so Jamal has 44 + 4 = **48 bananas**.\n\n**Andrea's bananas:** Andrea has half as many bananas as Jamal, so Andrea has 48 ÷ 2 = **24 bananas**.\n\n**Total fruits:** 52 + 44 + 48 + 24 = **168**\n\nAnswer: 168"
+      }
+    ],
+    "created": 1791920048,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 71,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.34,
+      "prompt_tokens_per_sec": 208.82,
+      "completion_tokens": 239,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 200,
+        "rejected_prediction_tokens": 73
+      },
+      "completion_time": 3.85,
+      "completion_tokens_per_sec": 62.02,
+      "total_tokens": 310,
+      "total_time": 4.2
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 71,
+      "prompt_ms": 340.0,
+      "prompt_per_token_ms": 4.788732394366197,
+      "prompt_per_second": 208.82352941176472,
+      "predicted_n": 239,
+      "predicted_ms": 3850.0,
+      "predicted_per_token_ms": 16.10878661087866,
+      "predicted_per_second": 62.077922077922075,
+      "draft_n": 273,
+      "draft_n_accepted": 200
+    }
+  },
+  "used_fallback": false
+}

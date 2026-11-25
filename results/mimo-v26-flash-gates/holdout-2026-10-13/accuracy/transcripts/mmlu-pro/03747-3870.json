@@ -1,0 +1,68 @@
+{
+  "index": 3747,
+  "task_id": 3870,
+  "rendered_prompt_sha256": "a27232cd2f1ab111c2c6f2c3526b17da85961c2a679f5a9ff34a7579be9a9e25",
+  "rendering": "official-encoder-mimo26-thinking",
+  "encoder": "mimo26",
+  "completion": "<think>Density = mass/volume = 2.02 g / 22400 mL = 9.018 × 10^-5 g/mL ≈ 9.0 × 10^-5 g/mL</think>Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "mimo-v2.6-flash",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6076434450224042
+  },
+  "response": {
+    "id": "cmpl-b25cbe6ab24040d998e95e4d3d8e66a7",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "eos_reason": "stop_token",
+        "logprobs": null,
+        "text": "<think>Density = mass/volume = 2.02 g / 22400 mL = 9.018 × 10^-5 g/mL ≈ 9.0 × 10^-5 g/mL</think>Answer: I"
+      }
+    ],
+    "created": 1791940774,
+    "model": "mimo-v2.6-flash",
+    "object": "text_completion",
+    "usage": {
+      "prompt_tokens": 213,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "prompt_time": 0.58,
+      "prompt_tokens_per_sec": 367.24,
+      "completion_tokens": 55,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 44,
+        "rejected_prediction_tokens": 33
+      },
+      "completion_time": 1.02,
+      "completion_tokens_per_sec": 53.96,
+      "total_tokens": 268,
+      "total_time": 1.6
+    },
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 213,
+      "prompt_ms": 580.0,
+      "prompt_per_token_ms": 2.723004694835681,
+      "prompt_per_second": 367.2413793103448,
+      "predicted_n": 55,
+      "predicted_ms": 1020.0,
+      "predicted_per_token_ms": 18.545454545454547,
+      "predicted_per_second": 53.92156862745098,
+      "draft_n": 77,
+      "draft_n_accepted": 44
+    }
+  }
+}
