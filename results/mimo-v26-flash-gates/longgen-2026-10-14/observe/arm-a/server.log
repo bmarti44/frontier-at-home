@@ -1,0 +1,123 @@
+
+===== mimo-v2.6-flash/cuda-spark-128g-262k session start 2026-10-14T08:19:07Z =====
+04:19:11.256 INFO:     The 'config.yml' file cannot be found
+04:19:11.257 WARNING:  Models loaded by request ignore these options unless they
+                       are in model.use_as_default or the model's
+                       tabby_config.yml: backend, cache_mode, cache_size,
+                       chunk_size, max_batch_size, max_seq_len, reasoning,
+                       tool_format, vision, draft_model.draft_model_name
+                       (max_seq_len and cache_size then default to the model's
+                       native context length).
+04:19:11.262 WARNING:  No sampler overrides are configured
+                       (sampling.override_preset or inline overrides in the
+                       sampling section), so sampling parameters have no
+                       fallback values. Requests that omit them run untruncated:
+                       temperature 1.0, top_k 0, top_p 1.0, min_p 0. Set
+                       override_preset to safe_defaults unless this is
+                       intentional.
+04:19:11.265 INFO:     exllamav3 version: 1.6.1
+04:19:12.270 INFO:     Using draft model:
+                       /home/bmarti44/models/mimo-v2.6-flash-draft/mimo-v2.6-fla
+                       sh-dflash
+04:19:12.270 INFO:     Disabling GPU split because one GPU is in use.
+04:19:12.270 INFO:     Context: max_seq_len 262,144 tokens (configured),
+                       cache_size 262,144 tokens
+04:19:12.296 INFO:     Using template "chat_template" for chat completions.
+04:19:12.296 INFO:     Response parsing: tool format qwen3_coder (config),
+                       reasoning tags <think> </think> (template)
+04:19:17.206 INFO:     Loading model
+                       /home/bmarti44/models/mimo-v2.6-flash-serve/mimo-v2.6-fla
+                       sh (single GPU)
+Loading vision modules ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 36/36 0:00:00
+Loading draft modules  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 7/7   0:00:00
+Loading model modules  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 51/51 0:00:00
+04:20:00.191 INFO:     Model loaded in 47.9 s
+
+04:20:00.191 WARNING:  Disabling authentication makes your instance vulnerable.
+                       Set the `disable_auth` flag to False in config.yml if you
+                       want to share this instance with others.
+04:20:00.192 WARNING:  With authentication disabled and `allowed_origins` left
+                       at ["*"], any website open in a browser on this machine
+                       can send requests to this instance and read the
+                       responses, including admin endpoints. Set
+                       `network.allowed_origins` to your own frontends (or [])
+                       unless you use a browser-based frontend that needs it.
+04:20:00.196 INFO:     Serving OAI API on http://127.0.0.1:8019 (docs at
+                       http://127.0.0.1:8019/redoc)
+04:20:01.936 WARNING:  Unable to switch model to default because
+                       "inline_model_loading" is not True in config.yml.
+04:20:01.938 INFO:     #4 chat/completions: 23 prompt tokens · temperature: 0,
+                       greedy (req), max_tokens: 256 (req)
+04:20:04.340 INFO:     #4 chat/completions: 123 tokens generated at 57.4 T/s ·
+                       prompt 23 tokens, none cached, 23 new in 0.25 s · first
+                       token 0.25 s, total 2.40 s · draft 102/147 accepted (69%)
+04:20:04.341 WARNING:  Unable to switch model to default because
+                       "inline_model_loading" is not True in config.yml.
+04:20:04.342 INFO:     #5 chat/completions: 18 prompt tokens · temperature: 0,
+                       greedy (req), max_tokens: 256 (req)
+04:20:08.603 INFO:     #5 chat/completions: 106 tokens generated at 26.0 T/s ·
+                       prompt 18 tokens, none cached, 18 new in 0.18 s · first
+                       token 0.18 s, total 4.26 s · draft 64/294 accepted (22%)
+04:20:08.605 WARNING:  Unable to switch model to default because
+                       "inline_model_loading" is not True in config.yml.
+04:20:08.606 INFO:     #6 chat/completions: 24 prompt tokens · temperature: 0,
+                       greedy (req), max_tokens: 256 (req)
+04:20:10.277 INFO:     #6 chat/completions: 68 tokens generated at 46.4 T/s ·
+                       prompt 24 tokens, none cached, 24 new in 0.20 s · first
+                       token 0.20 s, total 1.67 s · draft 53/105 accepted (50%)
+04:20:10.278 WARNING:  Unable to switch model to default because
+                       "inline_model_loading" is not True in config.yml.
+04:20:10.317 INFO:     #7 chat/completions (stream): 23 prompt tokens ·
+                       temperature: 0, greedy (req), max_tokens: 256 (req)
+04:20:12.568 INFO:     #7 chat/completions (stream): 123 tokens generated at
+                       60.1 T/s · prompt 23 tokens, none cached, 23 new in 0.20
+                       s · first token 0.20 s, total 2.25 s · draft 102/147
+                       accepted (69%)
+04:20:12.569 WARNING:  Unable to switch model to default because
+                       "inline_model_loading" is not True in config.yml.
+04:20:12.570 INFO:     #8 chat/completions (stream): 18 prompt tokens ·
+                       temperature: 0, greedy (req), max_tokens: 256 (req)
+04:20:16.839 INFO:     #8 chat/completions (stream): 106 tokens generated at
+                       25.9 T/s · prompt 18 tokens, none cached, 18 new in 0.18
+                       s · first token 0.18 s, total 4.27 s · draft 64/294
+                       accepted (22%)
+04:20:16.840 WARNING:  Unable to switch model to default because
+                       "inline_model_loading" is not True in config.yml.
+04:20:16.841 INFO:     #9 chat/completions (stream): 24 prompt tokens ·
+                       temperature: 0, greedy (req), max_tokens: 256 (req)
+04:20:18.517 INFO:     #9 chat/completions (stream): 68 tokens generated at 46.3
+                       T/s · prompt 24 tokens, none cached, 24 new in 0.20 s ·
+                       first token 0.20 s, total 1.67 s · draft 53/105 accepted
+                       (50%)
+04:20:18.641 INFO:     #10 completions: 692 prompt tokens · temperature: 0,
+                       greedy (req), max_tokens: 6144 (req)
+04:21:32.834 INFO:     #10 completions: 6,144 tokens generated at 85.6 T/s ·
+                       prompt 692 tokens, none cached, 692 new in 1.52 s (455
+                       T/s) · first token 1.53 s, total 73.3 s · draft 5375/5383
+                       accepted (100%) · max_tokens reached
+04:21:32.836 INFO:     #11 completions: 32 prompt tokens · temperature: 0,
+                       greedy (req), max_tokens: 6144 (req)
+04:22:47.894 INFO:     #11 completions: 6,144 tokens generated at 83.1 T/s ·
+                       prompt 32 tokens, none cached, 32 new in 0.23 s · first
+                       token 0.24 s, total 74.2 s · draft 5374/5390 accepted
+                       (100%) · max_tokens reached
+04:22:47.895 INFO:     #12 completions: 124 prompt tokens · temperature: 0,
+                       greedy (req), max_tokens: 5000 (req)
+04:24:44.043 INFO:     #12 completions: 5,000 tokens generated at 43.4 T/s ·
+                       prompt 124 tokens, none cached, 124 new in 0.42 s · first
+                       token 0.43 s, total 115.8 s · draft 3833/8169 accepted
+                       (47%) · max_tokens reached
+04:24:44.045 INFO:     #13 completions: 142 prompt tokens · temperature: 0,
+                       greedy (req), max_tokens: 5000 (req)
+04:26:29.466 INFO:     #13 completions: 5,000 tokens generated at 47.7 T/s ·
+                       prompt 142 tokens, none cached, 142 new in 0.47 s · first
+                       token 0.48 s, total 105.3 s · draft 3909/7637 accepted
+                       (51%) · max_tokens reached
+04:26:29.468 INFO:     #14 completions: 47 prompt tokens · temperature: 0,
+                       greedy (req), max_tokens: 6144 (req)
+04:30:08.337 INFO:     #14 completions: 6,144 tokens generated at 28.1 T/s ·
+                       prompt 47 tokens, none cached, 47 new in 0.29 s · first
+                       token 0.30 s, total 218.9 s · draft 3912/15624 accepted
+                       (25%) · max_tokens reached
+04:30:09.443 WARNING:  Shutdown signal called. Exiting gracefully.
+04:30:11.013 INFO:     Model unloaded.
