@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:474:P:0",
+ "suite": "mmlu-pro",
+ "row": 474,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "23b7c4d191c75d4fedfd1c436d481435804227b96eb0493fff06dab2471a9238",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:02:34.966010+00:00",
+ "completion": "We need answer MCQ. Need compute. Let's reason carefully.\n\nProblem: company wants 20% return on investment before taxes at sales volume equal to 80% of capacity. Fixed annual costs $200,000 and annual capacity 200,000 units (typo 200,00). Variable cost per unit $9 and investment $1,400,000. What should be selling price per unit given production and sales are 80% of capacity?\n\nSales volume = 80% of 200,000 = 160,000 units. Required pre-tax ROI = 20% of investment = 0.20*1,400,000 = 280,000. This is operating income before taxes? Return on investment before taxes likely (sales - variable costs - fixed costs)/investment = 20%. So target profit = 280,000.\n\nEquation: P*160,000 - 9*160,000 - 200,000 = 280,000.\nP*160,000 = 280,000 + 1,440,000 + 200,000 = 1,920,000? Check variable cost: 9*160,000=1,440,000. Add fixed 200,000 and target profit 280,000 = 1,920,000. P=1,920,000/160,000=12. Option A.\n\nNeed final only single letter form. Ensure no extra.Answer: A",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.777120411999931
+ },
+ "usage": {
+  "prompt_tokens": 168,
+  "total_tokens": 483,
+  "completion_tokens": 315,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "A",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:02:41.743409+00:00"
+}

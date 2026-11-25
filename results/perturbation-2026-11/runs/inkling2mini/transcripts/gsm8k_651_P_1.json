@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:651:P:1",
+ "suite": "gsm8k",
+ "row": 651,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "3b2d902541621ac9efd97cf08b3b63aa9b1b7a0936e85f4ce991a977fc341b4a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:26:42.822886+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Olivia has shop selling hats of two colors red and green. Her sales from red hats were $900 in a particular month, half the total amount she earned from selling green hats. Calculate total amount she made in two months if in the second month her sales were 4/9 of the total sales of the first month.\n\nInterpretation: In first month, red sales = $900. This is half the total amount she earned from selling green hats. So red = 1/2 * green_total? Wording: \"half the total amount she earned from selling green hats\" => red sales = half of green sales. Thus green = 1800. Total first month = red + green = 2700. Second month sales = 4/9 of total sales of first month = 4/9*2700 = 1200. Total two months = 2700+1200=3900.\n\nNeed final with brief maybe. Ensure final numeric answer on own line exactly Answer: <number>. Could include dollar sign? form says <number>, likely 3900. Use $? They said numeric answer; maybe Answer: $3900. But form <number> maybe no dollar. Do Answer: 3900. Need maybe brief explanation then final line.Red sales = $900, which is half of green sales, so green sales = $1800.  \nFirst month total = $900 + $1800 = $2700.  \nSecond month = 4/9 × $2700 = $1200.  \nTwo-month total = $2700 + $1200 = $3900.\n\nAnswer: 3900",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 9.962879492002685
+ },
+ "usage": {
+  "prompt_tokens": 113,
+  "total_tokens": 480,
+  "completion_tokens": 367,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "3900",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:26:52.785955+00:00"
+}

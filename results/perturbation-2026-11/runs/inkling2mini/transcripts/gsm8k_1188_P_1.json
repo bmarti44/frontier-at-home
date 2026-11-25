@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1188:P:1",
+ "suite": "gsm8k",
+ "row": 1188,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "5641c869ee1349dbeffd205cb0ab909c5a0bd7ab13c2e487e46902e6efe860ef",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:54:16.347579+00:00",
+ "completion": "We need answer math. Need parse carefully. \"Digimon had its 20th anniversary. When it came out Brandon was twice as old as Sam. If Brandon is 48 now how old is Sam?\" Need infer timeline. Digimon had 20th anniversary now? It came out 20 years ago. At that time Brandon was twice as old as Sam. Brandon is 48 now. So 20 years ago Brandon was 28. Then Sam was 14 (half of 28). Now Sam is 14+20=34. Need ensure no trick: Digimon had its 20th anniversary (maybe 20 years since release). When it came out Brandon was twice as old as Sam. Brandon now 48. Age difference constant: Brandon - Sam = 48 - Sam_now. At release: Brandon_then=28, Sam_then=14, difference=14. Now Sam=48-14=34. Yes.\nNeed final with brief maybe one sentence and final line exact. Ensure final numeric answer on own line.Digimon came out 20 years ago, so Brandon was 48 − 20 = 28 then. Sam was half that, 14, so now Sam is 14 + 20 = 34.\nAnswer: 34",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.681100812002114
+ },
+ "usage": {
+  "prompt_tokens": 79,
+  "total_tokens": 369,
+  "completion_tokens": 290,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "34",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:54:25.029017+00:00"
+}

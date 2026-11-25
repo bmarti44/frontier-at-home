@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:848:P:0",
+ "suite": "gsm8k",
+ "row": 848,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "37fac1d85abeb98ba9dac0131d428b267f0e7aedf527f6a5eb9c0efa93f16ea5",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:07:32.237592+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: 40 white shirts, 70 floral shirts. Half of white shirts have collars => 20 white with collars, 20 white with no collars. 45 of floral shirts have buttons => floral with no buttons = 70-45=25. Difference: floral no buttons - white no collars = 25-20=5. Need final numeric answer on own line form Answer: <number>. Brief explanation okay. Ensure final line exactly.White shirts with no collars: 40 / 2 = 20  \nFloral shirts with no buttons: 70 - 45 = 25  \nDifference: 25 - 20 = 5\n\nAnswer: 5",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.182189008999558
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 279,
+  "completion_tokens": 176,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "5",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:07:36.420019+00:00"
+}

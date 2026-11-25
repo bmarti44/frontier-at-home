@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:51:P:0",
+ "suite": "humaneval",
+ "row": 51,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "626688b79594a9bc3425b3aa0abb6504f42edb8e087ea66a72ff50b912433efe",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:55:30.169465+00:00",
+ "completion": "    vowels = \"aeiouAEIOU\"\n    return ''.join([char for char in text if char not in vowels])\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.984999564003374
+ },
+ "usage": {
+  "prompt_tokens": 134,
+  "total_tokens": 163,
+  "completion_tokens": 29,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return \"\".join([s for s in text if s.lower() not in [\"a\", \"e\", \"i\", \"o\", \"u\"]])\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:55:32.154688+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00221:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:33.164817+00:00"
+}

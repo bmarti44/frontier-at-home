@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:874:O:0",
+ "suite": "gsm8k",
+ "row": 874,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "2ef08560b7f46d5e270e10302a5b242640e0a10b6b0b754137108264f0d1bdd2",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:34:43.724317+00:00",
+ "completion": "The user wants a brief calculation. Ella earned $33 for 3 hours. Rate = 33/3 = $11 per hour. After 12 hours: 11*12 = $132. Need final numeric answer on its own line in form Answer: <number>. Could include brief reasoning then final line. Ensure final line exactly.Rate: $33 ÷ 3 = $11 per hour.  \n$11 × 12 = $132.\n\nAnswer: 132",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.316497263000201
+ },
+ "usage": {
+  "prompt_tokens": 75,
+  "total_tokens": 181,
+  "completion_tokens": 106,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "132",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:34:47.041107+00:00"
+}

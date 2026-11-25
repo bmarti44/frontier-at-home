@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:999:P:0",
+ "suite": "gsm8k",
+ "row": 999,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "3f358713f3c7e45a439a21a3dc30341bcd5139df45cd74e9dedf731cde754f16",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:52:48.875167+00:00",
+ "completion": "Let me work through this problem.\n\nWe have 3 adults and 4 kids dividing a watermelon.\nEach adult gets a slice that is twice as big as each kid's slice.\n\nLet each kid's slice = x\nThen each adult's slice = 2x\n\nTotal watermelon = 3(2x) + 4(x) = 6x + 4x = 10x\n\nSo the whole watermelon = 10x\n\nEach adult gets 2x out of 10x = 2/10 = 1/5 = 20%\n</think>\n\nLet me set up the problem:\n\n- Let each kid's slice = x\n- Each adult's slice = 2x\n\nTotal watermelon = 3(2x) + 4(x) = 6x + 4x = 10x\n\nEach adult gets: 2x / 10x = 1/5 = 20%\n\nAnswer: 20",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.998657613992691
+ },
+ "usage": {
+  "prompt_tokens": 114,
+  "total_tokens": 328,
+  "completion_tokens": 214,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "20",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:53:00.874072+00:00"
+}

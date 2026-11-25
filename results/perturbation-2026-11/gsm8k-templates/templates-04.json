@@ -1,0 +1,940 @@
+[
+ {
+  "row": 303,
+  "template": "{elise} has been selling her Dad's collection of {total} books for three years. Each book sells at {price}$, and she sold twice as many books in the first year as she has sold in the current year. There are currently {unsold} unsold books, and her sales number this year is {cur}. What's the total amount of money she earned in the second year?",
+  "vars": {
+   "elise": {
+    "kind": "name",
+    "original": "Elise",
+    "pool": [
+     "Sofia",
+     "Hannah",
+     "Priya",
+     "Chloe",
+     "Aisha",
+     "Megan",
+     "Lucia",
+     "Grace",
+     "Nadia",
+     "Emily"
+    ]
+   },
+   "total": {
+    "kind": "int",
+    "original": 250,
+    "min": 150,
+    "max": 500,
+    "step": 10
+   },
+   "price": {
+    "kind": "int",
+    "original": 20,
+    "min": 5,
+    "max": 60,
+    "step": 5
+   },
+   "unsold": {
+    "kind": "int",
+    "original": 50,
+    "min": 15,
+    "max": 120,
+    "step": 5
+   },
+   "cur": {
+    "kind": "int",
+    "original": 45,
+    "min": 15,
+    "max": 100,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "v['total'] - 3 * v['cur'] - v['unsold'] > 0"
+  ],
+  "solver": "def solve(v):\n    first = 2 * v['cur']                     # twice as many as the current year\n    second = v['total'] - first - v['cur'] - v['unsold']\n    assert second > 0\n    return second * v['price']\n"
+ },
+ {
+  "row": 535,
+  "template": "{nick} had twice as many candies as {george}. Then {george} ate {ate} candies. Now {george} has {left} candies left. How many candies does {nick} have?",
+  "vars": {
+   "nick": {
+    "kind": "name",
+    "original": "Nick",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "george": {
+    "kind": "name",
+    "original": "George",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "ate": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "left": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   }
+  },
+  "solver": "def solve(v):\n    george_start = v['ate'] + v['left']\n    return 2 * george_start\n"
+ },
+ {
+  "row": 544,
+  "template": "{jeff} and {brad} are trying to divide {total} dollars between them. {jeff} gets {times} times as much as {brad}. How much does {jeff} get in dollars?",
+  "vars": {
+   "jeff": {
+    "kind": "name",
+    "original": "Jeff",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "brad": {
+    "kind": "name",
+    "original": "Brad",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "total": {
+    "kind": "int",
+    "original": 100,
+    "min": 30,
+    "max": 400,
+    "step": 10
+   },
+   "times": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 9,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['total'] % (v['times'] + 1) == 0"
+  ],
+  "solver": "def solve(v):\n    parts = v['times'] + 1\n    assert v['total'] % parts == 0\n    brad = v['total'] // parts\n    return v['times'] * brad\n"
+ },
+ {
+  "row": 374,
+  "template": "{mary} has {sheep} sheep. She gets {a} kg of milk from half of them and {b} kg of milk from the other half every day. How much milk does she collect every day?",
+  "vars": {
+   "mary": {
+    "kind": "name",
+    "original": "Mary",
+    "pool": [
+     "Sofia",
+     "Hannah",
+     "Priya",
+     "Chloe",
+     "Aisha",
+     "Megan",
+     "Lucia",
+     "Grace",
+     "Nadia",
+     "Emily"
+    ]
+   },
+   "sheep": {
+    "kind": "int",
+    "original": 30,
+    "min": 10,
+    "max": 120,
+    "step": 2
+   },
+   "a": {
+    "kind": "int",
+    "original": 1,
+    "min": 1,
+    "max": 4,
+    "step": 1
+   },
+   "b": {
+    "kind": "int",
+    "original": 2,
+    "min": 1,
+    "max": 8,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['a'] != v['b']"
+  ],
+  "solver": "def solve(v):\n    assert v['sheep'] % 2 == 0\n    half = v['sheep'] // 2\n    return half * v['a'] + half * v['b']\n"
+ },
+ {
+  "row": 387,
+  "template": "An eraser costs ${eraser} and a pencil costs ${pencil}. How much do {n_erasers} erasers and {n_pencils} pencils cost?",
+  "vars": {
+   "eraser": {
+    "kind": "int",
+    "original": 2,
+    "min": 1,
+    "max": 8,
+    "step": 1
+   },
+   "pencil": {
+    "kind": "int",
+    "original": 3,
+    "min": 1,
+    "max": 12,
+    "step": 1
+   },
+   "n_erasers": {
+    "kind": "int",
+    "original": 6,
+    "min": 2,
+    "max": 24,
+    "step": 1
+   },
+   "n_pencils": {
+    "kind": "int",
+    "original": 8,
+    "min": 2,
+    "max": 30,
+    "step": 1
+   }
+  },
+  "solver": "def solve(v):\n    return v['eraser'] * v['n_erasers'] + v['pencil'] * v['n_pencils']\n"
+ },
+ {
+  "row": 434,
+  "template": "The vending machines sell chips for {chips} cents and candy bars for {candy} cents. {george} spent ${money} and got {n_chips} bags of chips and had {pct}% of his money left. How many candy bars did he buy?",
+  "vars": {
+   "chips": {
+    "kind": "int",
+    "original": 40,
+    "min": 15,
+    "max": 100,
+    "step": 5
+   },
+   "candy": {
+    "kind": "int",
+    "original": 75,
+    "min": 25,
+    "max": 150,
+    "step": 5
+   },
+   "george": {
+    "kind": "name",
+    "original": "George",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "money": {
+    "kind": "int",
+    "original": 5,
+    "min": 5,
+    "max": 20,
+    "step": 5
+   },
+   "n_chips": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "pct": {
+    "kind": "int",
+    "original": 1,
+    "min": 1,
+    "max": 4,
+    "step": 1
+   }
+  },
+  "solver": "def solve(v):\n    money = v['money'] * 100                       # cents\n    left = Fraction(money * v['pct'], 100)\n    spent = money - left\n    on_candy = spent - v['n_chips'] * v['chips']\n    assert on_candy > 0\n    bars = on_candy / v['candy']\n    assert bars.denominator == 1 and bars >= 1\n    return bars\n"
+ },
+ {
+  "row": 706,
+  "template": "The local firefighters are doing a “fill the boot” fundraiser. Their goal is to raise ${goal}. After the first {hours} hours, they have raised ${raised}.  For how many hours do they have to fundraise in total to reach their goal, assuming an equal amount raised in every hour?",
+  "vars": {
+   "goal": {
+    "kind": "int",
+    "original": 6300,
+    "min": 2000,
+    "max": 20000,
+    "step": 100
+   },
+   "hours": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "raised": {
+    "kind": "int",
+    "original": 2100,
+    "min": 600,
+    "max": 6000,
+    "step": 100
+   }
+  },
+  "constraints": [
+   "v['goal'] > v['raised']",
+   "v['raised'] % v['hours'] == 0",
+   "(v['goal'] * v['hours']) % v['raised'] == 0"
+  ],
+  "solver": "def solve(v):\n    assert v['goal'] > v['raised']\n    per_hour = Fraction(v['raised'], v['hours'])\n    assert per_hour.denominator == 1\n    total_hours = v['goal'] / per_hour\n    assert total_hours.denominator == 1\n    return total_hours\n"
+ },
+ {
+  "row": 347,
+  "template": "{davos} bought {n} shirts from the mall that cost ${price} each. If he bought them with a {pct}% discount, how much did {davos} pay for the {n} shirts?",
+  "vars": {
+   "davos": {
+    "kind": "name",
+    "original": "Davos",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "n": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "price": {
+    "kind": "int",
+    "original": 30,
+    "min": 10,
+    "max": 120,
+    "step": 5
+   },
+   "pct": {
+    "kind": "int",
+    "original": 40,
+    "min": 10,
+    "max": 80,
+    "step": 5
+   }
+  },
+  "solver": "def solve(v):\n    full = v['n'] * v['price']\n    discount = Fraction(full * v['pct'], 100)\n    return full - discount\n"
+ },
+ {
+  "row": 811,
+  "template": "{felix} notices that kids in the neighborhood are always getting things stuck in trees. Since he is an expert tree climber, he decided to start charging kids to get their stuff out. He charges based on how high he has to climb. Every branch he has to climb up costs ${price}. During the week he made ${total}. On average, how many branches did he climb per day?",
+  "vars": {
+   "felix": {
+    "kind": "name",
+    "original": "Felix",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "price": {
+    "kind": "num_choice",
+    "original": ".25",
+    "values": [
+     ".10",
+     ".15",
+     ".20",
+     ".30",
+     ".35",
+     ".40",
+     ".50"
+    ]
+   },
+   "total": {
+    "kind": "int",
+    "original": 105,
+    "min": 30,
+    "max": 400,
+    "step": 5
+   }
+  },
+  "solver": "def solve(v):\n    branches = v['total'] / v['price']\n    assert branches.denominator == 1\n    per_day = branches / 7                          # a week is 7 days\n    assert per_day.denominator == 1\n    return per_day\n"
+ },
+ {
+  "row": 35,
+  "template": "{mike} plays ping pong for {total_min} minutes.  In the first {half_min} minutes, he scores {pts} points.  In the second {half_min} minutes, he scores {pct}% more points.  How many total points did he score?",
+  "vars": {
+   "mike": {
+    "kind": "name",
+    "original": "Mike",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "total_min": {
+    "kind": "int",
+    "original": 40,
+    "min": 30,
+    "max": 60,
+    "step": 10
+   },
+   "half_min": {
+    "kind": "int",
+    "original": 20,
+    "min": 15,
+    "max": 30,
+    "step": 5
+   },
+   "pts": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 16,
+    "step": 1
+   },
+   "pct": {
+    "kind": "num_choice",
+    "original": "25",
+    "values": [
+     "10",
+     "20",
+     "40",
+     "50",
+     "60",
+     "75",
+     "100"
+    ]
+   }
+  },
+  "constraints": [
+   "v['total_min'] == 2 * v['half_min']"
+  ],
+  "solver": "def solve(v):\n    assert v['total_min'] == 2 * v['half_min']\n    first = v['pts']\n    second = first + first * v['pct'] / 100\n    assert second.denominator == 1\n    return first + second\n"
+ },
+ {
+  "row": 892,
+  "template": "{ellen} is on a diet. She eats two carrots, a salad, and a yogurt every day. The salad costs her ${salad}, while the yogurt is half the price. How much does {ellen} pay for one carrot every day when in total she pays ${total} for her goods?",
+  "vars": {
+   "ellen": {
+    "kind": "name",
+    "original": "Ellen",
+    "pool": [
+     "Sofia",
+     "Hannah",
+     "Priya",
+     "Chloe",
+     "Aisha",
+     "Megan",
+     "Lucia",
+     "Grace",
+     "Nadia",
+     "Emily"
+    ]
+   },
+   "salad": {
+    "kind": "int",
+    "original": 6,
+    "min": 2,
+    "max": 16,
+    "step": 2
+   },
+   "total": {
+    "kind": "int",
+    "original": 11,
+    "min": 5,
+    "max": 40,
+    "step": 1
+   }
+  },
+  "solver": "def solve(v):\n    yogurt = Fraction(v['salad'], 2)\n    carrots = v['total'] - v['salad'] - yogurt      # two carrots\n    assert carrots > 0\n    return carrots / 2\n"
+ },
+ {
+  "row": 314,
+  "template": "A football team has {members} members.  There are twice as many players on the offense as there is on the defense. There is half the number of players on the special teams as there is on the defense.  How many players are on the defense?",
+  "vars": {
+   "members": {
+    "kind": "int",
+    "original": 105,
+    "min": 42,
+    "max": 210,
+    "step": 7
+   }
+  },
+  "solver": "def solve(v):\n    # defense x, offense 2x, special teams x/2: x + 2x + x/2 = members\n    defense = Fraction(2 * v['members'], 7)\n    assert defense.denominator == 1 and (defense / 2).denominator == 1\n    return defense\n"
+ },
+ {
+  "row": 2,
+  "template": "{josh} decides to try flipping a house.  He buys a house for ${price} and then puts in ${repairs} in repairs.  This increased the value of the house by {pct}%.  How much profit did he make?",
+  "vars": {
+   "josh": {
+    "kind": "name",
+    "original": "Josh",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "price": {
+    "kind": "int",
+    "original": 80000,
+    "min": 40000,
+    "max": 200000,
+    "step": 5000,
+    "fmt": "comma"
+   },
+   "repairs": {
+    "kind": "int",
+    "original": 50000,
+    "min": 15000,
+    "max": 150000,
+    "step": 5000,
+    "fmt": "comma"
+   },
+   "pct": {
+    "kind": "int",
+    "original": 150,
+    "min": 50,
+    "max": 300,
+    "step": 10
+   }
+  },
+  "constraints": [
+   "v['price'] * v['pct'] > 100 * v['repairs']"
+  ],
+  "solver": "def solve(v):\n    cost = v['price'] + v['repairs']\n    new_value = v['price'] + Fraction(v['price'] * v['pct'], 100)\n    profit = new_value - cost\n    assert profit > 0\n    return profit\n"
+ },
+ {
+  "row": 944,
+  "template": "{jen} is planning to sell her root crops. She has {n_yams} yams which can be sold at ${p_yam} each, {n_sweet} sweet potatoes that cost ${p_sweet} each, and {n_carrots} carrots which cost ${p_carrot} each. If she sells everything, how much will she earn?",
+  "vars": {
+   "jen": {
+    "kind": "name",
+    "original": "Jen",
+    "pool": [
+     "Sofia",
+     "Hannah",
+     "Priya",
+     "Chloe",
+     "Aisha",
+     "Megan",
+     "Lucia",
+     "Grace",
+     "Nadia",
+     "Emily"
+    ]
+   },
+   "n_yams": {
+    "kind": "int",
+    "original": 6,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "p_yam": {
+    "kind": "num_choice",
+    "original": "1.5",
+    "values": [
+     "0.5",
+     "2.5",
+     "3.5",
+     "1.2",
+     "1.8",
+     "2.4"
+    ]
+   },
+   "n_sweet": {
+    "kind": "int",
+    "original": 10,
+    "min": 3,
+    "max": 30,
+    "step": 1
+   },
+   "p_sweet": {
+    "kind": "int",
+    "original": 2,
+    "min": 1,
+    "max": 6,
+    "step": 1
+   },
+   "n_carrots": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 16,
+    "step": 1
+   },
+   "p_carrot": {
+    "kind": "num_choice",
+    "original": "1.25",
+    "values": [
+     "0.75",
+     "1.75",
+     "2.25",
+     "2.75",
+     "1.50",
+     "0.50"
+    ]
+   }
+  },
+  "solver": "def solve(v):\n    return (v['n_yams'] * v['p_yam'] + v['n_sweet'] * v['p_sweet']\n            + v['n_carrots'] * v['p_carrot'])\n"
+ },
+ {
+  "row": 687,
+  "template": "There is one set of twins and one set of triplets. One twin is {diff} years older than one triplet. If their combined ages are {total}, how old is one of the twins?",
+  "vars": {
+   "diff": {
+    "kind": "int",
+    "original": 7,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "total": {
+    "kind": "int",
+    "original": 44,
+    "min": 20,
+    "max": 120,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "(v['total'] - 2 * v['diff']) % 5 == 0",
+   "v['total'] - 2 * v['diff'] > 0"
+  ],
+  "solver": "def solve(v):\n    # 2 twins aged t + diff, 3 triplets aged t: 5t + 2*diff = total\n    rest = v['total'] - 2 * v['diff']\n    assert rest > 0 and rest % 5 == 0\n    triplet = rest // 5\n    return triplet + v['diff']\n"
+ },
+ {
+  "row": 1184,
+  "template": "To heat during the winter, {ali} ordered {kilos} kilos of coal. The coal is delivered in {bag} kg bags, costing ${price} per unit. How much does his order cost?",
+  "vars": {
+   "ali": {
+    "kind": "name",
+    "original": "Ali",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "kilos": {
+    "kind": "int",
+    "original": 850,
+    "min": 300,
+    "max": 2000,
+    "step": 50
+   },
+   "bag": {
+    "kind": "int",
+    "original": 50,
+    "min": 20,
+    "max": 100,
+    "step": 5
+   },
+   "price": {
+    "kind": "int",
+    "original": 18,
+    "min": 8,
+    "max": 40,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['kilos'] % v['bag'] == 0"
+  ],
+  "solver": "def solve(v):\n    assert v['kilos'] % v['bag'] == 0\n    bags = v['kilos'] // v['bag']\n    return bags * v['price']\n"
+ },
+ {
+  "row": 297,
+  "template": "{sam} sells bread. He has a target of selling {target} crates of bread in a week. One week he was closed on Monday and Friday. Over the weekend he sold {weekend} crates. On Tuesday he sold {tue} crates, on Wednesday {wed} crates, and Thursday {thu} crates. By how many crates was {sam} off from his target for the week?",
+  "vars": {
+   "sam": {
+    "kind": "name",
+    "original": "Sam",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "target": {
+    "kind": "int",
+    "original": 120,
+    "min": 60,
+    "max": 300,
+    "step": 10
+   },
+   "weekend": {
+    "kind": "int",
+    "original": 20,
+    "min": 6,
+    "max": 60,
+    "step": 1
+   },
+   "tue": {
+    "kind": "int",
+    "original": 15,
+    "min": 4,
+    "max": 45,
+    "step": 1
+   },
+   "wed": {
+    "kind": "int",
+    "original": 12,
+    "min": 3,
+    "max": 40,
+    "step": 1
+   },
+   "thu": {
+    "kind": "int",
+    "original": 18,
+    "min": 5,
+    "max": 60,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['weekend'] + v['tue'] + v['wed'] + v['thu'] < v['target']"
+  ],
+  "solver": "def solve(v):\n    sold = v['weekend'] + v['tue'] + v['wed'] + v['thu']\n    assert sold < v['target']\n    return v['target'] - sold\n"
+ },
+ {
+  "row": 1068,
+  "template": "One meatball sub sandwich contains {meat} meatballs.  {sidney} ordered {less} less than ten meatball sub sandwiches. Then {mark} ate {ate} of {sidney}'s meatball sub sandwiches. So {sidney} ordered another three sub sandwiches.  How many meatballs were in the sub sandwiches that remained?",
+  "vars": {
+   "meat": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "less": {
+    "kind": "int",
+    "original": 3,
+    "min": 1,
+    "max": 8,
+    "step": 1
+   },
+   "mark": {
+    "kind": "name",
+    "original": "Mark",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "ate": {
+    "kind": "int",
+    "original": 4,
+    "min": 1,
+    "max": 8,
+    "step": 1
+   },
+   "sidney": {
+    "kind": "name",
+    "original": "Sidney",
+    "pool": [
+     "Jordan",
+     "Taylor",
+     "Casey",
+     "Morgan",
+     "Riley",
+     "Avery",
+     "Jamie",
+     "Quinn"
+    ]
+   }
+  },
+  "constraints": [
+   "v['ate'] <= 10 - v['less']"
+  ],
+  "solver": "def solve(v):\n    ordered = 10 - v['less']                        # 'less than ten'\n    assert 1 <= v['ate'] <= ordered\n    remaining = ordered - v['ate'] + 3              # 'another three'\n    return remaining * v['meat']\n"
+ },
+ {
+  "row": 792,
+  "template": "{damien} created a currency based on bottle caps and got his friends to take part.  He finds {caps} bottle caps a day on his way home and each bottle cap is worth ${value}.  How much money does he make in a 30 day month?",
+  "vars": {
+   "damien": {
+    "kind": "name",
+    "original": "Damien",
+    "pool": [
+     "Liam",
+     "Omar",
+     "Daniel",
+     "Ravi",
+     "Lucas",
+     "Ethan",
+     "Marcus",
+     "Kenji",
+     "Tomas",
+     "Owen"
+    ]
+   },
+   "caps": {
+    "kind": "int",
+    "original": 10,
+    "min": 3,
+    "max": 30,
+    "step": 1
+   },
+   "value": {
+    "kind": "num_choice",
+    "original": ".25",
+    "values": [
+     ".05",
+     ".10",
+     ".15",
+     ".20",
+     ".50",
+     ".75"
+    ]
+   }
+  },
+  "solver": "def solve(v):\n    caps = v['caps'] * 30                           # 30 day month\n    return caps * v['value']\n"
+ },
+ {
+  "row": 932,
+  "template": "{maria} invited {friends} of her friends over for a water balloon fight in the backyard. At the start of the game, {maria} gave each of her friends {each} water balloons. She had one water balloon for herself.  Then her mom came out and gave each person {more} more balloons.  How many total balloons did the girls have?",
+  "vars": {
+   "maria": {
+    "kind": "name",
+    "original": "Maria",
+    "pool": [
+     "Sofia",
+     "Hannah",
+     "Priya",
+     "Chloe",
+     "Aisha",
+     "Megan",
+     "Lucia",
+     "Grace",
+     "Nadia",
+     "Emily"
+    ]
+   },
+   "friends": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "each": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "more": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   }
+  },
+  "solver": "def solve(v):\n    start = v['friends'] * v['each'] + 1            # one balloon for herself\n    girls = v['friends'] + 1\n    return start + girls * v['more']\n"
+ }
+]

@@ -1,0 +1,82 @@
+[
+ {
+  "row": 405,
+  "solver": "def solve(v):\n    sandwiches = -(-v['people'] // v['serve'])\n    return sandwiches * (v['meat'] + v['cheese'])\n"
+ },
+ {
+  "row": 863,
+  "solver": "def solve(v):\n    silver = v['gold'] - v['diff']\n    assert silver >= 0\n    return v['gold'] + silver\n"
+ },
+ {
+  "row": 953,
+  "solver": "def solve(v):\n    usual = 8 * 60\n    walking = 38 - 15\n    r = usual - walking - v['early']\n    assert r >= 0\n    return r\n"
+ },
+ {
+  "row": 49,
+  "solver": "def solve(v):\n    total = v['floors'] * v['units']\n    unocc = Fraction(total * (v['den'] - v['num']), v['den'])\n    assert unocc.denominator == 1 and unocc >= 0\n    return unocc\n"
+ },
+ {
+  "row": 474,
+  "solver": "def solve(v):\n    return v['n'] * 4\n"
+ },
+ {
+  "row": 410,
+  "solver": "def solve(v):\n    taffy = v['taffy'] + Fraction(v['taffy'], 2)\n    spent = taffy + v['shells'] + v['mags'] * v['mprice']\n    left = v['budget'] - spent\n    assert left >= 0\n    return left\n"
+ },
+ {
+  "row": 705,
+  "solver": "def solve(v):\n    turtle = Fraction(v['cat'], v['ratio'])\n    return turtle * v['secs']\n"
+ },
+ {
+  "row": 528,
+  "solver": "def solve(v):\n    o_sofas = v['sofas']\n    o_chairs = o_sofas + v['fewer']\n    j_chairs = v['times'] * o_chairs\n    j_sofas = j_chairs - v['fewer']\n    assert j_sofas >= 0\n    return o_sofas + o_chairs + j_chairs + j_sofas\n"
+ },
+ {
+  "row": 220,
+  "solver": "def solve(v):\n    return v['cm'] * v['cn'] + v['sm'] * v['sn']\n"
+ },
+ {
+  "row": 1299,
+  "solver": "def solve(v):\n    left = v['budget'] - v['ice'] - 2 * v['ticket'] - v['bracelet']\n    assert left >= 0\n    return left\n"
+ },
+ {
+  "row": 1212,
+  "solver": "def solve(v):\n    john = 2 * Fraction(v['cap'], v['den'])\n    assert john.denominator == 1\n    return v['cap'] + john\n"
+ },
+ {
+  "row": 368,
+  "solver": "def solve(v):\n    # \"three times more points than Sara\" = Sara + 3*Sara (matches the reference)\n    now = 4 * v['sara_pts']\n    before = now - v['scored']\n    assert before >= 0\n    return before\n"
+ },
+ {
+  "row": 926,
+  "solver": "def solve(v):\n    spent = v['fri_n'] * v['fri'] + v['oth_n'] * v['oth'] + v['pop_n'] * v['pop'] + 4 * v['candy']\n    left = v['allow'] - spent - v['pop'] - v['candy']\n    assert left >= 0\n    return left // v['fri']\n"
+ },
+ {
+  "row": 243,
+  "solver": "def solve(v):\n    left = v['plan'] - v['call'] * v['days'] - v['extra']\n    assert left >= 0\n    return left\n"
+ },
+ {
+  "row": 56,
+  "solver": "def solve(v):\n    return v['budget'] // (v['ticket'] + v['pop'])\n"
+ },
+ {
+  "row": 889,
+  "solver": "def solve(v):\n    return v['nd'] * v['pd'] - v['no'] * v['po']\n"
+ },
+ {
+  "row": 1234,
+  "solver": "def solve(v):\n    r = Fraction(v['n'] * 4, 3)\n    assert r.denominator == 1\n    return r\n"
+ },
+ {
+  "row": 69,
+  "solver": "def solve(v):\n    start = v['total'] - v['allow'] * v['weeks']\n    assert start >= 0\n    return start\n"
+ },
+ {
+  "row": 1157,
+  "solver": "def solve(v):\n    ned = v['h'] - 2\n    carl = ned + 1\n    return Fraction(carl, 2)\n"
+ },
+ {
+  "row": 1193,
+  "solver": "def solve(v):\n    return v['laundry'] + v['room'] + 2 * v['trash'] + v['dn'] * v['dish']\n"
+ }
+]

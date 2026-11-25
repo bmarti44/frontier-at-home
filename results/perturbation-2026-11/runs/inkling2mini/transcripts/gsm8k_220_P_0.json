@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:220:P:0",
+ "suite": "gsm8k",
+ "row": 220,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "575f7d8950a0663be9e28b9429f9a6b0dbf47f746b9a363d002246bf69ccc294",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:17:48.924375+00:00",
+ "completion": "The user wants a math answer. Compute: crossword 2 puzzles *18 min =36 min. Sudoku 6*2=12 min. Total 48 min. Need brief reasoning and final line exactly Answer: <number>. Ensure final numeric answer on its own line. Could include units? Form says <number>, likely just 48. Maybe \"48 minutes\"? They said numeric answer; use 48. Need end with final numeric answer on its own line. Do that.Crosswords: 2 × 18 = 36 minutes. Sudokus: 6 × 2 = 12 minutes. Total: 36 + 12 = 48 minutes.\nAnswer: 48",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.977244332003465
+ },
+ "usage": {
+  "prompt_tokens": 96,
+  "total_tokens": 250,
+  "completion_tokens": 154,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "48",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:17:54.901943+00:00"
+}

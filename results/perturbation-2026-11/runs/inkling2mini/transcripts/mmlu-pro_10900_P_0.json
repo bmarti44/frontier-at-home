@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:10900:P:0",
+ "suite": "mmlu-pro",
+ "row": 10900,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "be890c8bb100498e92c078819999583b9946ae0c73c53570e75d8420aa77bd20",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:05:13.635078+00:00",
+ "completion": "We need answer logic. Need determine consistency of set: D ≡ E, F ∨ D, ~E · ~F. Interpret ~E · ~F = (~E) AND (~F). Need find valuation satisfying all.\nFrom ~E and ~F: E false, F false. D ≡ E => D false. Check F ∨ D: F false OR D false = false. Not satisfied. So inconsistent. Option H.\nNeed ensure indirect truth tables maybe. Answer single letter. Final only Answer: H.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.484468601996923
+ },
+ "usage": {
+  "prompt_tokens": 260,
+  "total_tokens": 381,
+  "completion_tokens": 121,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:05:18.119876+00:00"
+}

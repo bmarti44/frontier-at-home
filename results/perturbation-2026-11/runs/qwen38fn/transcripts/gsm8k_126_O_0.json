@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:126:O:0",
+ "suite": "gsm8k",
+ "row": 126,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "79651070dfb1c935c6a61cf3afa6f421a778f1b48bce43506ba08a1d988eb887",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:42:20.435720+00:00",
+ "completion": "Dylan bought 38 chicken sausages and 6 more fish sausages than chicken sausages.\n\nFish sausages = 38 + 6 = 44\nTotal sausages = 38 + 44 = 82\n</think>\n\nDylan bought 38 chicken sausages.\n\nFish sausages = 38 + 6 = 44\n\nTotal sausages = 38 + 44 = 82\n\nAnswer: 82",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.2969431309975334
+ },
+ "usage": {
+  "prompt_tokens": 115,
+  "total_tokens": 218,
+  "completion_tokens": 103,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "82",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:42:24.732947+00:00"
+}

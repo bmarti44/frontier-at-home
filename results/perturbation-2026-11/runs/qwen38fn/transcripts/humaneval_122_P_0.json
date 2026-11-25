@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:122:P:0",
+ "suite": "humaneval",
+ "row": 122,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "aee2d6058530939e47b3e88e986a977e787f0f54e886fecdbb7f55ddf7487c37",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:29:24.804514+00:00",
+ "completion": "    return sum(x for x in arr[:k] if -100 < x < 100)\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.867128532998322
+ },
+ "usage": {
+  "prompt_tokens": 139,
+  "total_tokens": 165,
+  "completion_tokens": 26,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return sum(elem for elem in arr[:k] if len(str(elem)) <= 2)\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:29:26.671867+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00051:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:44.310761+00:00"
+}

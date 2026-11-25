@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:12:P:0",
+ "suite": "humaneval",
+ "row": 12,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "dc89f990fed3c17e2bb7a3029f3058eaa02a9e29cc51e704d9cc9326e334103c",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:45:10.827109+00:00",
+ "completion": "    if not strings:\n        return None\n    max_len = len(strings[0])\n    max_str = strings[0]\n    for s in strings[1:]:\n        if len(s) > max_len:\n            max_len = len(s)\n            max_str = s\n    return max_str",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.926556249993155
+ },
+ "usage": {
+  "prompt_tokens": 108,
+  "total_tokens": 176,
+  "completion_tokens": 68,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    if not strings:\n        return None\n\n    maxlen = max(len(x) for x in strings)\n    for s in strings:\n        if len(s) == maxlen:\n            return s\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:45:13.753829+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00067:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:47.915043+00:00"
+}

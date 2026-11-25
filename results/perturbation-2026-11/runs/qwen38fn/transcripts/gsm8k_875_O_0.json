@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:875:O:0",
+ "suite": "gsm8k",
+ "row": 875,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "a8681b9336922d3822ad32f5abacb6a376a0f88ad1cecc07c916b59c2cd8649d",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:46:54.571422+00:00",
+ "completion": "Let me solve this step by step.\n\n1. Paul starts with 52 marbles.\n2. His friend gave him 28 marbles: 52 + 28 = 80 marbles.\n3. He lost 1/4 of his marbles: 1/4 of 80 = 20 marbles lost.\n4. Marbles left: 80 - 20 = 60 marbles.\n</think>\n\nPaul starts with 52 marbles.\nHis friend gives him 28 more: 52 + 28 = 80 marbles.\nHe loses 1/4 of his marbles: 80 × 1/4 = 20 lost.\nMarbles remaining: 80 - 20 = 60.\n\nAnswer: 60",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.150820085000305
+ },
+ "usage": {
+  "prompt_tokens": 106,
+  "total_tokens": 290,
+  "completion_tokens": 184,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "60",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:47:01.722410+00:00"
+}

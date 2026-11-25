@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:289:P:0",
+ "suite": "gsm8k",
+ "row": 289,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "95a4ca444ba6c502af9d48c22bf66887f5ff5497108f0b9e25ced002e611c210",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:01:34.973238+00:00",
+ "completion": "The user wants a calculation. Fast lane speed = 40 mph. Slow lane speed = half = 20 mph. Fast lane traveled total 280 miles. Time for fast lane = 280/40 = 7 hours. But question asks: calculate the time the car in the slow lane took to cover the same distance (280 miles). Slow lane time = 280/20 = 14 hours. Need final numeric answer on its own line form Answer: <number>. Could include brief reasoning. Ensure final line exactly.Slow lane speed = 40/2 = 20 mph. Time to cover 280 miles = 280/20 = 14 hours.\n\nAnswer: 14 hours",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.110707544001343
+ },
+ "usage": {
+  "prompt_tokens": 101,
+  "total_tokens": 251,
+  "completion_tokens": 150,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "14",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:01:39.084171+00:00"
+}

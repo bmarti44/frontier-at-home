@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:161:P:0",
+ "suite": "humaneval",
+ "row": 161,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "f825d2beaf83a3f6cb1fab94808effd2f778fa9a339e67c0290917593d7f2024",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:58:23.459165+00:00",
+ "completion": "    if not s:\n        return \"\"\n    if not any(c.isalpha() for c in s):\n        return s[::-1]\n    return \"\".join(c.lower() if c.isupper() else c.upper() for c in s)\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.089000200998271
+ },
+ "usage": {
+  "prompt_tokens": 114,
+  "total_tokens": 168,
+  "completion_tokens": 54,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    flg = 0\n    idx = 0\n    new_str = list(s)\n    for i in s:\n        if i.isalpha():\n            new_str[idx] = i.swapcase()\n            flg = 1\n        idx += 1\n    s = \"\"\n    for i in new_str:\n        s += i\n    if flg == 0:\n        return s[len(s)::-1]\n    return s\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:58:26.548306+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00137:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:03.409823+00:00"
+}

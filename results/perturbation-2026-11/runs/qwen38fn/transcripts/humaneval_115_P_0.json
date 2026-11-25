@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:115:P:0",
+ "suite": "humaneval",
+ "row": 115,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "7537835e8824838f382caeb817029a8577b0dbf2125e4b98f29b303d4b92face",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T04:18:31.181350+00:00",
+ "completion": "    total_drops = 0\n    for well in grid:\n        water_units = sum(well)\n        if water_units > 0:\n            total_drops += math.ceil(water_units / capacity)\n    return total_drops\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.633202885001083
+ },
+ "usage": {
+  "prompt_tokens": 336,
+  "total_tokens": 390,
+  "completion_tokens": 54,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return sum([math.ceil(sum(arr)/capacity) for arr in grid])\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T04:18:33.814774+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00035:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:40.792680+00:00"
+}

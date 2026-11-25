@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1191:O:0",
+ "suite": "gsm8k",
+ "row": 1191,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "11a93da6c108002ff25d5df03d65222a9cafd9eab92f32a48fc2389b9bcc84d2",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:15:45.513186+00:00",
+ "completion": "The user wants a brief calculation. Hair started at 10 inches and ended at 8 inches, so cut length is 2 inches. Cost per inch $30, so haircut = 2*30 = 60. Color = 40. Total = 100. Need final line exactly Answer: <number>. Could include brief explanation then final line. Ensure final numeric answer on its own line.Hair cut length: 10 − 8 = 2 inches.  \nHaircut cost: 2 × $30 = $60.  \nTotal: $60 + $40 = $100.\n\nAnswer: 100",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.577359518996673
+ },
+ "usage": {
+  "prompt_tokens": 89,
+  "total_tokens": 225,
+  "completion_tokens": 136,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "100",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:15:50.090816+00:00"
+}

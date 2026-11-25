@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1259:P:1",
+ "suite": "gsm8k",
+ "row": 1259,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "2f7637091c4ebd7f6d2d1a1229502276f2f56ed50cf53e4c6386e3212c025b27",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:59:12.388534+00:00",
+ "completion": "The user wants a calculation. June has 30 days. Liam makes 11 dozen doughnuts per day. 11 dozen = 132 doughnuts. Sells at $3 each = $396 per day. Over 30 days = $11,880. Need final numeric answer on its own line. Brief reasoning okay. Ensure final line exactly Answer: <number>. Could include dollar sign? They say numeric answer; form Answer: <number>. Use 11880 maybe with $? \"numeric answer\" likely 11880. I'll put Answer: $11,880? They said numeric; maybe Answer: 11880. To be safe, final line Answer: $11,880 is not purely numeric. Use Answer: 11880.June has 30 days. 11 dozen = 132 doughnuts/day. 132 × $3 = $396/day. $396 × 30 = $11,880.\n\nAnswer: 11880",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.3228332299986505
+ },
+ "usage": {
+  "prompt_tokens": 88,
+  "total_tokens": 306,
+  "completion_tokens": 218,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "11880",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:59:19.711697+00:00"
+}

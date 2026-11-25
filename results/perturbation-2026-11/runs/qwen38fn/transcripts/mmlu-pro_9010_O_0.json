@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:9010:O:0",
+ "suite": "mmlu-pro",
+ "row": 9010,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "dcc73d7b2dacf8d3cf9db35b9f49970dfe2e1d7e3aceb63540fd9d4af15b55e9",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:50:27.167303+00:00",
+ "completion": "We need to find the distance traveled during uniform acceleration from 30 mi/hr to 60 mi/hr in 10 seconds.\n\nFirst, convert speeds to ft/sec:\n- 30 mi/hr = 30 × 5280/3600 = 44 ft/sec\n- 60 mi/hr = 60 × 5280/3600 = 88 ft/sec\n\nFor uniform acceleration, the distance traveled is:\nd = (v₁ + v₂)/2 × t\n\nd = (44 + 88)/2 × 10 = 132/2 × 10 = 66 × 10 = 660 ft\n\nThe answer is E. 660 ft.\n</think>\n\nLooking at this problem, I need to find the distance traveled during uniform acceleration.\n\n**Convert speeds to ft/sec:**\n- 30 mi/hr = 30 × (5280/3600) = 44 ft/sec\n- 60 mi/hr = 60 × (5280/3600) = 88 ft/sec\n\n**Apply the formula for distance under uniform acceleration:**\n\n$$d = \\frac{v_1 + v_2}{2} \\times t = \\frac{44 + 88}{2} \\times 10 = 66 \\times 10 = 660 \\text{ ft}$$\n\nAnswer: E",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.231668420994538
+ },
+ "usage": {
+  "prompt_tokens": 185,
+  "total_tokens": 513,
+  "completion_tokens": 328,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "E",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:50:40.399176+00:00"
+}

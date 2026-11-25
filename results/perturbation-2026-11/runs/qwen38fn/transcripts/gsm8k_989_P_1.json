@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:989:P:1",
+ "suite": "gsm8k",
+ "row": 989,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "b83900e027c06ef9076a1b6ec4eb96ea4d62093dc878e8cd68eddf3c87dd07b3",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:17:17.547903+00:00",
+ "completion": "Let me work through this step by step.\n\nChloe can peel 3 shrimp per minute.\nShe can sauté 20 shrimp in 20 minutes.\n\nI need to find how long it takes to peel AND cook 60 shrimp.\n\nPeeling: 60 shrimp ÷ 3 shrimp per minute = 20 minutes to peel.\n\nCooking: She can sauté 20 shrimp in 20 minutes. So for 60 shrimp, that's 3 batches of 20 shrimp, each taking 20 minutes = 60 minutes to cook.\n\nTotal time = 20 + 60 = 80 minutes.\n\nWait, let me reconsider. Can she peel and cook simultaneously? The problem says \"peel and cook\" which typically means sequentially - she peels first, then cooks. But actually, in many similar problems, the assumption is that she does them sequentially.\n\nTotal = 20 minutes (peeling) + 60 minutes (cooking) = 80 minutes.\n</think>\n\n**Peeling:**\n- Rate: 3 shrimp per minute\n- 60 shrimp ÷ 3 shrimp/min = **20 minutes**\n\n**Cooking (sautéing):**\n- Rate: 20 shrimp per 20 minutes\n- 60 shrimp = 3 batches × 20 minutes = **60 minutes**\n\n**Total time:** 20 + 60 = 80 minutes\n\nAnswer: 80",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.255319716998201
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 426,
+  "completion_tokens": 323,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "80",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:17:30.803547+00:00"
+}

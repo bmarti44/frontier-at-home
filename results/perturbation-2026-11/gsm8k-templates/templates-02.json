@@ -1,0 +1,1111 @@
+[
+ {
+  "row": 1154,
+  "template": "{name} likes eating carrots. If he eats {wd} carrots each on weekdays and {we} carrots each on Saturday and Sunday, how many carrots does he eat a week?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Mason",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "wd": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "we": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    # 5 weekdays, 2 weekend days\n    return 5 * v['wd'] + 2 * v['we']\n"
+ },
+ {
+  "row": 1308,
+  "template": "If there are {n} eggs in a basket, and there are twice as many eggs in a second basket, how many eggs are in both baskets put together?",
+  "vars": {
+   "n": {
+    "kind": "int",
+    "original": 10,
+    "min": 4,
+    "max": 40,
+    "step": 2
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    first = v['n']\n    second = 2 * first\n    return first + second\n"
+ },
+ {
+  "row": 454,
+  "exclude": "The question says Marin and Nancy each eat 4 apples a day (8/day, 240 in 30 days) but the reference uses 4 + 1 = 5 apples a day (150); no faithful solver reproduces it."
+ },
+ {
+  "row": 280,
+  "template": "{name} purchased {n1} popsicles at ${p1} each. He also purchased {n2} ice cream bars at ${p2} each. How much did he pay in total in dollars?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Peter",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "n1": {
+    "kind": "int",
+    "original": 20,
+    "min": 10,
+    "max": 60,
+    "step": 5
+   },
+   "p1": {
+    "kind": "num_choice",
+    "original": "0.25",
+    "values": [
+     "0.10",
+     "0.15",
+     "0.20",
+     "0.30",
+     "0.35",
+     "0.40",
+     "0.45",
+     "0.60",
+     "0.75"
+    ]
+   },
+   "n2": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "p2": {
+    "kind": "num_choice",
+    "original": "0.50",
+    "values": [
+     "0.25",
+     "0.40",
+     "0.60",
+     "0.75",
+     "0.80",
+     "1.00",
+     "1.25",
+     "1.50"
+    ]
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    return v['n1'] * v['p1'] + v['n2'] * v['p2']\n"
+ },
+ {
+  "row": 177,
+  "template": "{name} spends 1/{d1} of his salary on rent, 1/{d2} on car fuel and donates half of the remaining amount to his favorite charity. He gives his daughter {kid}$ to use for her weekly expenses and {wife}$ to his wife to budget for groceries and other household goods. If {name} earns {sal}$ per month, how much money will he still have after all these expenses and donations?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Zaid",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "d1": {
+    "kind": "int",
+    "original": 4,
+    "min": 3,
+    "max": 6,
+    "step": 1
+   },
+   "d2": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 6,
+    "step": 1
+   },
+   "kid": {
+    "kind": "int",
+    "original": 200,
+    "min": 100,
+    "max": 500,
+    "step": 50
+   },
+   "wife": {
+    "kind": "int",
+    "original": 700,
+    "min": 300,
+    "max": 1500,
+    "step": 50
+   },
+   "sal": {
+    "kind": "int",
+    "original": 6000,
+    "min": 3000,
+    "max": 15000,
+    "step": 500
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    s = v['sal']\n    assert s % v['d1'] == 0 and s % v['d2'] == 0\n    rent = s // v['d1']\n    fuel = s // v['d2']\n    remaining = s - rent - fuel\n    assert remaining > 0 and remaining % 2 == 0\n    after_donation = remaining - remaining // 2\n    left = after_donation - v['kid'] - v['wife']\n    assert left > 0\n    return left\n"
+ },
+ {
+  "row": 923,
+  "template": "{name} is brewing cups of tea for her friends. She has {t} cups, and she divides these into {r} rows. In each row, she creates equal amounts of chamomile and mint tea cups. She then uses the remaining cups to brew a total of {c} cups of cinnamon tea. How many cups of mint tea are in each row?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Lana",
+    "pool": [
+     "Emma",
+     "Sofia",
+     "Priya",
+     "Mia",
+     "Chloe",
+     "Aisha",
+     "Yuki",
+     "Hannah",
+     "Grace",
+     "Leila",
+     "Nora",
+     "Elena",
+     "Ruth",
+     "Maya"
+    ]
+   },
+   "t": {
+    "kind": "int",
+    "original": 27,
+    "min": 12,
+    "max": 60,
+    "step": 6
+   },
+   "r": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 4,
+    "step": 1
+   },
+   "c": {
+    "kind": "int",
+    "original": 15,
+    "min": 4,
+    "max": 40,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    t, r, c = v['t'], v['r'], v['c']\n    assert t % r == 0          # cups divide evenly into rows\n    assert t > c\n    rest = t - c               # chamomile + mint cups\n    assert rest % 2 == 0\n    mint = rest // 2\n    assert mint % r == 0\n    return mint // r\n"
+ },
+ {
+  "row": 677,
+  "template": "{carol} and {jen} are sisters from Los Angeles who love collecting signatures from celebrities. During their summer break from school, the sisters spend every afternoon collecting signatures. After five weeks, {carol} and {jen} compare their autograph books, counting up the number of signatures each sister has collected. {carol} has {c} signatures in her book, and {jen} has {j}. The sisters have three more weeks of summer vacation, and they decide they want to reach {goal} signatures between them by the end of the summer. How many signatures do the sisters need to collect to reach their goal?",
+  "vars": {
+   "carol": {
+    "kind": "name",
+    "original": "Carol",
+    "pool": [
+     "Emma",
+     "Sofia",
+     "Priya",
+     "Mia",
+     "Chloe",
+     "Aisha",
+     "Yuki",
+     "Hannah",
+     "Grace",
+     "Leila",
+     "Nora",
+     "Elena",
+     "Ruth",
+     "Maya"
+    ]
+   },
+   "jen": {
+    "kind": "name",
+    "original": "Jennifer",
+    "pool": [
+     "Emma",
+     "Sofia",
+     "Priya",
+     "Mia",
+     "Chloe",
+     "Aisha",
+     "Yuki",
+     "Hannah",
+     "Grace",
+     "Leila",
+     "Nora",
+     "Elena",
+     "Ruth",
+     "Maya"
+    ]
+   },
+   "c": {
+    "kind": "int",
+    "original": 20,
+    "min": 5,
+    "max": 60,
+    "step": 5
+   },
+   "j": {
+    "kind": "int",
+    "original": 44,
+    "min": 12,
+    "max": 120,
+    "step": 1
+   },
+   "goal": {
+    "kind": "int",
+    "original": 100,
+    "min": 50,
+    "max": 300,
+    "step": 10
+   }
+  },
+  "constraints": [
+   "v['goal'] > v['c'] + v['j']"
+  ],
+  "solver": "def solve(v):\n    have = v['c'] + v['j']\n    need = v['goal'] - have\n    assert need > 0\n    return need\n"
+ },
+ {
+  "row": 1176,
+  "template": "A teacher uses a {length}-inch piece of chalk to write math equations on a chalkboard for his students. The teacher likes to conserve chalk, so he tries to only use {daily}% of the chalk each day. Since the teacher cannot write with a very small piece of chalk, he recycles the chalk when it is smaller than {thr} inches. On Monday the teacher used a new piece of chalk. His students need extra help that day, so he ended up writing more than usual. He used up {mon}% of the chalk by the end of the day. If the teacher goes back to using only {daily}% of the chalk each day, how many days does he have before he has to recycle this piece?",
+  "vars": {
+   "length": {
+    "kind": "int",
+    "original": 5,
+    "min": 3,
+    "max": 12,
+    "step": 1
+   },
+   "daily": {
+    "kind": "int",
+    "original": 20,
+    "min": 10,
+    "max": 40,
+    "step": 5
+   },
+   "thr": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 4,
+    "step": 1
+   },
+   "mon": {
+    "kind": "int",
+    "original": 45,
+    "min": 25,
+    "max": 80,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "v['mon'] > v['daily']",
+   "v['thr'] < v['length']"
+  ],
+  "solver": "def solve(v):\n    L = Fraction(v['length']) * (100 - v['mon']) / 100   # left after Monday\n    thr = v['thr']\n    assert L > thr\n    days = 0\n    while L >= thr:\n        assert L != thr                                  # avoid the exact-threshold edge case\n        L = L * (100 - v['daily']) / 100\n        days += 1\n    assert L != thr\n    return days\n"
+ },
+ {
+  "row": 21,
+  "template": "{ray} and {sam} are cousins. {ray} was born {gap} years before {sam}. {ray} had a son at the age of {age}. If {sam} is now {now}, how many years ago was {ray}'s son born?",
+  "vars": {
+   "ray": {
+    "kind": "name",
+    "original": "Raymond",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "sam": {
+    "kind": "name",
+    "original": "Samantha",
+    "pool": [
+     "Emma",
+     "Sofia",
+     "Priya",
+     "Mia",
+     "Chloe",
+     "Aisha",
+     "Yuki",
+     "Hannah",
+     "Grace",
+     "Leila",
+     "Nora",
+     "Elena",
+     "Ruth",
+     "Maya"
+    ]
+   },
+   "gap": {
+    "kind": "int",
+    "original": 6,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "age": {
+    "kind": "int",
+    "original": 23,
+    "min": 18,
+    "max": 40,
+    "step": 1
+   },
+   "now": {
+    "kind": "int",
+    "original": 31,
+    "min": 20,
+    "max": 70,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['now'] > v['age'] - v['gap']"
+  ],
+  "solver": "def solve(v):\n    sam_age_at_birth = v['age'] - v['gap']\n    assert sam_age_at_birth > 0\n    years_ago = v['now'] - sam_age_at_birth\n    assert years_ago > 0\n    return years_ago\n"
+ },
+ {
+  "row": 970,
+  "template": "{zeke}'s baseball team has {more} more players than {carl}'s. If {carl}'s team has {c} players, how many players are there in both teams combined?",
+  "vars": {
+   "zeke": {
+    "kind": "name",
+    "original": "Zeke",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "carl": {
+    "kind": "name",
+    "original": "Carlton",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "more": {
+    "kind": "int",
+    "original": 7,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "c": {
+    "kind": "int",
+    "original": 13,
+    "min": 5,
+    "max": 40,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    carlton = v['c']\n    zeke = carlton + v['more']\n    return zeke + carlton\n"
+ },
+ {
+  "row": 356,
+  "template": "{name}'s mother gave him ${money} to go to the toy store. {name} bought {cars} toy cars and {bears} teddy bears. Each toy car cost ${cp} and each teddy bear cost ${bp}. His mother then feels generous and decides to give him an extra ${extra}. How much money does {name} have left?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Dean",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "money": {
+    "kind": "int",
+    "original": 28,
+    "min": 10,
+    "max": 80,
+    "step": 1
+   },
+   "cars": {
+    "kind": "int",
+    "original": 6,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   },
+   "bears": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   },
+   "cp": {
+    "kind": "int",
+    "original": 2,
+    "min": 1,
+    "max": 8,
+    "step": 1
+   },
+   "bp": {
+    "kind": "int",
+    "original": 1,
+    "min": 1,
+    "max": 4,
+    "step": 1
+   },
+   "extra": {
+    "kind": "int",
+    "original": 10,
+    "min": 5,
+    "max": 30,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "v['cars'] * v['cp'] + v['bears'] * v['bp'] <= v['money']"
+  ],
+  "solver": "def solve(v):\n    cost = v['cars'] * v['cp'] + v['bears'] * v['bp']\n    assert cost <= v['money']      # he can pay before the extra money arrives\n    return v['money'] + v['extra'] - cost\n"
+ },
+ {
+  "row": 100,
+  "template": "{name} had 4 friends who came to visit him on a certain day. The first friend pressed on the doorbell {first} times before {name} opened, the second friend pressed on the doorbell 1/{k} times more than {name}'s first friend. The third friend pressed on the doorbell {diff} times more than the fourth friend. If the fourth friend pressed on the doorbell {fourth} times, how many doorbell rings did the doorbell make?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Jerome",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "first": {
+    "kind": "int",
+    "original": 20,
+    "min": 10,
+    "max": 80,
+    "step": 5
+   },
+   "k": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 5,
+    "step": 1
+   },
+   "diff": {
+    "kind": "int",
+    "original": 10,
+    "min": 5,
+    "max": 40,
+    "step": 5
+   },
+   "fourth": {
+    "kind": "int",
+    "original": 60,
+    "min": 20,
+    "max": 200,
+    "step": 10
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    f1 = v['first']\n    assert f1 % v['k'] == 0\n    f2 = f1 + f1 // v['k']\n    f4 = v['fourth']\n    f3 = f4 + v['diff']\n    return f1 + f2 + f3 + f4\n"
+ },
+ {
+  "row": 132,
+  "template": "{pam} and {fred} went to a carnival. {pam} rode the roller coaster {p} times while {fred} rode it {f} times. After that, each of them decided to ride the luge {l} times. If each ride cost {t} tickets, how many tickets did they use that day?",
+  "vars": {
+   "pam": {
+    "kind": "name",
+    "original": "Pam",
+    "pool": [
+     "Emma",
+     "Sofia",
+     "Priya",
+     "Mia",
+     "Chloe",
+     "Aisha",
+     "Yuki",
+     "Hannah",
+     "Grace",
+     "Leila",
+     "Nora",
+     "Elena",
+     "Ruth",
+     "Maya"
+    ]
+   },
+   "fred": {
+    "kind": "name",
+    "original": "Fred",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "p": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "f": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "l": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "t": {
+    "kind": "int",
+    "original": 6,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    coaster = v['p'] + v['f']\n    luge = 2 * v['l']            # each of the two rides the luge l times\n    return (coaster + luge) * v['t']\n"
+ },
+ {
+  "row": 364,
+  "template": "There are {total} fourth-graders at Small Tree  School. {girls} of them are girls. On Friday, {ga} fourth-grade girls and {ba} fourth-grade boys were absent. How many fourth grade boys were at Small Tree  School on Friday?",
+  "vars": {
+   "total": {
+    "kind": "int",
+    "original": 96,
+    "min": 40,
+    "max": 200,
+    "step": 1
+   },
+   "girls": {
+    "kind": "int",
+    "original": 43,
+    "min": 15,
+    "max": 120,
+    "step": 1
+   },
+   "ga": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   },
+   "ba": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "10 * v['girls'] >= 3 * v['total']",
+   "10 * v['girls'] <= 7 * v['total']",
+   "v['ga'] < v['girls']",
+   "v['ba'] < v['total'] - v['girls']"
+  ],
+  "solver": "def solve(v):\n    boys = v['total'] - v['girls']\n    assert boys > v['ba'] and v['girls'] > v['ga']\n    return boys - v['ba']\n"
+ },
+ {
+  "row": 969,
+  "template": "{name} decides to buy new phones for him, his {kids} kids, and his wife.  Each phone after the first {first} is half price.  If the phone price is ${price} how much did he pay for them all?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "John",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "kids": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 6,
+    "step": 1
+   },
+   "first": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 4,
+    "step": 1
+   },
+   "price": {
+    "kind": "int",
+    "original": 600,
+    "min": 200,
+    "max": 1500,
+    "step": 50
+   }
+  },
+  "constraints": [
+   "v['first'] < v['kids'] + 2"
+  ],
+  "solver": "def solve(v):\n    phones = 1 + v['kids'] + 1     # him, kids, wife\n    assert v['first'] < phones\n    full = v['first'] * v['price']\n    half = (phones - v['first']) * Fraction(v['price'], 2)\n    return full + half\n"
+ },
+ {
+  "row": 1273,
+  "template": "{giver} has {total} marbles and gives them to twins, {dallas} and {darla}.  If {dallas} has a total of {has} marbles after dropping {drop} of them in the playground, how many did {giver} give to {darla}?",
+  "vars": {
+   "giver": {
+    "kind": "name",
+    "original": "Mazie",
+    "pool": [
+     "Emma",
+     "Sofia",
+     "Priya",
+     "Mia",
+     "Chloe",
+     "Aisha",
+     "Yuki",
+     "Hannah",
+     "Grace",
+     "Leila",
+     "Nora",
+     "Elena",
+     "Ruth",
+     "Maya"
+    ]
+   },
+   "dallas": {
+    "kind": "name",
+    "original": "Dallas",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "darla": {
+    "kind": "name",
+    "original": "Darla",
+    "pool": [
+     "Emma",
+     "Sofia",
+     "Priya",
+     "Mia",
+     "Chloe",
+     "Aisha",
+     "Yuki",
+     "Hannah",
+     "Grace",
+     "Leila",
+     "Nora",
+     "Elena",
+     "Ruth",
+     "Maya"
+    ]
+   },
+   "total": {
+    "kind": "int",
+    "original": 52,
+    "min": 20,
+    "max": 150,
+    "step": 1
+   },
+   "has": {
+    "kind": "int",
+    "original": 21,
+    "min": 6,
+    "max": 80,
+    "step": 1
+   },
+   "drop": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['total'] > v['has'] + v['drop']"
+  ],
+  "solver": "def solve(v):\n    to_dallas = v['has'] + v['drop']\n    to_darla = v['total'] - to_dallas\n    assert to_darla > 0\n    return to_darla\n"
+ },
+ {
+  "row": 143,
+  "template": "{name} buys milk for {milk} dollars, eggs for {eggs} dollars, light bulbs for {bulbs} dollars, cups for {cups} dollars, and roach traps for {traps} dollars.  If there is a {tax}% tax on all nonfood items how much did everything cost.",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "John",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "milk": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "eggs": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "bulbs": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "cups": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "traps": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 16,
+    "step": 1
+   },
+   "tax": {
+    "kind": "int",
+    "original": 10,
+    "min": 5,
+    "max": 25,
+    "step": 5
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    food = v['milk'] + v['eggs']\n    nonfood = v['bulbs'] + v['cups'] + v['traps']\n    tax = Fraction(nonfood * v['tax'], 100)\n    return food + nonfood + tax\n"
+ },
+ {
+  "row": 442,
+  "template": "When {name} wakes up, his house is {start} degrees. He spends {hours} hours baking, and every hour the oven is on it raises the house's temperature by {rate} degrees. Then {name} opens a window for {window} minutes, and the house cools down {cool} degrees for every {interval} minutes the window is open. What is the house's final temperature?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Marcus",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "start": {
+    "kind": "int",
+    "original": 40,
+    "min": 30,
+    "max": 80,
+    "step": 5
+   },
+   "hours": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "rate": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   },
+   "window": {
+    "kind": "int",
+    "original": 30,
+    "min": 10,
+    "max": 90,
+    "step": 5
+   },
+   "cool": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "interval": {
+    "kind": "int",
+    "original": 10,
+    "min": 5,
+    "max": 20,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "v['start'] + v['hours'] * v['rate'] <= 90"
+  ],
+  "solver": "def solve(v):\n    warm = v['start'] + v['hours'] * v['rate']\n    assert v['window'] % v['interval'] == 0\n    drops = v['window'] // v['interval']\n    assert drops * v['cool'] < v['hours'] * v['rate']   # window cools less than the oven warmed, as in the original\n    final = warm - drops * v['cool']\n    assert final > 0\n    return final\n"
+ },
+ {
+  "row": 464,
+  "template": "{name} took part in a {dist}-meter race.  She started off in first, but then fell back {b1} spots.  She then moved ahead {a1} spots, before falling behind {b2}.  Lastly, she jumped ahead 1 spot to finish the race.  What place did she finish in?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Finley",
+    "pool": [
+     "Emma",
+     "Sofia",
+     "Priya",
+     "Mia",
+     "Chloe",
+     "Aisha",
+     "Yuki",
+     "Hannah",
+     "Grace",
+     "Leila",
+     "Nora",
+     "Elena",
+     "Ruth",
+     "Maya"
+    ]
+   },
+   "dist": {
+    "kind": "int",
+    "original": 100,
+    "min": 100,
+    "max": 400,
+    "step": 100
+   },
+   "b1": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   },
+   "a1": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 6,
+    "step": 1
+   },
+   "b2": {
+    "kind": "int",
+    "original": 3,
+    "min": 1,
+    "max": 10,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['a1'] < v['b1']"
+  ],
+  "solver": "def solve(v):\n    pos = 1\n    pos += v['b1']\n    pos -= v['a1']\n    assert pos >= 1\n    pos += v['b2']\n    pos -= 1\n    assert pos >= 1\n    return pos\n"
+ },
+ {
+  "row": 1089,
+  "template": "{name} has a bouncy ball that bounces to 2/3rds of its starting height with each bounce. If he drops it from the third-floor balcony in the mall, where each story is {h} feet high, how high does the ball go on its second bounce?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Nathan",
+    "pool": [
+     "Liam",
+     "Noah",
+     "Ethan",
+     "Oliver",
+     "Daniel",
+     "Mateo",
+     "Omar",
+     "Ravi",
+     "Kenji",
+     "Victor",
+     "Samuel",
+     "Aaron",
+     "Hugo",
+     "Felix"
+    ]
+   },
+   "h": {
+    "kind": "int",
+    "original": 24,
+    "min": 12,
+    "max": 36,
+    "step": 3
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    drop = 3 * v['h']                  # third-floor balcony = 3 stories\n    b1 = Fraction(drop) * 2 / 3\n    b2 = b1 * 2 / 3\n    assert b2.denominator == 1\n    return b2\n"
+ }
+]

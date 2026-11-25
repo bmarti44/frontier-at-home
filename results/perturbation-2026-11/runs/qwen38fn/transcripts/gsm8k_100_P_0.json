@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:100:P:0",
+ "suite": "gsm8k",
+ "row": 100,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "43f38e97d6b786d3e85efe4a0f1f03e89cea9917221dd2efdb45a9b8080a2576",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:59:04.245107+00:00",
+ "completion": "Let me work through this step by step.\n\nFirst friend: pressed 10 times\nSecond friend: pressed 1/5 times more than the first friend. \"1/5 times more\" means 1/5 of 10 more than 10, so 10 + (1/5 × 10) = 10 + 2 = 12 times.\nThird friend: pressed 20 times more than the fourth friend. Fourth friend pressed 30 times, so third friend pressed 30 + 20 = 50 times.\nFourth friend: pressed 30 times.\n\nTotal = 10 + 12 + 50 + 30 = 102\n</think>\n\nLet me solve this step by step:\n\n**First friend:** 10 times\n\n**Second friend:** 1/5 times more than the first friend = 10 + (1/5 × 10) = 10 + 2 = 12 times\n\n**Fourth friend:** 30 times\n\n**Third friend:** 20 times more than the fourth friend = 30 + 20 = 50 times\n\n**Total:** 10 + 12 + 50 + 30 = 102\n\nAnswer: 102",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.432225413998822
+ },
+ "usage": {
+  "prompt_tokens": 161,
+  "total_tokens": 446,
+  "completion_tokens": 285,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "102",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:59:15.677607+00:00"
+}

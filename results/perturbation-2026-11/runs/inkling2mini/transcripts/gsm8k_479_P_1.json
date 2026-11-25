@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:479:P:1",
+ "suite": "gsm8k",
+ "row": 479,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "4687d94bd46688870fd143e7c19b1f06cb6453e054ecaf17d86ced3b02dbf206",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:17:17.261414+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: David decides to give wife anniversary getaway. Plane tickets cost $5500 each. Hotel is 60% more expensive than normal because busy weekend. Normal price $1400 per day. If they are there for 3 days how much did the trip cost?\n\nInterpretation: two people (David and wife), plane tickets cost $5500 each => 2*5500 = 11000. Hotel normal price $1400 per day. Is that per day total for couple or per person? Wording: \"The hotel is 60% more expensive than normal... normal price is $1400 per day. If they are there for 3 days\" Usually hotel price per day for the room (for both). 60% more => 1400*1.6 = 2240 per day. For 3 days = 6720. Total = 11000+6720=17720.\n\nNeed final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly. No extra after. Use dollar maybe number only? They say numeric answer. Answer: 17720. Could include $? form <number>, likely 17720. Do brief.Tickets: 2 × $5500 = $11000  \nHotel: $1400 × 1.6 × 3 = $6720  \nTotal: $11000 + $6720 = $17720\n\nAnswer: 17720",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.487653470001533
+ },
+ "usage": {
+  "prompt_tokens": 111,
+  "total_tokens": 438,
+  "completion_tokens": 327,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "17720",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:17:25.749341+00:00"
+}

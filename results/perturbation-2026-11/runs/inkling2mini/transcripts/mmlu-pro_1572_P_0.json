@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:1572:P:0",
+ "suite": "mmlu-pro",
+ "row": 1572,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "c134653e4df514f4a24af97405f1ec91b308a65a70c1512663a9e81f1b9fc6f6",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:26:24.659840+00:00",
+ "completion": "We need answer single letter. Need determine correct. Derogation in human rights treaties: temporary suspension of obligations in time of public emergency threatening life of nation. Option H says State may suspend particular rights by means of derogation in circumstances that threaten its existence. Option J says exemptions from particular human rights obligations contained in a treaty. Which is best? Let's parse.\n\nQuestion: What is a derogation? Options:\nA process whereby state can amend treaty - no.\nB enforcement clauses - no.\nC ability of rights holders to bring claim - no.\nD responsibility of state to ensure protection - no.\nE legal term for state's refusal to comply - no.\nF penalties - no.\nG mechanism allows state to temporarily suspend obligations under treaty in times of peace - wrong (times of peace).\nH A State may suspend particular rights by means of a derogation in circumstances that threaten its existence - correct (public emergency threatening existence of nation).\nI withdraw - no.\nJ exemptions from particular human rights obligations contained in a treaty - also plausible definition. But H more precise and includes circumstances. J is generic: derogations are exemptions from particular human rights obligations contained in a treaty. In human rights law, derogation is a temporary suspension of certain rights in time of emergency. J lacks temporary/emergency but is still definition. H says \"in circumstances that threaten its existence\" (existence of state) exactly. Likely H.\n\nNeed final only Answer: H.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.116793313001835
+ },
+ "usage": {
+  "prompt_tokens": 268,
+  "total_tokens": 612,
+  "completion_tokens": 344,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:26:35.776917+00:00"
+}

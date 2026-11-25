@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:3721:P:0",
+ "suite": "mmlu-pro",
+ "row": 3721,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "687ad5aec3911af1952a313c89254f60ed73438e3d960128457e1a5b36f1d39f",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:45:31.068823+00:00",
+ "completion": "Let me work through this stoichiometry problem.\n\nThe reaction is:\n2 NaCN + H₂SO₄ → Na₂SO₄ + 2 HCN\n\nGiven:\n- Mass of NaCN = 196 g\n- H₂SO₄ is in excess (dilute)\n- Find volume of HCN at STP\n\nStep 1: Find moles of NaCN\nMolar mass of NaCN = 23 + 12 + 14 = 49 g/mol\nMoles of NaCN = 196 g ÷ 49 g/mol = 4 mol\n\nStep 2: Use stoichiometry\nFrom the balanced equation: 2 NaCN → 2 HCN\nSo the mole ratio is 1:1\nMoles of HCN = 4 mol\n\nStep 3: Find volume at STP\nAt STP, 1 mol of gas = 22.4 L\nVolume of HCN = 4 mol × 22.4 L/mol = 89.6 L\n\nThe answer is D.\n</think>\n\n## Solution\n\n**Balanced equation:**\n$$2\\text{NaCN} + \\text{H}_2\\text{SO}_4 \\rightarrow \\text{Na}_2\\text{SO}_4 + 2\\text{HCN}$$\n\n**Step 1: Moles of NaCN**\n$$\\text{Molar mass of NaCN} = 23 + 12 + 14 = 49 \\text{ g/mol}$$\n$$n = \\frac{196 \\text{ g}}{49 \\text{ g/mol}} = 4 \\text{ mol}$$\n\n**Step 2: Moles of HCN produced**\nThe mole ratio NaCN : HCN = 2 : 2 = 1 : 1, so:\n$$n_{\\text{HCN}} = 4 \\text{ mol}$$\n\n**Step 3: Volume at STP**\n$$V = 4 \\text{ mol} \\times 22.4 \\text{ L/mol} = 89.6 \\text{ L}$$\n\nAnswer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 16.47504476999893
+ },
+ "usage": {
+  "prompt_tokens": 205,
+  "total_tokens": 685,
+  "completion_tokens": 480,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:45:47.544011+00:00"
+}

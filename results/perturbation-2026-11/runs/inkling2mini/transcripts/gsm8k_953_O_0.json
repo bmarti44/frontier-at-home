@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:953:O:0",
+ "suite": "gsm8k",
+ "row": 953,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "7440d5478c8c4d4e87d41b2f3a9c26f07eaf5b25c31d0629a09cc17341666936",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:03:36.272445+00:00",
+ "completion": "We need answer math. Need parse carefully. Kim usually sleeps 10 p.m. to 6 a.m. = 8 hours = 480 min. One day, after reviewing cameras, she finds that she woke up that day and was sleepwalking from 2:15 to 2:38 am. Also, that day she woke up 5 minutes earlier than usual to go to the bathroom. How many minutes did she sleep on her bed that day?\n\nNeed determine total sleep on bed that day. She woke up 5 minutes earlier than usual to go to bathroom. Usual wake 6:00, so woke at 5:55? But also woke up and sleepwalked from 2:15 to 2:38. Need subtract sleepwalking interval? Let's parse.\n\nShe usually goes to sleep at 10 p.m. and wakes at 6 a.m. One day, after reviewing cameras, she finds that she woke up that day and was sleepwalking from 2:15 to 2:38 am. Also, that day she woke up 5 minutes earlier than usual to go to the bathroom. How many minutes did she sleep on her bed that day?\n\nPotential interpretation: Total time in bed from 10pm to 5:55am = 7h55m = 475 min. During 2:15-2:38 she woke up and was sleepwalking (not sleeping) for 23 min. So sleep on bed = 475 - 23 = 452 min. But need consider if sleepwalking from 2:15 to 2:38 means she was awake/sleepwalking, not sleeping. Yes.\n\nCheck: usual sleep 8h. Earlier wake by 5 min => 7h55 = 475. Sleepwalking period 23 min (2:15 to 2:38 = 23). Subtract = 452. Answer 452.\n\nNeed final with brief explanation and final line exact. Ensure final numeric answer on own line.Usual time in bed: 10 p.m. to 6 a.m. = 480 minutes.  \nShe woke 5 minutes earlier: 480 − 5 = 475 minutes in bed.  \nSleepwalking interval: 2:15 to 2:38 = 23 minutes, not sleeping.  \nSleeping on bed: 475 − 23 = 452 minutes.\n\nAnswer: 452",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.361193605000153
+ },
+ "usage": {
+  "prompt_tokens": 158,
+  "total_tokens": 689,
+  "completion_tokens": 531,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "452",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:03:49.633946+00:00"
+}

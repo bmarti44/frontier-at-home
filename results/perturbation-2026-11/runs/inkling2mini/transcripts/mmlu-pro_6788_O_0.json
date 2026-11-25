@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:6788:O:0",
+ "suite": "mmlu-pro",
+ "row": 6788,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "56057393049cdcae24cf5a0318a4f5a3724a1e9343f3a332122f0f66f7002dc5",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:57:38.718177+00:00",
+ "completion": "We need answer economics. Need determine GDP includes market value of goods/services produced within U.S. borders (regardless of citizenship), not sales to foreigners? GDP measures production within country. Let's evaluate:\nI. Movies made in Africa by U.S. citizens: production in Africa, not U.S. border => not included in U.S. GDP (even though citizens). Exclude.\nII. Olive oil made in Italy and sold in U.S.: production in Italy => not U.S. GDP. Exclude.\nIII. Blue jeans made in U.S. and sold in Japan: production in U.S. => included in U.S. GDP (exports count). Include.\nIV. Wine made in U.S. by Canadian citizens: production in U.S. border => included in U.S. GDP (regardless of producer citizenship). Include.\nThus III and IV only => G. Need final only single letter form. Ensure no extra.Answer: G",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.25783803000013
+ },
+ "usage": {
+  "prompt_tokens": 189,
+  "total_tokens": 416,
+  "completion_tokens": 227,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "G",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:57:45.976273+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1024:P:0",
+ "suite": "gsm8k",
+ "row": 1024,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "6321959f69e696521306784aeea7df864f8a74621d1ad319a1260dcde7280a88",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:40:53.603935+00:00",
+ "completion": "We need answer math. Need compute. Grace sold 90 cookies for $1 each = $90. 30 cupcakes for $7 each = $210. Total earnings = $300. Gave two sisters $25 each = $50. Left = $250. Need final numeric answer on own line form Answer: <number>. Brief if needed. Ensure final line exactly. Could include short calculation then final line. Need no extra after final line.Cookies: 90 × $1 = $90  \nCupcakes: 30 × $7 = $210  \nTotal: $300; sisters: 2 × $25 = $50; left: $250  \n\nAnswer: $250",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.662463365999429
+ },
+ "usage": {
+  "prompt_tokens": 84,
+  "total_tokens": 235,
+  "completion_tokens": 151,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "250",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:40:58.266724+00:00"
+}

@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:59:O:0",
+ "suite": "humaneval",
+ "row": 59,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "cf78f9000b4d867d85088bb0c95336fae0da8a00dee82e40074ad153f0f470bd",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:54:28.861667+00:00",
+ "completion": "    def is_prime(num):\n        if num < 2:\n            return False\n        for i in range(2, int(num ** 0.5) + 1):\n            if num % i == 0:\n                return False\n        return True\n\n    largest = -1\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0 and is_prime(i):\n            largest = i\n    if largest == -1:\n        return n\n    return largest\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.171881440997822
+ },
+ "usage": {
+  "prompt_tokens": 69,
+  "total_tokens": 190,
+  "completion_tokens": 121,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    def is_prime(k):\n        if k < 2:\n            return False\n        for i in range(2, k - 1):\n            if k % i == 0:\n                return False\n        return True\n    largest = 1\n    for j in range(2, n + 1):\n        if n % j == 0 and is_prime(j):\n            largest = max(largest, j)\n    return largest\n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T03:54:34.033724+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00236:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 41, in <module>\n    check(largest_prime_factor)\n  File \"/case/main.py\", line 33, in check\n    assert candidate(15) == 5\n           ^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:36.391082+00:00"
+}

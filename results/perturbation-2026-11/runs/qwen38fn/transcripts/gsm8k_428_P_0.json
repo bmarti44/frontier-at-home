@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:428:P:0",
+ "suite": "gsm8k",
+ "row": 428,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "3c955d58788196b5ef5b41c88863ab21fdc03a40fa63c897bb1e88e43fa0729d",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:07:00.235739+00:00",
+ "completion": "Let me work through this step by step.\n\nThe caterer was told to prepare for 26 guests.\n- Most people would eat one hotdog, so he prepared 26 hotdogs for the first round.\n- He prepared enough for half of the guests to have a second hotdog. Half of 26 = 13 guests could have a second hotdog.\n- So total hotdogs prepared = 26 + 13 = 39 hotdogs.\n\nNow, 30 guests showed up, and everyone wanted a second hotdog.\n- First, each of the 30 guests gets one hotdog: 30 hotdogs used.\n- Remaining hotdogs: 39 - 30 = 9 hotdogs left for second hotdogs.\n- 30 guests want a second hotdog, but only 9 are available.\n- Guests who did NOT get a second hotdog: 30 - 9 = 21.\n</think>\n\nLet me work through this step by step.\n\n**Hotdogs prepared:**\n- 26 guests were expected, so 26 hotdogs for the first round.\n- Half of 26 = 13 guests could have a second hotdog, so 13 extra hotdogs.\n- Total hotdogs = 26 + 13 = **39 hotdogs**\n\n**30 guests show up, everyone wants a second hotdog:**\n- First hotdog for each guest: 30 hotdogs used.\n- Remaining hotdogs: 39 - 30 = **9 hotdogs** left for second helpings.\n- 30 guests want a second hotdog, but only 9 are available.\n- Guests who did NOT get a second hotdog: 30 - 9 = **21**\n\nAnswer: 21",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 18.25486738100153
+ },
+ "usage": {
+  "prompt_tokens": 138,
+  "total_tokens": 537,
+  "completion_tokens": 399,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "21",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:07:18.490847+00:00"
+}

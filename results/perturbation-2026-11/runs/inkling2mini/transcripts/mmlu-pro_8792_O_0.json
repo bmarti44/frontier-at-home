@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:8792:O:0",
+ "suite": "mmlu-pro",
+ "row": 8792,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "19191bb4337290db29f6f32e30459ef92ca213aeeda8edb2509562c5880f0293",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:14:48.844002+00:00",
+ "completion": "We need answer single letter. Need evaluate statements.\n\nA false: correlation 1 perfect linear relationship, not causation.\nB false: -1 perfect negative linear, not causation.\nC false: can be positive/negative/zero.\nD false: correlation coefficient (Pearson) applies to quantitative variables; categorical not equally.\nE false: correlation coefficient r and slope b = r * sy/sx, not equal generally.\nF false? slope of regression line and correlation coefficient have same sign (if x,y variances positive). b = r sy/sx, sy/sx positive, so same sign. Opposite signs false.\nG true: +0.87 and -0.87 have same absolute value, same degree of linear clustering around regression line (strength), opposite direction.\nH false: 0 no linear relationship.\nAnswer G. Need final only form.Answer: G",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.467462914999487
+ },
+ "usage": {
+  "prompt_tokens": 192,
+  "total_tokens": 390,
+  "completion_tokens": 198,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "G",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:14:56.311667+00:00"
+}

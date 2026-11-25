@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:3872:P:0",
+ "suite": "mmlu-pro",
+ "row": 3872,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "ccf3fc5142d9f10cf2aed9b7f62413671b8468ed077f38219301369c13b1ecbc",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:21:55.299694+00:00",
+ "completion": "We need answer. Need compute coefficient Phi0 normalized CI-SD wavefunction. Need understand Davidson correction. Given SCF energy E_SCF=-76.040542, CI-SD energy E_CI=-76.243772, Davidson corrected E_D=-76.254549. Need coefficient of Phi0 in normalized CI-SD wavefunction.\n\nDavidson correction: ΔE_D = (E_CI - E_SCF) * (1 - c0^2)/c0^2? Let's recall. Davidson correction for truncated CI: E_D = E_CI + (E_CI - E_HF) * (1 - c_0^2)/c_0^2? Or E_D = E_CI + (E_CI - E_HF) * (1 - c0^2)/c0^2? Need derive.\n\nIn CI, wavefunction Ψ = c0 Φ0 + sum_i c_i Φ_i. Normalized: c0^2 + sum c_i^2 =1. Energy E = c0^2 E0 + sum c_i^2 E_i + cross terms. Davidson correction estimates higher-order correlation: ΔE_D = (E_CI - E_HF) * (1 - c0^2)/c0^2? Let's check.\n\nKnown formula: Davidson correction: E_D = E_CI + (E_CI - E_HF) * (1 - c_0^2)/c_0^2. Sometimes ΔE_D = (E_CI - E_HF) * (1 - c0^2)/c0^2. Let's test with numbers.\n\nE_CI - E_SCF = -76.243772 - (-76.040542) = -0.203230. E_D - E_CI = -76.254549 - (-76.243772) = -0.010777. Ratio ΔE_D/(E_CI-E_SCF) = (-0.010777)/(-0.203230)=0.0530. This equals (1 - c0^2)/c0^2 = 1/c0^2 -1. Then 1/c0^2 = 1.0530, c0^2=0.9493, c0=0.9741. Option C 0.9731 close. Let's compute accurately.\n\nRatio: 0.010777/0.203230.20323*0.053 =0.010774? 0.20323*0.053=0.010774? 0.20323*0.053 =0.010774? 0.20323*0.05=0.0101615; plus *0.003=0.0006097 total 0.0107712. yes ratio 0.05303. c0^2=1/(1.05303)=0.94928; c0=0.9740. Option C 0.9731. Good.\n\nNeed ensure sign and formula. Alternative formula ΔE_D = (E_CI - E_HF) * (1 - c0^2)/c0^2? yes.\n\nLet's produce single letter only. Need final exactly Answer: C. Ensure no extra.Answer: C",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 15.194409359999554
+ },
+ "usage": {
+  "prompt_tokens": 215,
+  "total_tokens": 972,
+  "completion_tokens": 757,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "C",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:22:10.494429+00:00"
+}

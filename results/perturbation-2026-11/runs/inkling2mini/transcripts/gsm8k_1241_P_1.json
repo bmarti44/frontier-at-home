@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1241:P:1",
+ "suite": "gsm8k",
+ "row": 1241,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "2f9a0c646e432845d665a969a53dec086563f3716c76179214a07fdca7a7b06e",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:41:22.270832+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nPriya bought five dozens of eggs. 1 dozen = 12 eggs. 5 dozens = 60 eggs. Cost = $1.80 per dozen * 5 = $9.00.\nShe sells for $2 for 5 eggs. 60 eggs / 5 = 12 groups. Revenue = 12 * $2 = $24. Profit = revenue - cost = $24 - $9 = $15.\nNeed final with brief explanation and final numeric answer on own line form Answer: <number>. Ensure number maybe $15.00. They said numeric answer; use $15? Form Answer: <number>. Could use Answer: $15. Need final line exactly. Brief if needed.5 dozens = 60 eggs. Cost = 5 × $1.80 = $9.00.  \nSelling 60 eggs at $2 per 5 eggs = 12 × $2 = $24.00.  \nProfit = $24.00 − $9.00 = $15.00.\n\nAnswer: $15.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.062439458999506
+ },
+ "usage": {
+  "prompt_tokens": 79,
+  "total_tokens": 322,
+  "completion_tokens": 243,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "15",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:41:29.333582+00:00"
+}

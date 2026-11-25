@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:8500:P:0",
+ "suite": "mmlu-pro",
+ "row": 8500,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "97b6feca2d82044c2d2634699b2152e27e13f532f6439d0dd646e0f545d6ccc2",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:29:15.525749+00:00",
+ "completion": "We need answer single letter. Need determine which value is between 0.0051 and 0.038. Interpret \"between\" likely exclusive. Check options:\nA 0.0042 <0.0051 no\nB 0.049 >0.038 no\nC 0.039 >0.038 no (if exclusive; 0.039 > .038)\nD 0.0261 yes between\nE 0.045 no\nF 0.0381 >0.038 no\nG 0.050 no\nH 0.0021 no\nI 0.052 no\nJ 0.005 <0.0051 no\nAnswer D. Need final only form.Answer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.8710150760016404
+ },
+ "usage": {
+  "prompt_tokens": 134,
+  "total_tokens": 295,
+  "completion_tokens": 161,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:29:19.396966+00:00"
+}

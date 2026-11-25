@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:439:P:1",
+ "suite": "gsm8k",
+ "row": 439,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "1b8a671bb22d8792b7c38e83ba7a7be79bedf219a2b3ea21b4cc5e7baaa82a8d",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:50:27.907813+00:00",
+ "completion": "Let me work through this step by step.\n\n- Mateo's drive takes 4 minutes.\n- Camille's drive takes 4 times as long as Mateo's, so Camille's drive takes 4 × 4 = 16 minutes.\n- Camille wants to arrive 6 minutes before Mateo.\n\nIf Mateo leaves at time T, he arrives at T + 4.\nCamille wants to arrive at (T + 4) - 6 = T - 2.\nCamille's drive takes 16 minutes, so she needs to leave at (T - 2) - 16 = T - 18.\n\nSo Camille needs to leave 18 minutes before Mateo.\n</think>\n\nLet me work through this step by step.\n\n**Mateo's drive:** 4 minutes\n\n**Camille's drive:** 4 × 4 = 16 minutes\n\n**Camille wants to arrive 6 minutes before Mateo.**\n\nIf Mateo leaves at time T, he arrives at T + 4.\nCamille wants to arrive at (T + 4) − 6 = T − 2.\nSince her drive takes 16 minutes, she must leave at (T − 2) − 16 = T − 18.\n\nSo Camille should leave **18 minutes** before Mateo.\n\nAnswer: 18",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.168059368996182
+ },
+ "usage": {
+  "prompt_tokens": 175,
+  "total_tokens": 476,
+  "completion_tokens": 301,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "18",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:50:41.076135+00:00"
+}

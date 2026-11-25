@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:10862:P:0",
+ "suite": "mmlu-pro",
+ "row": 10862,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "beb992b7898ff274b84be420b66a502d3a4689d979ee536c2385baaefff783c4",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:58:05.664328+00:00",
+ "completion": "We need answer predicate logic. Need parse notation. Predicate Mxyz: x moves to y from z. Marco doesn't move from Spain to Italy. x=Marco (m), y=Italy (i), z=Spain (s). So \"Marco moves to Italy from Spain\" = M m i s? Notation Mxyz with x=m, y=i, z=s => Mmis? Let's map: Mxyz means M with three args x,y,z. So M m i s = Mmis (M + m + i + s). Negation: ~Mmis. Option I is ~Mmis. Check options: A M~msi = x=m, y=~s? no. C ~Mmsi = x=m,y=s,z=i (moves to Spain from Italy) negated. I ~Mmis = correct. Need final only letter. Ensure no extra.Answer: I",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.138140360999387
+ },
+ "usage": {
+  "prompt_tokens": 129,
+  "total_tokens": 338,
+  "completion_tokens": 209,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "E",
+ "reason": "incorrect: parsed='I' expected='E'",
+ "finished_at": "2026-11-25T00:58:12.802713+00:00"
+}

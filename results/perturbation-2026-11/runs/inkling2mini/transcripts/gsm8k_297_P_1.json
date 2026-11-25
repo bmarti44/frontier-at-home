@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:297:P:1",
+ "suite": "gsm8k",
+ "row": 297,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "146f8630f516596a2ea3127fd0263a1687a89ac45ee71d34926d6b1dad507d8b",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:34:12.333443+00:00",
+ "completion": "We need answer math. Need compute. Let's parse carefully.\n\nMarcus target 170 crates in a week. Closed Monday and Friday. Over the weekend he sold 33 crates. On Tuesday 13, Wednesday 34, Thursday 25. Need by how many crates was Marcus off from target for the week.\n\nWeek likely includes weekend (Saturday/Sunday) sold 33 total. Tuesday 13, Wednesday 34, Thursday 25. Monday/Friday closed (0). Total = 33+13+34+25 = 105? 33+13=46, +34=80, +25=105. Target 170. Off by 170-105=65 crates short. Need final numeric answer only line. Could include brief. Ensure final line exactly Answer: 65. Maybe mention crates. The user says think briefly if needed, then end with final numeric answer on its own line. We can provide concise calculation and final line. Need no extra after final line.Total sold: 33 + 13 + 34 + 25 = 105 crates.  \nShortfall: 170 − 105 = 65 crates.\n\nAnswer: 65",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.148684103995038
+ },
+ "usage": {
+  "prompt_tokens": 120,
+  "total_tokens": 379,
+  "completion_tokens": 259,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "65",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:34:19.482317+00:00"
+}

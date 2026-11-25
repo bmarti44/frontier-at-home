@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:192:P:1",
+ "suite": "gsm8k",
+ "row": 192,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "54e699b63f205cd49dbbad88b7b4ee99f90d54de803e410ba90ae909e8f3f11b",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:31:18.187495+00:00",
+ "completion": "We need answer math. Need compute carefully. Ethan plants 13 trees/year, chops down 5 trees/year. Starts with 90. After 10 years, 30% of trees die. Need interpret sequence: Over 10 years net change +8/year => 90 + 80 = 170 trees before deaths. Then 30% die => 70% remain = 119. Check if deaths occur after 10 years. Yes. Need final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: 119.Net change per year: 13 - 5 = 8 trees.  \nAfter 10 years: 90 + 8×10 = 170 trees.  \n30% die, so 70% remain: 170 × 0.7 = 119.\n\nAnswer: 119",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.906424559998413
+ },
+ "usage": {
+  "prompt_tokens": 93,
+  "total_tokens": 278,
+  "completion_tokens": 185,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "119",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:31:24.094232+00:00"
+}

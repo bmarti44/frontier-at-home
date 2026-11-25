@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:9:P:0",
+ "suite": "humaneval",
+ "row": 9,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "8a9655670d5eafbfab30892a97049e758fb6774820e4fcdbf15af6e55211b7f7",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:59:36.297455+00:00",
+ "completion": "    result = []\n    for i in range(len(numbers)):\n        result.append(max(numbers[:i+1]))\n    return result\n\n\ndef test_rolling_peak():\n    assert rolling_peak([1, 2, 3, 2, 3, 4, 2]) == [1, 2, 3, 3, 3, 4, 4]\n    assert rolling_peak([5, 4, 3, 2, 1]) == [5, 5, 5, 5, 5]\n    assert rolling_peak([1, 1, 1, 1, 1]) == [1, 1, 1, 1, 1]\n    assert rolling_peak([]) == []\n    assert rolling_peak([1]) == [1]\n\n\nif __name__ == \"__main__\":\n    test_rolling_peak()\n    print(\"All tests passed.\")",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.450641465002263
+ },
+ "usage": {
+  "prompt_tokens": 99,
+  "total_tokens": 301,
+  "completion_tokens": 202,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    running_max = None\n    result = []\n\n    for n in numbers:\n        if running_max is None:\n            running_max = n\n        else:\n            running_max = max(running_max, n)\n\n        result.append(running_max)\n\n    return result\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:59:43.748325+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00327:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "All tests passed.\n",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:56.410590+00:00"
+}

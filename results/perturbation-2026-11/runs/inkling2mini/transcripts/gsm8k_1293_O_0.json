@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1293:O:0",
+ "suite": "gsm8k",
+ "row": 1293,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "a02c7a299742ae0b2d250fad9c946c3f9d1389f39d4e2cb2c3dba4a9260bfe76",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:34:30.848163+00:00",
+ "completion": "The user wants a brief calculation. Need determine two weeks = 14 days. Produce 5000 bars/day *14 = 70000 bars. Sell at $2 = 140000. Need final numeric answer on own line form Answer: <number>. Could include brief explanation then final line. Ensure final answer numeric maybe $140,000. They said numeric answer; form Answer: <number>. Use 140000 perhaps with dollar sign? \"numeric answer\" maybe Answer: $140,000. They specifically say numeric answer on its own line in form Answer: <number>. I'll put Answer: $140,000. Brief if needed.Two weeks = 14 days.  \n5000 × 14 = 70,000 bars; 70,000 × $2 = $140,000.\n\nAnswer: $140,000",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.328414661998977
+ },
+ "usage": {
+  "prompt_tokens": 90,
+  "total_tokens": 275,
+  "completion_tokens": 185,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "140000",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:34:37.176956+00:00"
+}

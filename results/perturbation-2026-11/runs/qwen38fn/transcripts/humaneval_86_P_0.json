@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:86:P:0",
+ "suite": "humaneval",
+ "row": 86,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "ab7a61d90b5214fdf5b7fa49a82da0b119bf0da74bc5a18e106c36487e6427a2",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:58:14.409381+00:00",
+ "completion": "    return ' '.join([''.join(sorted(word)) for word in s.split(' ')])\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.6139229540058295
+ },
+ "usage": {
+  "prompt_tokens": 135,
+  "total_tokens": 156,
+  "completion_tokens": 21,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return ' '.join([''.join(sorted(list(i))) for i in s.split(' ')])\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:58:16.023402+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00297:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:49.738390+00:00"
+}

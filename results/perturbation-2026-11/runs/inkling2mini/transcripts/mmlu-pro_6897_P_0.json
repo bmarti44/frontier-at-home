@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:6897:P:0",
+ "suite": "mmlu-pro",
+ "row": 6897,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "2308965fa251cd04825e795eaf49b2d133733ad9b8012bbfbf6e209c9caedc68",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:48:51.646952+00:00",
+ "completion": "We need answer MCQ. Need reason. Durbin-Watson statistic d close to 0 indicates strong positive first-order autocorrelation in residuals. Relationship d ≈ 2(1 - rho) for small? Actually d = sum(e_t - e_{t-1})^2 / sum e_t^2 ≈ 2(1 - r) where r is first-order autocorrelation (approx). If d close to 0, then 1-r close to 0 => r close to 1. So I. Need ensure exact? Not exactly plus one, close to plus one. Answer I.Answer: I",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.135078770999826
+ },
+ "usage": {
+  "prompt_tokens": 142,
+  "total_tokens": 286,
+  "completion_tokens": 144,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "B",
+ "reason": "incorrect: parsed='I' expected='B'",
+ "finished_at": "2026-11-24T21:48:56.782320+00:00"
+}

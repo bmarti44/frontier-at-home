@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:231:P:0",
+ "suite": "gsm8k",
+ "row": 231,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "48ab8bfd593575a7ea8cd6d9b2b6aba8b6018b3b6f81392fc8bf1a1b9a6ca43e",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:56:31.075069+00:00",
+ "completion": "We need answer math. Need be careful with wording: \"Brooke collects 7 more shells than Daniel, who collects 10 shells.\" On Monday Daniel collects 10, Brooke collects 17. Tuesday Brooke collects 2 times more shells than she did on Monday. Ambiguity: \"2 times more than\" often means 2x as many? In many word problems, \"2 times more shells than\" could mean 3 times as many (2 times more = original + 2*original = 3x). But common in elementary math, \"2 times more\" is often used to mean \"2 times as many\". Need infer. They ask how many shells Brooke collects Tuesday. Monday Brooke = 10+7=17. Tuesday = 2 times more than Monday. If strictly \"2 times more than\" = 17 + 2*17 = 51. If \"2 times as many\" = 34. Need decide. The phrasing \"2 times more shells than she did\" is mathematically ambiguous. Many datasets (GSM8K style) use \"2 times more\" to mean multiply by 2? Let's recall GSM8K phrasing: \"John has 3 times more apples than Mary\" often means 3x? Actually GSM8K solutions often interpret \"x times more\" as multiplication by x? Examples: \"James has 4 times more marbles than ...\" solution: 4*...? They often say \"times more\" but compute multiplication. The problem likely designed: Daniel 10, Brooke Monday 17, Tuesday 2 times more = 34. Need answer 34.\n\nNeed final with brief reasoning and final line exact. Ensure final numeric answer on own line.Daniel collects 10 shells on Monday, so Brooke collects 10 + 7 = 17 shells.  \nOn Tuesday, Brooke collects 2 × 17 = 34 shells.\n\nAnswer: 34",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.930633997999394
+ },
+ "usage": {
+  "prompt_tokens": 107,
+  "total_tokens": 546,
+  "completion_tokens": 439,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "34",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:56:45.006031+00:00"
+}

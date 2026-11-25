@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1299:O:0",
+ "suite": "gsm8k",
+ "row": 1299,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "5837123e1cc93aab8fb268ab40ca4b6e5137b427987c839041e3e106d50fd767",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:49:41.856612+00:00",
+ "completion": "Let me calculate Janet's total spending and subtract from $40.\n\n- Ice cream: $3.50\n- Movie tickets: $7.50 each for herself and her sister = $7.50 × 2 = $15.00\n- Bracelet: $8.50\n\nTotal spent: $3.50 + $15.00 + $8.50 = $27.00\n\nRemaining: $40.00 - $27.00 = $13.00\n</think>\n\nJanet's total spending:\n- Ice cream: $3.50\n- Movie tickets: $7.50 × 2 = $15.00\n- Bracelet: $8.50\n\nTotal spent: $3.50 + $15.00 + $8.50 = $27.00\n\nAmount left: $40.00 - $27.00 = $13.00\n\nAnswer: 13",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.992897918011295
+ },
+ "usage": {
+  "prompt_tokens": 126,
+  "total_tokens": 353,
+  "completion_tokens": 227,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "13",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:49:52.849747+00:00"
+}

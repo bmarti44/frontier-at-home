@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:428:P:1",
+ "suite": "gsm8k",
+ "row": 428,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "9aead1050e340cbcf11f0ad36c0a79c7274fec355037291eab809630266168a1",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:31:09.243600+00:00",
+ "completion": "Let me work through this step by step.\n\nThe caterer was told to prepare for 40 guests.\n\nHe prepared enough for:\n- All 40 guests to have one hotdog each = 40 hotdogs\n- Half of the guests (20 guests) to have a second hotdog = 20 additional hotdogs\n\nTotal hotdogs prepared = 40 + 20 = 60 hotdogs\n\nNow, 45 guests showed up, and everyone wanted a second hotdog.\n\nEveryone gets their first hotdog: 45 hotdogs used.\nRemaining hotdogs for second helpings: 60 - 45 = 15 hotdogs.\n\nSo only 15 guests can get a second hotdog.\n\nGuests who did NOT get a second hotdog: 45 - 15 = 30 guests.\n</think>\n\n**Step-by-step:**\n\n1. **Hotdogs prepared:** The caterer prepared for 40 guests, with enough for all 40 to have one hotdog, plus enough for half (20) to have a second.\n   - Total = 40 + 20 = **60 hotdogs**\n\n2. **45 guests arrive, each wants 2 hotdogs:**\n   - First hotdogs for everyone: 45 used\n   - Remaining for second hotdogs: 60 − 45 = **15 hotdogs left**\n\n3. **Only 15 guests can get a second hotdog**, so:\n   - Guests without a second hotdog: 45 − 15 = **30**\n\nAnswer: 30",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 16.24650086300244
+ },
+ "usage": {
+  "prompt_tokens": 138,
+  "total_tokens": 495,
+  "completion_tokens": 357,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "30",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:31:25.490438+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1068:P:0",
+ "suite": "gsm8k",
+ "row": 1068,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "2d97b06b614caba81a8fd9c24ec1ebeff5cfdebcbf76b7612f57adba9deae659",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:57:54.299419+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: One meatball sub sandwich contains 3 meatballs. Quinn ordered 2 less than ten meatball sub sandwiches. Ten = 10, 2 less = 8 sandwiches. Liam ate 4 of Quinn's meatball sub sandwiches. Remaining after Liam: 8 - 4 = 4 sandwiches. Then Quinn ordered another three sub sandwiches. Total sandwiches now = 4 + 3 = 7. Meatballs = 7 * 3 = 21. Need ensure interpretation: \"Then Liam ate 4 of Quinn's meatball sub sandwiches. So Quinn ordered another three sub sandwiches. How many meatballs were in the sub sandwiches that remained?\" Yes.\n\nNeed final with brief maybe one line and final numeric answer own line. Ensure final line exactly Answer: 21.Quinn ordered 8 sandwiches, Liam ate 4, leaving 4. Quinn added 3 more, for 7 sandwiches. Each has 3 meatballs: 7 × 3 = 21.\n\nAnswer: 21",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.855093501995725
+ },
+ "usage": {
+  "prompt_tokens": 115,
+  "total_tokens": 382,
+  "completion_tokens": 267,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "21",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:58:01.154713+00:00"
+}

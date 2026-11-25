@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:328:P:1",
+ "suite": "gsm8k",
+ "row": 328,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "6313d3adb4f9fb83a9bfe9eccf7815104b0e5b060fcaf6917fb87e3d4998976c",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:26:10.371066+00:00",
+ "completion": "We need answer math. Need compute: phone at 70%, full 100%, needs 30 percentage points. Rate 1 point per 8 minutes => 30*8=240 minutes = 4 hours. Need final line exactly Answer: <number>. Could include brief. Ensure final numeric answer on own line. Maybe number with hours? Form says <number>, likely 4. Need maybe \"4 hours\"? It says in hours and final numeric answer. Use Answer: 4. Brief explanation okay.It needs 30 percentage points, at 1 point per 8 minutes: 30 × 8 = 240 minutes = 4 hours.\n\nAnswer: 4",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.179111546000058
+ },
+ "usage": {
+  "prompt_tokens": 86,
+  "total_tokens": 237,
+  "completion_tokens": 151,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "4",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:26:15.550494+00:00"
+}

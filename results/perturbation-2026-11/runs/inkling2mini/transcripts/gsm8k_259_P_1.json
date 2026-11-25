@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:259:P:1",
+ "suite": "gsm8k",
+ "row": 259,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "6124cc29e25c8797b6b7313a5d5cb8c69cce065abbdda47254c5927494e19943",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:04:05.890058+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Chloe has 5 more apples than Ben and half as many bananas as Ben. Ben has 2 more bananas than apples. How many fruits are there if Chloe has 65 apples?\n\nLet Ben apples = B_a. Chloe apples = B_a + 5 = 65 => B_a = 60.\nBen bananas = Ben apples + 2 = 62.\nChloe bananas = half as many bananas as Ben = 31.\nTotal fruits = Chloe apples 65 + Chloe bananas 31 + Ben apples 60 + Ben bananas 62 = 65+31=96; +60=156; +62=218. Check: 96+122=218.\nNeed final with brief explanation and final line exactly Answer: 218. Ensure final numeric answer on own line.Chloe has 65 apples, so Ben has 65 − 5 = 60 apples.  \nBen has 60 + 2 = 62 bananas. Chloe has half as many bananas as Ben: 62 / 2 = 31 bananas.  \nTotal fruits: 65 + 31 + 60 + 62 = 218.\n\nAnswer: 218",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.445753378000518
+ },
+ "usage": {
+  "prompt_tokens": 84,
+  "total_tokens": 370,
+  "completion_tokens": 286,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "218",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:04:12.336033+00:00"
+}

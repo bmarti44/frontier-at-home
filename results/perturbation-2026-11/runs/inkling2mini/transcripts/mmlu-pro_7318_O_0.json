@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:7318:O:0",
+ "suite": "mmlu-pro",
+ "row": 7318,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "0e2ff6cad54bd1a4bb66ea698abeee317bc6a6b7b31c17c0679596934554efdc",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:19:52.413555+00:00",
+ "completion": "We need answer economics definitions. Need determine true statement. Let's reason carefully.\n\nDefinitions: TC = TFC + TVC. AVC = TVC/Q. AFC = TFC/Q. ATC = TC/Q = AVC + AFC. MC = dTC/dQ.\n\nCheck options:\nA TFC = AVC at all levels: false generally.\nB AVC + AFC = TC: false; equals ATC, not TC.\nC TFC = TC at all levels: false (only Q=0 maybe).\nD MC = AVC + AFC: false; RHS=ATC.\nE AFC = TC - AVC: false dimensions; TC - AVC not AFC.\nF ATC = TC - AFC: false; ATC=TC/Q.\nG MC = TC - TFC: false; TC-TFC=TVC, not MC.\nH TC = (AVC + AFC)Q: true since AVC+AFC=ATC, times Q = TC.\nI TC = MC*Q: false generally.\nJ AVC = TC - TFC: false; TC-TFC=TVC, AVC=TVC/Q.\n\nAnswer H. Need final only single letter form. Ensure no extra.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.4739930869982345
+ },
+ "usage": {
+  "prompt_tokens": 156,
+  "total_tokens": 450,
+  "completion_tokens": 294,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:19:58.887756+00:00"
+}

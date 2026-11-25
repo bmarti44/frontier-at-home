@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:528:P:1",
+ "suite": "gsm8k",
+ "row": 528,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "5f5eff64b766772cd7fa21758743bf675e19a090076bba3da5891fe78e040dd8",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:50:41.152528+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Olivia and Grace living same building. Each has 5 fewer sofas than chairs. Grace has 4 times as many chairs as Olivia. Olivia has 25 sofas. Calculate total number of sofas and chairs they have.\n\nOlivia: sofas =25. Sofas = chairs -5 (5 fewer sofas than chairs) => chairs =30. Grace: chairs =4*Olivia chairs =4*30=120. Grace sofas = chairs -5 =115. Total sofas =25+115=140. Total chairs=30+120=150. Total =290.\n\nNeed final with brief maybe and final line exact. Ensure final numeric answer on own line. Could include concise explanation then Answer: 290.Olivia has 25 sofas, so she has 30 chairs. Grace has 4 × 30 = 120 chairs and 115 sofas. Total: (25 + 115) + (30 + 120) = 290.\n\nAnswer: 290",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.016547346996958
+ },
+ "usage": {
+  "prompt_tokens": 100,
+  "total_tokens": 340,
+  "completion_tokens": 240,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "290",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:50:48.169417+00:00"
+}

@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:10862:O:0",
+ "suite": "mmlu-pro",
+ "row": 10862,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "fbea5e2b5e02e5bbc062ce6de5a25067236d5f1e1c0b923fb1fe2065f6797971",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:52:49.765677+00:00",
+ "completion": "We need answer predicate logic. Need parse notation. Predicate Mxyz: x moves to y from z. So M i s m? Let's map: Mxyz means x moves to y from z. Marco doesn't move from Spain to Italy. x=Marco (m), y=Italy (i), z=Spain (s). So M m i s. Negation: ~Mmis. Option D is ~Mmis. Check options: D. ~Mmis yes. Need ensure not ~M i s m? No. Answer D.Answer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.090769354999793
+ },
+ "usage": {
+  "prompt_tokens": 129,
+  "total_tokens": 257,
+  "completion_tokens": 128,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:52:53.856698+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:442:P:1",
+ "suite": "gsm8k",
+ "row": 442,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "bebf20ab7691f1f6cadbf839145f109c3db741de8609456070f2afa1d0d815cb",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:34:42.288313+00:00",
+ "completion": "Let me work through this step by step.\n\nStarting temperature: 35 degrees\n\nHugo bakes for 5 hours, and every hour the oven raises the temperature by 4 degrees.\nTemperature increase from baking: 5 × 4 = 20 degrees\nTemperature after baking: 35 + 20 = 55 degrees\n\nThen Hugo opens a window for 10 minutes, and the house cools down 4 degrees for every 10 minutes the window is open.\nTemperature decrease from window: 4 degrees (since it's open for exactly 10 minutes)\nFinal temperature: 55 - 4 = 51 degrees\n</think>\n\nStarting temperature: 35 degrees\n\n**Baking phase:** 5 hours × 4 degrees/hour = 20 degrees increase\nTemperature after baking: 35 + 20 = 55 degrees\n\n**Window phase:** 10 minutes open = 1 interval of 10 minutes × 4 degrees = 4 degrees decrease\nFinal temperature: 55 - 4 = 51 degrees\n\nAnswer: 51",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.775446496991208
+ },
+ "usage": {
+  "prompt_tokens": 143,
+  "total_tokens": 382,
+  "completion_tokens": 239,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "51",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:34:53.064014+00:00"
+}

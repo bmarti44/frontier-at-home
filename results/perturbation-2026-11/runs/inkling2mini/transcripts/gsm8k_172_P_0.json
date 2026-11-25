@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:172:P:0",
+ "suite": "gsm8k",
+ "row": 172,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "dd41a761070cea0ef628fb228e3bdc5c76c2964f43e70a07f2f7e277347980e2",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:46:08.834114+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: four birds at Caboose. Sally Two is three years older than Granny Red. Granny Red is two times as old as Sally Four. Sally Four same age as Sally Thirtytwo, and Sally Thirtytwo is 4 years old. Total age of four birds?\n\nSally Thirtytwo = 4. Sally Four = 4. Granny Red = 2 * Sally Four = 8. Sally Two = Granny Red + 3 = 11. Four birds: Sally Two, Granny Red, Sally Four, Sally Thirtytwo. Total = 11+8+4+4 = 27. Need final line Answer: 27. Brief explanation okay. Ensure final numeric answer on own line.Sally Four = Sally Thirtytwo = 4.  \nGranny Red = 2 × 4 = 8.  \nSally Two = 8 + 3 = 11.  \nTotal = 11 + 8 + 4 + 4 = 27.\n\nAnswer: 27",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.858366280001064
+ },
+ "usage": {
+  "prompt_tokens": 116,
+  "total_tokens": 363,
+  "completion_tokens": 247,
+  "prompt_tokens_details": {
+   "cached_tokens": 64,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "27",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:46:14.692840+00:00"
+}

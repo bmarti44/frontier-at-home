@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:8071:O:0",
+ "suite": "mmlu-pro",
+ "row": 8071,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "50e33f3a1fad24d0f0b8c52dd5f6d180aab33b070303a4ff6bef7f25a7c87948",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:51:42.086455+00:00",
+ "completion": "We need answer math. Need compute. Rainfall values: 8.1, 4.2, 0.33. Sum = 8.1+4.2=12.3; +0.33=12.63. Round to nearest whole number = 13. Option A. Need final only single letter form. Ensure no extra.Answer: A",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.2301004540022404
+ },
+ "usage": {
+  "prompt_tokens": 157,
+  "total_tokens": 241,
+  "completion_tokens": 84,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "J",
+ "reason": "incorrect: parsed='A' expected='J'",
+ "finished_at": "2026-11-24T22:51:44.316727+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:615:O:0",
+ "suite": "gsm8k",
+ "row": 615,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "603446a175b45dba9d2c87260a26f01e90b95032d475945140672e4b853b3528",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:53:01.880039+00:00",
+ "completion": "The user wants me to calculate total spending.\n\nAquarium: $10.00\n2 bags of rocks at $2.50 each: 2 × 2.50 = $5.00\n3 pieces of coral at $2.00 apiece: 3 × 2.00 = $6.00\n20 fish at $0.50 each: 20 × 0.50 = $10.00\nFish food: $2.00\n\nTotal: 10.00 + 5.00 + 6.00 + 10.00 + 2.00 = 33.00\n\nLet me verify: 10+5=15, +6=21, +10=31, +2=33.\n\nAnswer: $33.00Aquarium: $10.00  \nRocks: 2 × $2.50 = $5.00  \nCoral: 3 × $2.00 = $6.00  \nFish: 20 × $0.50 = $10.00  \nFish food: $2.00  \n\nTotal: $10.00 + $5.00 + $6.00 + $10.00 + $2.00 = $33.00\n\nAnswer: $33.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.5905988100021204
+ },
+ "usage": {
+  "prompt_tokens": 121,
+  "total_tokens": 391,
+  "completion_tokens": 270,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "33",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:53:06.470979+00:00"
+}

@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:5335:P:0",
+ "suite": "mmlu-pro",
+ "row": 5335,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "a8dcd6d9ebaca8da5f3d6c68692d292f5489d2870fe3ee0368b871fc2639669e",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:04:50.950455+00:00",
+ "completion": "The question asks about which financial statements a government entity is required to include a statement of cash flows in.\n\nLet me think about governmental accounting standards (GASB):\n\nUnder GASB standards, government entities prepare:\n1. Government-wide financial statements (using accrual basis)\n2. Fund financial statements, which include:\n   - Governmental fund financial statements (using modified accrual basis)\n   - Proprietary fund financial statements (using full accrual basis)\n   - Fiduciary fund financial statements\n\nThe statement of cash flows is required for:\n- Proprietary fund financial statements (enterprise funds and internal service funds) - YES, GASB requires a statement of cash flows for proprietary funds\n- Government-wide financial statements - NO, they do not include a statement of cash flows\n- Governmental fund financial statements - NO, they use modified accrual and do not include a statement of cash flows\n- Fiduciary fund financial statements - NO, they do not include a statement of cash flows\n\nSo the answer is H. Proprietary fund financial statements.\n\nGASB Statement No. 95 and GASB Statement No. 34 require that proprietary funds present a statement of cash flows. Government-wide statements and governmental fund statements do not include a statement of cash flows.\n</think>\n\nAnswer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 12.511121923998871
+ },
+ "usage": {
+  "prompt_tokens": 164,
+  "total_tokens": 440,
+  "completion_tokens": 276,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:05:03.461811+00:00"
+}

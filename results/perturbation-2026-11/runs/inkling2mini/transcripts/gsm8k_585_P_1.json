@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:585:P:1",
+ "suite": "gsm8k",
+ "row": 585,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "e3cca722fc0902aea7af6f4830ef03465edfbb6e60ca0785bd65b0ab027a0b54",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:43:17.192481+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nNina: Saturday 6h, Sunday 1h. Total 7h. Earns $10/h => $70.\nRavi: Saturday twice as long as Nina on Saturday = 2*6=12h. Sunday three times as long as Nina on Sunday = 3*1=3h. Total 15h. Earns $150. Difference = $80.\nNeed final with brief maybe one sentence and final line exactly Answer: 80? They said numeric answer on its own line form Answer: <number>. Could include dollar sign? <number> maybe 80. Ensure final line only. Brief if needed. We can say Nina worked 7 hours; Ravi worked 15 hours; difference 8 hours * $10 = $80. Then Answer: $80? Form says <number>, maybe Answer: 80. Use no extra after final line.Nina worked 7 hours; Ravi worked 15 hours. Difference: 8 hours × $10 = $80.\nAnswer: 80",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.266413831999671
+ },
+ "usage": {
+  "prompt_tokens": 118,
+  "total_tokens": 355,
+  "completion_tokens": 237,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "80",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:43:25.459145+00:00"
+}

@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:75:P:0",
+ "suite": "humaneval",
+ "row": 75,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "3344accc78e6440dec4007ecf30b8422dc3161728a2a99bf609c6d18d1ff38c5",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:55:06.859281+00:00",
+ "completion": "    if a < 2:\n        return False\n    primes = []\n    for i in range(2, a):\n        if is_prime(i):\n            primes.append(i)\n    for i in range(len(primes)):\n        for j in range(i+1, len(primes)):\n            for k in range(j+1, len(primes)):\n                if primes[i] * primes[j] * primes[k] == a:\n                    return True\n    return False\n\ndef is_prime(n):\n    \"\"\"Helper function to check if a number is prime.\"\"\"\n    if n < 2:\n        return False\n    for i in range(2, int(n**0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\n# Test cases\nassert is_product_of_primes(30) == True\nassert is_product_of_primes(26) == False\nassert is_product_of_primes(66) == True\nassert is_product_of_primes(1) == False\nassert is_product_of_primes(2) == False\nassert is_product_of_primes(3) == False\nassert is_product_of_primes(4) == False\nassert is_product_of_primes(5) == False\nassert is_product_of_primes(6) == False\nassert is_product_of_primes(7) == False\nassert is_product_of_primes(8) == False\nassert is_product_of_primes(9) == False\nassert is_product_of_primes(10) == False\nassert is_product_of_primes(11) == False\nassert is_product_of_primes(12) == False\nassert is_product_of_primes(13) == False\nassert is_product_of_primes(14) == False\nassert is_product_of_primes(15) == False\nassert is_product_of_primes(16) == False\nassert is_product_of_primes(17) == False\nassert is_product_of_primes(18) == False\nassert is_product_of_primes(19) == False\nassert is_product_of_primes(20) == False\nassert is_product_of_primes(21) == False\nassert is_product_of_primes(22) == False\nassert is_product_of_primes(23) == False\nassert is_product_of_primes(24) == False\nassert is_product_of_primes(25) == False\nassert is_product_of_primes(26) == False\nassert is_product_of_primes(27) == False\nassert is_product_of_primes(28) == False\nassert is_product_of_primes(29) == False\nassert is_product_of_primes(30) == True\nassert is_product_of_primes(31) == False\nassert is_product_of_primes(32) == False\nassert is_product_of_primes(33) == False\nassert is_product_of_primes(34) == False\nassert is_product_of_primes(35) == False\nassert is_product_of_primes(36) == False\nassert is_product_of_primes(37) == False\nassert is_product_of_primes(38) == False\nassert is_product_of_primes(39) == False\nassert is_product_of_primes(40) == False\nassert is_product_of_primes(41) == False\nassert is_product_of_primes(42) == False\nassert is_product_of_primes(43) == False\nassert is_product_of_primes(44) == False\nassert is_product_of_primes(45) == False\nassert is_product_of_primes(46) == False\nassert is_product_of_primes(47) == False\nassert is_product_of_primes(48) == False\nassert is_product_of_primes(49) == False\nassert is_product_of_primes(50) == False\nassert is_product_of_primes(51) == False\nassert is_product_of_primes(52) == False\nassert is_product_of_primes(53) == False\nassert is_product_of_primes(54) == False\nassert is_product_of_primes(55) == False\nassert is_product_of_primes(56) == False\nassert is_product_of_primes(57) == False\nassert is_product_of_primes(58) == False\nassert is_product_of_primes(59) == False\nassert is_product_of_primes(60) == False\nassert is_product_of_primes(61) == False\nassert is_product_of_primes(62) == False\nassert is_product_of_primes(63) == False\nassert is_product_of_primes(64) == False\nassert is_product_of_primes(65) == False\nassert is_product_of_primes(66) == True\nassert is_product_of_primes(67) == False\nassert is_product_of_primes(68) == False\nassert is_product_of_primes(69) == False\nassert is_product_of_primes(70) == False\nassert is_product_of_primes(71) == False\nassert is_product_of_primes(72) == False\nassert is_product_of_primes(73) == False\nassert is_product_of_primes(74) == False\nassert is_product_of_primes(75) == False\nassert is_product_of_primes(76) == False\nassert is_product_of_primes(77) == False\nassert is_product_of_primes(78) == False\nassert is_product_of_primes(79) == False\nassert is_product_of_primes(80) == False\nassert is_product_of_primes(81) == False\nassert is_product_of_primes(82) == False\nassert is_product_of_primes(83) == False\nassert is_product_of_primes(84) == False\nassert is_product_of_primes(85) == False\nassert is_product_of_primes(86) == False\nassert is_product_of_primes(87) == False\nassert is_product_of_primes(88) == False\nassert is_product_of_primes(89) == False\nassert is_product_of_primes(90) == False\nassert is_product_of_primes(91) == False\nassert is_product_of_primes(92) == False\nassert is_product_of_primes(93) == False\nassert is_product_of_primes(94) == False\nassert is_product_of_primes(95) == False\nassert is_product_of_primes(96) == False\nassert is_product_of_primes(97) == False\nassert is_product_of_primes(98) == False\nassert is_product_of_primes(99) == False\nassert is_product_of_primes(100) == False\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 50.650697946002765
+ },
+ "usage": {
+  "prompt_tokens": 86,
+  "total_tokens": 1595,
+  "completion_tokens": 1509,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    def is_prime(n):\n        for j in range(2,n):\n            if n%j == 0:\n                return False\n        return True\n\n    for i in range(2,101):\n        if not is_prime(i): continue\n        for j in range(2,101):\n            if not is_prime(j): continue\n            for k in range(2,101):\n                if not is_prime(k): continue\n                if i*j*k == a: return True\n    return False\n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T05:55:57.510207+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00273:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 49, in <module>\n    check(is_product_of_primes)\n  File \"/case/main.py\", line 38, in check\n    assert candidate(8) == True\n           ^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:44.570392+00:00"
+}

@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:158:P:0",
+ "suite": "mmlu-pro",
+ "row": 158,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "ea8000b614907a2a776856c4e830b7e4ea6113e9622e5a4428ad722fff4f291e",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:35:04.327055+00:00",
+ "completion": "We need answer math. Need compute. Family: 2 adults, 2 children. Rides cost adults 75 cents, children 50 cents. Mr. Stadlow has $10 = 1000 cents. Need how many rides can family go on? Ambiguity: each ride for each person? Likely total cost per ride for family = 2*0.75 + 2*0.50 = 1.50+1.00=2.50 per ride (family rides together?). $10 / $2.50 = 4 rides. Option D. Check alternative: total money can buy rides individually: if all adults? But question \"how many rides can the family go on\" likely each ride costs per person, family goes on rides together. 4 rides. Need final only letter form. Ensure no extra.Answer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.956690540999261
+ },
+ "usage": {
+  "prompt_tokens": 162,
+  "total_tokens": 355,
+  "completion_tokens": 193,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:35:11.284101+00:00"
+}

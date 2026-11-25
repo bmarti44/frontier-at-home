@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:658:O:0",
+ "suite": "gsm8k",
+ "row": 658,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "26192a3f7b2fee28a4826db9121e5c27d34e709d8ca7619077a86cf5f089deac",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:20:45.915485+00:00",
+ "completion": "Let me work through this step by step.\n\n- Rice took 30 minutes to cook.\n- Pork took 20 more minutes than rice, so pork = 30 + 20 = 50 minutes.\n- Beans took half the combined cooking time of pork and rice, so beans = (30 + 50) / 2 = 80 / 2 = 40 minutes.\n\nTotal time = rice + pork + beans = 30 + 50 + 40 = 120 minutes.\n</think>\n\nLet me solve this step by step:\n\n- **Rice:** 30 minutes\n- **Pork:** 20 more minutes than rice = 30 + 20 = 50 minutes\n- **Beans:** Half the combined time of pork and rice = (30 + 50) / 2 = 40 minutes\n\n**Total time:** 30 + 50 + 40 = 120 minutes\n\nAnswer: 120",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.134532867996313
+ },
+ "usage": {
+  "prompt_tokens": 139,
+  "total_tokens": 363,
+  "completion_tokens": 224,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "120",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:20:54.050301+00:00"
+}

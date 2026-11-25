@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:2:P:0",
+ "suite": "gsm8k",
+ "row": 2,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "66a350a8334af81649164c6a1ca7201e2c433858b85f5705744ce18ea59cbf55",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:46:01.081832+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Marcus buys house for $50,000 and puts in $55,000 in repairs. This increased the value of the house by 210%. How much profit did he make?\n\nInterpretation: Initial value = 50,000. Increased by 210% means new value = 50,000 + 210% of 50,000 = 50,000 * (1 + 2.10) = 50,000 * 3.10 = 155,000. Total cost = 50,000 + 55,000 = 105,000. Profit = 155,000 - 105,000 = 50,000.\n\nNeed final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly. Maybe include dollar sign? Form says <number>, likely Answer: $50,000. They said numeric answer; use $50,000? \"numeric answer\" maybe 50000. But form Answer: <number>. Use Answer: $50,000. Brief if needed.New value: $50,000 × 3.10 = $155,000. Total cost: $50,000 + $55,000 = $105,000. Profit: $155,000 − $105,000 = $50,000.\n\nAnswer: $50,000",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.750697882001987
+ },
+ "usage": {
+  "prompt_tokens": 96,
+  "total_tokens": 398,
+  "completion_tokens": 302,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "50000",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:46:08.832913+00:00"
+}

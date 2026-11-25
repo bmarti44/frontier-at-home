@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:13:P:0",
+ "suite": "humaneval",
+ "row": 13,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "7a19afa4c4b79e69d36550554959d87782e4c324b2bdf79338bf9a0b38af7b64",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:48:23.484989+00:00",
+ "completion": "    while b:\n        a, b = b, a % b\n    return a\n\n\ndef lowest_common_multiple(a: int, b: int) -> int:\n    \"\"\" Return a lowest common multiple of two integers a and b\n    >>> lowest_common_multiple(3, 5)\n    15\n    >>> lowest_common_multiple(25, 15)\n    75\n    \"\"\"\n    return a * b // highest_common_factor(a, b)\n\n\nif __name__ == \"__main__\":\n    import doctest\n    doctest.testmod()\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.067308841003978
+ },
+ "usage": {
+  "prompt_tokens": 68,
+  "total_tokens": 194,
+  "completion_tokens": 126,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    while b:\n        a, b = b, a % b\n    return a\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:48:29.552432+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00089:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:52.858305+00:00"
+}

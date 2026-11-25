@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:6702:O:0",
+ "suite": "mmlu-pro",
+ "row": 6702,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "f9388352daa8ef7ceac1f7641e70a0adc6dc98d4af426aed5a7dc943d7d1fc4d",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:23:39.121578+00:00",
+ "completion": "We need answer single letter. Need understand finance term \"7 percent discount\" loan. In discount loans, interest is deducted upfront; borrower receives principal minus discount, repays full principal. A 7% discount loan: borrower receives $93 today and pays back $100 in a year (assuming $100 face). That's option C. Check G: borrower pays 7 percent interest upfront and then repays principal after a year. That sounds similar? If borrower receives $93 and repays $100, the lender discounts $7 upfront; borrower pays 7% interest upfront? Actually borrower receives $93, repays $100, interest $7 paid upfront (as discount). Option G says borrower pays 7 percent interest upfront and then repays the principal after a year. That would mean receives $100? No, pays 7% interest upfront ($7) and repays principal $100, total cost $107, not discount loan. Option C exact. Answer C.Answer: C",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.324859104002826
+ },
+ "usage": {
+  "prompt_tokens": 319,
+  "total_tokens": 549,
+  "completion_tokens": 230,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "C",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:23:47.446587+00:00"
+}

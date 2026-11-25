@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:126:P:1",
+ "suite": "gsm8k",
+ "row": 126,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "5fb900392c1b9b79fcc6b6db8507cbdea5a1bd9f5bce7780b3402b7418d57ece",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:24:56.001146+00:00",
+ "completion": "The user wants me to solve a math problem. Let me compute.\n\nChicken sausages = 71.\nFish sausages = 6 more than chicken = 71 + 6 = 77.\nTotal = 71 + 77 = 148.\n\nNeed to think briefly if needed, then end with final numeric answer on its own line in form Answer: <number>.\n\nI should provide brief reasoning and final line.Fish sausages: 71 + 6 = 77. Total: 71 + 77 = 148.\n\nAnswer: 148",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.645422558001883
+ },
+ "usage": {
+  "prompt_tokens": 95,
+  "total_tokens": 224,
+  "completion_tokens": 129,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "148",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:24:59.646817+00:00"
+}

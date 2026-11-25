@@ -1,0 +1,82 @@
+[
+ {
+  "row": 1024,
+  "solver": "def solve(v):\n    earned = v['cookies'] * v['cprice'] + v['cupcakes'] * v['cuprice']\n    left = earned - 2 * v['gift']\n    assert left >= 0\n    return left\n"
+ },
+ {
+  "row": 1251,
+  "solver": "def solve(v):\n    f = Fraction(v['first'])\n    # side 1: f; sides 2 and 3: 2f each; last 2 sides (4th, 5th): f/2 each\n    return f + 2 * (2 * f) + 2 * (f / 2)\n"
+ },
+ {
+  "row": 439,
+  "solver": "def solve(v):\n    wayne = 4\n    bern = 4 * wayne\n    return bern - wayne + v['early']\n"
+ },
+ {
+  "row": 491,
+  "solver": "def solve(v):\n    left = v['eggs'] - v['cap'] * v['trays']\n    assert left >= 0\n    return left\n"
+ },
+ {
+  "row": 856,
+  "solver": "def solve(v):\n    need = v['students'] * v['per']\n    return -(-need // v['pack'])\n"
+ },
+ {
+  "row": 547,
+  "solver": "def solve(v):\n    calls = v['first']\n    for _ in range(3):\n        calls *= v['each']\n    return calls\n"
+ },
+ {
+  "row": 1224,
+  "solver": "def solve(v):\n    return 2 * v['mon'] + 1\n"
+ },
+ {
+  "row": 346,
+  "solver": "def solve(v):\n    rest = v['bag'] - v['son'] * v['days'] - 1 * 7\n    assert rest >= 0\n    return rest\n"
+ },
+ {
+  "row": 655,
+  "solver": "def solve(v):\n    done = Fraction(v['pages'] * v['num'], v['den'])\n    return v['pages'] - done\n"
+ },
+ {
+  "row": 1188,
+  "solver": "def solve(v):\n    john_then = v['age'] - 20\n    assert john_then > 0\n    jim_then = Fraction(john_then, 2)\n    return jim_then + 20\n"
+ },
+ {
+  "row": 272,
+  "solver": "def solve(v):\n    change = v['paid'] - (v['cocoa'] + v['laundry'] + v['pasta'])\n    assert change >= 0\n    return change\n"
+ },
+ {
+  "row": 231,
+  "solver": "def solve(v):\n    monday = v['rob'] + v['more']\n    return v['mult'] * monday\n"
+ },
+ {
+  "row": 578,
+  "solver": "def solve(v):\n    s = Fraction(v['start'])\n    x = (s + s / 2) / v['div']\n    return x * (s - v['sub'])\n"
+ },
+ {
+  "row": 113,
+  "solver": "def solve(v):\n    grown = v['rate'] * v['days'] - v['dead']\n    assert grown >= 0\n    return grown\n"
+ },
+ {
+  "row": 1245,
+  "solver": "def solve(v):\n    s = Fraction(v['total'] + v['d'], v['k'] + 1)\n    blue = v['k'] * s - v['d']\n    assert s >= 0 and blue >= 0\n    return blue\n"
+ },
+ {
+  "row": 999,
+  "solver": "def solve(v):\n    assert v['adults'] + v['kids'] == v['total']\n    units = 2 * v['adults'] + v['kids']\n    return Fraction(100 * 2, units)\n"
+ },
+ {
+  "row": 844,
+  "solver": "def solve(v):\n    jack_dishes = Fraction(v['dishes'])\n    jack_socks = jack_dishes / 2\n    peter_socks = 2 * jack_socks\n    peter_dishes = jack_dishes / 2\n    return jack_dishes + jack_socks + peter_socks + peter_dishes\n"
+ },
+ {
+  "row": 1150,
+  "solver": "def solve(v):\n    left = v['start'] - v['gave']\n    assert left >= 0\n    return left + v['bought']\n"
+ },
+ {
+  "row": 1194,
+  "solver": "def solve(v):\n    return 10 * 3 * v['whale']\n"
+ },
+ {
+  "row": 73,
+  "solver": "def solve(v):\n    per_unit = v['price'] * (1 + Fraction(v['rate'], 100))\n    total = 5 * per_unit\n    return total / v['months']\n"
+ }
+]

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:272:P:0",
+ "suite": "gsm8k",
+ "row": 272,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "c8e4706722fe5617e71e9184dd861916d64f38e12793fcf90ce91759fbe8bc90",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:40:58.267881+00:00",
+ "completion": "The user wants me to calculate change. Let me compute: 4.60 + 10.45 + 1.95 = 4.60 + 10.45 = 15.05; +1.95 = 17.00. She pays 20.00. Change = 20.00 - 17.00 = 3.00.\n\nNeed to end with final numeric answer on its own line in form Answer: <number>. Brief thinking if needed. I should provide concise reasoning then final line.Total cost: $4.60 + $10.45 + $1.95 = $17.00. Change: $20.00 − $17.00 = $3.00.\n\nAnswer: $3.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.185421386000598
+ },
+ "usage": {
+  "prompt_tokens": 90,
+  "total_tokens": 255,
+  "completion_tokens": 165,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "3",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:41:02.453647+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:846:P:0",
+ "suite": "gsm8k",
+ "row": 846,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "f1e60538ba7df651f5d9fecbc3b53463e448c2a9ec6eea54be1329d2e8fd3233",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:45:38.507223+00:00",
+ "completion": "Let me work through this step by step.\n\nThe show is 2 hours = 120 minutes.\n\nEach group needs:\n- 5 minutes to get on stage\n- 3 minutes to perform\n- 3 minutes to exit the stage\nTotal per group: 5 + 3 + 3 = 11 minutes\n\nThere's a 10-minute intermission.\n\nSo the time available for groups is: 120 - 10 = 110 minutes.\n\nNumber of groups: 110 ÷ 11 = 10 groups.\n\nLet me verify: 10 groups × 11 minutes = 110 minutes + 10 minutes intermission = 120 minutes = 2 hours. ✓\n</think>\n\n## Solving the Concert Scheduling Problem\n\n**Total show time:** 2 hours = 120 minutes\n\n**Time per group:**\n- Get on stage: 5 minutes\n- Perform: 3 minutes\n- Exit stage: 3 minutes\n- **Total per group: 11 minutes**\n\n**Time available for groups:**\n120 minutes − 10 minutes (intermission) = 110 minutes\n\n**Number of groups:**\n110 ÷ 11 = 10 groups\n\n**Verification:** 10 × 11 + 10 = 110 + 10 = 120 minutes ✓\n\nAnswer: 10",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.303615700999217
+ },
+ "usage": {
+  "prompt_tokens": 135,
+  "total_tokens": 453,
+  "completion_tokens": 318,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "10",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:45:49.811108+00:00"
+}

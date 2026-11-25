@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:6358:P:0",
+ "suite": "mmlu-pro",
+ "row": 6358,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "a6207bd34e3ddd9af251d0b65b567c05349628e5a255475191824771f881849f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:54:00.973820+00:00",
+ "completion": "We need answer MCQ. Need reason. Let's analyze.\n\nScenario: Teacher gives sticker at end of each day to each student who showed up on time that morning. That's daily reinforcement contingent on showing up on time each day: continuous reinforcement? For tardiness/on-time behavior, every day on-time gets sticker (assuming each day). That's continuous reinforcement (every occurrence). At end of each week, gives sticker to any student who got above 90% on three quizzes in a row. That's fixed-ratio schedule? Reinforcement after a fixed number of responses (three quizzes) — but quizzes are not necessarily daily; behavior is quiz performance. Fixed ratio = reinforcement after a fixed number of responses. Three quizzes in a row above 90% = fixed ratio (3) with requirement. Performance increased significantly; tardiness only decreased slightly. So behavior change stronger in response to fixed-ratio than continuous reinforcement. Option G.\n\nCheck other options: A variable-interval vs fixed-ratio no. B variable-ratio vs continuous no. C fixed-ratio weaker than continuous opposite. D variable ratio strongest least extinction not relevant. E intrinsic motivation not best. F fixed-interval vs continuous no. H fixed-ratio vs variable-interval no. I continuous stronger than variable-ratio no. J excitement not best.\n\nAnswer G. Need final only single letter form. Ensure no extra.Answer: G",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.806921005998447
+ },
+ "usage": {
+  "prompt_tokens": 398,
+  "total_tokens": 717,
+  "completion_tokens": 319,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "G",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:54:11.781064+00:00"
+}

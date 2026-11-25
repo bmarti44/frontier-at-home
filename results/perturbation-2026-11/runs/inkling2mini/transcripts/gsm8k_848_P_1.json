@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:848:P:1",
+ "suite": "gsm8k",
+ "row": 848,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "4956588c9f16346819df2f14de5bf19b19e6c1ce9107f237b42e34a6cb0ce683",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:25:58.764217+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: 80 white shirts, 90 floral shirts. Half of white shirts have collars => white with collars = 40, no collars = 40. 35 of floral shirts have buttons => floral with no buttons = 90-35=55. Difference floral no buttons - white no collars = 55-40=15. Need final with brief explanation and final line exactly Answer: 15. Ensure final numeric answer on own line.White shirts with no collars: 80 − 40 = 40.  \nFloral shirts with no buttons: 90 − 35 = 55.  \nDifference: 55 − 40 = 15.\n\nAnswer: 15",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.428795504001755
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 280,
+  "completion_tokens": 177,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "15",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:26:03.193308+00:00"
+}

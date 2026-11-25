@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:207:P:1",
+ "suite": "gsm8k",
+ "row": 207,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "169964eb85260e9ecd120e2f68a48e99bf8b886ced54e1e9b05764ac0803ffcc",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:12:31.305101+00:00",
+ "completion": "We need answer math. Need think briefly. Compute: chocolate bars 60 * 40g = 2400g. Each chocolate bar weighs twice as much as each candied apple. So candied apple weighs 20g. 50 *20 =1000g. Total 3400g. Need final line exactly Answer: 3400. Ensure no extra after final line. Could include brief explanation then final. User says think briefly if needed, then end with final numeric answer on its own line. We can provide concise explanation and final line.Each candied apple weighs 40/2 = 20g.  \nTotal: 60×40 + 50×20 = 2400 + 1000 = 3400g.\n\nAnswer: 3400",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.963443766002456
+ },
+ "usage": {
+  "prompt_tokens": 102,
+  "total_tokens": 272,
+  "completion_tokens": 170,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "3400",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:12:36.268907+00:00"
+}

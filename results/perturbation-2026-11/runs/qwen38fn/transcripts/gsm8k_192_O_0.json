@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:192:O:0",
+ "suite": "gsm8k",
+ "row": 192,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "ff2821e99d7bdbfe23bb4408dca3ffc82f70baf1fca5aabfd0a2b3a222b1f4e3",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:17:48.013871+00:00",
+ "completion": "Let me work through this step by step.\n\nTom starts with 50 trees.\nEach year he plants 10 trees and chops down 2 trees, so net gain is 8 trees per year.\n\nAfter 10 years:\n- Trees planted: 10 × 10 = 100\n- Trees chopped: 2 × 10 = 20\n- Net change: 100 - 20 = 80\n\nTotal trees after 10 years: 50 + 80 = 130\n\nThen 30% of the trees die:\n- Trees that die: 130 × 0.30 = 39\n- Trees remaining: 130 - 39 = 91\n</think>\n\nLet me work through this step by step.\n\n**Starting trees:** 50\n\n**Each year:** plants 10, chops down 2 → net gain of 8 trees per year\n\n**After 10 years:**\n- Net gain: 8 × 10 = 80 trees\n- Total: 50 + 80 = 130 trees\n\n**30% die:**\n- Trees lost: 130 × 0.30 = 39\n- Trees remaining: 130 - 39 = 91\n\nAnswer: 91",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 12.27093211299507
+ },
+ "usage": {
+  "prompt_tokens": 121,
+  "total_tokens": 424,
+  "completion_tokens": 303,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "91",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:18:00.285046+00:00"
+}

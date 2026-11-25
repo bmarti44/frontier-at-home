@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:12009:O:0",
+ "suite": "mmlu-pro",
+ "row": 12009,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "315540fcdb065da234122d324148bd0ba6a8f0f33191b0483f611dce06df3363",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:58:54.931678+00:00",
+ "completion": "We need answer MCQ. Need compute bandwidth. Let's reason carefully.\n\nProblem: TV picture composed approx 300,000 individual picture elements, each can attain ten different distinguishable brightness levels. For any picture element, probability of occurrence of ten brightness levels equal, and 30 picture frames per second. Determine bandwidth of TV video signal. Assume SNR of 1000 (30 dB) required for proper reproduction of any picture.\n\nThis is Shannon-Hartley: C = B log2(1+SNR). Need data rate R = bits per second. Each picture element has 10 levels equally likely => entropy per element = log2(10) bits (since equal probabilities). Number elements = 300,000. Frames per second = 30. R = 300,000 * log2(10) * 30 bits/s. log2(10)=3.32192809489. 300k*30=9,000,000 elements/s. times 3.321928 = 29.897e6 bits/s ≈ 29.9 Mbps.\n\nSNR=1000 (30 dB). Shannon: C = B log2(1+1000) = B log2(1001). log2(1001) ≈ ln(1001)/ln2. ln1001=6.908754? Let's compute: ln1000=6.907755279, ln(1.001)=0.0009995, sum=6.9087548. /0.693147=9.967? 6.90875/0.693147=9.9672 (since log2 1024=10, 1001 slightly less: 10 + log2(1001/1024)=10+log2(0.977539)=10+(-0.0230)=9.977? Let's calculate accurately: 1001/1024=0.9775390625. ln= -0.022727? /ln2=-0.0328. so 9.9672. yes.) B=29.897e6/9.967=3.000e6 Hz. Option G 3MHz.\n\nNeed final single letter form Answer: G. Ensure no extra.Answer: G",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 15.432567227002437
+ },
+ "usage": {
+  "prompt_tokens": 219,
+  "total_tokens": 725,
+  "completion_tokens": 506,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "G",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:59:10.364623+00:00"
+}

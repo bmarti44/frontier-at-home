@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:8847:P:0",
+ "suite": "mmlu-pro",
+ "row": 8847,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "a26b88d1ac970aaf9323023a8474784fb5f655cf4ba1634f439301747bf413b7",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:52:57.139640+00:00",
+ "completion": "We need answer single letter. Need compute monthly payment for 100k, 30-year, 9% annual. Monthly rate = 0.09/12 = 0.0075. n=360. Payment = P*r/(1-(1+r)^-n). Compute approximate. (1.0075)^360. ln(1.0075)=0.0074720? Let's calculate: ln(1+x), x=.0075: x - x^2/2 + x^3/3 = .0075 - .000028125 + .0000001406 = .007471? .0075-.000028125=.007471875 +.0000001406=.0074720156. *360 = 2.6899256. exp=14.733? e^2.69 = 14.73. (1+r)^-n = 1/14.733 = .06786. denominator=.93214. numerator=750. payment=750/.93214=804.6. Option B. Need final only.Answer: B",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.745164478001243
+ },
+ "usage": {
+  "prompt_tokens": 143,
+  "total_tokens": 397,
+  "completion_tokens": 254,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "B",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:53:03.885043+00:00"
+}

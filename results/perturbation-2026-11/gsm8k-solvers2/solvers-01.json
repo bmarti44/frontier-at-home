@@ -1,0 +1,82 @@
+[
+ {
+  "row": 772,
+  "solver": "def solve(v):\n    total = v['sat'] + v['sun']\n    remaining = total - v['read']\n    assert remaining >= 0\n    video = Fraction(remaining, v['den'])\n    soccer = remaining - video\n    return soccer * 100 / Fraction(total)\n"
+ },
+ {
+  "row": 176,
+  "solver": "def solve(v):\n    chinese = v['total'] - v['japanese']\n    girls = chinese - v['boys']\n    assert girls >= 0\n    return girls\n"
+ },
+ {
+  "row": 15,
+  "solver": "def solve(v):\n    pj = v['jewelry'] * v['pj'] / 100\n    pg = v['gadgets'] * v['pg'] / 100\n    return max(Fraction(pj), Fraction(pg))\n"
+ },
+ {
+  "row": 66,
+  "solver": "def solve(v):\n    schools = 4\n    teams = 2\n    return schools * teams * (v['players'] + 1)\n"
+ },
+ {
+  "row": 479,
+  "solver": "def solve(v):\n    tickets = 2 * v['ticket']\n    hotel_per_day = Fraction(v['normal']) * (100 + v['pct']) / 100\n    return tickets + hotel_per_day * v['days']\n"
+ },
+ {
+  "row": 896,
+  "solver": "def solve(v):\n    return v['times'] * v['hours'] * v['rate'] - v['payment']\n"
+ },
+ {
+  "row": 1122,
+  "solver": "def solve(v):\n    made = v['order'] - v['short']\n    others = 2 * v['ra'] * v['shift'] + 2 * v['rb'] * v['shift']\n    fifth_total = made - others\n    assert fifth_total >= 0\n    return Fraction(fifth_total, v['shift'])\n"
+ },
+ {
+  "row": 1005,
+  "solver": "def solve(v):\n    assert (v['pop'] * v['num']) % v['den'] == 0\n    females = v['pop'] * v['num'] // v['den']\n    return v['pop'] + 12 * females * v['babies']\n"
+ },
+ {
+  "row": 480,
+  "solver": "def solve(v):\n    assert v['blue'] % 2 == 0\n    return v['blue'] // 2 + 3 * v['yellow']\n"
+ },
+ {
+  "row": 187,
+  "solver": "def solve(v):\n    p = Fraction(v['principal'])\n    return p + p * v['rate'] * v['months'] / 100\n"
+ },
+ {
+  "row": 275,
+  "solver": "def solve(v):\n    song = v['song']\n    s1 = Fraction(2 * song, 3)\n    s2 = Fraction(4 * (song + 6), 5)\n    assert s1.denominator == 1 and s2.denominator == 1\n    return song + s1 + s2\n"
+ },
+ {
+  "row": 868,
+  "solver": "def solve(v):\n    need = v['kids'] * v['cups']\n    boxes = -(-need // v['per_box'])\n    return boxes * v['price']\n"
+ },
+ {
+  "row": 921,
+  "solver": "def solve(v):\n    per_day = v['rate'] + 2 * v['rate']\n    return Fraction(v['slices'], per_day)\n"
+ },
+ {
+  "row": 562,
+  "solver": "def solve(v):\n    return v['angle'] + v['rate'] * v['hours']\n"
+ },
+ {
+  "row": 1082,
+  "solver": "def solve(v):\n    d = Fraction(v['dist'])\n    distance = d / 2 + d / 2 + d\n    return distance / v['speed']\n"
+ },
+ {
+  "row": 172,
+  "solver": "def solve(v):\n    s32 = v['age']\n    s4 = s32\n    granny = 2 * s4\n    s2 = granny + 3\n    return s32 + s4 + granny + s2\n"
+ },
+ {
+  "row": 770,
+  "solver": "def solve(v):\n    return v['nv'] * v['sv'] - v['nf'] * v['sf']\n"
+ },
+ {
+  "row": 1191,
+  "solver": "def solve(v):\n    cut = v['start'] - v['end']\n    assert cut >= 0\n    return v['color'] + v['rate'] * cut\n"
+ },
+ {
+  "row": 413,
+  "solver": "def solve(v):\n    dangerous = Fraction(v['candles']) * (100 - v['safe']) / 100\n    return dangerous * v['smell'] / 100\n"
+ },
+ {
+  "row": 537,
+  "solver": "def solve(v):\n    third = v['second'] - v['diff']\n    fourth = 2 * v['first']\n    return v['first'] + v['second'] + third + fourth\n"
+ }
+]

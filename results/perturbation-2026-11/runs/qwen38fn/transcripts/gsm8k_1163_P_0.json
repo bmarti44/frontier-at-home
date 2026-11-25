@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1163:P:0",
+ "suite": "gsm8k",
+ "row": 1163,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "a9228cffd1e9ce657741136b2f3fc370a7a3117c5e4dce74d3f6fe0c8e89ae1c",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:57:46.381391+00:00",
+ "completion": "Let me work through this step by step.\n\n- Kenji changes his face mask 2 times every time he goes out.\n- He goes out 3 times a day.\n- I need to find how many face masks he uses every 3 days.\n\nMasks per outing: 2\nOutings per day: 3\nMasks per day: 2 × 3 = 6\nMasks per 3 days: 6 × 3 = 18\n</think>\n\nKenji uses 2 masks per outing × 3 outings per day = 6 masks per day.\n\nOver 3 days: 6 × 3 = 18 masks.\n\nAnswer: 18",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.375388931999623
+ },
+ "usage": {
+  "prompt_tokens": 101,
+  "total_tokens": 250,
+  "completion_tokens": 149,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "18",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:57:51.757014+00:00"
+}

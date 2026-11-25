@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:10905:P:0",
+ "suite": "mmlu-pro",
+ "row": 10905,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "fdce9802df86ca1dbe6d969af62799ad9ceec7ebf1e6541c940daa50a590e532",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:45:00.773382+00:00",
+ "completion": "We need answer translation. Need parse notation. Sentence: \"Leroy is bad only if DJ Khaled shouts his name.\" Let B_l? likely Bl = Leroy is bad; Sk = DJ Khaled shouts his name? Need infer from options. Options use Bx, Sy, Sk, Bl, By. Names: Leroy maybe l, DJ Khaled maybe k? \"his name\" = Leroy's name? DJ Khaled shouts his name (Leroy's name). So Sk = DJ Khaled shouts Leroy's name. Bl = Leroy is bad. \"Leroy is bad only if DJ Khaled shouts his name\" means Bl -> Sk (bad only if shouts). That is G: Bl ⊃ Sk. Check options: G. Bl ⊃ Sk. Yes.\n\nNeed final only single letter form. Ensure no extra.Answer: G",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.064189565000561
+ },
+ "usage": {
+  "prompt_tokens": 126,
+  "total_tokens": 329,
+  "completion_tokens": 203,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "G",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:45:06.837898+00:00"
+}

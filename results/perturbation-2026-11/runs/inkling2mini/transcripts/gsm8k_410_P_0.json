@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:410:P:0",
+ "suite": "gsm8k",
+ "row": 410,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "275f81b6f9021c7600bcdf176215cee30eca18c37c899c03f985e86e928bdd08",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:29:28.704466+00:00",
+ "completion": "We need answer arithmetic. Need compute carefully.\n\nProblem: Nina has $10. Taffy sale: \"Buy 1 pound at $3, get 1 pound 1/2 off.\" She scooped up 2 pounds. Interpretation: buy 1 pound at $3, get 1 pound half off. So for 2 pounds: first pound $3, second pound half off = $1.50. Total taffy = $4.50. She also bought seashells $2.50 and 2 magnets at $0.50 each = $1.00. Total spent = 4.50+2.50+1.00=8.00. Left = 2.00.\n\nNeed final with brief maybe one line and final numeric answer own line. Ensure format Answer: <number>. Could include $2.00. They said numeric answer; form Answer: <number>. Use Answer: $2.00? numeric maybe 2.00. Do that.Taffy: $3 + $1.50 = $4.50; seashells $2.50; magnets $1.00; total $8.00.\nAnswer: $2.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.376509049998276
+ },
+ "usage": {
+  "prompt_tokens": 146,
+  "total_tokens": 411,
+  "completion_tokens": 265,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "2",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:29:36.081262+00:00"
+}

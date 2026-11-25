@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:160:O:0",
+ "suite": "gsm8k",
+ "row": 160,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "537fb04a2ac4368f7af95bf72ef641e88bb816f623c65b42e34cbe81a3ebf6af",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:19:54.077330+00:00",
+ "completion": "We need answer math. Need compute: Monday depth 17 ft. Tuesday = 17+7=24 ft. Wednesday = two thirds of Tuesday = (2/3)*24=16 ft. Need final with brief explanation and final numeric answer on own line exactly Answer: <number>. Ensure number maybe 16 feet. They said numeric answer; form Answer: <number>. Could put Answer: 16 feet? They said numeric answer on its own line in form Answer: <number>. Better Answer: 16 feet? \"<number>\" maybe just 16. But tank depth in feet; final numeric answer could be 16. Do brief.Tuesday: 17 + 7 = 24 feet.  \nWednesday: (2/3) × 24 = 16 feet.\n\nAnswer: 16 feet",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.753824278999673
+ },
+ "usage": {
+  "prompt_tokens": 97,
+  "total_tokens": 277,
+  "completion_tokens": 180,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "16",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:19:59.831361+00:00"
+}

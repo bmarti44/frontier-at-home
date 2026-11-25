@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:4:O:0",
+ "suite": "humaneval",
+ "row": 4,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "2717edd5d203ea22a6eebf62263effd9b792e1a2ef93e017868cedaac7b5ef10",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:46:27.560976+00:00",
+ "completion": "    mean = sum(numbers) / len(numbers)\n    return sum(abs(x - mean) for x in numbers) / len(numbers)\n\n# Check the case when the list is empty\ndef test_mean_absolute_deviation_empty_list():\n    assert mean_absolute_deviation([]) == 0\n\n# Check the case when the list has only one element\ndef test_mean_absolute_deviation_single_element():\n    assert mean_absolute_deviation([5.0]) == 0\n\n# Check the case when the list has two elements\ndef test_mean_absolute_deviation_two_elements():\n    assert mean_absolute_deviation([1.0, 2.0]) == 0.5\n\n# Check the case when the list has three elements\ndef test_mean_absolute_deviation_three_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0]) == 1.0\n\n# Check the case when the list has four elements\ndef test_mean_absolute_deviation_four_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0]) == 1.0\n\n# Check the case when the list has five elements\ndef test_mean_absolute_deviation_five_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0]) == 1.2\n\n# Check the case when the list has six elements\ndef test_mean_absolute_deviation_six_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]) == 1.5\n\n# Check the case when the list has seven elements\ndef test_mean_absolute_deviation_seven_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) == 1.7142857142857142\n\n# Check the case when the list has eight elements\ndef test_mean_absolute_deviation_eight_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]) == 2.0\n\n# Check the case when the list has nine elements\ndef test_mean_absolute_deviation_nine_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]) == 2.2222222222222223\n\n# Check the case when the list has ten elements\ndef test_mean_absolute_deviation_ten_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]) == 2.5\n\n# Run the tests\ntest_mean_absolute_deviation_empty_list()\ntest_mean_absolute_deviation_single_element()\ntest_mean_absolute_deviation_two_elements()\ntest_mean_absolute_deviation_three_elements()\ntest_mean_absolute_deviation_four_elements()\ntest_mean_absolute_deviation_five_elements()\ntest_mean_absolute_deviation_six_elements()\ntest_mean_absolute_deviation_seven_elements()\ntest_mean_absolute_deviation_eight_elements()\ntest_mean_absolute_deviation_nine_elements()\ntest_mean_absolute_deviation_ten_elements()\n```\n</think>\n\nI have implemented the `mean_absolute_deviation` function and added some test cases to ensure it works correctly. The function calculates the Mean Absolute Deviation (MAD) around the mean of a given list of numbers.\n\nHere's the implementation:\n\n```python\nfrom typing import List\n\n\ndef mean_absolute_deviation(numbers: List[float]) -> float:\n    \"\"\" For a given list of input numbers, calculate Mean Absolute Deviation\n    around the mean of this dataset.\n    Mean Absolute Deviation is the average absolute difference between each\n    element and a centerpoint (mean in this case):\n    MAD = average | x - x_mean |\n    >>> mean_absolute_deviation([1.0, 2.0, 3.0, 4.0])\n    1.0\n    \"\"\"\n    mean = sum(numbers) / len(numbers)\n    return sum(abs(x - mean) for x in numbers) / len(numbers)\n\n# Check the case when the list is empty\ndef test_mean_absolute_deviation_empty_list():\n    assert mean_absolute_deviation([]) == 0\n\n# Check the case when the list has only one element\ndef test_mean_absolute_deviation_single_element():\n    assert mean_absolute_deviation([5.0]) == 0\n\n# Check the case when the list has two elements\ndef test_mean_absolute_deviation_two_elements():\n    assert mean_absolute_deviation([1.0, 2.0]) == 0.5\n\n# Check the case when the list has three elements\ndef test_mean_absolute_deviation_three_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0]) == 1.0\n\n# Check the case when the list has four elements\ndef test_mean_absolute_deviation_four_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0]) == 1.0\n\n# Check the case when the list has five elements\ndef test_mean_absolute_deviation_five_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0]) == 1.2\n\n# Check the case when the list has six elements\ndef test_mean_absolute_deviation_six_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]) == 1.5\n\n# Check the case when the list has seven elements\ndef test_mean_absolute_deviation_seven_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]) == 1.7142857142857142\n\n# Check the case when the list has eight elements\ndef test_mean_absolute_deviation_eight_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]) == 2.0\n\n# Check the case when the list has nine elements\ndef test_mean_absolute_deviation_nine_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]) == 2.2222222222222223\n\n# Check the case when the list has ten elements\ndef test_mean_absolute_deviation_ten_elements():\n    assert mean_absolute_deviation([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]) == 2.5\n\n# Run the tests\ntest_mean_absolute_deviation_empty_list()\ntest_mean_absolute_deviation_single_element()\ntest_mean_absolute_deviation_two_elements()\ntest_mean_absolute_deviation_three_elements()\ntest_mean_absolute_deviation_four_elements()\ntest_mean_absolute_deviation_five_elements()\ntest_mean_absolute_deviation_six_elements()\ntest_mean_absolute_deviation_seven_elements()\ntest_mean_absolute_deviation_eight_elements()\ntest_mean_absolute_deviation_nine_elements()\ntest_mean_absolute_deviation_ten_elements()\n```\n\nThe function first calculates the mean of the input numbers, then calculates the absolute difference between each number and the mean, and finally calculates the average of these absolute differences. The test cases cover various scenarios, including empty lists, single-element lists, and lists with multiple elements.",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 75.37133765099861
+ },
+ "usage": {
+  "prompt_tokens": 117,
+  "total_tokens": 1965,
+  "completion_tokens": 1848,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    mean = sum(numbers) / len(numbers)\n    return sum(abs(x - mean) for x in numbers) / len(numbers)\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:47:42.932536+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00216:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:31.948688+00:00"
+}

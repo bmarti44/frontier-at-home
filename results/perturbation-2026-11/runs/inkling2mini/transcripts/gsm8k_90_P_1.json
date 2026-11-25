@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:90:P:1",
+ "suite": "gsm8k",
+ "row": 90,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "f3c5ab4efb3446e4fc9677dd733d22941a442f6aa259bab5febc1e320530ea2a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:20:29.321531+00:00",
+ "completion": "The user wants a math answer. Need compute: adult eats 12 lbs. Child eats half = 6 lbs. 25 adults *12 = 300. 3 children *6 = 18. Total 318 lbs. Need final line exactly Answer: 318. Could include brief calculation. Ensure final numeric answer on its own line. No need for more tools.Adults: 25 × 12 = 300 lbs  \nChildren: 3 × 6 = 18 lbs  \nTotal: 300 + 18 = 318 lbs  \n\nAnswer: 318",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.7914961030037375
+ },
+ "usage": {
+  "prompt_tokens": 134,
+  "total_tokens": 260,
+  "completion_tokens": 126,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "318",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:20:33.113223+00:00"
+}

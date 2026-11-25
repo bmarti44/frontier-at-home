@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:910:P:1",
+ "suite": "gsm8k",
+ "row": 910,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "f19fcdbba51691ec0fee40c1d64a12c0f220429222b4f88fc11737eb608b7ce6",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:39:06.557019+00:00",
+ "completion": "The user wants me to solve a math problem. Let me compute.\n\nFarmer Miller's farm = 250 acres.\nFarmer Lewis's farm = 270 acres more than twice that = 2*250 + 270 = 500 + 270 = 770 acres.\nTogether = 250 + 770 = 1020 acres.\n\nNeed to think briefly if needed, then end with final numeric answer on its own line in form Answer: <number>.\n\nI should provide brief reasoning and final line.Farmer Lewis's farm: 2 × 250 + 270 = 770 acres.  \nTogether: 250 + 770 = 1020 acres.\n\nAnswer: 1020",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.9936308060005103
+ },
+ "usage": {
+  "prompt_tokens": 80,
+  "total_tokens": 239,
+  "completion_tokens": 159,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "1020",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:39:10.550970+00:00"
+}

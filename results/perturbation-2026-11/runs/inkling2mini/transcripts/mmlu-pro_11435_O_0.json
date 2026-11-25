@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:11435:O:0",
+ "suite": "mmlu-pro",
+ "row": 11435,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "75809ec735784b59ce2a08a949f68b9c0e02a17bb4582703532e4010cec82ec0",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:21:56.885235+00:00",
+ "completion": "We need answer based on typical CRI values. Need determine best among options. Xenon has very high CRI ~95-100 (daylight). Incandescent ~100 (actually 95-100). Halogen ~100. LED can be high but varies; often 80-90, some >95. Xenon ~95-98. Halogen ~100. Incandescent ~100. Which lamp has best CRI? Need infer from standard table. Options include Xenon, High pressure sodium vapour, Halogen, Low pressure sodium vapour, Compact fluorescent, LED, Mercury vapour, Incandescent, Fluorescent, Metal halide.\n\nTypical CRI: Incandescent 100, Halogen 100, Xenon 95-100, Metal halide 65-95, Fluorescent 50-90, Compact fluorescent 50-80, LED 70-90 (some 95), High pressure sodium 20-60, Low pressure sodium 20, Mercury vapour 40-60.\n\nIf asking singular best, likely incandescent or halogen. Halogen lamps have CRI ~100, same as incandescent. Xenon also ~95. In many lighting references: CRI values: Incandescent 100; Halogen 100; Fluorescent 60-80; Compact fluorescent 60-80; LED 80-90; Metal halide 65-90; High pressure sodium 20-60; Low pressure sodium 20; Mercury vapour 40-60; Xenon 95-100. Halogen often 100. Incandescent also 100. Which is best? Maybe Xenon has CRI 95-98, halogen 100, incandescent 100. Need choose one.\n\nQuestion likely from a dataset where answer is one of options. They ask \"Which lamp has the best Colour Rendering Index (CRI)?\" In common tables, \"Halogen\" CRI = 100, \"Incandescent\" = 100, \"Xenon\" = 95. If tie, maybe halogen is best? Let's recall exact values from Wikipedia? Light sources CRI: Incandescent 100, Halogen 100, Tungsten-halogen 100, Xenon arc 95-98, Metal halide 65-95, Fluorescent 50-90, LED 80-90, High-pressure sodium 20-60, Low-pressure sodium 20, Mercury vapor 40-60, Compact fluorescent 50-80.\n\nIf multiple tie, maybe \"Halogen\" is often cited as CRI 100 and best. Incandescent also 100 but halogen is a type of incandescent with higher CRI? Actually halogen has CRI 100, incandescent 95-100. Halogen often 100. Choose C.\n\nNeed final only single letter form.Answer: C",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 22.492651877000753
+ },
+ "usage": {
+  "prompt_tokens": 111,
+  "total_tokens": 755,
+  "completion_tokens": 644,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "H",
+ "reason": "incorrect: parsed='C' expected='H'",
+ "finished_at": "2026-11-25T01:22:19.378150+00:00"
+}

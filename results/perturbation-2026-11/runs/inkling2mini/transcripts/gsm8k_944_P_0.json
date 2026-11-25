@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:944:P:0",
+ "suite": "gsm8k",
+ "row": 944,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "b0c54a7b880f900462ff544523330e4dee9160d5e36f68be98b831d5083c0e4e",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:52:03.993615+00:00",
+ "completion": "We need answer arithmetic. Need compute: 3 yams * $0.5 = $1.5. 20 sweet potatoes * $1 = $20. 7 carrots * $0.50 = $3.5. Total = 1.5+20+3.5=25.0. Need final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly.3 yams × $0.50 = $1.50  \n20 sweet potatoes × $1 = $20  \n7 carrots × $0.50 = $3.50  \nTotal = $25.00\n\nAnswer: $25",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.8368768000000273
+ },
+ "usage": {
+  "prompt_tokens": 106,
+  "total_tokens": 258,
+  "completion_tokens": 152,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "25",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:52:06.830800+00:00"
+}

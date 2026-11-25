@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:107:P:1",
+ "suite": "gsm8k",
+ "row": 107,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "95c49f23fcef3394ecb168d6bd8b2ba38e413f6c4433ed1aabe44f9a9b30007d",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:53:56.975465+00:00",
+ "completion": "Let me work through this step by step.\n\nMonday: 1 hour\nTuesday: 1 hour\nWednesday: some number of 40-minute episodes\nThursday: 1 hour + 40 minutes\nFriday: 2 × 1 hour = 2 hours\n\nTotal = 9 hours\n\nLet me add up what I know:\nMonday + Tuesday = 1 + 1 = 2 hours\nThursday = 1 hour + 40 minutes = 1 hour 40 minutes\nFriday = 2 hours\n\nTotal known = 2 + 1 hour 40 min + 2 = 5 hours 40 minutes\n\nRemaining for Wednesday = 9 hours - 5 hours 40 minutes = 3 hours 20 minutes\n\n3 hours 20 minutes = 200 minutes\n\nEach episode is 40 minutes.\n\n200 / 40 = 5 episodes\n\nSo he watched 5 episodes on Wednesday.\n</think>\n\nLet me add up the known TV time:\n\n- **Monday:** 1 hour\n- **Tuesday:** 1 hour\n- **Thursday:** 1 hour + 40 minutes\n- **Friday:** 2 × 1 hour = 2 hours\n\n**Total known:** 1 + 1 + 1 hr 40 min + 2 = 5 hours 40 minutes\n\n**Remaining for Wednesday:** 9 hours − 5 hours 40 minutes = 3 hours 20 minutes = 200 minutes\n\n**Number of 40-minute episodes:** 200 ÷ 40 = 5\n\nAnswer: 5",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.602351073001046
+ },
+ "usage": {
+  "prompt_tokens": 180,
+  "total_tokens": 527,
+  "completion_tokens": 347,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "5",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:54:10.578131+00:00"
+}

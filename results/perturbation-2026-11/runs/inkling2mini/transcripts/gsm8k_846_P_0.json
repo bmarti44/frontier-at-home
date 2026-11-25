@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:846:P:0",
+ "suite": "gsm8k",
+ "row": 846,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "895163e033f76ef36bbd57221037ac78c8b28b899ddf0f42064446410b72ee58",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:10:08.626466+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Concert 2 hours = 120 minutes. Each group: 5 min get on stage, 3 min perform, 3 min exit = 11 minutes per group. She allows a 10-minute intermission. How many groups can perform?\n\nInterpretation: Total time = intermission + sum group times. 120 - 10 = 110 minutes for groups. 110 / 11 = 10 exactly. So 10 groups. Need ensure intermission placement doesn't matter. Answer 10.\n\nNeed final with brief explanation and final line exactly Answer: 10.2 hours = 120 minutes. Subtract the 10-minute intermission: 110 minutes. Each group takes 5 + 3 + 3 = 11 minutes. 110 ÷ 11 = 10.\n\nAnswer: 10",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.359333070002322
+ },
+ "usage": {
+  "prompt_tokens": 109,
+  "total_tokens": 301,
+  "completion_tokens": 192,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "10",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:10:13.986105+00:00"
+}

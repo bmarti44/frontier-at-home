@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:368:P:0",
+ "suite": "gsm8k",
+ "row": 368,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "b09e98601ef294fe67bf886cab10fd0f509b25ab7cc1d6fa21b4f20f93c02c89",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:02:50.387019+00:00",
+ "completion": "We need answer math. Need parse wording carefully. \"After scoring 15 points, Nina now has three times more points than Leah, who scored 8. How many points did Nina have before?\" Ambiguity: \"three times more points than Leah\" could mean now has 3 times as many as Leah (24) or three times more = 4x (32). Common word problems: \"three times more points than Leah\" often intended as 3 times as many. Leah scored 8, so Nina now has 3*8=24. She scored 15, so before = 24-15=9. Need final numeric answer only line. Brief explanation okay. Ensure final line Answer: 9.After scoring, Nina has \\(3 \\times 8 = 24\\) points. Before scoring 15, she had \\(24 - 15 = 9\\).\n\nAnswer: 9",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.140587074998621
+ },
+ "usage": {
+  "prompt_tokens": 73,
+  "total_tokens": 283,
+  "completion_tokens": 210,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": false,
+ "expected": "17",
+ "reason": "incorrect: parsed='9' expected='17'",
+ "finished_at": "2026-11-24T22:02:56.527864+00:00"
+}

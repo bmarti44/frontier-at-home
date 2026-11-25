@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:509:P:0",
+ "suite": "mmlu-pro",
+ "row": 509,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "e7eee13db3bdb07630b2a2bdcfd8d7502db1a4bff4f47bafcd414f7e2f80361d",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:26:49.974804+00:00",
+ "completion": "We need answer based on table. Need compute premiums. Formula likely premium = face value /100 * rate * term? Let's inspect.\nPolicy1: face 9000, rate .28 per $100, term 1 year. 9000/100=90; *0.28=25.20; *1=25.20. Policy2: 52000/100=520; *0.35=182.00; *3 years =546.00 if term multiplies. Policy3: 28000/100=280; *0.42=117.60; *1=117.60. So Policy1 25.20, Policy2 546.00, Policy3 117.60 => H. Need ensure if premium rate per $100 per year, term multiplies. Yes.\nFinal only letter form.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.3833657239956665
+ },
+ "usage": {
+  "prompt_tokens": 381,
+  "total_tokens": 572,
+  "completion_tokens": 191,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "E",
+ "reason": "incorrect: parsed='H' expected='E'",
+ "finished_at": "2026-11-25T00:26:55.358406+00:00"
+}

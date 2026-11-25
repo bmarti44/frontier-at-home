@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:32:P:1",
+ "suite": "gsm8k",
+ "row": 32,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "9cb4752f465f7cec9ed77328a734aa4dee71eae9fc4878164e6932036ac0b0ee",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:06:39.297995+00:00",
+ "completion": "Let me solve this step by step.\n\nJames takes care of 28 dogs.\nEach dog takes 0.25 hours a day.\nI need to find hours per week.\n\nDaily hours: 28 × 0.25 = 7 hours per day\nWeekly hours: 7 × 7 = 49 hours per week\n</think>\n\n28 dogs × 0.25 hours/day = 7 hours per day\n7 hours/day × 7 days/week = 49 hours per week\n\nAnswer: 49",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.772218158999749
+ },
+ "usage": {
+  "prompt_tokens": 108,
+  "total_tokens": 227,
+  "completion_tokens": 119,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "49",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:06:44.070430+00:00"
+}

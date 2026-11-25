@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:2:P:0",
+ "suite": "gsm8k",
+ "row": 2,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "1084b9ca9bca9e8348b3748a990bcad747e420a791c70f04f0cf3d54d854468a",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:16:37.491559+00:00",
+ "completion": "Let me work through this step by step.\n\nMarcus buys a house for $50,000 and puts in $55,000 in repairs.\n\nTotal cost = $50,000 + $55,000 = $105,000\n\nThe repairs increased the value of the house by 210%.\n\nNow, I need to figure out what \"increased the value of the house by 210%\" means. This means the value increased by 210% of the original value.\n\nOriginal value = $50,000\nIncrease = 210% of $50,000 = 2.10 × $50,000 = $105,000\n\nNew value = $50,000 + $105,000 = $155,000\n\nProfit = New value - Total cost = $155,000 - $105,000 = $50,000\n\nWait, let me reconsider. \"Increased the value of the house by 210%\" - this could mean the new value is 210% of the original, or it increased BY 210%.\n\n\"Increased by 210%\" means the increase is 210% of the original value.\nNew value = $50,000 + 210% × $50,000 = $50,000 + $105,000 = $155,000\n\nProfit = $155,000 - $105,000 = $50,000\n\nSo the profit is $50,000.\n</think>\n\n## Solving the House Flipping Problem\n\n**Step 1: Calculate total cost**\n- Purchase price: $50,000\n- Repairs: $55,000\n- Total cost: $50,000 + $55,000 = **$105,000**\n\n**Step 2: Calculate the new value after repairs**\n- The repairs increased the value by 210% of the original value\n- Increase = 210% × $50,000 = $105,000\n- New value = $50,000 + $105,000 = **$155,000**\n\n**Step 3: Calculate profit**\n- Profit = New value − Total cost\n- Profit = $155,000 − $105,000 = **$50,000**\n\nAnswer: 50000",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 20.693677770999784
+ },
+ "usage": {
+  "prompt_tokens": 123,
+  "total_tokens": 740,
+  "completion_tokens": 617,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "50000",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:16:58.185502+00:00"
+}

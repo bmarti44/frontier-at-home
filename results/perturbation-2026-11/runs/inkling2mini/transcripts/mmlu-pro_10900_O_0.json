@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:10900:O:0",
+ "suite": "mmlu-pro",
+ "row": 10900,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "d09cd650a60fb13a89a400a1b1ee834169bcecb71137738195d79d1ac8263039",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:32:02.940262+00:00",
+ "completion": "We need answer logic. Need determine consistency of set: D ≡ E, F ∨ D, ~E · ~F. Interpret ~E · ~F means E false and F false (conjunction). If E false, D ≡ E implies D false. F false. Then F ∨ D = false ∨ false = false, violates. Inconsistent. Check options: B. Need ensure indirect truth tables maybe. Answer single letter. Final only Answer: B.Answer: B",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.476619295004639
+ },
+ "usage": {
+  "prompt_tokens": 260,
+  "total_tokens": 368,
+  "completion_tokens": 108,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "B",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:32:06.417126+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1193:P:0",
+ "suite": "gsm8k",
+ "row": 1193,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "a8cfafe4f2afdde1547a4378f5e5dcdb4c3a6d849b011363a6a29cd2829c3dfe",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:58:46.026334+00:00",
+ "completion": "We need answer arithmetic. Need compute carefully.\n\nDerek earns: laundry $2.00 each? \"$2.00 for doing his laundry\" likely per time. cleaning room $1.25, trash $0.25 each week? Wording: \"$0.25 for taking the trash to the curb each week and $0.25 for emptying the dishwasher.\" In two week period, Derek emptied dishwasher 9 times, did laundry once, took trash out twice and cleaned room once.\n\nCompute: laundry once = 2.00. cleaning room once = 1.25. trash out twice = 2*0.25 = 0.50. dishwasher 9 times = 9*0.25 = 2.25. Total = 2.00+1.25+0.50+2.25 = 6.00? 2+1.25=3.25; +0.5=3.75; +2.25=6.00. Yes.\n\nNeed final with brief maybe one line and final numeric answer on own line. Ensure form Answer: <number>. Could include dollar sign? They say numeric answer; form Answer: <number>. Use Answer: $6.00 maybe numeric with dollar. They said numeric answer; examples often accept $6.00. Do that.Laundry: $2.00; room: $1.25; trash: 2 × $0.25 = $0.50; dishwasher: 9 × $0.25 = $2.25. Total = $6.00.\nAnswer: $6.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.476671488999273
+ },
+ "usage": {
+  "prompt_tokens": 141,
+  "total_tokens": 507,
+  "completion_tokens": 366,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "6",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:58:54.503207+00:00"
+}

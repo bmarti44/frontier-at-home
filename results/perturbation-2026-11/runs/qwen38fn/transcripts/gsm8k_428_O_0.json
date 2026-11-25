@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:428:O:0",
+ "suite": "gsm8k",
+ "row": 428,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "4ebd39985651e5fc6b8c4000589ef1ae8c31bbde1d829f9906507314292331f8",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:56:16.245476+00:00",
+ "completion": "Let me work through this step by step.\n\nThe caterer was told to prepare for 36 guests.\n- Most people would only eat one hotdog, so he prepared enough for all 36 guests to have one hotdog each = 36 hotdogs\n- He prepared enough for half of the guests to have two hotdogs. Half of 36 = 18 guests would get a second hotdog.\n- So total hotdogs prepared = 36 (first hotdogs for everyone) + 18 (second hotdogs for half) = 54 hotdogs\n\nNow, 40 guests showed up, and everyone wanted a second hotdog.\n- First, everyone gets a first hotdog: 40 hotdogs used\n- Remaining hotdogs for second round: 54 - 40 = 14 hotdogs\n- So only 14 guests can get a second hotdog\n- Guests who did NOT get a second hotdog: 40 - 14 = 26\n\nThe answer is 26.\n</think>\n\nLet me work through this step by step.\n\n**Hotdogs prepared:**\n- 36 guests were expected, so 36 first hotdogs were prepared.\n- Half of 36 = 18 guests were expected to want a second hotdog, so 18 extra hotdogs were prepared.\n- **Total hotdogs = 36 + 18 = 54**\n\n**When 40 guests showed up:**\n- Everyone gets a first hotdog: 40 hotdogs used.\n- Remaining hotdogs for seconds: 54 − 40 = **14**\n- So only 14 guests can get a second hotdog.\n\n**Guests who did NOT get a second hotdog:**\n40 − 14 = **26**\n\nAnswer: 26",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 19.157168218996958
+ },
+ "usage": {
+  "prompt_tokens": 138,
+  "total_tokens": 544,
+  "completion_tokens": 406,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "26",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:56:35.402884+00:00"
+}

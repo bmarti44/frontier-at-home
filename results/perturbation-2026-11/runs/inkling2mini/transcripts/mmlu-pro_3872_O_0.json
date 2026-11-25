@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:3872:O:0",
+ "suite": "mmlu-pro",
+ "row": 3872,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "e21a4d3b6ff913706db4f9d6fcb4f2416ff9053ca45524e6c5df63538911f2e8",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:22:26.878774+00:00",
+ "completion": "We need answer. Need compute coefficient Phi0 normalized CI-SD wavefunction. Need understand Davidson correction. Given SCF energy E_SCF=-76.040542, CI-SD energy E_CI=-76.243772, Davidson corrected E_D=-76.254549. Need coefficient of Phi0 in normalized CI-SD wavefunction.\n\nDavidson correction: E_corr = E_CI + (E_CI - E_SCF)/(1 - c0^2)? Let's recall. Davidson correction for truncated CI: ΔE_D = (E_CI - E_HF)/(1 - c_0^2) maybe? Actually Davidson correction: E_D = E_CI + (E_CI - E_HF) * (1 - c_0^2)/c_0^2? Need derive.\n\nIn CI, wavefunction Ψ = c0 Φ0 + sum c_i Φ_i. Normalized: c0^2 + sum c_i^2 =1. Energy E = c0^2 E0 + sum c_i^2 E_i + cross terms. For SD, E_CI - E_HF =? There is known Davidson correction: E_D = E_CI + (E_CI - E_HF)/(1 - c_0^2) *? Let's recall exact formula.\n\nDavidson correction (1977): ΔE_D = (E_CI - E_HF) * (1 - c_0^2)/c_0^2? Hmm.\n\nLet's derive from known relation. In CI, define correlation energy E_corr = E_CI - E_HF. The coefficient c0 (weight of reference) relates to correlation energy via Epstein-Nesbet? There is formula: E_corr = (1 - c0^2) * (E_CI - E_HF)/(1 - c0^2?) no.\n\nKnown Davidson correction: E_D = E_CI + (E_CI - E_HF)/(1 - c_0^2) *? Let's search memory: In quantum chemistry, Davidson correction: E_D = E_CI + (E_CI - E_HF) * (1 - c_0^2)/c_0^2? Actually often written: E_D = E_CI + (E_CI - E_HF)/(1 - c_0^2) * (1 - c_0^2)? no.\n\nLet's recall from electronic structure: For CISD, Davidson correction: E_D = E_CISD + (E_CISD - E_HF) * (1 - c_0^2)/c_0^2? Test with typical values: c0 ~0.9, c0^2~0.81, 1-c0^2~0.19. E_CI-E_HF ~ -0.2032. (E_CI-E_HF)/(1-c0^2) ~ -1.07 huge, not correction. (E_CI-E_HF)*(1-c0^2)/c0^2 ~ -0.2032*0.234 ~ -0.0476, too large vs actual correction -0.010777. Maybe formula E_D = E_CI + (E_CI - E_HF)*(1 - c0^2)/(1 - c0^2?) no.\n\nActual correction = E_D - E_CI = -76.254549 - (-76.243772) = -0.010777. Ratio correction/(E_CI-E_HF) = -0.010777 / -0.203230 = 0.0530. This equals? (1-c0^2)/c0^2 maybe if c0^2 ~0.95? (1-x)/x =0.053 => x=0.949. c0=0.974. Option H 0.9731 likely. Let's verify.\n\nIf correction = (E_CI - E_HF) * (1 - c0^2)/c0^2, then ratio = (1-x)/x =0.0530 => x=1/(1.0530)=0.9490, c0=0.9740. Option H 0.9731. Good.\n\nAlternative formula correction = (E_CI-E_HF)*(1-c0^2)/(1? maybe c0^2?) yes.\n\nLet's compute accurately: ΔE_CI = -76.243772 - (-76.040542) = -0.203230. ΔE_D = -76.254549 - (-76.243772) = -0.010777. ratio r=0.010777/0.203230=0.053014? Compute: 0.20323*0.053 =0.0107748, yes r=0.053011. Then (1-x)/x=r => 1/x -1 = r => x=1/(1+r)=1/1.053011=0.9490? 1/1.053 =0.9490. c0=sqrt(0.9490)=0.9740. Option H 0.9731. Good.\n\nNeed final only letter. Ensure no extra.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 27.227801495006133
+ },
+ "usage": {
+  "prompt_tokens": 215,
+  "total_tokens": 1443,
+  "completion_tokens": 1228,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:22:54.106907+00:00"
+}

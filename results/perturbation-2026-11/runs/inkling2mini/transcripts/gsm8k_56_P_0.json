@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:56:P:0",
+ "suite": "gsm8k",
+ "row": 56,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "305e31831bef47910c67934fe2f089cdcf72aa83e6c75a583322f498fa4e542f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:44:14.119097+00:00",
+ "completion": "The user wants a brief answer. Compute: each movie costs ticket $6 + popcorn $5 = $11. He has $22. 22/11 = 2. So he can go 2 times. Need final line exactly \"Answer: <number>\". Keep brief.Each visit costs $6 + $5 = $11. With $22, he can go 22 ÷ 11 = 2 times.\n\nAnswer: 2",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.159128318002331
+ },
+ "usage": {
+  "prompt_tokens": 86,
+  "total_tokens": 187,
+  "completion_tokens": 101,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "2",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:44:17.278449+00:00"
+}

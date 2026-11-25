@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:11368:P:0",
+ "suite": "mmlu-pro",
+ "row": 11368,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "deb2d7e8842e5a2c465d5f44a5bcfe2290a14954f05cbf8cd8002f7e43619fa3",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:40:04.580382+00:00",
+ "completion": "We need answer single letter. Need compute saturation pressure of water vapor at -60°C. Need be careful: saturation pressure over ice? At -60°C, saturation vapor pressure over ice is very low. Options include 0.0129 kPa? Let's estimate.\n\nKnown saturation vapor pressure over ice: at -40°C ~0.128 kPa? Wait check. At 0°C saturation vapor pressure over water =0.611 kPa, over ice similar 0.611. At -10°C ~0.26 kPa, -20°C ~0.103 kPa, -30°C ~0.038 kPa, -40°C ~0.013 kPa, -50°C ~0.004? -60°C ~0.001? Let's recall exact: saturation vapor pressure over ice at -60°C maybe 0.00109 kPa? Option C. Let's verify.\n\nUse Murphy & Koop or Tetens. Over ice: log10(p_i/Pa) =? At -60C, p_sat ice ~1.09 Pa? That is 0.00109 kPa. Yes option C. Option G 0.0129 kPa corresponds -40C. Option A 11.87 kPa maybe at 40C? no.\n\nNeed final only Answer: C. Ensure no extra.Answer: C",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 9.854944904000149
+ },
+ "usage": {
+  "prompt_tokens": 163,
+  "total_tokens": 471,
+  "completion_tokens": 308,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "C",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:40:14.435624+00:00"
+}

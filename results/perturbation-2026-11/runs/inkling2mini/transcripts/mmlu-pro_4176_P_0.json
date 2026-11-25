@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:4176:P:0",
+ "suite": "mmlu-pro",
+ "row": 4176,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "e1723bc6269c216ab3491a941be3e98c4c68150f7e90b64124d9a40dd87c0f37",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:27:46.476928+00:00",
+ "completion": "We need answer chemistry. Need compute partial pressure water vapor. Reaction CH4 + 2O2 -> CO2 + 2H2O(g). Final pressure of gaseous products was 6.25 torr. Assuming products only CO2 and H2O, stoichiometric ratio H2O:CO2 = 2:1. Total pressure = P_CO2 + P_H2O = 6.25. Let P_CO2=x, P_H2O=2x, total=3x=6.25 => x=2.0833, water=4.1667 torr. Option J 4.16 torr. Need final only single letter form. Ensure no extra.Answer: J",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.316577244004293
+ },
+ "usage": {
+  "prompt_tokens": 198,
+  "total_tokens": 363,
+  "completion_tokens": 165,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "J",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:27:50.793722+00:00"
+}
