@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1191:P:1",
+ "suite": "gsm8k",
+ "row": 1191,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "4f0202ee97373c7a16541d579265aecca524d8c0e076d3e06fc8ceaeac40e7da",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:50:21.602112+00:00",
+ "completion": "The user wants a brief calculation. Hair started at 13 inches and ended at 5 inches, so cut length = 13 - 5 = 8 inches. Cost of haircut = $15 per inch * 8 = $120. Color = $40. Total = $160. Need final numeric answer on its own line in form Answer: <number>. Probably include dollar sign? They say numeric answer; form Answer: <number>. Use Answer: $160 maybe. Ensure final line exactly.The haircut removed 13 − 5 = 8 inches.  \nHaircut cost: 8 × $15 = $120.  \nTotal: $120 + $40 = $160.\n\nAnswer: $160",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.8887030569967465
+ },
+ "usage": {
+  "prompt_tokens": 89,
+  "total_tokens": 248,
+  "completion_tokens": 159,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "160",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:50:26.491092+00:00"
+}

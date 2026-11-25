@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:272:P:0",
+ "suite": "gsm8k",
+ "row": 272,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "05e73051afb5f602e9ea2517d3d7efb0717a1a9c9fc976eb27d06c41468f57c7",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:44:22.558073+00:00",
+ "completion": "Let me calculate the total cost and then find the change.\n\nCocoa: $4.60\nLaundry: $10.45\nPasta: $1.95\n\nTotal: $4.60 + $10.45 + $1.95 = $17.00\n\nShe pays $20, so change = $20.00 - $17.00 = $3.00\n</think>\n\nLet me add up the total cost:\n\n- Cocoa: $4.60\n- Laundry: $10.45\n- Pasta: $1.95\n\nTotal: $4.60 + $10.45 + $1.95 = $17.00\n\nChange: $20.00 - $17.00 = $3.00\n\nAnswer: 3",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.470618314000603
+ },
+ "usage": {
+  "prompt_tokens": 116,
+  "total_tokens": 308,
+  "completion_tokens": 192,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "3",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:44:29.028930+00:00"
+}

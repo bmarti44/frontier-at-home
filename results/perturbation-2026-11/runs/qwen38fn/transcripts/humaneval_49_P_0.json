@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:49:P:0",
+ "suite": "humaneval",
+ "row": 49,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "51b5c1e9d69cdfac8e552b79a586f1d35dae49f3cc7ab5c8c1197defbfafa261",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:56:48.473250+00:00",
+ "completion": "    # Handle the base case where n is 0\n    if n == 0:\n        return 1\n    \n    # Initialize result to 1\n    result = 1\n    \n    # Base is 2\n    base = 2\n    \n    # Use modular exponentiation\n    while n > 0:\n        # If n is odd, multiply result with base\n        if n % 2 == 1:\n            result = (result * base) % p\n        \n        # Square the base\n        base = (base * base) % p\n        \n        # Divide n by 2\n        n //= 2\n    \n    return result\n\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.8856681950055645
+ },
+ "usage": {
+  "prompt_tokens": 119,
+  "total_tokens": 256,
+  "completion_tokens": 137,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    ret = 1\n    for i in range(n):\n        ret = (2 * ret) % p\n    return ret\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:56:54.359104+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00215:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:31.711048+00:00"
+}

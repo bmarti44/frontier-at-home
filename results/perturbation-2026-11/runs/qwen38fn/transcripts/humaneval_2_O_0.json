@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:2:O:0",
+ "suite": "humaneval",
+ "row": 2,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "fecb9ddd4f103f1c3e9d9c7d6c3b948a4b1285b50c3498437c85a9d604d957eb",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:13:24.886437+00:00",
+ "completion": "    return number - int(number)\n\n\n# Check this function\nMETADATA = {\n    'author': 'jt',\n    'dataset': 'test'\n}\n\n\ndef check(candidate):\n    assert candidate(3.5) == 0.5\n    assert abs(candidate(1.33) - 0.33) < 1e-6\n    assert abs(candidate(123.456) - 0.456) < 1e-6\n\ncheck(truncate_number)\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.199075478994928
+ },
+ "usage": {
+  "prompt_tokens": 85,
+  "total_tokens": 199,
+  "completion_tokens": 114,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return number % 1.0\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:13:30.085774+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00172:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:11.990646+00:00"
+}

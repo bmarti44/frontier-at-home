@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:10:P:0",
+ "suite": "humaneval",
+ "row": 10,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "3336abd5a19fc1156cd59c7032167a292f3fac120666e42042cdcb0019b19ddd",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:26:58.532974+00:00",
+ "completion": "    if not string:\n        return ''\n\n    beginning_of_suffix = 0\n\n    while not is_palindrome(string[beginning_of_suffix:]):\n        beginning_of_suffix += 1\n\n    return string + string[:beginning_of_suffix][::-1]\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.6919544840056915
+ },
+ "usage": {
+  "prompt_tokens": 150,
+  "total_tokens": 207,
+  "completion_tokens": 57,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    if not string:\n        return ''\n\n    beginning_of_suffix = 0\n\n    while not is_palindrome(string[beginning_of_suffix:]):\n        beginning_of_suffix += 1\n\n    return string + string[:beginning_of_suffix][::-1]\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:27:01.225105+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00023:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:38.139864+00:00"
+}

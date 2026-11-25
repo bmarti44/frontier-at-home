@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:383:P:1",
+ "suite": "gsm8k",
+ "row": 383,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "0c72cb837d6cab1bcd7e6649beac469a4929778788a82a2a2573d319b90ea980",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:08:53.795871+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Aisha spends $72 to buy supplies to make 6 pitchers. Each pitcher holds 12 cups. Total cups = 6*12 = 72 cups. Sells each cup for $2. Total revenue = 72*2 = $144. Profit total = revenue - cost = 144 - 72 = $72. She sells average 4 cups per hour. Time to sell all 72 cups = 72/4 = 18 hours. Profit per hour = 72/18 = $4 per hour. Alternatively per hour revenue = 4 cups*$2=$8/hour; total cost $72 over 18 hours = $4/hour cost; profit = $4/hour. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.Total cups: 6 × 12 = 72 cups  \nTotal revenue: 72 × $2 = $144  \nTotal profit: $144 − $72 = $72  \nHours to sell all: 72 ÷ 4 = 18 hours  \nProfit per hour: $72 ÷ 18 = $4  \n\nAnswer: $4",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.103451615999802
+ },
+ "usage": {
+  "prompt_tokens": 149,
+  "total_tokens": 414,
+  "completion_tokens": 265,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "4",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:09:00.899543+00:00"
+}

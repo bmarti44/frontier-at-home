@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:658:P:0",
+ "suite": "gsm8k",
+ "row": 658,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "1ce93ffd8aa07e9b60527f8b56371afed1eca8ef76cc85dcf3bfe3005e76b27c",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:45:47.487041+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Mei bought rice, beans, pork. It took her 20 more minutes to cook pork than rice. Beans took half the combined cooking time of pork and rice. Rice took 25 minutes. Find total cooking time.\n\nRice = 25. Pork = rice + 20 = 45. Combined pork+rice = 70. Beans = half of 70 = 35. Total = 25+45+35 = 105. Need final with brief explanation and final numeric answer on own line. Ensure final line exactly Answer: 105. Could include units? form says <number>, so Answer: 105.Rice: 25 minutes  \nPork: 25 + 20 = 45 minutes  \nBeans: (25 + 45) / 2 = 35 minutes  \nTotal: 25 + 45 + 35 = 105 minutes\n\nAnswer: 105",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.9603932940008235
+ },
+ "usage": {
+  "prompt_tokens": 118,
+  "total_tokens": 328,
+  "completion_tokens": 210,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "105",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:45:53.447726+00:00"
+}

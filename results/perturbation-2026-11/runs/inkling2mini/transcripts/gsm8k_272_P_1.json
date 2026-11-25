@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:272:P:1",
+ "suite": "gsm8k",
+ "row": 272,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "5581dc467972d2e69d9665c762b6557cb591048b36e9226f977feca5e35d0fa4",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:40:31.045451+00:00",
+ "completion": "The user wants me to calculate change.\n\nCosts: cocoa $5.00 + laundry $10.85 + pasta $2.15 = 5.00 + 10.85 = 15.85; + 2.15 = 18.00.\nPaid $25.00. Change = 25.00 - 18.00 = 7.00.\n\nNeed final numeric answer on its own line in form Answer: <number>. Brief thinking allowed. Ensure final line exactly.Total cost: $5.00 + $10.85 + $2.15 = $18.00. Change: $25.00 − $18.00 = $7.00.\n\nAnswer: $7.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.520436333001271
+ },
+ "usage": {
+  "prompt_tokens": 90,
+  "total_tokens": 252,
+  "completion_tokens": 162,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "7",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:40:34.566230+00:00"
+}

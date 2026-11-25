@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:132:P:0",
+ "suite": "humaneval",
+ "row": 132,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "9ff877da52a0fdd00716b3371c9be255c9ba86b6d893a056bbd23766bd24787b",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:27:13.600312+00:00",
+ "completion": "    for i in range(len(string)):\n        if string[i] == '[' and string[i+1] == '[':\n            return True\n    return False\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.90018893800152
+ },
+ "usage": {
+  "prompt_tokens": 133,
+  "total_tokens": 168,
+  "completion_tokens": 35,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    opening_bracket_index = []\n    closing_bracket_index = []\n    for i in range(len(string)):\n        if string[i] == '[':\n            opening_bracket_index.append(i)\n        else:\n            closing_bracket_index.append(i)\n    closing_bracket_index.reverse()\n    cnt = 0\n    i = 0\n    l = len(closing_bracket_index)\n    for idx in opening_bracket_index:\n        if i < l and idx < closing_bracket_index[i]:\n            cnt += 1\n            i += 1\n    return cnt >= 2\n\n    \n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T05:27:15.500703+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00073:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 43, in <module>\n    check(nested_check)\n  File \"/case/main.py\", line 25, in check\n    assert candidate('[]]]]]]][[[[[]') == False\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:49.233234+00:00"
+}

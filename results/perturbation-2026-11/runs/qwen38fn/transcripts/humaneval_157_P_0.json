@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:157:P:0",
+ "suite": "humaneval",
+ "row": 157,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "1c7e063b1b0cb042cf1a6059f9efff69284a3b751cbe63f3e7279a513dc39716",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:16:21.028968+00:00",
+ "completion": "    ### Human edit here ###\n    sides = sorted([a, b, c])\n    return sides[0] ** 2 + sides[1] ** 2 == sides[2] ** 2\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.4805532739992486
+ },
+ "usage": {
+  "prompt_tokens": 107,
+  "total_tokens": 153,
+  "completion_tokens": 46,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return a*a == b*b + c*c or b*b == a*a + c*c or c*c == a*a + b*b\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:16:23.509749+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00127:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:01.259631+00:00"
+}

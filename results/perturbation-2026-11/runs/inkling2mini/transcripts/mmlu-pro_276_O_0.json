@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:276:O:0",
+ "suite": "mmlu-pro",
+ "row": 276,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "4aee180244f98111fa86ccdebc968634876ee60aacd4ae3bfa42ca8c83b5c4cb",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:45:06.839075+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Norman Stevens lives in town where 28% of property tax is passed along to county government. Home assessed for $17,400. Town tax rate $24.90 per $1,000. How much of his tax was passed along to county government?\n\nTax = assessed * rate per 1000 = 17,400/1000 * 24.90 = 17.4 * 24.90. 24.9*17 = 423.3; plus 24.9*0.4=9.96; total 433.26? Check 17.4*24.9 = 17.4*(25 -0.1)=435 -1.74=433.26. 28% = 0.28*433.26 = 121.3128? 433.26*0.3=129.978; subtract 433.26*0.02=8.6652; =121.3128. Option F $121.31. Need final only single letter form. Ensure no extra.Answer: F",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.300987482001801
+ },
+ "usage": {
+  "prompt_tokens": 175,
+  "total_tokens": 421,
+  "completion_tokens": 246,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "F",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:45:13.140390+00:00"
+}

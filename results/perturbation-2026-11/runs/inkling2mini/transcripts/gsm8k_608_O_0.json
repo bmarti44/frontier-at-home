@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:608:O:0",
+ "suite": "gsm8k",
+ "row": 608,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "04cfa05bbab2669806514ece0ba143743bf43141ec5f788a159e3a7e6d65f9d3",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:41:46.831152+00:00",
+ "completion": "We need answer math. Need compute. Joe has $50. Sale 30% off. Shirt $25, shorts $35. Total before discount = 60. 30% off => pay 70% of 60 = 42. Tax included. Left = 50 - 42 = 8. Need final numeric answer on own line form Answer: <number>. Could include brief. Ensure final line exactly.Total before discount: $25 + $35 = $60  \nAfter 30% off: $60 × 0.70 = $42  \nMoney left: $50 − $42 = $8\n\nAnswer: $8",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.863389638994704
+ },
+ "usage": {
+  "prompt_tokens": 114,
+  "total_tokens": 256,
+  "completion_tokens": 142,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "8",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:41:50.694744+00:00"
+}

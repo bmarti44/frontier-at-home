@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:297:O:0",
+ "suite": "gsm8k",
+ "row": 297,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "30ecc0c0ee640ce348b601a2f5f3d18b2bcb2daab6a7fc16dfd61d8e77f6fb09",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:29:41.472529+00:00",
+ "completion": "Let me calculate the total crates sold and compare to the target.\n\nTarget: 120 crates\n\nSold:\n- Weekend: 20 crates\n- Tuesday: 15 crates\n- Wednesday: 12 crates\n- Thursday: 18 crates\n- Monday: closed (0)\n- Friday: closed (0)\n\nTotal sold = 20 + 15 + 12 + 18 = 65 crates\n\nDifference from target = 120 - 65 = 55 crates\n</think>\n\nTo find how many crates Sam was off from his target:\n\n**Target:** 120 crates\n\n**Crates sold:**\n- Monday: 0 (closed)\n- Tuesday: 15\n- Wednesday: 12\n- Thursday: 18\n- Friday: 0 (closed)\n- Weekend: 20\n\n**Total sold:** 15 + 12 + 18 + 20 = 65 crates\n\n**Difference:** 120 - 65 = 55 crates\n\nAnswer: 55",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.298873559993808
+ },
+ "usage": {
+  "prompt_tokens": 144,
+  "total_tokens": 383,
+  "completion_tokens": 239,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "55",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:29:51.771671+00:00"
+}

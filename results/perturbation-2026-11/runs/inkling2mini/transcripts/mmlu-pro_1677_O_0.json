@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:1677:O:0",
+ "suite": "mmlu-pro",
+ "row": 1677,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "b4c8b361fc938d6c07b0f8f3cbd95ddfee479328e8efb802beec40ef34c9205f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:25:23.806028+00:00",
+ "completion": "We need answer legal. Need reason. Adverse possession begins when tenant enters adversely, i.e., after lease expires? Tenant had lease for 7 years from 1985, expires 1992. But widow died 1986, no heirs, estate to Boy Scouts. Tenant learned death one month later (1986), decided remain but stopped paying rent. Does lease terminate at death? Leases generally do not terminate at death of landlord; tenant remains under lease until expiration. Adverse possession requires possession without permission. Tenant's possession under lease is permissive until lease expires. So statutory period begins when lease expires (B), not death. Need consider if lease terminates upon death of lessor? In many jurisdictions, lease survives death of landlord; tenant's right continues. So B.\n\nCheck options: E widow died maybe if lease terminates at death? But no, lease term seven years, rent installments. Tenant stopped paying rent one month after death, but still has leasehold until 1992. Adverse possession cannot start until lease expires. Answer B.\n\nNeed final only single letter form.Answer: B",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 12.326779102004366
+ },
+ "usage": {
+  "prompt_tokens": 385,
+  "total_tokens": 652,
+  "completion_tokens": 267,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "J",
+ "reason": "incorrect: parsed='B' expected='J'",
+ "finished_at": "2026-11-25T00:25:36.133069+00:00"
+}

@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:97:P:0",
+ "suite": "humaneval",
+ "row": 97,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "769e7d095523b2e4b5d0125f0cda6ef980d05135c3adb9779150fcab5986440b",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:45:00.942007+00:00",
+ "completion": "    return abs(a % 10) * abs(b % 10)\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.3702268589986488
+ },
+ "usage": {
+  "prompt_tokens": 117,
+  "total_tokens": 136,
+  "completion_tokens": 19,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return abs(a % 10) * abs(b % 10)\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:45:02.312421+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00321:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:55.033490+00:00"
+}

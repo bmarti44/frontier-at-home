@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1108:P:1",
+ "suite": "gsm8k",
+ "row": 1108,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "406e2355091d0f4f9d481e72fbd9ad263384325af6781db367e9c0a1c22b9d87",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T04:07:55.412680+00:00",
+ "completion": "Simple arithmetic problem. Pots cost $14, soil costs $27, coupon for $2 off.\n\nTotal = 14 + 27 - 2 = 39\n</think>\n\nPots: $14\nSoil: $27\nCoupon: -$2\n\n$14 + $27 - $2 = $39\n\nAnswer: 39",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.693689412997628
+ },
+ "usage": {
+  "prompt_tokens": 119,
+  "total_tokens": 201,
+  "completion_tokens": 82,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "39",
+ "reason": "correct",
+ "finished_at": "2026-11-25T04:07:59.106542+00:00"
+}

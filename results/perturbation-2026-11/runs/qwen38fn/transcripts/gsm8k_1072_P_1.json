@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1072:P:1",
+ "suite": "gsm8k",
+ "row": 1072,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "4bdf91088c0b0d53f70042e8170541b6e4164527aeb6989161c2bee0d4b0d12d",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:26:49.314937+00:00",
+ "completion": "Let me work through this problem step by step.\n\nHannah spent a quarter (1/4) of her money. She had $72.\n- Amount spent: $72 × 1/4 = $18\n- Amount left: $72 - $18 = $54\n\nJulia spent one-third (1/3) of her money. She had $72.\n- Amount spent: $72 × 1/3 = $24\n- Amount left: $72 - $24 = $48\n\nTotal money left: $54 + $48 = $102\n</think>\n\nHannah had $72 and spent 1/4 of it:\n- Spent: $72 × 1/4 = $18\n- Left: $72 - $18 = $54\n\nJulia had $72 and spent 1/3 of it:\n- Spent: $72 × 1/3 = $24\n- Left: $72 - $24 = $48\n\nTotal left: $54 + $48 = $102\n\nAnswer: 102",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 9.216843124995648
+ },
+ "usage": {
+  "prompt_tokens": 102,
+  "total_tokens": 359,
+  "completion_tokens": 257,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "102",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:26:58.532030+00:00"
+}

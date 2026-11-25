@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:32:P:0",
+ "suite": "humaneval",
+ "row": 32,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "60876e0581fb8b60fae8b8e6817d3fd5c5e57c6d856f626ce7220aad37ec8f7f",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:46:49.062993+00:00",
+ "completion": "    for i in range(100):\n        x = (xs[0] + xs[-1]) / 2\n        if poly(xs, x) == 0:\n            return x\n        if poly(xs, x) > 0:\n            xs = xs[1:]\n        else:\n            xs = xs[:-1]\n    return x\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.6791513740026858
+ },
+ "usage": {
+  "prompt_tokens": 267,
+  "total_tokens": 348,
+  "completion_tokens": 81,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    begin, end = -1., 1.\n    while poly(xs, begin) * poly(xs, end) > 0:\n        begin *= 2.0\n        end *= 2.0\n    while end - begin > 1e-10:\n        center = (begin + end) / 2.0\n        if poly(xs, center) * poly(xs, begin) > 0:\n            begin = center\n        else:\n            end = center\n    return begin\n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T03:46:52.742343+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00179:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 58, in <module>\n    check(locate_root)\n  File \"/case/main.py\", line 53, in check\n    solution = candidate(copy.deepcopy(coeffs))\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/case/main.py\", line 25, in locate_root\n    x = (xs[0] + xs[-1]) / 2\n         ~~^^^\nIndexError: list index out of range\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:13.679470+00:00"
+}

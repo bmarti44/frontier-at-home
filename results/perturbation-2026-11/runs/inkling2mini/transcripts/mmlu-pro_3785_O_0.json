@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:3785:O:0",
+ "suite": "mmlu-pro",
+ "row": 3785,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "fc23305ee478c5d47cc850c472feaf35742077b0c3430348d19c5ec99faaa758",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:57:19.529717+00:00",
+ "completion": "We need answer physics. Need compute. Constant volume perfect gas: p = nRT/V, at constant V,T? Change pressure for ΔT=1 K: Δp = p ΔT / T (since p ∝ T at constant V). p=6.69 kPa, T=273.16 K. Δp=6.69/273.16 kPa =? 6.69/273.16. 273.16*0.0245 = 6.687? compute: 273.16*0.0245 = 273.16*(0.025 -0.0005)=6.829 -0.13658=6.6924. Yes 0.0245. Option C. Need final only single letter form. Ensure no extra.Answer: C",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.499099075997947
+ },
+ "usage": {
+  "prompt_tokens": 158,
+  "total_tokens": 338,
+  "completion_tokens": 180,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "C",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:57:25.029116+00:00"
+}

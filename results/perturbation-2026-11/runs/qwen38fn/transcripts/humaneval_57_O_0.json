@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:57:O:0",
+ "suite": "humaneval",
+ "row": 57,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "5656ff21e3b01209978415c290235784e32350405706cebc0045defa6271dd99",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T04:34:02.405002+00:00",
+ "completion": "    if l == sorted(l) or l == sorted(l, reverse=True):\n        return True\n    return False\n\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.4724114109994844
+ },
+ "usage": {
+  "prompt_tokens": 92,
+  "total_tokens": 118,
+  "completion_tokens": 26,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    if l == sorted(l) or l == sorted(l, reverse=True):\n        return True\n    return False\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T04:34:03.877587+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00232:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:35.534094+00:00"
+}

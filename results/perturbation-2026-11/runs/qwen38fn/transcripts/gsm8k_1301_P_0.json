@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1301:P:0",
+ "suite": "gsm8k",
+ "row": 1301,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "0fefe58fec0776b6503b898b19544df685154742f366e7cab3a79c6e12e4f56c",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:21:14.633541+00:00",
+ "completion": "Let me work through this step by step.\n\nStarting cookies:\n- Oatmeal: 6\n- Chocolate chip: 7\n- Sugar: 7\n\nStep 1: Ate 3 cookies for an early day snack, one of each flavor.\n- Oatmeal: 6 - 1 = 5\n- Chocolate chip: 7 - 1 = 6\n- Sugar: 7 - 1 = 6\n\nStep 2: Ate 5 oatmeal cookies for lunch.\n- Oatmeal: 5 - 5 = 0\n- Chocolate chip: 6\n- Sugar: 6\n\nStep 3: Gives 5 sugar cookies to friends.\n- Oatmeal: 0\n- Chocolate chip: 6\n- Sugar: 6 - 5 = 1\n\nStep 4: Bakes 2 of each flavor for dinner.\n- Oatmeal: 0 + 2 = 2\n- Chocolate chip: 6 + 2 = 8\n- Sugar: 1 + 2 = 3\n\nTotal: 2 + 8 + 3 = 13\n</think>\n\nLet me track each flavor step by step.\n\n**Starting:**\n- Oatmeal: 6\n- Chocolate chip: 7\n- Sugar: 7\n\n**Ate 1 of each for snack:**\n- Oatmeal: 6 − 1 = 5\n- Chocolate chip: 7 − 1 = 6\n- Sugar: 7 − 1 = 6\n\n**Ate 5 oatmeal for lunch:**\n- Oatmeal: 5 − 5 = 0\n- Chocolate chip: 6\n- Sugar: 6\n\n**Gave 5 sugar cookies to friends:**\n- Oatmeal: 0\n- Chocolate chip: 6\n- Sugar: 6 − 5 = 1\n\n**Baked 2 of each flavor:**\n- Oatmeal: 0 + 2 = 2\n- Chocolate chip: 6 + 2 = 8\n- Sugar: 1 + 2 = 3\n\n**Total:** 2 + 8 + 3 = 13\n\nAnswer: 13",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 15.61999810099951
+ },
+ "usage": {
+  "prompt_tokens": 143,
+  "total_tokens": 623,
+  "completion_tokens": 480,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "13",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:21:30.253718+00:00"
+}

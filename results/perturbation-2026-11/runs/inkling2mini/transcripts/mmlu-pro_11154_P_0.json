@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:11154:P:0",
+ "suite": "mmlu-pro",
+ "row": 11154,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "eb26764e35817aebdecf4b46656f6abf540b18de818182400531b7a9d6582733",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:33:56.459749+00:00",
+ "completion": "We need answer physics. Need compute max pressure exerted on aircraft flying at 200 mph at sea level. Likely dynamic pressure q = 1/2 rho v^2. Max pressure on aircraft = p0 + q (stagnation). Convert units: 200 mph = 200*5280/3600 ft/s = 293.333... ft/s. rho=0.00238 slug/ft^3. q=0.5*0.00238*(293.333)^2 lb/ft^2 (since slug/ft^3 * ft^2/s^2 = slug/(ft s^2)=lb/ft^2). Compute: v^2 = 293.333^2. 293.333*293.333: 293.333^2 = (880/3?) 200 mph = 200*22/15? ft/s: 1 mph = 22/15 ft/s =1.4666667, so 200=293.333333 = 880/3. Square = 774400/9 = 86044.444? 774400/9 = 86044.4444. q=0.00119*86044.444 = 102.?? 86044.444*0.001 =86.0444; plus *0.00019=16.3484; total 102.3928 lb/ft^2. Convert to psi: /144 =0.71134 psi. p=14.7+0.711=15.411 psi. Option F 15.42 psia. Need ensure max pressure exerted maybe p0 + 1/2 rho v^2 = 15.42. Answer F. Need final only single letter form.Answer: F",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.836488731001737
+ },
+ "usage": {
+  "prompt_tokens": 165,
+  "total_tokens": 559,
+  "completion_tokens": 394,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "F",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:34:08.296444+00:00"
+}

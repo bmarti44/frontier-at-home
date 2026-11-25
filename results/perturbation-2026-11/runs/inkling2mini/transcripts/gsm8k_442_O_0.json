@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:442:O:0",
+ "suite": "gsm8k",
+ "row": 442,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "a5936bdd1425fad00a5eefa7f1976cc82b6d27006e717d31e4d5b0b6cc45d71e",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:07:25.912578+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nInitial 40. Bakes 3 hours, every hour oven on raises house temp by 5 degrees. So +15 => 55. Then opens window for 30 minutes, house cools down 2 degrees for every 10 minutes window open. 30/10=3 intervals *2 =6 degrees cool. 55-6=49. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.After baking: 40 + 3×5 = 55.  \nWindow cooling: 30 minutes = 3×10 minutes, so 3×2 = 6 degrees cooler.  \nFinal: 55 − 6 = 49.\n\nAnswer: 49",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.321955973999138
+ },
+ "usage": {
+  "prompt_tokens": 119,
+  "total_tokens": 291,
+  "completion_tokens": 172,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "49",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:07:31.234809+00:00"
+}

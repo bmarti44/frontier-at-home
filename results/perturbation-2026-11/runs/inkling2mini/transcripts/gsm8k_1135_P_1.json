@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1135:P:1",
+ "suite": "gsm8k",
+ "row": 1135,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "920981d5df73e0eca7905272d4b54f294b24cce2a945fb8f52417ab9bc427881",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:48:05.849093+00:00",
+ "completion": "We need answer arithmetic. Need compute carefully. Problem: \"4 trees each had 4 blue birds in them. 3 different trees each had 9 blue birds. 1 final tree had 4 blue birds. How many blue birds were in the trees in total?\"\nInterpretation: 4 trees *4 =16. 3 different trees *9 =27. 1 final tree *4 =4. Total 16+27+4=47. Need final numeric answer on own line form Answer: <number>. Brief if needed. Ensure no extra after final line. Could include short calculation then final line. Need final answer only maybe. Do concise.4×4 + 3×9 + 1×4 = 16 + 27 + 4 = 47\nAnswer: 47",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.824290033997386
+ },
+ "usage": {
+  "prompt_tokens": 84,
+  "total_tokens": 260,
+  "completion_tokens": 176,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "47",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:48:10.673696+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:846:P:1",
+ "suite": "gsm8k",
+ "row": 846,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "de4ac9fdf9a2ab2eff168f0e8c2fe4629284740d321f1282f8eb8b5f66b7697b",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:27:52.324063+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Show 5 hours = 300 minutes. Each group: 5 min get on stage + 6 min perform + 4 min exit = 15 minutes per group. Allows a 15-minute intermission. How many groups can perform?\n\nInterpretation: total time = intermission + n*15 <= 300. n*15 <= 285. n <= 19 exactly? 15*19 = 285. Yes n=19. Check: 19 groups *15 =285, +15 intermission =300. Answer 19.\n\nNeed final with brief explanation and final numeric answer on own line. Ensure final line exactly Answer: 19.Each group takes 5 + 6 + 4 = 15 minutes.  \n5 hours = 300 minutes. Subtract the 15-minute intermission: 285 minutes remain.  \n285 ÷ 15 = 19 groups.\n\nAnswer: 19",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.985854879996623
+ },
+ "usage": {
+  "prompt_tokens": 109,
+  "total_tokens": 320,
+  "completion_tokens": 211,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "19",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:27:58.310112+00:00"
+}

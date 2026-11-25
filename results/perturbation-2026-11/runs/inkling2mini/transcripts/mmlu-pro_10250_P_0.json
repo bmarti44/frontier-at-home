@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:10250:P:0",
+ "suite": "mmlu-pro",
+ "row": 10250,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "55fa8c4e9a18f6c45f1de52f92f9bc865b3ed21fd998ae58fd5f874db1e770df",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:09:13.103027+00:00",
+ "completion": "We need answer multiple choice. Need determine K-fold cross-validation complexity? Likely linear in K: train/evaluate K models, each on (K-1)/K data, total cost roughly K * (K-1)/K = K-1 times full training, linear in K. So A. Need final only single letter form. Ensure no extra.Answer: A",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.2414923940013978
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 190,
+  "completion_tokens": 87,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "A",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:09:16.344837+00:00"
+}

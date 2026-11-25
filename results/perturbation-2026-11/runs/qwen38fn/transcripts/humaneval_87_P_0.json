@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:87:P:0",
+ "suite": "humaneval",
+ "row": 87,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "e72f0527a3e0c3303bb4a0b7d772a2a3d10828db13e8146f9c97469b9e88282a",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:53:24.456039+00:00",
+ "completion": "    coords = [(i, j) for i in range(len(lst)) for j in range(len(lst[i])) if lst[i][j] == x]\n    return sorted(sorted(coords, key=lambda x: x[1], reverse=True), key=lambda x: x[0])\n\n\ndef check(fetch_row):\n    # Check some simple cases\n    assert fetch_row([[1,2,3,4,5,6],[1,2,3,4,1,6],[1,2,3,4,5,1]], 1) == [(0, 0), (1, 4), (1, 0), (2, 5), (2, 0)], \"First test\"\n    assert fetch_row([[], [1], [1, 2, 3]], 3) == [(2, 2)], \"Second test\"\n    assert fetch_row([], 1) == [], \"Third test\"\n    assert fetch_row([[1,2,3],[1,2,3]], 2) == [(0, 1), (1, 1)], \"Fourth test\"\n\n\n    # Check some edge cases that are easy to work out by hand.\n    assert True\n\n\nif __name__ == \"__main__\":\n    check(fetch_row)\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.6905565929992
+ },
+ "usage": {
+  "prompt_tokens": 272,
+  "total_tokens": 547,
+  "completion_tokens": 275,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    coords = [(i, j) for i in range(len(lst)) for j in range(len(lst[i])) if lst[i][j] == x]\n    return sorted(sorted(coords, key=lambda x: x[1], reverse=True), key=lambda x: x[0])\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:53:36.146804+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00299:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:50.192367+00:00"
+}

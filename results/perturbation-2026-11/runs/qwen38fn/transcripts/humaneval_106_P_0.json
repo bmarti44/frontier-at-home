@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:106:P:0",
+ "suite": "humaneval",
+ "row": 106,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "d9f9b635bda9b091e103789f975767a5171ba1378360c7d4d71e44299cd03a17",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:56:11.420404+00:00",
+ "completion": "    \n    def factorial(n):\n        result = 1\n        for i in range(1, n + 1):\n            result *= i\n        return result\n\n    def sum_of_numbers(n):\n        return n * (n + 1) // 2\n\n    result = []\n    for i in range(1, n + 1):\n        if i % 2 == 0:\n            result.append(factorial(i))\n        else:\n            result.append(sum_of_numbers(i))\n    return result\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.377492405998055
+ },
+ "usage": {
+  "prompt_tokens": 129,
+  "total_tokens": 243,
+  "completion_tokens": 114,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    ret = []\n    for i in range(1,n+1):\n        if i%2 == 0:\n            x = 1\n            for j in range(1,i+1): x *= j\n            ret += [x]\n        else:\n            x = 0\n            for j in range(1,i+1): x += j\n            ret += [x]\n    return ret\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:56:15.798073+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00015:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:36.415941+00:00"
+}

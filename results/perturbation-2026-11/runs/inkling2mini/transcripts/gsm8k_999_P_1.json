@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:999:P:1",
+ "suite": "gsm8k",
+ "row": 999,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "46e009833349b28c7ae6d01ef05cf1e2c736bf21258b04182c1c8bfaea19c48a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:34:06.100243+00:00",
+ "completion": "We need answer math. Need compute. Let kid slice = x. Adult slice = 2x. Family: 2 adults => 4x total. 6 kids => 6x total. Total = 10x. Each adult gets 2x/10x = 1/5 = 20%. Need final with brief explanation and final line exactly Answer: <number>. Ensure number maybe 20%. They ask percentage. Final numeric answer on own line form Answer: <number>. Could include % sign. Do that.Let each kid get \\(x\\). Each adult gets \\(2x\\).\n\nTotal = \\(2(2x) + 6(x) = 4x + 6x = 10x\\).  \nEach adult gets \\(2x/10x = 1/5 = 20\\%\\).\n\nAnswer: 20%",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.714938275996246
+ },
+ "usage": {
+  "prompt_tokens": 89,
+  "total_tokens": 290,
+  "completion_tokens": 201,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "20",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:34:11.815460+00:00"
+}

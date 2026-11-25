@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:289:P:1",
+ "suite": "gsm8k",
+ "row": 289,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "d851ed3fa73ac271d4d7e43061a9e0c2add42560fd6d74afd1d2256dc6560749",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:21:03.689161+00:00",
+ "completion": "We need answer math. Need compute. Fast lane speed 60 mph. Slow lane half = 30 mph. Fast lane traveled total 510 miles. Time fast = 510/60 = 8.5 hours. Slow lane same distance 510 at 30 mph = 17 hours. Need final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly. Units? time in hours. Answer: 17 hours maybe numeric answer only? User says final numeric answer on its own line in form Answer: <number>. Could put Answer: 17 hours. They said numeric answer; maybe <number> can include unit? Better Answer: 17 hours. But \"numeric answer\" maybe just 17. Form Answer: <number>. Use Answer: 17 hours? The placeholder number suggests number only. But time needs unit. They asked calculate the time; final numeric answer. I'll do brief and final line Answer: 17 hours.Slow lane speed = 60/2 = 30 mph.  \nTime = 510 / 30 = 17 hours.\n\nAnswer: 17 hours",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 9.16076273300132
+ },
+ "usage": {
+  "prompt_tokens": 101,
+  "total_tokens": 345,
+  "completion_tokens": 244,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "17",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:21:12.850072+00:00"
+}

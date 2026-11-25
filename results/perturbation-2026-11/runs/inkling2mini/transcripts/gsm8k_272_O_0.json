@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:272:O:0",
+ "suite": "gsm8k",
+ "row": 272,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "db938031f28eff46df722a4800d996c5b3481268f8bd4f7519a14778e4f6bdc5",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:45:38.420932+00:00",
+ "completion": "The user wants me to calculate change. Let me compute: 4.20 + 9.45 + 1.35 = 4.20 + 9.45 = 13.65; +1.35 = 15.00. She pays 20.00, change = 5.00.\n\nNeed to end with final numeric answer on its own line in form Answer: <number>. Brief thinking allowed.Total cost: 4.20 + 9.45 + 1.35 = 15.00. Change: 20.00 − 15.00 = 5.00.\n\nAnswer: $5.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.001884880999569
+ },
+ "usage": {
+  "prompt_tokens": 90,
+  "total_tokens": 234,
+  "completion_tokens": 144,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "5",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:45:41.423024+00:00"
+}

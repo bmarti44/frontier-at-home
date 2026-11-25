@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:243:P:0",
+ "suite": "gsm8k",
+ "row": 243,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "6bb25de8b932b6180b8f10df660661507c9c4af0367fec1eb2619d8c70c5b90d",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T09:21:07.253025+00:00",
+ "completion": "Let me solve this step by step.\n\nAndre has 1500 minutes per month.\nEvery day he has a 15-minute call with his boss.\nThe month has 31 days.\nSo his boss calls use: 15 × 31 = 465 minutes.\nHe's also had 900 extra minutes of calls to other people.\nTotal minutes used: 465 + 900 = 1365 minutes.\nMinutes left: 1500 - 1365 = 135 minutes.\n</think>\n\n**Step-by-step:**\n\n1. **Boss calls:** 15 minutes/day × 31 days = 465 minutes\n2. **Other calls:** 900 minutes\n3. **Total used:** 465 + 900 = 1,365 minutes\n4. **Minutes remaining:** 1,500 − 1,365 = 135 minutes\n\nAnswer: 135",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 12.109584599995287
+ },
+ "usage": {
+  "prompt_tokens": 129,
+  "total_tokens": 356,
+  "completion_tokens": 227,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "135",
+ "reason": "correct",
+ "finished_at": "2026-11-25T09:21:19.362840+00:00"
+}

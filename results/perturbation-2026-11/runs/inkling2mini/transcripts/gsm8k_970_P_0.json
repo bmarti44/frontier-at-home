@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:970:P:0",
+ "suite": "gsm8k",
+ "row": 970,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "f09d716e270c2163158a05663541de0e4d35bad7ce2a3c2e7f75a2f074cd8567",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:33:08.713003+00:00",
+ "completion": "The user wants a brief answer. Omar's team has 10 players. Ravi's team has 5 more = 15. Combined = 25. Need final line exactly \"Answer: <number>\". We can include brief reasoning then final line. Ensure final numeric answer on its own line.Omar has 10 players; Ravi has 10 + 5 = 15. Combined: 10 + 15 = 25.\nAnswer: 25",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.067525325997849
+ },
+ "usage": {
+  "prompt_tokens": 79,
+  "total_tokens": 187,
+  "completion_tokens": 108,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "25",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:33:11.780779+00:00"
+}

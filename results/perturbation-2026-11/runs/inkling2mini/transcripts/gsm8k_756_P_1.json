@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:756:P:1",
+ "suite": "gsm8k",
+ "row": 756,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "58eec68939189510623b72715791f932c7dd94467b59a6653c174dbf98b6804d",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:35:02.265032+00:00",
+ "completion": "We need answer math. Need be careful: vote passed with twice as many votes in favor as against. 42 people on council. Are all people voting? Likely yes. Let against = x, favor = 2x. Total votes = 3x = 42 => x=14, favor=28. Need final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: 28.Let against votes be \\(x\\). Then in favor votes are \\(2x\\).  \n\\(x + 2x = 42\\), so \\(3x = 42\\), \\(x = 14\\). In favor: \\(2x = 28\\).\n\nAnswer: 28",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.905110494000837
+ },
+ "usage": {
+  "prompt_tokens": 94,
+  "total_tokens": 261,
+  "completion_tokens": 167,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "28",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:35:07.170463+00:00"
+}

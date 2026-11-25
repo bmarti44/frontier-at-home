@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1072:P:0",
+ "suite": "gsm8k",
+ "row": 1072,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "d0ca93ce6eab7abc19b6d20f3be9600aa146446629bd032bbaa9ef5242c824dd",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:31:56.764644+00:00",
+ "completion": "We need answer math. Need compute. Lucia spent quarter of her money, had $36. Ambiguity: \"They each had $36\" likely each had $36 initially? Lucia spent a quarter of her money, Nina spent one-third of her money. They each had $36. How much money do the two of them have left? If each had $36 (before spending), Lucia left 3/4*36=27, Nina left 2/3*36=24, total 51. Need final numeric answer on own line. Brief explanation okay. Ensure final line exactly Answer: $51 maybe number. They said form Answer: <number>. Use Answer: 51 maybe with dollar sign? <number> could be $51. Do concise.Lucia has \\(36 \\times \\frac34 = 27\\) left. Nina has \\(36 \\times \\frac23 = 24\\) left. Total: \\(27+24=51\\).\n\nAnswer: $51",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.39322197599904
+ },
+ "usage": {
+  "prompt_tokens": 77,
+  "total_tokens": 302,
+  "completion_tokens": 225,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "51",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:32:04.158063+00:00"
+}

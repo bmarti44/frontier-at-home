@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:953:P:0",
+ "suite": "gsm8k",
+ "row": 953,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "f281bbbd619dc8eacc0e1fe1cd734da8210a6e1f084a2927dc64ea8058591879",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:04:56.354337+00:00",
+ "completion": "We need answer math. Need parse carefully. Elena usually sleeps 10pm to 6am = 8 hours = 480 min. One day, after reviewing cameras, she finds that she woke up that day and was sleepwalking from 2:15 to 2:38 am. Also, that day she woke up 8 minutes earlier than usual to go to the bathroom. How many minutes did she sleep on her bed that day?\n\nNeed determine total sleep on bed that day. She woke up 8 minutes earlier than usual to go to bathroom. Usual wake 6:00, so woke at 5:52? But also sleepwalking from 2:15 to 2:38. During sleepwalking she is awake? She woke up and was sleepwalking from 2:15 to 2:38. That means she was out of bed? Sleepwalking likely leaves bed. Need subtract sleepwalking interval from sleep time? Let's reason.\n\nUsual sleep hours: 10pm-6am. That day she woke up 8 minutes earlier than usual to go to bathroom: wake at 5:52 (8 min earlier). Total time in bed from 10pm to 5:52 = 7h52 = 472 min. But she was sleepwalking 2:15-2:38 (23 min), presumably not sleeping on her bed during that time. So sleep on bed = 472 - 23 = 449 min. Need check if sleepwalking interval includes waking up and then returning? She woke up that day and was sleepwalking from 2:15 to 2:38. Also that day she woke up 8 minutes earlier than usual to go to bathroom. Could mean she woke up at 5:52 to bathroom, and sleepwalking episode 2:15-2:38. Sleep on bed = usual 480 - 8 (earlier wake) - 23 (sleepwalking not on bed) = 449. Yes.\n\nNeed final with brief explanation and final line exact. Ensure final numeric answer on own line.Usual sleep: 10 p.m. to 6 a.m. = 480 minutes.  \nThat day: woke 8 minutes earlier, and was sleepwalking 23 minutes (2:15–2:38), so subtract 8 + 23 = 31 minutes.  \n480 − 31 = 449.\n\nAnswer: 449",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 15.927475495002
+ },
+ "usage": {
+  "prompt_tokens": 159,
+  "total_tokens": 689,
+  "completion_tokens": 530,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "449",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:05:12.282017+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:371:O:0",
+ "suite": "gsm8k",
+ "row": 371,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "4bdda5baf02da4668eb537995147666b07cbfbe10db36e2507b9d79604f382e0",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:33:58.261554+00:00",
+ "completion": "We need answer math. Need parse carefully. Friday sold 14 pairs. Saturday sold double that number of shoes. Wording: \"double that number of shoes\" Could mean double the number of shoes sold Friday. Friday sold 14 pairs = 28 shoes. Double that number of shoes = 56 shoes = 28 pairs. But many word problems use pairs loosely. Let's inspect: \"On Friday the store sold 14 pairs of tennis shoes. The next day they sold double that number of shoes.\" It says double that number of shoes, not pairs. Friday number of shoes = 14 pairs? Ambiguous. Then \"On the last day of the sale they sold one-half the amount that they did the day before, but six people returned their pairs because they didn't fit. How many tennis shoes were sold by the end of the sale?\" Need compute total tennis shoes sold by end. Returns reduce sold? They sold one-half amount day before, but six people returned their pairs. Need subtract 6 pairs = 12 shoes from last day sales.\n\nLet's compute both interpretations:\nInterpretation A (track pairs): Friday 14 pairs. Saturday double that number of shoes? If \"that number\" refers to 14 pairs? double = 28 pairs. Sunday sold one-half of 28 pairs = 14 pairs. Six people returned pairs => net sold 8 pairs = 16 shoes. Total pairs = 14+28+8=50 pairs = 100 shoes.\nInterpretation B (track shoes): Friday 14 pairs = 28 shoes. Saturday sold double that number of shoes = 56 shoes (28 pairs). Sunday sold one-half amount day before = 28 shoes (14 pairs). Six people returned their pairs = 12 shoes returned, net sold 16 shoes. Total shoes = 28+56+16=100 shoes. Same total! Nice. Because halving and doubling consistent. Answer 100.\n\nNeed provide brief reasoning and final line exact. Ensure final numeric answer on own line. Could mention pairs/shoes. Keep concise.Friday: 14 pairs = 28 shoes  \nSaturday: double = 56 shoes  \nSunday: half of 56 = 28 shoes, minus 6 returned pairs (12 shoes) = 16 shoes  \nTotal: 28 + 56 + 16 = 100 shoes\n\nAnswer: 100",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 14.625640638998448
+ },
+ "usage": {
+  "prompt_tokens": 130,
+  "total_tokens": 646,
+  "completion_tokens": 516,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": false,
+ "expected": "50",
+ "reason": "incorrect: parsed='100' expected='50'",
+ "finished_at": "2026-11-24T20:34:12.887499+00:00"
+}

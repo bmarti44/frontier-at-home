@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:11660:O:0",
+ "suite": "mmlu-pro",
+ "row": 11660,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "48e0b88ab13e1c99488e6ea9bffc2e96e46b82fc12b2aa4966d6b2ad04db916d",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:33:23.598017+00:00",
+ "completion": "We need answer MCQ. Need solve. Let's reason carefully.\n\nProblem: reaction in presence of air in fluidized coal reactor at 1200 K, limiting factor diffusion of oxygen counter to that of carbon monoxide formed at particle surface. Spherical coal particle diameter 2.0e-4 m consists pure carbon density 1.35e3 kg/m3. Diffusivity of oxygen in mixture 1.5e-4 m2/s. Assuming steady state, calculate time required to reduce diameter of carbon to 8e-5 m.\n\nThis is classic diffusion-controlled shrinking core. For spherical particle, rate of consumption of carbon due to oxygen diffusion counter-diffusing with CO. Need derive.\n\nReaction: C + 1/2 O2 -> CO (or C + O2 -> CO2?) Presence of air, CO formed at particle surface. Limiting factor diffusion of oxygen counter to that of carbon monoxide formed at particle surface. So gas mixture: O2 diffuses inward, CO diffuses outward, counter-diffusion. For equimolar counter-diffusion of O2 and CO? Reaction C + 1/2 O2 -> CO. One mole CO produced per 0.5 mole O2 consumed, so molar fluxes: N_CO = -2 N_O2? Let's derive.\n\nAt steady state, carbon consumed at surface, CO formed. Oxygen diffuses from bulk to surface, CO diffuses from surface to bulk. For spherical geometry, total molar flux of O2 inward equals consumption rate. CO outward equals production. Stoichiometry: 1 mol C consumed produces 1 mol CO and consumes 0.5 mol O2. So N_CO (outward) = 2 * N_O2 (inward) in molar terms? If O2 inward molar flux magnitude = 0.5 per C, CO outward = 1 per C, ratio CO/O2 = 2. Counter-diffusion with different molar fluxes. Need use Stefan-Maxwell / film theory.\n\nGiven diffusivity of oxygen in mixture D_AB = 1.5e-4 m2/s. Need calculate time. Options around 0.3-2.5 sec. Let's derive formula.\n\nFor spherical particle radius r, carbon core shrinks. Let r_p = particle radius (carbon radius). At surface, O2 concentration maybe zero? Assume oxygen concentration at particle surface = 0 (complete consumption), bulk concentration C_O2,b. CO concentration at surface maybe? Need boundary conditions. Counter-diffusion of O2 and CO in mixture with inerts? Air contains N2 inert. Diffusivity of oxygen in mixture given. Hmm.\n\nClassic problem from transport phenomena (Welty?). For diffusion-controlled reaction in spherical particle with counter-diffusion of reactant and product, rate:\n\nd(r^3)/dt = - (6 D_AB C_A,b / (rho_C)) * (1/(1 - y_A,s?))? Need exact.\n\nLet's derive from first principles.\n\nConsider spherical carbon particle radius R. Gas phase outside. At steady state, molar flux of O2 toward particle through spherical shell. Let total molar concentration c (constant), y_A = O2 mole fraction, y_B = CO mole fraction, y_N = inert. Diffusion of O2 relative to mixture? Given D_oxygen in mixture. For counter-diffusion of O2 and CO, with inert N2 maybe negligible? Air has N2, but maybe ignore inerts? They say diffusion of oxygen counter to that of carbon monoxide formed at particle surface. So two species counter-diffuse: O2 inward, CO outward. Inerts? Air includes N2 but maybe not considered.\n\nFor binary counter-diffusion A (O2) and B (CO), with no net molar flux? But stoichiometry gives net molar flux: O2 consumed 0.5 mol, CO produced 1 mol, net gas molar increase = +0.5 per C. So not equimolar counter-diffusion. Need account.\n\nGeneral Stefan flow for binary A-B:\nN_A = -D_AB dc/dz? Let's set coordinate r outward. A=O2 diffuses inward (N_A negative outward), B=CO diffuses outward (N_B positive outward). Total molar flux N_t = N_A + N_B (outward positive). For binary, N_A = -c D_AB dy_A/dr + y_A N_t (with r outward? sign). Standard: N_i = -c D_i ∇y_i + y_i N_t. For A: N_A = -c D dy_A/dr + y_A N_t. For B: N_B = -c D dy_B/dr + y_B N_t. Since y_A+y_B=1 (binary), dy_B=-dy_A. N_A+N_B = -cD(dy_A+dy_B)/dr + N_t = N_t OK.\n\nBoundary: at bulk r=∞, y_A=y_A,b, y_B=0 (no CO in bulk), N_A=N_A,b? At steady state, fluxes constant in spherical shell: N_A * 4πr^2 = total inward molar rate (negative). Let define total molar rate of O2 inward = I_A (positive inward). Then N_A (outward) = -I_A/(4πr^2). CO outward total = I_B = 2 I_A (per stoichiometry). N_B (outward) = +I_B/(4πr^2) = 2 I_A/(4πr^2). Total outward molar flux total = I_B - I_A = I_A (net outward). Interesting net molar flux outward equals I_A (since CO 2I_A outward, O2 I_A inward, net outward I_A). Per C consumed: I_A=0.5 per C, net gas molar increase = 0.5 per C, yes net outward = 0.5 per C = I_A. Good.\n\nAt surface r=R, y_A=0 (O2 consumed), y_B = ? CO concentration at surface unknown. Bulk y_A=y_A,b, y_B=0. Need integrate.\n\nUse spherical steady state with constant total concentration c. Let total molar flux outward total = Q = I_A (positive outward) (since net outward = I_A). Actually Q = N_B_total + N_A_total = 2I_A - I_A = I_A.\n\nEquations:\nN_A(r) = -I_A/(4πr^2) (outward negative). N_B(r) = +2I_A/(4πr^2).\nN_t(r) = I_A/(4πr^2).\n\nBinary relation: N_A = -cD dy_A/dr + y_A N_t.\nSubstitute N_A = -I_A/(4πr^2), N_t = I_A/(4πr^2).\n-I_A/(4πr^2) = -cD dy_A/dr + y_A I_A/(4πr^2).\nMultiply by 4πr^2: -I_A = -cD 4πr^2 dy_A/dr + y_A I_A.\n=> cD 4πr^2 dy_A/dr = I_A + y_A I_A = I_A(1+y_A).\n=> dy_A/dr = I_A(1+y_A)/(4π c D r^2).\nIntegrate from surface r=R (y_A=0) to bulk r=∞ (y_A=y_b):\n∫_0^{y_b} dy_A/(1+y_A) = ∫_R^∞ I_A/(4π c D r^2) dr = I_A/(4π c D) * (1/R).\nLeft = ln(1+y_b).\nRight = I_A/(4π c D R).\nThus I_A = 4π c D R ln(1+y_b).\n\nCheck sign: as R decreases, I_A decreases proportional R. Good.\n\nNow carbon consumption: I_A = 0.5 * (rate of C consumption in mol/s). Carbon mass rate = rho_C * 4πR^2 * (-dR/dt) (since radius decreases, mass loss = rho 4πR^2 (-dR/dt)). Molar C consumption = mass rate / M_C. I_A = 0.5 * molar C consumption = 0.5 * rho_C 4πR^2 (-dR/dt)/M_C.\n\nSet equal: 0.5 * rho_C 4πR^2 (-dR/dt)/M_C = 4π c D R ln(1+y_b).\nCancel 4πR: 0.5 * rho_C R (-dR/dt)/M_C = c D ln(1+y_b).\n=> -dR/dt = [2 c D ln(1+y_b) M_C]/[rho_C R].\n=> R dR = - [2 c D ln(1+y_b) M_C/rho_C] dt.\nIntegrate from R0 to R: (R^2 - R0^2)/2 = - [2 c D ln(1+y_b) M_C/rho_C] t.\n=> R0^2 - R^2 = [4 c D ln(1+y_b) M_C/rho_C] t.\n=> t = rho_C (R0^2 - R^2) / [4 c D ln(1+y_b) M_C].\n\nNeed c (total molar concentration) at 1200 K, y_b (O2 mole fraction in air), M_C. Air: y_O2 ≈ 0.21 (or 0.232?). At 1200 K, c = P/(RT). Pressure? Not given. Hmm. Maybe use ideal gas at 1 atm? Not specified. Maybe they expect use c = P/(RT) with P=1 atm? Not given but typical assume 1 atm. Need compute and compare options.\n\nLet's compute with P=1 atm=101325 Pa, T=1200 K, R=8.314, c=101325/(8.314*1200)=101325/9976.8=10.15 mol/m3. y_b=0.21. ln(1.21)=0.1906. M_C=0.012 kg/mol (12 g/mol). rho=1350. D=1.5e-4. R0=1e-4 m (diameter 2e-4), R=4e-5 m (diameter 8e-5). R0^2=1e-8, R^2=1.6e-9, difference=8.4e-9.\n\nNumerator rho*(diff)=1350*8.4e-9=1.134e-5.\nDenominator: 4*c*D*ln(1+y)*M_C = 4*10.15*1.5e-4*0.1906*0.012.\n4*10.15=40.6; *1.5e-4=0.00609; *0.1906=0.001160; *0.012=1.392e-5.\nt=1.134e-5/1.392e-5=0.815 s. Option D 0.81 sec. Great.\n\nNeed final only letter. Ensure no extra. Answer D.Answer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 83.52640534000238
+ },
+ "usage": {
+  "prompt_tokens": 247,
+  "total_tokens": 3049,
+  "completion_tokens": 2802,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:34:47.124704+00:00"
+}

@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:6597:P:0",
+ "suite": "mmlu-pro",
+ "row": 6597,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "3bfe58b834bfedafb748bd729b90d36d50ee3ef330278545f3a0c2ead178e4dd",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:47:40.769105+00:00",
+ "completion": "We need answer single letter. Need reason. Killed vaccine vs live: killed cannot replicate, avoids reversion to virulence. Live vaccines can revert, especially in immunocompromised. Killed generally require boosters, lower immunogenicity, not sterilizing, not more effective immunocompromised, may cause local reactions, affected by preexisting antibodies? Actually live vaccines are affected by preexisting antibodies; killed less affected? Hmm option G: \"Is less likely to be affected by preexisting antibodies\". Killed vaccines are not replicating, so preexisting antibodies to virus may not neutralize? Actually preexisting antibodies can reduce response to live vaccines by neutralizing before replication; killed vaccines are less affected by preexisting antibodies because they don't need to replicate. But the most appropriate rationale for developing a killed vaccine for a new severe respiratory illness? Need parse.\n\nQuestion: \"A new severe respiratory illness caused by a newly identified virus is discovered. Which of the following properties of a killed vaccine relative to a live vaccine is the most appropriate rationale for developing a killed vaccine for this illness?\" They ask property of killed vaccine relative to live vaccine. In context of new severe respiratory illness, likely concern about live vaccine causing disease in immunocompromised or reversion. Killed vaccines avoid reversion to virulence. Option B.\n\nCheck G: Killed vaccines are less affected by preexisting antibodies? Live vaccines can be neutralized by preexisting antibodies, but killed vaccines also can be affected? Preexisting antibodies may reduce immunogenicity of killed vaccines too? Actually killed vaccines are not replicating, so preexisting antibodies don't prevent infection but can still bind antigen and reduce uptake? In general, live vaccines are contraindicated in immunocompromised and affected by circulating antibodies; killed vaccines are safer. The classic rationale: killed vaccines cannot cause disease or revert to virulence. So B.\n\nNeed final only Answer: B.Answer: B",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.654248394996102
+ },
+ "usage": {
+  "prompt_tokens": 200,
+  "total_tokens": 631,
+  "completion_tokens": 431,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "B",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:47:51.423592+00:00"
+}

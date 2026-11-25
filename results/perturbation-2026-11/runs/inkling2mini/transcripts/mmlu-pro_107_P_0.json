@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:107:P:0",
+ "suite": "mmlu-pro",
+ "row": 107,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "555c6b598a64525070db34403850280dba7546e4fd65f08cfa1d714733871cf0",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:57:52.465284+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nHouse worth $16,500 assessed at rate 22%. Assessed value = 16,500 * 0.22 = 3,630? 16,500*0.2=3,300; +16,500*0.02=330; total 3,630. Yes.\n\nTax rates per $100:\nlocal college fund $.41 per $100 => 3,630/100 = 36.3 * .41 = 14.883? 36.3*0.4=14.52; +36.3*0.01=0.363; total 14.883.\nspecial education $.02 per $100 => 36.3*.02=0.726.\nhealth and welfare $.001 per $100 => 36.3*.001=0.0363.\ncommunity construction $.089 per $100 => 36.3*.089 = 36.3*(0.09 -0.001)=3.267 -0.0363=3.2307.\nTotal = 14.883+0.726+0.0363+3.2307 = 14.883+0.726=15.609; +0.0363=15.6453; +3.2307=18.876. = $18.88. Option J.\n\nNeed reply single letter form Answer: <letter>. Ensure no extra.Answer: J",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.931826382999134
+ },
+ "usage": {
+  "prompt_tokens": 193,
+  "total_tokens": 522,
+  "completion_tokens": 329,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "J",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:57:59.397416+00:00"
+}

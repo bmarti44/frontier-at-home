@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:651:O:0",
+ "suite": "gsm8k",
+ "row": 651,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "cecec738db1d3d4b72036546bf2ce467a9f31443c1b239acee3bb02744beeb3c",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:28:31.268003+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Ariadne shop selling hats two colors red and green. Sales from red hats were $400 in a particular month, half the total amount she earned from selling green hats. Calculate total amount she made in two months if in second month her sales were 3/4 of total sales of first month.\n\nInterpretation: In first month, red sales = $400. This is half the total amount she earned from selling green hats. So red = 1/2 * green_total? Wording: \"half the total amount she earned from selling green hats\" => red sales = half of green sales. Thus green = 800. Total first month = red + green = 1200. Second month sales = 3/4 of total sales of first month = 900. Total two months = 2100.\n\nNeed final with brief maybe. Ensure final numeric answer on own line form Answer: <number>. Could include dollar sign? They say number. Use 2100 maybe with $? Form Answer: <number>. Do Answer: $2100? They said numeric answer; maybe Answer: 2100. Need final line exactly. Brief explanation then final line.Red sales = $400, which is half of green sales, so green sales = $800.  \nFirst month total = $400 + $800 = $1200.  \nSecond month = 3/4 × $1200 = $900.  \nTwo-month total = $1200 + $900 = $2100.\n\nAnswer: 2100",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 9.261960009000177
+ },
+ "usage": {
+  "prompt_tokens": 114,
+  "total_tokens": 454,
+  "completion_tokens": 340,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "2100",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:28:40.530163+00:00"
+}

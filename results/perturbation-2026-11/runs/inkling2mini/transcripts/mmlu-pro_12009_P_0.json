@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:12009:P:0",
+ "suite": "mmlu-pro",
+ "row": 12009,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "bd623a6cdfed43ce21be532495986609ff4946dad1c23ac2f3280b030cdb36e1",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:55:22.514544+00:00",
+ "completion": "We need answer. Need compute Shannon-Hartley. Picture elements 300k, 10 levels, equal probs. Bits per element = log2(10) ≈3.3219. Bits per frame = 300k*3.3219 ≈997k bits. Frames/sec 30 => bit rate ≈29.91 Mbps. SNR=1000, Shannon C = B log2(1+1000) ≈ B*9.967. B ≈3.0 MHz. Option C. Need ensure maybe use Nyquist? Let's calculate: 300000*log2(10)*30 = 300000*3.321928*30 = 29,897,? 300k*30=9,000,000; *3.321928=29.8976e6. log2(1001)=9.96723. B=3.000e6. Answer C. Need final only single letter form.Answer: C",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.015005703000497
+ },
+ "usage": {
+  "prompt_tokens": 219,
+  "total_tokens": 438,
+  "completion_tokens": 219,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "C",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:55:30.529816+00:00"
+}

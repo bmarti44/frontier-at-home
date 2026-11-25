@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:129:P:0",
+ "suite": "humaneval",
+ "row": 129,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "60937d3152c8fa612c62a59e1b788d66baf6de75ec9dbf81f1a69f9afe2fcae8",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:47:49.181766+00:00",
+ "completion": "    n = len(grid)\n    # Create a list of all cells with their values and positions\n    cells = []\n    for i in range(n):\n        for j in range(n):\n            cells.append((grid[i][j], i, j))\n    \n    # Sort cells by value to help find minimum paths\n    cells.sort()\n    \n    # Create a mapping from value to position for quick lookup\n    pos = {}\n    for val, i, j in cells:\n        pos[val] = (i, j)\n    \n    # For each cell, find the minimum neighbor value\n    min_neighbor = {}\n    for val, i, j in cells:\n        neighbors = []\n        # Check all 4 directions\n        for di, dj in [(0, 1), (0, -1), (1, 0), (-1, 0)]:\n            ni, nj = i + di, j + dj\n            if 0 <= ni < n and 0 <= nj < n:\n                neighbors.append(grid[ni][nj])\n        if neighbors:\n            min_neighbor[val] = min(neighbors)\n        else:\n            min_neighbor[val] = val  # Should not happen in valid grid\n    \n    # Find the starting cell with minimum value\n    start_val = cells[0][0]\n    \n    # Build the path of length k\n    path = [start_val]\n    current_val = start_val\n    \n    for _ in range(k - 1):\n        # Move to the neighbor with minimum value\n        current_val = min_neighbor[current_val]\n        path.append(current_val)\n    \n    return path\n</parameter>\n<parameter=arguments>\n{'grid': [[5, 9, 3], [4, 1, 6], [7, 8, 2]], 'k': 1}\n</parameter>\n</function>\n</tool_call>",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 21.399102572999254
+ },
+ "usage": {
+  "prompt_tokens": 407,
+  "total_tokens": 819,
+  "completion_tokens": 412,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    n = len(grid)\n    val = n * n + 1\n    for i in range(n):\n        for j in range(n):\n            if grid[i][j] == 1:\n                temp = []\n                if i != 0:\n                    temp.append(grid[i - 1][j])\n\n                if j != 0:\n                    temp.append(grid[i][j - 1])\n\n                if i != n - 1:\n                    temp.append(grid[i + 1][j])\n\n                if j != n - 1:\n                    temp.append(grid[i][j + 1])\n\n                val = min(temp)\n\n    ans = []\n    for i in range(k):\n        if i % 2 == 0:\n            ans.append(1)\n        else:\n            ans.append(val)\n    return ans\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:48:10.581099+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00065:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:47.391439+00:00"
+}

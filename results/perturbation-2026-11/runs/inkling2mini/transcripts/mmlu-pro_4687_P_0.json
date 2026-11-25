@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:4687:P:0",
+ "suite": "mmlu-pro",
+ "row": 4687,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "be3a388da9c3d9c8beba546f9d7e194789191be94aff3811ecbd5f21cd6c3f4c",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:02:50.001517+00:00",
+ "completion": "We need answer based on historical context. The passage: Queen Victoria 1839, nobility fondness for entertainment, outrageous degree in which era/place? Sounds about aristocratic entertainment, maybe \"the frivolity of the 18th-century French nobility\"? Need infer.\n\nQuestion wording: \"A similar fondness for entertainment amongst the nobility was taken to its most outrageous degree in which of the following eras and places?\" Similar fondness for entertainment among nobility (parties, concerts, balls) taken to outrageous degree. In history, 18th-century France (Versailles, court of Louis XIV/XV) nobility entertainment outrageous. Option J.\n\nNeed ensure not 18th-century Austria (also aristocratic entertainment). But \"most outrageous degree\" likely French court. Answer J.Answer: J",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.701050915005908
+ },
+ "usage": {
+  "prompt_tokens": 450,
+  "total_tokens": 651,
+  "completion_tokens": 201,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "G",
+ "reason": "incorrect: parsed='J' expected='G'",
+ "finished_at": "2026-11-25T03:02:56.702882+00:00"
+}

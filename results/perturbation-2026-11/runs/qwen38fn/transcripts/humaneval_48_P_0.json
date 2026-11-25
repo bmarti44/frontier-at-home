@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:48:P:0",
+ "suite": "humaneval",
+ "row": 48,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "a17a10d4cfaa833a731a3f2eefb2b4e9740a0a39b6101dc6320a9e0876a9eb65",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:49:02.512229+00:00",
+ "completion": "    return text == text[::-1]\n\n\nif __name__ == \"__main__\":\n    import doctest\n    doctest.testmod()\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.0218322219952825
+ },
+ "usage": {
+  "prompt_tokens": 69,
+  "total_tokens": 101,
+  "completion_tokens": 32,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    for i in range(len(text)):\n        if text[i] != text[len(text) - 1 - i]:\n            return False\n    return True\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:49:04.534215+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00213:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:31.278824+00:00"
+}

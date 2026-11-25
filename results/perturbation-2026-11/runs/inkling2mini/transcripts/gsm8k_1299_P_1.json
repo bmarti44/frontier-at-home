@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1299:P:1",
+ "suite": "gsm8k",
+ "row": 1299,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "756b25acdbbd9feb08d55e6e9dcedc4ea3d429098f8f1148f2f8344d799de23a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:38:40.391246+00:00",
+ "completion": "The user wants me to solve a math problem. Let me compute.\n\nIce cream: $4.00\nMovie tickets: $6.50 each for herself and younger sister = 2 × $6.50 = $13.00\nBracelet: $10.00\nTotal spent: 4.00 + 13.00 + 10.00 = $27.00\nParents gave: $45.00\nLeft: 45.00 - 27.00 = $18.00\n\nFinal answer: 18. Need to end with \"Answer: <number>\" on its own line. The user says think briefly if needed. I'll provide brief reasoning then final line.Movie tickets: 2 × $6.50 = $13.00  \nTotal spent: $4.00 + $13.00 + $10.00 = $27.00  \nLeft: $45.00 − $27.00 = $18.00\n\nAnswer: 18",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.7506718520016875
+ },
+ "usage": {
+  "prompt_tokens": 98,
+  "total_tokens": 312,
+  "completion_tokens": 214,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "18",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:38:45.142297+00:00"
+}

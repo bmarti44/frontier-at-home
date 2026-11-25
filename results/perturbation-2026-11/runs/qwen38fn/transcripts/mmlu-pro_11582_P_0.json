@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:11582:P:0",
+ "suite": "mmlu-pro",
+ "row": 11582,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "e90ae49f52ddb5a235067ee8c1460d3adcd5e482122da1c092b0298109151ef4",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:30:57.813688+00:00",
+ "completion": "This is a mass transfer problem involving evaporation from a water drop into still air. I need to calculate the net rate of evaporation using the mass transfer coefficient for a sphere.\n\nGiven:\n- Velocity of drop: v = 225 cm/s\n- Diameter of drop: d = 0.03 cm\n- Pressure: P = 1 atm\n- Temperature of air: T_air = 145°F = 62.78°C = 335.93 K\n- Surface temperature of drop: T_s = 70°F = 21.11°C = 294.26 K\n- Vapor pressure of water at 70°F: p_A,s = 0.0247 atm\n- Dry air (so p_A,∞ = 0)\n\nFor evaporation from a sphere, I need to find the mass transfer coefficient.\n\nFirst, let me find the properties of air at the film temperature.\n\nFilm temperature: T_f = (T_air + T_s)/2 = (145 + 70)/2 = 107.5°F = 41.94°C = 315.1 K\n\nProperties of air at ~315 K (approximately 42°C):\n- Density: ρ ≈ 1.127 kg/m³ = 1.127 × 10⁻³ g/cm³\n- Viscosity: μ ≈ 1.91 × 10⁻⁵ Pa·s = 1.91 × 10⁻⁴ g/(cm·s)\n- Diffusion coefficient of water vapor in air: D_AB ≈ 0.26 cm²/s (at about 42°C)\n\nActually, let me use the standard approach for this type of problem.\n\nFor a sphere, the Sherwood number correlation is:\nSh = 2 + 0.6 Re^0.5 Sc^(1/3)\n\nReynolds number: Re = ρvd/μ\n\nLet me calculate properties at film temperature T_f = 107.5°F ≈ 42°C ≈ 315 K\n\nFor air at 315 K:\n- ρ = PM/(RT) = (1.013 × 10⁵)(0.029)/(8.314 × 315) = 1.122 kg/m³ = 1.122 × 10⁻³ g/cm³\n- μ ≈ 1.91 × 10⁻⁵ Pa·s = 1.91 × 10⁻⁴ g/(cm·s)\n\nRe = ρvd/μ = (1.122 × 10⁻³)(225)(0.03)/(1.91 × 10⁻⁴)\nRe = (1.122 × 10⁻³)(225)(0.03)/(1.91 × 10⁻⁴)\nRe = 0.007574/1.91 × 10⁻⁴\nRe = 39.65\n\nSc = μ/(ρD_AB)\n\nFor water vapor in air at 315 K:\nD_AB ≈ 0.26 cm²/s (approximately)\n\nActually, let me use the Fuller correlation or standard values.\n\nAt 315 K, D_AB for water in air ≈ 0.26 cm²/s\n\nSc = μ/(ρD_AB) = (1.91 × 10⁻⁴)/((1.122 × 10⁻³)(0.26))\nSc = 1.91 × 10⁻⁴/(2.917 × 10⁻⁴)\nSc = 0.655\n\nSh = 2 + 0.6 Re^0.5 Sc^(1/3)\nSh = 2 + 0.6(39.65)^0.5(0.655)^(1/3)\nSh = 2 + 0.6(6.297)(0.868)\nSh = 2 + 3.276\nSh = 5.276\n\nk_c = Sh × D_AB / d = 5.276 × 0.26 / 0.03 = 45.71 cm/s\n\nNow, the molar flux:\nN_A = k_c × (C_A,s - C_A,∞)\n\nC_A,s = p_A,s/(RT_s) = 0.0247/(82.05 × 294.26) = 0.0247/24143 = 1.023 × 10⁻⁶ mol/cm³\n\nWait, let me use R = 82.05 cm³·atm/(mol·K)\n\nC_A,s = p_A,s/(RT_s) = 0.0247/(82.05 × 294.26) = 0.0247/24143 = 1.023 × 10⁻⁶ mol/cm³\n\nC_A,∞ = 0 (dry air)\n\nN_A = k_c × C_A,s = 45.71 × 1.023 × 10⁻⁶ = 4.676 × 10⁻⁵ mol/(cm²·s)\n\nSurface area of sphere: A = πd² = π(0.03)² = 2.827 × 10⁻³ cm²\n\nRate of evaporation = N_A × A = 4.676 × 10⁻⁵ × 2.827 × 10⁻³ = 1.322 × 10⁻⁷ mol/s\n\nThis is approximately 1.324 × 10⁻⁷ gmole/sec\n\nSo the answer is D.\n\nWait, let me double-check the calculation more carefully.\n\nActually, let me reconsider. The problem says \"dry still air\" but the drop is falling with velocity 225 cm/s. So the relative velocity between the drop and air is 225 cm/s.\n\nLet me recalculate more carefully.\n\nFilm temperature: T_f = (145 + 70)/2 = 107.5°F = 41.94°C = 315.1 K\n\nProperties of air at 315 K:\n- ρ = PM/(RT) = (1)(28.97)/(82.05 × 315.1) = 28.97/25854 = 1.121 × 10⁻³ g/cm³\n- μ at 315 K ≈ 1.91 × 10⁻⁴ g/(cm·s) (using Sutherland's or standard tables)\n\nActually, let me use μ = 1.91 × 10⁻⁴ g/(cm·s)\n\nRe = ρvd/μ = (1.121 × 10⁻³)(225)(0.03)/(1.91 × 10⁻⁴)\n= (1.121 × 10⁻³)(6.75)/(1.91 × 10⁻⁴)\n= 7.567 × 10⁻³/(1.91 × 10⁻⁴)\n= 39.6\n\nSc = μ/(ρD_AB)\n\nFor D_AB of water in air at 315 K:\nUsing Fuller's equation or standard values, D_AB ≈ 0.26 cm²/s at about 42°C.\n\nActually, at 25°C, D_AB ≈ 0.26 cm²/s. At higher temperatures, it increases.\nD_AB at 315 K ≈ 0.26 × (315/298)^1.75 ≈ 0.26 × 1.103 ≈ 0.287 cm²/s\n\nHmm, let me try with D_AB = 0.26 cm²/s first.\n\nSc = (1.91 × 10⁻⁴)/((1.121 × 10⁻³)(0.26)) = 1.91 × 10⁻⁴/(2.915 × 10⁻⁴) = 0.655\n\nSh = 2 + 0.6(39.6)^0.5(0.655)^(1/3) = 2 + 0.6(6.293)(0.868) = 2 + 3.274 = 5.274\n\nk_c = Sh × D_AB/d = 5.274 × 0.26/0.03 = 45.71 cm/s\n\nC_A,s = p_A,s/(RT_s) = 0.0247/(82.05 × 294.26) = 0.0247/24143 = 1.023 × 10⁻⁶ mol/cm³\n\nN_A = k_c × C_A,s = 45.71 × 1.023 × 10⁻⁶ = 4.676 × 10⁻⁵ mol/(cm²·s)\n\nA = πd² = π(0.03)² = 2.827 × 10⁻³ cm²\n\nRate = N_A × A = 4.676 × 10⁻⁵ × 2.827 × 10⁻³ = 1.322 × 10⁻⁷ mol/s\n\nThis matches option D: 1.324 × 10⁻⁷ gmole/sec\n\nThe answer is D.\n</think>\n\n# Evaporation Rate from a Water Drop\n\n## Given Information\n- Velocity: v = 225 cm/s\n- Diameter: d = 0.03 cm\n- Air temperature: T_air = 145°F = 335.9 K\n- Drop surface temperature: T_s = 70°F = 294.3 K\n- Vapor pressure at 70°F: p_A,s = 0.0247 atm\n- Dry air: p_A,∞ = 0\n\n## Solution\n\n**Film temperature:** T_f = (145 + 70)/2 = 107.5°F ≈ 315 K\n\n**Air properties at 315 K:**\n- ρ = PM/RT = (1)(28.97)/(82.05 × 315) = 1.121 × 10⁻³ g/cm³\n- μ ≈ 1.91 × 10⁻⁴ g/(cm·s)\n- D_AB ≈ 0.26 cm²/s\n\n**Reynolds number:**\n$$Re = \\frac{\\rho v d}{\\mu} = \\frac{(1.121 \\times 10^{-3})(225)(0.03)}{1.91 \\times 10^{-4}} = 39.6$$\n\n**Schmidt number:**\n$$Sc = \\frac{\\mu}{\\rho D_{AB}} = \\frac{1.91 \\times 10^{-4}}{(1.121 \\times 10^{-3})(0.26)} = 0.655$$\n\n**Sherwood number (sphere correlation):**\n$$Sh = 2 + 0.6\\,Re^{0.5}\\,Sc^{1/3} = 2 + 0.6(6.29)(0.868) = 5.27$$\n\n**Mass transfer coefficient:**\n$$k_c = \\frac{Sh \\cdot D_{AB}}{d} = \\frac{5.27 \\times 0.26}{0.03} = 45.7 \\text{ cm/s}$$\n\n**Surface concentration:**\n$$C_{A,s} = \\frac{p_{A,s}}{RT_s} = \\frac{0.0247}{82.05 \\times 294.3} = 1.023 \\times 10^{-6} \\text{ mol/cm}^3$$\n\n**Molar flux:**\n$$N_A = k_c \\cdot C_{A,s} = 45.7 \\times 1.023 \\times 10^{-6} = 4.68 \\times 10^{-5} \\text{ mol/(cm}^2\\text{·s)}$$\n\n**Surface area:** A = πd² = π(0.03)² = 2.827 × 10⁻³ cm²\n\n**Rate of evaporation:**\n$$\\dot{n} = N_A \\times A = 4.68 \\times 10^{-5} \\times 2.827 \\times 10^{-3} \\approx 1.324 \\times 10^{-7} \\text{ gmole/s}$$\n\nAnswer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 120.6201493779954
+ },
+ "usage": {
+  "prompt_tokens": 339,
+  "total_tokens": 3385,
+  "completion_tokens": 3046,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:32:58.434123+00:00"
+}

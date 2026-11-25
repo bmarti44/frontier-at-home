@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:118:P:0",
+ "suite": "humaneval",
+ "row": 118,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "4f2fe609a066437f2c7bd650e1fb454fd1150250059cfe09882c16471a6f250a",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:57:02.386107+00:00",
+ "completion": "    vowels = \"aeiouAEIOU\"\n    consonants = \"bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ\"\n    for i in range(len(word) - 2, 0, -1):\n        if word[i] in vowels and word[i - 1] in consonants and word[i + 1] in consonants:\n            return word[i]\n    return \"\"\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.6474066709997714
+ },
+ "usage": {
+  "prompt_tokens": 143,
+  "total_tokens": 238,
+  "completion_tokens": 95,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    if len(word) < 3:\n        return \"\"\n\n    vowels = {\"a\", \"e\", \"i\", \"o\", \"u\", \"A\", \"E\", 'O', 'U', 'I'}\n    for i in range(len(word)-2, 0, -1):\n        if word[i] in vowels:\n            if (word[i+1] not in vowels) and (word[i-1] not in vowels):\n                return word[i]\n    return \"\"\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:57:07.033720+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00041:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:42.075671+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:953:P:1",
+ "suite": "gsm8k",
+ "row": 953,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "3859e811ce84a9b09b95be809f0a92e6d673c5aa01dcc6614e2a8a255311096f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:59:04.972913+00:00",
+ "completion": "We need answer math. Need parse carefully. Sofia usually goes to sleep at 10 p.m. and wakes at 6 a.m. That's 8 hours = 480 minutes in bed? She is sleepwalker. One day, after reviewing cameras, she finds that she woke up that day and was sleepwalking from 2:15 to 2:38 am. Also, that day she woke up 2 minutes earlier than usual to go to the bathroom. How many minutes did she sleep on her bed that day?\n\nNeed determine total sleep on bed that day. Usual sleep period 10pm-6am = 480 min. That day she woke up 2 minutes earlier than usual to go to bathroom. Usual wake 6:00, earlier by 2 min => 5:58? But also she woke up and was sleepwalking from 2:15 to 2:38 am. During sleepwalking she is out of bed? Need subtract time sleepwalking from bed sleep. She woke up at 2:15 and was sleepwalking until 2:38, so not sleeping on bed during 23 minutes. Also final wake 2 minutes earlier than usual means total time in bed reduced by 2 minutes? Let's reason.\n\nTimeline: goes to sleep at 10 p.m. (assume same). Usual wake 6 a.m. That day wakes 2 min earlier than usual to go to bathroom: wake at 5:58 a.m. So in-bed period duration = 10:00 to 5:58 = 7h58 = 478 min. During that period, she woke up and sleepwalked from 2:15 to 2:38 (23 min). During sleepwalking, she is not sleeping on her bed (likely out of bed). So sleep on bed = 478 - 23 = 455 min. Need check if sleepwalking interval includes waking and returning to bed? She woke up at 2:15, sleepwalking until 2:38, then presumably returned to bed and slept until 5:58. So subtract 23. Answer 455.\n\nNeed final with brief explanation and final line exact. Ensure no extra after final line.Usual sleep time: 10 p.m. to 6 a.m. = 480 minutes.  \nThat day she woke 2 minutes earlier: 480 − 2 = 478 minutes in bed.  \nSleepwalking from 2:15 to 2:38 = 23 minutes not sleeping on her bed.  \n478 − 23 = 455 minutes.\n\nAnswer: 455",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 18.2701211349995
+ },
+ "usage": {
+  "prompt_tokens": 159,
+  "total_tokens": 733,
+  "completion_tokens": 574,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "455",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:59:23.243270+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:347:P:1",
+ "suite": "gsm8k",
+ "row": 347,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "ba348fbe3c73e015969fdfaf63831e0e71027f650c19ee25f3b54f515702c6d8",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:10:48.529946+00:00",
+ "completion": "The user wants a brief calculation. 4 shirts * $20 = $80. 50% discount means pay half: $40. Need final numeric answer on its own line in form Answer: <number>. Ensure final line exactly. Could include brief reasoning then final line. Need be careful: \"how much did Ravi pay\" numeric maybe $40. Final answer line: Answer: $40. They said numeric answer; form Answer: <number>. Use $40? numeric answer maybe 40. The form says <number>, but currency okay. To be safe: Answer: $40.4 shirts × $20 = $80; 50% discount leaves $40.\nAnswer: $40",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.043694984000467
+ },
+ "usage": {
+  "prompt_tokens": 80,
+  "total_tokens": 236,
+  "completion_tokens": 156,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "40",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:10:53.573977+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:999:O:0",
+ "suite": "gsm8k",
+ "row": 999,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "74601135b90a34fe9ecab102d5b861d95ec65cab3552a9661c43496c529189e5",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:15:42.413756+00:00",
+ "completion": "We need answer math. Need compute. Let kid slice = x. Adult slice = 2x. Family: 2 adults => 4x, 4 kids => 4x. Total = 8x. Each adult gets 2x/8x = 1/4 = 25%. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.Let each kid get \\(x\\). Each adult gets \\(2x\\).  \nTotal = \\(2(2x) + 4(x) = 8x\\). Each adult gets \\(2x/8x = 1/4 = 25\\%\\).\n\nAnswer: 25%",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.5422925640014
+ },
+ "usage": {
+  "prompt_tokens": 89,
+  "total_tokens": 256,
+  "completion_tokens": 167,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "25",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:15:46.956400+00:00"
+}

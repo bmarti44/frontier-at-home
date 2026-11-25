@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:480:P:1",
+ "suite": "gsm8k",
+ "row": 480,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "3c3843e5bb4104f781102c469104dd866eb36beb6d65b6b4be6857c7d926bcd3",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:07:18.984681+00:00",
+ "completion": "Samuel has 6 blue tubes and 5 yellow tubes.\n\nOmar has half as many blue tubes as Samuel: 6 / 2 = 3 blue tubes.\nOmar has three times as many yellow tubes as Samuel: 5 × 3 = 15 yellow tubes.\n\nTotal tubes for Omar: 3 + 15 = 18.\n</think>\n\nSamuel has 6 blue and 5 yellow tubes.\n\nOmar's blue tubes: 6 ÷ 2 = 3\nOmar's yellow tubes: 5 × 3 = 15\n\nTotal: 3 + 15 = 18\n\nAnswer: 18",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.680482862000645
+ },
+ "usage": {
+  "prompt_tokens": 116,
+  "total_tokens": 261,
+  "completion_tokens": 145,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "18",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:07:24.665435+00:00"
+}

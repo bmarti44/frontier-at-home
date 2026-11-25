@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:149:O:0",
+ "suite": "humaneval",
+ "row": 149,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "387c54540db444ab39a66ed7c465db9a9145f9437273960b116cd1c7c974727a",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:06:53.096841+00:00",
+ "completion": "",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 0.49365843499981565
+ },
+ "usage": {
+  "prompt_tokens": 196,
+  "total_tokens": 197,
+  "completion_tokens": 1,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    lst.sort()\n    new_lst = []\n    for i in lst:\n        if len(i)%2 == 0:\n            new_lst.append(i)\n    return sorted(new_lst, key=len)\n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T05:06:53.590647+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00108:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 35, in <module>\n    check(sorted_list_sum)\n  File \"/case/main.py\", line 23, in check\n    assert candidate([\"aa\", \"a\", \"aaa\"]) == [\"aa\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:57.096890+00:00"
+}

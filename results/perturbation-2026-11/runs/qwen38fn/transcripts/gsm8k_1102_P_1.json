@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1102:P:1",
+ "suite": "gsm8k",
+ "row": 1102,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "01c354ab76a5a90128117771c1b34a4970912c5fc7ccb339aa2f43cc15c230c9",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:00:19.196631+00:00",
+ "completion": "Let me work through this step by step.\n\n1. Priya charged $85.00 on her credit card.\n2. She returned one item that cost $40.00, so her balance decreased by $40.00.\n   Balance: $85.00 - $40.00 = $45.00\n3. She bought a frying pan that was 20% off $55.00.\n   Discount: 20% of $55.00 = $11.00\n   Price: $55.00 - $11.00 = $44.00\n4. She bought a set of towels that was 40% off $70.00.\n   Discount: 40% of $70.00 = $28.00\n   Price: $70.00 - $28.00 = $42.00\n5. New balance: $45.00 + $44.00 + $42.00 = $131.00\n</think>\n\nLet me work through this step by step:\n\n1. **Initial charge:** $85.00\n2. **Return:** $85.00 - $40.00 = $45.00\n3. **Frying pan (20% off $55.00):** $55.00 × 0.80 = $44.00\n4. **Towels (40% off $70.00):** $70.00 × 0.60 = $42.00\n5. **New balance:** $45.00 + $44.00 + $42.00 = $131.00\n\nAnswer: 131",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.967308483996021
+ },
+ "usage": {
+  "prompt_tokens": 169,
+  "total_tokens": 588,
+  "completion_tokens": 419,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "131",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:00:33.164199+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1224:P:1",
+ "suite": "gsm8k",
+ "row": 1224,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "d682791e605480e3710cbbf6782f91344d2c7757d0b714abf6a434a240693514",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:54:27.889421+00:00",
+ "completion": "The user wants a math answer. Need compute: Monday 4 inches. Tuesday expected to rain 1 more inch than twice Monday's total. Twice Monday = 8. 1 more = 9. Need final numeric answer on its own line form Answer: <number>. They said think briefly if needed, then end with final numeric answer. We can provide brief calculation and final line. Ensure final line exactly Answer: 9 maybe inches? Form says <number>, so Answer: 9. Could include inches in text but final numeric answer only number. Do that.Twice Monday’s total is 2 × 4 = 8 inches. One more inch is 8 + 1 = 9 inches.\nAnswer: 9",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.712340915000823
+ },
+ "usage": {
+  "prompt_tokens": 79,
+  "total_tokens": 241,
+  "completion_tokens": 162,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "9",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:54:32.602055+00:00"
+}

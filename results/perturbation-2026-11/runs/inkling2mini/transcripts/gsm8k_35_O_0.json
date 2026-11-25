@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:35:O:0",
+ "suite": "gsm8k",
+ "row": 35,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "399adaf2cdcf838cfe7dbe8deb5b54b2caeb76c178c7a3189e2133d745c8fa1a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:59:40.399252+00:00",
+ "completion": "The user wants me to solve a math problem. Let me compute.\n\nFirst 20 minutes: 4 points.\nSecond 20 minutes: 25% more points than first 20 minutes. 25% more than 4 = 4 * 1.25 = 5.\nTotal = 4 + 5 = 9.\n\nNeed to end with final numeric answer on its own line: Answer: 9.\nBrief thinking then final line.Second 20 minutes: 4 × 1.25 = 5 points. Total: 4 + 5 = 9.\n\nAnswer: 9",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.9330175620016234
+ },
+ "usage": {
+  "prompt_tokens": 90,
+  "total_tokens": 227,
+  "completion_tokens": 137,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "9",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:59:43.332574+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1014:P:1",
+ "suite": "gsm8k",
+ "row": 1014,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "c8fc313213058ff5bd4ede7071d6ef0ef3e2f56430c62ff37297ca7c0c971e17",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:40:45.025201+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nBudget $21. Prices incl tax: peaches $1 each, pears $1 each, apples $0.5 each, kiwis $2, plums $0.75.\nAlready purchased: 3 peaches =3, 5 pears=5, 3 kiwis=6, 5 apples=2.5. Total spent =3+5+6+2.5=16.5. Remaining=21-16.5=4.5. Plums at .75 => 4.5/.75=6. Exactly. Need final numeric answer on own line form Answer: <number>. Could include brief. Ensure final line exactly.Spent so far: 3 + 5 + 6 + 2.5 = $16.50  \nRemaining: $21 − $16.50 = $4.50  \nPlums: $4.50 ÷ $0.75 = 6\n\nAnswer: 6",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.521522489001654
+ },
+ "usage": {
+  "prompt_tokens": 138,
+  "total_tokens": 365,
+  "completion_tokens": 227,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "6",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:40:50.546947+00:00"
+}

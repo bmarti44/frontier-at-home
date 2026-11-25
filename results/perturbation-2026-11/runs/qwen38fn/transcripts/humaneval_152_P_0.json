@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:152:P:0",
+ "suite": "humaneval",
+ "row": 152,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "e743c29f0161b972e34c38a232c18a0aab517c0b2201119c02ec3ec4ff911bbb",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:49:35.955694+00:00",
+ "completion": "    return [abs(g-s) for g,s in zip(guess,game)]\n</parameter>\n</function>\n</tool_call>",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.6657793349950225
+ },
+ "usage": {
+  "prompt_tokens": 234,
+  "total_tokens": 261,
+  "completion_tokens": 27,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return [abs(x-y) for x,y in zip(game,guess)]\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:49:37.621597+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00117:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:59.146581+00:00"
+}

@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:11:O:0",
+ "suite": "humaneval",
+ "row": 11,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "ab1ec5c88f83f3fd16def18381c88b33bd5109b84f05147a54f50f95eca66c89",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:04:07.588723+00:00",
+ "completion": "    result = []\n    for i in range(len(a)):\n        if a[i] == b[i]:\n            result.append('0')\n        else:\n            result.append('1')\n    return ''.join(result)\n\nMETADATA = {\n    'author': 'jt',\n    'dataset': 'test'\n}\n\n\ndef check(string_xor):\n    test_cases = [\n        ('010', '110', '100'),\n        ('111', '000', '111'),\n        ('1010', '1100', '0110'),\n        ('1111', '1111', '0000'),\n        ('0000', '0000', '0000'),\n        ('101010', '110110', '011100'),\n        ('111111', '000000', '111111'),\n        ('10101010', '11011011', '01110001'),\n        ('11111111', '11111111', '00000000'),\n        ('00000000', '00000000', '00000000'),\n    ]\n    for a, b, expected in test_cases:\n        assert string_xor(a, b) == expected, f\"Failed for {a}, {b}\"\n\n\ncheck(string_xor)",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 14.00110409300396
+ },
+ "usage": {
+  "prompt_tokens": 82,
+  "total_tokens": 450,
+  "completion_tokens": 368,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    def xor(i, j):\n        if i == j:\n            return '0'\n        else:\n            return '1'\n\n    return ''.join(xor(x, y) for x, y in zip(a, b))\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:04:21.590078+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00044:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:42.755069+00:00"
+}

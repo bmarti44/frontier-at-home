@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:705:O:0",
+ "suite": "gsm8k",
+ "row": 705,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "17a924b7b1d7d16168cdbcda40c6afbc7ae5faf5f3d41adb5b6d926860fdab3f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:21:44.164206+00:00",
+ "completion": "The cat is 5 times faster than the turtle. Cat speed = 15 ft/s. Turtle speed = 15/5 = 3 ft/s. In 40 seconds, turtle crawls 3*40 = 120 feet. Need final numeric answer on its own line. Brief reasoning okay. Ensure final line exactly Answer: 120 maybe with feet? User says form Answer: <number>. So Answer: 120.The turtle is 5 times slower than the cat, so its speed is 15 / 5 = 3 feet/second. In 40 seconds: 3 × 40 = 120 feet.\n\nAnswer: 120",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.671212851004384
+ },
+ "usage": {
+  "prompt_tokens": 80,
+  "total_tokens": 229,
+  "completion_tokens": 149,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "120",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:21:47.835716+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:612:P:0",
+ "suite": "gsm8k",
+ "row": 612,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "fca0215e2b0f38a8e710701fde7eb1af2cbd9844ca92b7c48c0f03e5dd62f8cb",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:06:30.077501+00:00",
+ "completion": "The user wants me to compute total ounces of meat consumed.\n\nFirst player: 6-ounce steak = 6 oz meat.\nSecond player: beef tips, 3 tips each 1 ounce = 3 oz meat.\nThird player: one-pound steak. 1 pound = 16 ounces. So 16 oz meat.\nFourth and fifth: vegetarian meals = 0 oz meat.\n\nTotal = 6 + 3 + 16 + 0 + 0 = 25 oz.\n\nNeed to answer with brief reasoning and final line exactly \"Answer: <number>\". Ensure final numeric answer on its own line.6 + 3 + 16 = 25 ounces.\n\nAnswer: 25",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.409385769002256
+ },
+ "usage": {
+  "prompt_tokens": 129,
+  "total_tokens": 291,
+  "completion_tokens": 162,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "25",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:06:34.487164+00:00"
+}

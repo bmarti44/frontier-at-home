@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:3466:P:0",
+ "suite": "mmlu-pro",
+ "row": 3466,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "c3240ef0123e46c6587577574dbf987c905f2fa74b206abf88c786bb31d69ef1",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:11:36.219237+00:00",
+ "completion": "We need answer chemistry. Need compute carefully.\n\nReaction: 2 NH3(g) ⇌ N2(g) + 3 H2(g). Initial: 2.0 mol NH3 in 1.0 L, no N2/H2. At equilibrium, 1.0 mol NH3 remains. So NH3 consumed = 1.0 mol. Stoichiometry: for every 2 mol NH3 consumed, 1 mol N2 and 3 mol H2 produced. Consumed 1.0 mol NH3 = 0.5 mol of reaction extent? Let extent ξ: consumes 2ξ NH3, produces ξ N2, 3ξ H2. 2ξ = 1.0 => ξ=0.5. Equilibrium amounts: NH3=1.0, N2=0.5, H2=1.5. Volume 1.0 L so concentrations equal moles: [NH3]=1.0, [N2]=0.5, [H2]=1.5.\nKc = [N2][H2]^3/[NH3]^2 = 0.5*(1.5)^3/(1.0)^2. 1.5^3 = 3.375. *0.5 = 1.6875. Option B.\nNeed final only single letter form. Ensure no extra.Answer: B",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.023442307996447
+ },
+ "usage": {
+  "prompt_tokens": 195,
+  "total_tokens": 515,
+  "completion_tokens": 320,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "B",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:11:44.242990+00:00"
+}

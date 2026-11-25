@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:149:P:0",
+ "suite": "humaneval",
+ "row": 149,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "030070a5e3fe926555d3ff5aef5027f3615fe42e8d3f761365416b4bc098f29d",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:24:31.768421+00:00",
+ "completion": "    even_length_words = [word for word in lst if len(word) % 2 == 0]\n    sorted_words = sorted(even_length_words, key=lambda x: (len(x), x))\n    return sorted_words\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.918690950013115
+ },
+ "usage": {
+  "prompt_tokens": 196,
+  "total_tokens": 246,
+  "completion_tokens": 50,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    lst.sort()\n    new_lst = []\n    for i in lst:\n        if len(i)%2 == 0:\n            new_lst.append(i)\n    return sorted(new_lst, key=len)\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:24:34.687303+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00109:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:57.312441+00:00"
+}

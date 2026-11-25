@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:371:P:0",
+ "suite": "gsm8k",
+ "row": 371,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "40aabfa33b2fd0b303ce98fcd27bfbe9a4b02975135466f06cb15e3383544fb3",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:06:25.785854+00:00",
+ "completion": "We need answer arithmetic. Need be careful: Friday sold 11 pairs. Saturday sold double that number of shoes. Wording: \"double that number of shoes\" could mean double the number of shoes sold Friday. Friday sold 11 pairs = 22 shoes. Double that number of shoes = 44 shoes = 22 pairs. Last day sold one-half the amount that they did the day before. \"amount\" likely number of shoes? Day before sold 44 shoes; half = 22 shoes. But six people returned their pairs because they didn't fit. Returned pairs = 6 pairs = 12 shoes. Need how many tennis shoes were sold by end of sale? Interpret sold by end of sale maybe net sold after returns? Let's parse.\n\nFriday: 11 pairs. Next day: sold double that number of shoes. If \"that number\" refers to 11 pairs? They sold double that number of shoes = 22 shoes? Hmm exact: \"On Friday the store sold 11 pairs of tennis shoes. The next day they sold double that number of shoes.\" Since Friday number is pairs, \"double that number of shoes\" ambiguous. Could mean double the number of shoes (11 pairs = 22 shoes) = 44 shoes. Then last day sold one-half the amount that they did the day before = half of 44 shoes = 22 shoes. Six people returned their pairs: 6 pairs = 12 shoes returned. How many tennis shoes were sold by end of sale? Could be total sold (gross) = 22 + 44 + 22 = 88 shoes. Returns don't change number sold? But they mention returns, so likely subtract returned shoes: 88 - 12 = 76. Need determine intended.\n\nLet's examine wording: \"On the last day of the sale they sold one-half the amount that they did the day before, but six people returned their pairs because they didn't fit. How many tennis shoes were sold by the end of the sale?\" They ask shoes sold by end of sale. Returns mean those pairs no longer sold? Usually word problems include returns to subtract. Need compute in pairs maybe: Friday 11 pairs. Saturday double that number of shoes: Friday 11 pairs = 22 shoes; double = 44 shoes = 22 pairs. Sunday sold half the amount day before = 22 shoes = 11 pairs. Six people returned pairs = 6 pairs returned. Net pairs sold = 11 + 22 + 11 - 6 = 38 pairs = 76 shoes. Yes.\n\nNeed final with brief explanation and final line exact. Ensure final numeric answer on own line. Could mention gross vs net. Keep concise.Friday: 11 pairs = 22 shoes  \nSaturday: double = 44 shoes  \nSunday: half = 22 shoes  \nReturns: 6 pairs = 12 shoes  \n\nNet shoes sold: 22 + 44 + 22 − 12 = 76  \n\nAnswer: 76",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 18.324354366002808
+ },
+ "usage": {
+  "prompt_tokens": 130,
+  "total_tokens": 767,
+  "completion_tokens": 637,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": false,
+ "expected": "38",
+ "reason": "incorrect: parsed='76' expected='38'",
+ "finished_at": "2026-11-24T20:06:44.110453+00:00"
+}

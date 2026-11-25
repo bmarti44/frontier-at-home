@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:192:P:0",
+ "suite": "gsm8k",
+ "row": 192,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "7d8f3f13ead750a66b1739891090d1a429cb80a2f57e1128a6700652290bbcb1",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T09:08:41.431236+00:00",
+ "completion": "Let me work through this step by step.\n\nCarlos starts with 80 trees.\nEach year he plants 12 trees and chops down 8 trees.\nNet gain per year = 12 - 8 = 4 trees per year.\n\nAfter 20 years:\nTrees added = 4 × 20 = 80 trees\nTotal trees after 20 years = 80 + 80 = 160 trees\n\nThen 60% of the trees die:\nTrees that die = 60% of 160 = 0.6 × 160 = 96 trees\nTrees remaining = 160 - 96 = 64 trees\n</think>\n\nLet me work through this step by step.\n\n**Starting point:** 80 trees\n\n**Net change per year:** 12 planted - 8 chopped = 4 trees per year\n\n**After 20 years:**\n- Trees gained: 4 × 20 = 80\n- Total trees: 80 + 80 = 160\n\n**After 60% die:**\n- Trees that die: 0.60 × 160 = 96\n- Trees remaining: 160 - 96 = 64\n\nAnswer: 64",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 12.191841496998677
+ },
+ "usage": {
+  "prompt_tokens": 121,
+  "total_tokens": 410,
+  "completion_tokens": 289,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "64",
+ "reason": "correct",
+ "finished_at": "2026-11-25T09:08:53.623337+00:00"
+}

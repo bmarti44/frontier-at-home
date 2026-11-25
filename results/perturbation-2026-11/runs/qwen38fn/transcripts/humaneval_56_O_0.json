@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:56:O:0",
+ "suite": "humaneval",
+ "row": 56,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "4d14ffd571dae1770eb5e26636b128c8520cee2173f2f4a592277c6cd094e644",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T04:56:47.349065+00:00",
+ "completion": "    depth = 0\n    for b in brackets:\n        if b == \"<\":\n            depth += 1\n        else:\n            depth -= 1\n        if depth < 0:\n            return False\n    return depth == 0\n\n\nMETADATA = {\n    'author': 'jt',\n    'dataset': 'test'\n}\n\n\ndef check(correct_bracketing):\n    assert correct_bracketing(\"<\") == False\n    assert correct_bracketing(\"<>\") == True\n    assert correct_bracketing(\"<<><>>\") == True\n    assert correct_bracketing(\"><<>\") == False\n\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.164822471000662
+ },
+ "usage": {
+  "prompt_tokens": 95,
+  "total_tokens": 231,
+  "completion_tokens": 136,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    depth = 0\n    for b in brackets:\n        if b == \"<\":\n            depth += 1\n        else:\n            depth -= 1\n        if depth < 0:\n            return False\n    return depth == 0\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T04:56:52.514117+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00230:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:35.097008+00:00"
+}

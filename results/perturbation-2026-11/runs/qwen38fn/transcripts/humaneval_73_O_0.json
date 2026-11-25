@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:73:O:0",
+ "suite": "humaneval",
+ "row": 73,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "a91bec8bc0f85124b068553a370cb6c2b8564b2e298289f578e913cb77f619bf",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:08:29.428259+00:00",
+ "completion": "    n = len(arr)\n    count = 0\n    for i in range(n // 2):\n        if arr[i] != arr[n - 1 - i]:\n            count += 1\n    return count\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.1110483839947847
+ },
+ "usage": {
+  "prompt_tokens": 157,
+  "total_tokens": 207,
+  "completion_tokens": 50,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    ans = 0\n    for i in range(len(arr) // 2):\n        if arr[i] != arr[len(arr) - i - 1]:\n            ans += 1\n    return ans\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:08:31.539497+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00268:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:43.473952+00:00"
+}

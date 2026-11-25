@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1024:P:1",
+ "suite": "gsm8k",
+ "row": 1024,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "cb967ab22c6921eed176efb7f297aabb857759a9bd23790859e287cd7b3e929e",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:22:11.042979+00:00",
+ "completion": "Let me solve this step by step.\n\n1. Grace sold 80 cookies for $2 each: 80 × $2 = $160\n2. Grace sold 40 cupcakes for $8 each: 40 × $8 = $320\n3. Total earnings: $160 + $320 = $480\n4. She gave her two sisters $25 each: 2 × $25 = $50\n5. Money left: $480 - $50 = $430\n</think>\n\nGrace's earnings:\n- Cookies: 80 × $2 = $160\n- Cupcakes: 40 × $8 = $320\n- Total earnings: $160 + $320 = $480\n\nMoney given to sisters: 2 × $25 = $50\n\nMoney left: $480 - $50 = $430\n\nAnswer: 430",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.151564722997136
+ },
+ "usage": {
+  "prompt_tokens": 110,
+  "total_tokens": 328,
+  "completion_tokens": 218,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "430",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:22:19.194788+00:00"
+}

@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:5524:P:0",
+ "suite": "mmlu-pro",
+ "row": 5524,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "3cc608d23f844aa38572b4699c2544f87a17b1717bce80b05e78575bf628edc3",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:47:00.014091+00:00",
+ "completion": "The Kinsey scale is a 7-point scale (0-6) that describes a person's sexual orientation:\n\n- 0 = Exclusively heterosexual\n- 1 = Predominantly heterosexual, only incidentally homosexual\n- 2 = Predominantly heterosexual, but more than incidentally homosexual\n- 3 = Equally heterosexual and homosexual (bisexual)\n- 4 = Predominantly homosexual, but more than incidentally heterosexual\n- 5 = Predominantly homosexual, only incidentally heterosexual\n- 6 = Exclusively homosexual\n\nSo a rating of 4 would be \"mostly homosexual with incidental heterosexual experience\" or more precisely \"predominantly homosexual, but more than incidentally heterosexual.\"\n\nLooking at the options:\n- D says \"mostly homosexual with incidental heterosexual experience\" - this is closer to a 5\n- H says \"homosexual with substantial heterosexual experience\" - this is closer to a 4\n\nWait, let me reconsider. The standard descriptions:\n- 4 = Predominantly homosexual, but more than incidentally heterosexual\n\nSo \"substantial heterosexual experience\" fits better for a 4 than \"incidental heterosexual experience\" (which would be a 5).\n\nOption H: \"homosexual with substantial heterosexual experience\" - this matches a 4.\n\nActually, let me reconsider the options more carefully:\n- D: \"mostly homosexual with incidental heterosexual experience\" - this sounds like a 5\n- H: \"homosexual with substantial heterosexual experience\" - this sounds like a 4\n\nYes, H is the correct answer for a Kinsey rating of 4.\n</think>\n\nAnswer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.943272614997113
+ },
+ "usage": {
+  "prompt_tokens": 162,
+  "total_tokens": 502,
+  "completion_tokens": 340,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:47:13.957594+00:00"
+}

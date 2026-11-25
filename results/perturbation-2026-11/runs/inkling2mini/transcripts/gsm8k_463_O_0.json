@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:463:O:0",
+ "suite": "gsm8k",
+ "row": 463,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "6b00f5c65b485615d0ff0df09d7afbfff807d463e1f61571f10827a654713810",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:48:56.836358+00:00",
+ "completion": "The user asks: Ashley's pizza delivery costs $15. What is the total amount that Ashley should give the delivery man if she wants to give a tip that is equal to 1/5 of the amount she ordered?\n\nInterpretation: delivery costs $15. Tip = 1/5 of amount she ordered. The amount she ordered likely $15? Then tip = 3, total = 18. Need be careful: \"delivery costs $15\" could mean the pizza delivery costs $15 (the order). Tip equal to 1/5 of amount she ordered = 1/5*15=3. Total = 18.\n\nNeed final numeric answer on own line. Brief.Tip = 1/5 × $15 = $3. Total = $15 + $3 = $18.\n\nAnswer: 18",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.559708777000196
+ },
+ "usage": {
+  "prompt_tokens": 84,
+  "total_tokens": 267,
+  "completion_tokens": 183,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "18",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:49:01.396323+00:00"
+}

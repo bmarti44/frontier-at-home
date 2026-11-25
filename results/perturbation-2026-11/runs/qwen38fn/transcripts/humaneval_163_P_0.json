@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:163:P:0",
+ "suite": "humaneval",
+ "row": 163,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "1529deea87fb980039e14000314aaeb78cd41b7c56ddb8250b5ee548aec6d319",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:16:23.510691+00:00",
+ "completion": "    if a > b:\n        a, b = b, a\n    return [x for x in range(a, b + 1) if x % 2 == 0]\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.0672201580018736
+ },
+ "usage": {
+  "prompt_tokens": 109,
+  "total_tokens": 151,
+  "completion_tokens": 42,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    lower = max(2, min(a, b))\n    upper = min(8, max(a, b))\n\n    return [i for i in range(lower, upper+1) if i % 2 == 0]\n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T08:16:25.578133+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00141:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 30, in <module>\n    check(produce_integers)\n  File \"/case/main.py\", line 20, in check\n    assert candidate(2, 10) == [2, 4, 6, 8], \"Test 1\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Test 1\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:04.303219+00:00"
+}

@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:27:P:0",
+ "suite": "humaneval",
+ "row": 27,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "420ceecaf8aa5b9d1f4c3a2a937d8b9f935a44c55f5859a1f7db8d3042eeae6a",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:27:33.957312+00:00",
+ "completion": "",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 0.4617640799988294
+ },
+ "usage": {
+  "prompt_tokens": 47,
+  "total_tokens": 48,
+  "completion_tokens": 1,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    return string.swapcase()\n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T07:27:34.419344+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00167:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 25, in <module>\n    check(invert_case)\n  File \"/case/main.py\", line 20, in check\n    assert candidate('') == ''\n           ^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:10.630247+00:00"
+}

@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:103:P:0",
+ "suite": "humaneval",
+ "row": 103,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "20970cfcf8921bae5a96fa942588a0c259f99669406cb18f05f78f82a6fa2e83",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:44:29.029741+00:00",
+ "completion": "    if n > m:\n        return -1\n    else:\n        return bin(round((n + m) / 2))\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.6902751789966715
+ },
+ "usage": {
+  "prompt_tokens": 153,
+  "total_tokens": 184,
+  "completion_tokens": 31,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    if m < n:\n        return -1\n    summation = 0\n    for i in range(n, m+1):\n        summation += i\n    return bin(round(summation/(m - n + 1)))\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:44:30.720265+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00009:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:35.083847+00:00"
+}

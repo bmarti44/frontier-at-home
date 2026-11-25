@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:595:O:0",
+ "suite": "mmlu-pro",
+ "row": 595,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "cd0d144a121530f4ed28798aa1b7a4848ab6267b090ef25b924458477a2deeeb",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:31:21.316604+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Frank Bryant salesman. Compensated for all travel expenses, allowed drawing account of $600 per month. Receives monthly commission: 2% of first $30,000 sales, 2.5% of next $10,000 sales, 3% of all sales in excess of $40,000. Find amount due him for month in which travel expenses paid out of pocket are $332.75, drawings are $600, sales total $41,180.\n\nInterpretation: He is compensated for all travel expenses (reimbursed), allowed drawing account $600 per month. He has drawings $600 (i.e., he drew $600 from drawing account). Need amount due him = commission + travel expenses reimbursement - drawings? Let's compute commission: first 30k *2% = 600. Next 10k (30k-40k) *2.5% = 250. Excess over 40k: 1,180 *3% = 35.40. Total commission = 885.40. Add travel expenses paid out of pocket 332.75 = 1218.15. Subtract drawings 600 = 618.15. Option D. Check: 885.40+332.75=1218.15 (option I) then -600 = 618.15 (D). Yes.\n\nNeed final only single letter form. Ensure no extra.Answer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.325393102000817
+ },
+ "usage": {
+  "prompt_tokens": 236,
+  "total_tokens": 560,
+  "completion_tokens": 324,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:31:29.642217+00:00"
+}

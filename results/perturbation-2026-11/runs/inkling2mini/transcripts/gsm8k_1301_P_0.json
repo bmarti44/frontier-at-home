@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1301:P:0",
+ "suite": "gsm8k",
+ "row": 1301,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "60ce6602c3355fc16fb5541c60063bc3aa78f613b37496b9db30123e33a248be",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:42:55.862103+00:00",
+ "completion": "We need answer arithmetic. Need compute carefully.\n\nInitial: oatmeal 6, chocolate chip 7, sugar 7. Total 20.\nAte 3 cookies early snack, one of each flavor: subtract 1 oatmeal, 1 choc, 1 sugar. Remaining: oatmeal 5, choc 6, sugar 6. Total 17.\nAte 5 oatmeal for lunch: oatmeal 0, total 12. (5-5=0)\nGives 5 sugar cookies to friends: sugar 6-5=1, total 7.\nBakes 2 of each flavor for dinner: oatmeal +2 =2, choc +2=8, sugar +2=3. Total 13. Check total: 0+6+6=12; -5 sugar =7; +6 =13. Yes.\nNeed final with brief maybe one line and final numeric answer own line. Ensure final line exactly Answer: 13.After all changes: oatmeal 2, chocolate chip 8, sugar 3, total 13.\nAnswer: 13",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.679813096001453
+ },
+ "usage": {
+  "prompt_tokens": 121,
+  "total_tokens": 372,
+  "completion_tokens": 251,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "13",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:43:03.542205+00:00"
+}

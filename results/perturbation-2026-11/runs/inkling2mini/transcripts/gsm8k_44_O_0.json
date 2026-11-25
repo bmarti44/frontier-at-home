@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:44:O:0",
+ "suite": "gsm8k",
+ "row": 44,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "1be97b15d8365f26b8aa081cec1ff368457c702cf15e6bc5811a5e0f75ab04f4",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:56:43.885417+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: For every pound of beeswax, he can make 10 tapered candles. One pound of beeswax and the wicks cost $10.00 in supplies. Sells each candle for $2.00. Net profit if makes and sells 20 candles?\n\n20 candles / 10 per pound = 2 pounds beeswax. Supplies cost: one pound beeswax and wicks cost $10.00. Ambiguity: \"One pound of beeswax and the wicks cost $10.00 in supplies\" likely for each pound (and wicks for 10 candles) cost $10. So 2 pounds cost $20. Revenue 20*$2=$40. Profit = $20.\n\nNeed final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly. Use $ maybe number. They say numeric answer; form Answer: <number>. Could do Answer: $20.00. That's numeric with currency. Fine.20 candles require 2 pounds of beeswax. Supplies cost 2 × $10.00 = $20.00. Revenue is 20 × $2.00 = $40.00. Net profit = $40.00 − $20.00 = $20.00.\n\nAnswer: $20.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.475818998995237
+ },
+ "usage": {
+  "prompt_tokens": 121,
+  "total_tokens": 430,
+  "completion_tokens": 309,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "20",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:56:50.361490+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:923:P:0",
+ "suite": "gsm8k",
+ "row": 923,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "bf18df5aa603c3965bd2d875d7c70f5c6fee1b8d6263aef66e0c3295a63f48a7",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:06:27.828734+00:00",
+ "completion": "We need answer math. Need parse carefully.\n\nProblem: Mia has 24 cups, divides these into 2 rows. In each row, she creates equal amounts of chamomile and mint tea cups. She then uses the remaining cups to brew a total of 20 cups of cinnamon tea. How many cups of mint tea are in each row?\n\nInterpretation: She has 24 cups total. Divides into 2 rows => 12 cups per row? In each row, she creates equal amounts of chamomile and mint tea cups. So in each row, chamomile = mint, using some cups. Then uses remaining cups to brew total 20 cups cinnamon tea. Total cups used = chamomile + mint + cinnamon = 24. Cinnamon total =20. Remaining cups = 24-20=4 for chamomile+mint across both rows. Equal amounts of chamomile and mint in each row. Let mint per row = x, chamomile per row = x (equal amounts in each row). Across 2 rows: mint=2x, chamomile=2x, total chamomile+mint=4x. Set 4x +20 =24 =>4x=4=>x=1. Answer 1.\n\nNeed final with brief explanation and final line exact. Ensure final numeric answer on own line.Total cups used for chamomile and mint: 24 − 20 = 4.  \nAcross 2 rows, with equal chamomile and mint per row, mint cups total 2, so per row: 2 ÷ 2 = 1.\n\nAnswer: 1",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 9.776781952001329
+ },
+ "usage": {
+  "prompt_tokens": 115,
+  "total_tokens": 461,
+  "completion_tokens": 346,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "1",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:06:37.605759+00:00"
+}

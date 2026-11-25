@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1212:P:1",
+ "suite": "gsm8k",
+ "row": 1212,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "3ec0da286f1752f2950a008f01b1c55723a5ad47879a301927063690d7fdc08f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:20:45.808530+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nMarcus is dean of private school where he teaches one class. Derek is dean of public school. Derek has two classes in his school. Each class has 1/5 the capacity of Marcus’s class which has capacity 210 students. What is combined capacity of both schools?\n\nMarcus's class capacity = 210. Each class (Derek's classes?) has 1/5 the capacity of Marcus's class = 42. Derek has two classes = 84. Private school has Marcus teaches one class = 210 (assuming school capacity = one class). Public school capacity = two classes = 84. Combined = 294.\n\nNeed final with brief explanation and final line exactly Answer: 294. Ensure no extra after final line.Marcus’s class capacity is 210. Each of Derek’s classes has \\(210/5 = 42\\) students, and he has 2 classes: \\(2 \\times 42 = 84\\). Combined capacity: \\(210 + 84 = 294\\).\n\nAnswer: 294",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.204362593001861
+ },
+ "usage": {
+  "prompt_tokens": 110,
+  "total_tokens": 360,
+  "completion_tokens": 250,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "294",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:20:53.013129+00:00"
+}

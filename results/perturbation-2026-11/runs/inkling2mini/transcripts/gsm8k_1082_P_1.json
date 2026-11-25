@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1082:P:1",
+ "suite": "gsm8k",
+ "row": 1082,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "610582191ca7d79e579b15821e343b518b473551543decafba089ee4ea722c3c",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:52:27.167003+00:00",
+ "completion": "We need answer math. Need parse carefully. Ravi walks to store. Home is 8 miles from store. He walks halfway there = 4 miles toward store. Realizes forgot something and had to walk back. Ambiguity: walk back to home? \"had to walk back\" likely back home. Then presumably after getting something he walks to store again. Need total time to reach store. Sequence: home -> halfway (4 mi) at 4 mph = 1 h. Then walk back home (4 mi) = 1 h. Then walk to store (8 mi) = 2 h. Total = 4 h. Need ensure if he forgot something at home and had to walk back, maybe he walks back halfway? No, forgot something at home means return home. Total distance = 4 + 4 + 8 = 16 miles; at 4 mph = 4 hours. Final numeric answer on own line. Need brief explanation and final line exactly.He walks 4 miles to halfway, 4 miles back home, then 8 miles to the store: 16 miles total. At 4 miles per hour, that takes 16/4 = 4 hours.\n\nAnswer: 4 hours",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.397730108998076
+ },
+ "usage": {
+  "prompt_tokens": 99,
+  "total_tokens": 362,
+  "completion_tokens": 263,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "4",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:52:35.565016+00:00"
+}

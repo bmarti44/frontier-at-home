@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:8246:P:0",
+ "suite": "mmlu-pro",
+ "row": 8246,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "549824130b79add711014e378ecdc776b186b9ed73b9522155c040482f6d880b",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:16:25.079636+00:00",
+ "completion": "We need answer single letter. Need compute. Uniform(0,1), sample n=12. Mean bar X approx normal mean 0.5 variance (1/12)/12? Uniform variance =1/12. Sample mean variance = (1/12)/12 =1/144 = (1/12)^2? Wait uniform variance = (b-a)^2/12 =1/12. Divide by n=12 gives 1/144. SD =1/12 ≈0.0833333. P(0.5 <= barX <= 0.6666667). Lower bound equals mean, so z lower=0, upper=(1/6)/(1/12)=2. So approx Phi(2)-Phi(0)=0.9772499-0.5=0.4772499. Option A 0.4772. Need ensure continuity correction? No. Answer A.Answer: A",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.526629281001078
+ },
+ "usage": {
+  "prompt_tokens": 190,
+  "total_tokens": 405,
+  "completion_tokens": 215,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "A",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:16:31.606553+00:00"
+}

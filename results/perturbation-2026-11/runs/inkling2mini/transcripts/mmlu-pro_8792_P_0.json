@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:8792:P:0",
+ "suite": "mmlu-pro",
+ "row": 8792,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "5dd47edba11b25b537f0cc18da561e54b8750bb2130737f7aad550adce83176e",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:43:13.930908+00:00",
+ "completion": "We need answer single letter. Need evaluate statements.\n\nA false: correlation 0 no linear relationship.\nB: correlation coefficient sign equals sign of slope of regression line? For simple linear regression y on x, slope b = r * (sy/sx). sy/sx positive, so sign(b)=sign(r). They cannot have opposite signs. False.\nC false: -1 perfect linear negative relationship, not cause-effect.\nD false: 1 perfect linear positive relationship, not cause-effect.\nE: correlations +0.87 and -0.87 have same absolute value, same degree of clustering around regression line (strength), opposite direction. True.\nF false: not equal generally.\nG false: can be positive/zero.\nH false: correlation coefficient (Pearson) applies to quantitative variables; categorical need other measures.\nAnswer E. Need final only form.Answer: E",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.397143549998873
+ },
+ "usage": {
+  "prompt_tokens": 192,
+  "total_tokens": 392,
+  "completion_tokens": 200,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "E",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:43:20.328410+00:00"
+}

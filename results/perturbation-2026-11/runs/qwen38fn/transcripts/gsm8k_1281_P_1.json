@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1281:P:1",
+ "suite": "gsm8k",
+ "row": 1281,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "938afb32a080fbd460c17769441e19e839173710e46a7fd4eb0d9477c9d9cd7a",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:01:10.103271+00:00",
+ "completion": "Let me work through this step by step.\n\n- Ethan has 5 pigs\n- Each pig eats 8 pounds of feed, twice a day\n- So each pig eats 8 × 2 = 16 pounds per day\n- 5 pigs eat 5 × 16 = 80 pounds per day\n- In a week (7 days), they eat 80 × 7 = 560 pounds\n- Ethan ordered 600 pounds\n- Left: 600 - 560 = 40 pounds\n</think>\n\nEach pig eats 8 pounds twice a day = 16 pounds per day.\n\n5 pigs eat 5 × 16 = 80 pounds per day.\n\nIn a week (7 days): 80 × 7 = 560 pounds consumed.\n\nFeed left: 600 - 560 = 40 pounds.\n\nAnswer: 40",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.792186971004412
+ },
+ "usage": {
+  "prompt_tokens": 107,
+  "total_tokens": 310,
+  "completion_tokens": 203,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "40",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:01:17.895691+00:00"
+}

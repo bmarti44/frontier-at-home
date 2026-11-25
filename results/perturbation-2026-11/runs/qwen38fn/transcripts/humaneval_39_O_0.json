@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:39:O:0",
+ "suite": "humaneval",
+ "row": 39,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "6dde5c311a83caad26ca80e7e914c596b9cb6e8467630530600e21c98d547c5a",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T09:11:58.082137+00:00",
+ "completion": "    def is_prime(num):\n        if num < 2:\n            return False\n        for i in range(2, int(num ** 0.5) + 1):\n            if num % i == 0:\n                return False\n        return True\n\n    fib_numbers = [0, 1]\n    prime_fib_numbers = []\n\n    while len(prime_fib_numbers) < n:\n        next_fib = fib_numbers[-1] + fib_numbers[-2]\n        fib_numbers.append(next_fib)\n        if is_prime(next_fib):\n            prime_fib_numbers.append(next_fib)\n\n    return prime_fib_numbers[-1]\n\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.271286528994096
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 250,
+  "completion_tokens": 147,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    import math\n\n    def is_prime(p):\n        if p < 2:\n            return False\n        for k in range(2, min(int(math.sqrt(p)) + 1, p - 1)):\n            if p % k == 0:\n                return False\n        return True\n    f = [0, 1]\n    while True:\n        f.append(f[-1] + f[-2])\n        if is_prime(f[-1]):\n            n -= 1\n        if n == 0:\n            return f[-1]\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T09:12:05.353525+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00192:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:16.556710+00:00"
+}

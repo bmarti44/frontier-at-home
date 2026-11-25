@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1193:P:1",
+ "suite": "gsm8k",
+ "row": 1193,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "a6f486e8f115811cc9c4a630a2e9813b2b07abd6ef8223a67bbb2efaf6f1819b",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:23:33.195707+00:00",
+ "completion": "We need answer arithmetic. Need compute carefully.\n\nMarcus earns: laundry $2.00, cleaning room $2.00, trash to curb $1.00 each week? Wording: \"$1.00 for taking the trash to the curb each week and $1.00 for emptying the dishwasher.\" In a two week period, Marcus emptied dishwasher 5 times, did laundry once, took trash out twice and cleaned room once.\n\nInterpretation: laundry once = $2.00. Cleaning room once = $2.00. Trash out twice = $1.00 each time? It says for taking trash to curb each week; in two week period took trash out twice (once per week) = $2.00. Dishwasher 5 times = $5.00. Total = 2+2+2+5 = 11.00.\n\nNeed final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly.Laundry: $2.00  \nRoom: $2.00  \nTrash: 2 × $1.00 = $2.00  \nDishwasher: 5 × $1.00 = $5.00  \nTotal: $11.00\n\nAnswer: $11.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.392679505999695
+ },
+ "usage": {
+  "prompt_tokens": 139,
+  "total_tokens": 428,
+  "completion_tokens": 289,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "11",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:23:39.588696+00:00"
+}

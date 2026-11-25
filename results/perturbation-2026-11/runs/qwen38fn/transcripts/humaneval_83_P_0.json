@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:83:P:0",
+ "suite": "humaneval",
+ "row": 83,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "91ed7e89a9e7da9709eb5d5ebffcbd92ed7ba109934cc55df6814c48cf028e29",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:17:54.414415+00:00",
+ "completion": "    if n == 1:\n        return 1\n    return 18 * 10 ** (n - 2) + 1\n\n# Test the function\nprint(one_starts_or_ends(1))  # Output: 1\nprint(one_starts_or_ends(2))  # Output: 18\nprint(one_starts_or_ends(3))  # Output: 180\nprint(one_starts_or_ends(4))  # Output: 1800\nprint(one_starts_or_ends(5))  # Output: 18000\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.523985706000531
+ },
+ "usage": {
+  "prompt_tokens": 44,
+  "total_tokens": 168,
+  "completion_tokens": 124,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    if n == 1: return 1\n    return 18 * (10 ** (n - 2))\n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T07:17:59.938557+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00291:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 28, in <module>\n    check(one_starts_or_ends)\n  File \"/case/main.py\", line 18, in check\n    assert candidate(2) == 18\n           ^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:48.455404+00:00"
+}

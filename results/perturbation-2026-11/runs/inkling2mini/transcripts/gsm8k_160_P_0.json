@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:160:P:0",
+ "suite": "gsm8k",
+ "row": 160,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "abf0d123250a40766a0f23356fe92f15325d4db8c914088462b0eeac7e03d549",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:11:01.381564+00:00",
+ "completion": "The user wants a math answer. Need compute: Monday depth 16 ft. Tuesday = 16+5=21 ft. Wednesday = two thirds of Tuesday = (2/3)*21 = 14 ft. Need final numeric answer on its own line form Answer: <number>. They said think briefly if needed, then end with final numeric answer. We can provide brief calculation and final line. Ensure final line exactly Answer: 14 feet? They said numeric answer; form Answer: <number>. Could use Answer: 14 feet or Answer: 14. They said numeric answer on its own line. Use Answer: 14 feet maybe number with unit. \"<number>\" suggests just 14. But depth in feet; final numeric answer could be 14. Do that.Tuesday: 16 + 5 = 21 feet. Wednesday: (2/3) × 21 = 14 feet.\nAnswer: 14",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.180319979001069
+ },
+ "usage": {
+  "prompt_tokens": 97,
+  "total_tokens": 301,
+  "completion_tokens": 204,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "14",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:11:07.562220+00:00"
+}

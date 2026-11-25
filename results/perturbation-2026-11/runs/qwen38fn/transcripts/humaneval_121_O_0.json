@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:121:O:0",
+ "suite": "humaneval",
+ "row": 121,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "f5c091f79c729b97c5ed96f86e84d4d3ebee2ccae5b5ab192e98f6e265df18d5",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:46:29.970191+00:00",
+ "completion": "    return sum(x for i, x in enumerate(lst) if i % 2 == 0 and x % 2 == 1)\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.6565857690002304
+ },
+ "usage": {
+  "prompt_tokens": 101,
+  "total_tokens": 132,
+  "completion_tokens": 31,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return sum([x for idx, x in enumerate(lst) if idx%2==0 and x%2==1])\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:46:31.626925+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00048:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:43.663947+00:00"
+}

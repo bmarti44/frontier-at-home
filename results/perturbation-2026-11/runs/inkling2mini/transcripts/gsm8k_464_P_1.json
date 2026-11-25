@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:464:P:1",
+ "suite": "gsm8k",
+ "row": 464,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "273dd91e56a1a05065b9e961524b016855b7d4fe0c187fda2a0a922747675177",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:32:09.758097+00:00",
+ "completion": "We need answer arithmetic. Need compute carefully. Start first = position 1. Fell back 8 spots: in race, falling back means worse by 8 positions: 1+8=9. Moved ahead 3 spots: 9-3=6. Fell behind 5: 6+5=11. Jumped ahead 1: 11-1=10. Finish 10th. Need final numeric answer on own line form Answer: <number>. Brief maybe one sentence. Ensure final line exactly.Ruth went from 1st to 9th, then 6th, then 11th, then 10th.\n\nAnswer: 10",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.121474789993954
+ },
+ "usage": {
+  "prompt_tokens": 106,
+  "total_tokens": 257,
+  "completion_tokens": 151,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "10",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:32:13.879687+00:00"
+}

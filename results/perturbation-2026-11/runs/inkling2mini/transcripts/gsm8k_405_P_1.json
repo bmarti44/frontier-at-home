@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:405:P:1",
+ "suite": "gsm8k",
+ "row": 405,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "1752b00896c6a4e358dbb80991491a326a6e39a537ad894e34f733c7feec1381",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:48:19.756725+00:00",
+ "completion": "We need answer math. Need compute. 12 people, each sandwich serves 2 people => 6 sandwiches. Each sandwich requires 1 lb meat and 1 lb cheese => 6 lb meat, 6 lb cheese. Meat cost 6*8=48. Cheese cost 6*4=24. Total 72. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.12 people ÷ 2 people per sandwich = 6 sandwiches.  \n6 sandwiches × 1 lb meat = 6 lb meat; 6 lb × $8 = $48.  \n6 sandwiches × 1 lb cheese = 6 lb cheese; 6 lb × $4 = $24.  \nTotal = $48 + $24 = $72.\n\nAnswer: $72.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.936950884999533
+ },
+ "usage": {
+  "prompt_tokens": 135,
+  "total_tokens": 327,
+  "completion_tokens": 192,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "72",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:48:24.693892+00:00"
+}

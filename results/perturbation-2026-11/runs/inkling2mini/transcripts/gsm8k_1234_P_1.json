@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1234:P:1",
+ "suite": "gsm8k",
+ "row": 1234,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "57cb35f88cb9492d1e6b811720bb77a5555e73f6f9762719dc8fb9bd3311d3d0",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:27:34.165792+00:00",
+ "completion": "The user wants me to solve a math problem. Let me think.\n\nAmara wrote 6 novels last year. This is 3 quarters of the number of novels she has written this year.\n\nSo 6 = (3/4) * (this year's novels)\nThis year = 6 / (3/4) = 6 * 4/3 = 8.\n\nAnswer: 8.\n\nNeed to end with final numeric answer on its own line in form Answer: <number>. Brief thinking then final.6 is 3/4 of this year's total, so this year's total is 6 ÷ (3/4) = 6 × 4/3 = 8.\n\nAnswer: 8",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.416233857999032
+ },
+ "usage": {
+  "prompt_tokens": 80,
+  "total_tokens": 249,
+  "completion_tokens": 169,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "8",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:27:38.582360+00:00"
+}

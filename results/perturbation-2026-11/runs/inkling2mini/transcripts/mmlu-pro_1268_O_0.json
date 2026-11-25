@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:1268:O:0",
+ "suite": "mmlu-pro",
+ "row": 1268,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "fdbffd212583accc4e21d325ac336ce32bb3089fd5c0d53592a12502db65c0e2",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:19:37.818382+00:00",
+ "completion": "We need answer legal multiple choice. Need reason. Facts: wedding planner owned cottage on knoll above lake. Agreement with neighbor, adjoining landowner, whereby neighbor, in writing, granted wedding planner a right-of-way over strip of land 30 ft width and quarter mile length along eastern margin. Without notifying neighbor, planner improved roadbed by asphalting. Years later neighbor started sand business requiring heavy hauling destroyed asphalted surface. Ten years later planner sold lakefront property to artist. Shortly after artist took possession, neighbor erected barriers across roadway obstructing access to artist's property. Interest wedding planner acquired in access road best described as?\n\nKey: written grant of right-of-way = express easement. But is it easement in gross? It was granted to wedding planner personally? Let's parse. Easement in gross is right to use land for a specific purpose unrelated to any dominant estate, e.g., utility easement, or right to fish. Here wedding planner acquired right-of-way to access his cottage. That is appurtenant easement (benefit to dominant estate), not in gross. Written grant = express easement. It runs with land to artist. Neighbor cannot obstruct. Answer D.\n\nNeed ensure not easement by estoppel: planner improved road without notifying neighbor; estoppel requires reliance and detrimental reliance, but written agreement already exists. Express easement. Not prescriptive (no adverse use). Not necessity (not landlocked? maybe knoll above lake but agreement). Not implied prior use. Not license (written grant, not revocable). Not profit (right to remove resources). Not light/air/support. So D.\n\nNeed final only single letter form.Answer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 16.25777096499951
+ },
+ "usage": {
+  "prompt_tokens": 377,
+  "total_tokens": 778,
+  "completion_tokens": 401,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:19:54.076425+00:00"
+}

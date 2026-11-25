@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:135:P:0",
+ "suite": "humaneval",
+ "row": 135,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "b883477a8c20e39826fc4129b65c4db96f503dc40dbaf315e67270c58faa6e12",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:31:41.965492+00:00",
+ "completion": "    for i in range(len(arr)-1, 0, -1):\n        if arr[i] < arr[i-1]:\n            return i\n    return -1\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.7558387280005263
+ },
+ "usage": {
+  "prompt_tokens": 99,
+  "total_tokens": 138,
+  "completion_tokens": 39,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    ind=-1\n    i=1\n    while i<len(arr):\n      if arr[i]<arr[i-1]:\n        ind=i\n      i+=1\n    return ind\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:31:43.721539+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00079:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:50.504371+00:00"
+}

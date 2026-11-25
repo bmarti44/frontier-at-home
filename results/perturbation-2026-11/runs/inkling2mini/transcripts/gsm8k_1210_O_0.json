@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1210:O:0",
+ "suite": "gsm8k",
+ "row": 1210,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "e19e251463026c05b12a8ffbcbab8f7690ffa7fb1f888d9c7e1790c2301bdb97",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:32:50.510011+00:00",
+ "completion": "The user wants a math answer. Compute: 10 packs * 30 balloons = 300 balloons. 12 left, so thrown = 300 - 12 = 288. Need final numeric answer on its own line in form Answer: <number>. They said think briefly if needed, then end with final numeric answer. We can provide brief calculation and final line. Ensure final line exactly Answer: 288.They started with 10 × 30 = 300 balloons. With 12 left, they threw 300 − 12 = 288.\n\nAnswer: 288",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.693520193002769
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 234,
+  "completion_tokens": 131,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "288",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:32:54.203787+00:00"
+}

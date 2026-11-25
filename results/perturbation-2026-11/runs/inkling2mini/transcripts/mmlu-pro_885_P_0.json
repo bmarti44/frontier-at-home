@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:885:P:0",
+ "suite": "mmlu-pro",
+ "row": 885,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "27692fb4beb5c8362be99c49162138e4fa94b8f70ff10ed2c685be4525cfac8e",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:16:13.488593+00:00",
+ "completion": "We need answer legal evidence. Need reason carefully. Scenario: plaintiff sued defendant for injuries when struck by defendant's car. Plaintiff testified walking across street inside crosswalk at time. Jurisdiction statute requires motorists stop and permit pedestrians to cross at designated crosswalks. Defendant contended plaintiff ran into street outside crosswalk. Defendant testified he immediately applied brakes when saw plaintiff dart into street, couldn't stop. In support of defendant's testimony, defendant calls neighbor to testify she has observed plaintiff frequently during years lived on street, and plaintiff \"always crosses the street outside the crosswalk.\" Neighbor's testimony likely to be?\n\nThis is character evidence / habit. FRE 406: evidence of habit or routine practice is admissible to prove conduct in conformity. Habit = specific, repeated, semi-automatic response to particular situation. \"Always crosses the street outside the crosswalk\" is habit of crossing street outside crosswalk. It is probative of plaintiff's conduct on this occasion. But note: character evidence to show conduct on particular occasion is generally inadmissible, except habit/routine practice. Here neighbor's testimony is habit, not character. So F likely. Need check options: G says excluded because impermissible evidence of character to show defendant's plaintiff's conduct on a particular occasion. But habit exception makes F. Also H supports defendant's version of events: habit evidence can be admitted to show conduct, but not merely to support version? F more precise. D credibility? no. E hearsay? neighbor's testimony is her observation, not hearsay. B personal opinion? no, factual observation. A irrelevant? no. C context? no. I careless? habit not carelessness. So F.\n\nNeed final only single letter form. Ensure no extra.Answer: F",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 16.109037018999516
+ },
+ "usage": {
+  "prompt_tokens": 399,
+  "total_tokens": 799,
+  "completion_tokens": 400,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "F",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:16:29.597950+00:00"
+}

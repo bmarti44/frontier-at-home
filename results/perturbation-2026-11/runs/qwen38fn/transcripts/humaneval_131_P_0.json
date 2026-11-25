@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:131:P:0",
+ "suite": "humaneval",
+ "row": 131,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "41102e77f5ae8d2999a22baa5ef9a06c2cc8ffb3dfc97036b67a9acd71a10e48",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:53:00.874826+00:00",
+ "completion": "    product = 1\n    has_odd = False\n    for digit in str(n):\n        if int(digit) % 2 != 0:\n            product *= int(digit)\n            has_odd = True\n    return product if has_odd else 0\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.896668031011359
+ },
+ "usage": {
+  "prompt_tokens": 78,
+  "total_tokens": 137,
+  "completion_tokens": 59,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    product = 1\n    odd_count = 0\n    for digit in str(n):\n        int_digit = int(digit)\n        if int_digit%2 == 1:\n            product= product*int_digit\n            odd_count+=1\n    if odd_count ==0:\n        return 0\n    else:\n        return product\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:53:04.771707+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00071:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:48.797902+00:00"
+}

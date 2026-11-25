@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1122:P:1",
+ "suite": "gsm8k",
+ "row": 1122,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "40e9a94046d73f8892407fcd17bd01840f5fc6df47b7db8be43e08cc631f05a1",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:48:58.536914+00:00",
+ "completion": "Let me work through this step by step.\n\n- Total order: 480 toys\n- 5 workers available\n- 2 workers produce 3 toys/hour each\n- 2 workers produce 5 toys/hour each\n- 1 worker produces x toys/hour (unknown)\n- They work an 11-hour shift\n- After the shift, they still need 40 more toys\n\nSo the total toys produced during the shift = 480 - 40 = 440 toys\n\nProduction per hour:\n- 2 workers × 3 toys/hour = 6 toys/hour\n- 2 workers × 5 toys/hour = 10 toys/hour\n- 1 worker × x toys/hour = x toys/hour\n\nTotal per hour = 6 + 10 + x = 16 + x\n\nOver 11 hours: 11(16 + x) = 440\n\n16 + x = 40\nx = 24\n\nThe fifth worker produces 24 toys per hour.\n</think>\n\n## Setting Up the Problem\n\n**Total toys needed:** 480\n**Toys still needed after shift:** 40\n**Toys actually produced:** 480 − 40 = **440 toys**\n\n**Production per hour:**\n- 2 workers × 3 toys/hr = 6 toys/hr\n- 2 workers × 5 toys/hr = 10 toys/hr\n- 1 worker × x toys/hr = x toys/hr\n\n**Total hourly rate:** 16 + x\n\n**Over 11 hours:**\n\n$$11(16 + x) = 440$$\n\n$$16 + x = 40$$\n\n$$x = 24$$\n\nAnswer: 24",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 15.117935135000153
+ },
+ "usage": {
+  "prompt_tokens": 163,
+  "total_tokens": 558,
+  "completion_tokens": 395,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "24",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:49:13.655080+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:371:P:1",
+ "suite": "gsm8k",
+ "row": 371,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "d5252cd688fefa161190bff2afb2794afbb0b52c083f1faa7cc3dc40f973e6ed",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:24:32.444012+00:00",
+ "completion": "We need answer math. Need parse carefully. Friday sold 21 pairs. Saturday sold double that number of shoes. Wording: \"double that number of shoes\" Could mean double the number of shoes sold Friday. Friday sold 21 pairs = 42 shoes. Double that number of shoes = 84 shoes = 42 pairs. Last day sold one-half the amount that they did the day before, but six people returned their pairs because they didn't fit. Need determine units.\n\nLet's parse: \"On Friday the store sold 21 pairs of tennis shoes. The next day they sold double that number of shoes.\" Since Friday number is pairs, \"double that number of shoes\" ambiguous: double that number (21) of shoes = 42 shoes? Or double that number of shoes (21 pairs = 42 shoes) = 84 shoes. Phrase \"that number of shoes\" likely refers to 21 pairs? They say \"21 pairs of tennis shoes\" then \"double that number of shoes\" maybe double 21 = 42 shoes? But then \"On the last day ... one-half the amount that they did the day before\" amount could be shoes. Then six people returned their pairs (12 shoes). Need compute total shoes sold by end of sale.\n\nLet's examine typical word problem style. It may be designed to test pair/shoe conversion. Friday: 21 pairs. Saturday: double that number of shoes. If Friday sold 21 pairs = 42 shoes, double that number of shoes = 84 shoes. Sunday: one-half the amount they did day before = 42 shoes, but six people returned their pairs = 12 shoes returned, so net sold = 30 shoes? Total = 42 + 84 + 30 = 156 shoes. Alternatively if Saturday sold double that number (21 pairs) = 42 pairs = 84 shoes same result. Good: double that number of shoes? Wait if \"that number\" = 21 pairs, double = 42 pairs = 84 shoes. Same as above. Good.\n\nSunday: one-half the amount day before. Day before amount = 84 shoes (or 42 pairs). Half = 42 shoes (21 pairs). Six people returned their pairs = 6 pairs = 12 shoes returned. Net = 30 shoes. Total = 42+84+30=156.\n\nCheck if returns should subtract from Sunday sales only: yes. \"How many tennis shoes were sold by the end of the sale?\" Could count gross sales including returned? Usually sold by end after returns = net. They mention returns to subtract. So 156.\n\nNeed final with brief reasoning and final line exact. Ensure final numeric answer on own line.Friday: 21 pairs = 42 shoes  \nSaturday: double = 84 shoes  \nSunday: half of 84 = 42 shoes, minus 6 returned pairs (12 shoes) = 30 shoes  \n\nTotal: 42 + 84 + 30 = 156  \n\nAnswer: 156",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 18.863205949000985
+ },
+ "usage": {
+  "prompt_tokens": 130,
+  "total_tokens": 771,
+  "completion_tokens": 641,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": false,
+ "expected": "78",
+ "reason": "incorrect: parsed='156' expected='78'",
+ "finished_at": "2026-11-24T21:24:51.307514+00:00"
+}
