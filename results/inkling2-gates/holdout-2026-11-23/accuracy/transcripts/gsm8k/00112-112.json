@@ -1,0 +1,60 @@
+{
+  "index": 112,
+  "task_id": 112,
+  "rendered_prompt_sha256": "b22fe2dbc5d4dc1ac620537d48fcfc31eeb0bdb67e9cb4058e346266762215c9",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute: 4 teachers, each 2 lessons/day => 8 lessons/day. Each lesson cleaned 3 times => 24. Need final with brief maybe one sentence and final line exact. Ensure final numeric answer on own line. No extra after.4 teachers × 2 lessons = 8 lessons; 8 × 3 cleanings = 24.\nAnswer: 24",
+  "finish_reason": "stop",
+  "expected": "24",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.1378170889802277
+  },
+  "response": {
+    "id": "cmpl-96b7a0fc4f1b567e",
+    "object": "text_completion",
+    "created": 1795429067,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute: 4 teachers, each 2 lessons/day => 8 lessons/day. Each lesson cleaned 3 times => 24. Need final with brief maybe one sentence and final line exact. Ensure final numeric answer on own line. No extra after.4 teachers × 2 lessons = 8 lessons; 8 × 3 cleanings = 24.\nAnswer: 24",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 103,
+      "total_tokens": 196,
+      "completion_tokens": 93,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

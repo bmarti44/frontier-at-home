@@ -1,0 +1,60 @@
+{
+  "index": 55,
+  "task_id": 55,
+  "rendered_prompt_sha256": "bd7c481488c1f3912c3fc9fd6b95652336b37c20c565a935c718159198b899e4",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "Jean has 30 lollipops. Eats 2, remaining 28. Package 2 per bag: 28/2 = 14 bags. Need final line exactly Answer: 14. Brief reasoning okay.After eating 2, Jean has 30 − 2 = 28 lollipops.  \n28 ÷ 2 = 14 bags.\n\nAnswer: 14",
+  "finish_reason": "stop",
+  "expected": "14",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.751594659406692
+  },
+  "response": {
+    "id": "cmpl-bc74b2a4fa6582a2",
+    "object": "text_completion",
+    "created": 1795415271,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Jean has 30 lollipops. Eats 2, remaining 28. Package 2 per bag: 28/2 = 14 bags. Need final line exactly Answer: 14. Brief reasoning okay.After eating 2, Jean has 30 − 2 = 28 lollipops.  \n28 ÷ 2 = 14 bags.\n\nAnswer: 14",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 91,
+      "total_tokens": 180,
+      "completion_tokens": 89,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

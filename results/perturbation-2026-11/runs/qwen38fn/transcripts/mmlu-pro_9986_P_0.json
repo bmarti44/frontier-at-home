@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:9986:P:0",
+ "suite": "mmlu-pro",
+ "row": 9986,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "63e1461e1f67f3a9af7768213466b3d18896befbfeda6803962919a0342861a2",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:56:22.179538+00:00",
+ "completion": "The maximum efficiency of a heat engine is given by the Carnot efficiency formula:\n\nη = 1 - T_cold / T_hot\n\nwhere temperatures must be in Kelvin.\n\nT_hot = 175°C = 175 + 273.15 = 448.15 K\nT_cold = 75°C = 75 + 273.15 = 348.15 K\n\nη = 1 - 348.15 / 448.15\nη = 1 - 0.7769\nη = 0.2231\nη ≈ 22.3%\n\nThis matches option H.\n</think>\n\nTo find the maximum (Carnot) efficiency, I use:\n\n$$\\eta = 1 - \\frac{T_{cold}}{T_{hot}}$$\n\nConverting to Kelvin:\n- T_hot = 175°C + 273.15 = 448.15 K\n- T_cold = 75°C + 273.15 = 348.15 K\n\n$$\\eta = 1 - \\frac{348.15}{448.15} = 1 - 0.777 = 0.223 = 22.3\\%$$\n\nAnswer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.862034853002115
+ },
+ "usage": {
+  "prompt_tokens": 173,
+  "total_tokens": 482,
+  "completion_tokens": 309,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:56:33.041762+00:00"
+}

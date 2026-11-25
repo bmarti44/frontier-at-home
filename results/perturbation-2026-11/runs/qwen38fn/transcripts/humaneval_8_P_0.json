@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:8:P:0",
+ "suite": "humaneval",
+ "row": 8,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "868008b11e2ef48268c3d7aa3d54714a2f24d50d6cebaf7e68456724aa417f2e",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:18:11.793604+00:00",
+ "completion": "    sum = 0\n    product = 1\n    for number in numbers:\n        sum += number\n        product *= number\n    return (sum, product)",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.913916595003684
+ },
+ "usage": {
+  "prompt_tokens": 118,
+  "total_tokens": 155,
+  "completion_tokens": 37,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    sum_value = 0\n    prod_value = 1\n\n    for n in numbers:\n        sum_value += n\n        prod_value *= n\n    return sum_value, prod_value\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:18:13.707668+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00305:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:51.563550+00:00"
+}

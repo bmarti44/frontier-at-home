@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:3116:P:0",
+ "suite": "mmlu-pro",
+ "row": 3116,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "c2e8f4ce41eb7322154a22c160ee136fe9a11a5029d7b5ca8572a13a5167de5f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:59:23.243670+00:00",
+ "completion": "We need answer MCQ. Need determine correct. Let's reason.\n\nFish tuna: swim by lateral undulation of body/tail, tail fin vertical (oriented dorso-ventrally? Let's parse orientation). In fish, tail fin (caudal fin) is vertical plane, i.e., oriented dorso-ventrally? Hmm \"tail fin is oriented dorso-ventrally\" could mean the fin extends vertically (top-bottom), and movement is side-to-side. Dolphins: tail flukes are horizontal plane (left-right), oriented laterally? They move up-and-down. Dolphins have vestigial hind limbs (pelvic bones) and forelimbs modified into flippers for balance/steering. Option H says: In tuna, tail fin is oriented dorso-ventrally and movement is side to side, while in dolphins, tail fin is oriented laterally with dorso-ventral movement. Dolphins also have vestigial hind limbs and modified forelimbs for balance, unlike tuna.\n\nCheck orientation wording: Tuna caudal fin is vertical (in sagittal plane), extends dorsoventrally, moves side-to-side. Dolphin caudal fin is horizontal (in transverse plane), extends laterally, moves dorsoventrally. Yes H correct.\n\nNeed final only single letter form. Ensure no extra.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.422571700000844
+ },
+ "usage": {
+  "prompt_tokens": 331,
+  "total_tokens": 645,
+  "completion_tokens": 314,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:59:34.666398+00:00"
+}

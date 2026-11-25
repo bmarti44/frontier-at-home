@@ -1,0 +1,59 @@
+{
+  "index": 474,
+  "task_id": 549,
+  "rendered_prompt_sha256": "0d6cfdb45189ec45cc7a081e928ccadf69c0ab74b5e0292e92311c85c0303178",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer accounting/economics. Need compute. Let's reason carefully.\n\nProblem: company wants 20% return on investment before taxes at sales volume equal to 80% of capacity. Fixed annual costs $200,000 and annual capacity 200,00 units (probably 200,000 units). Variable cost per unit $9 and investment $1,400,000. What should be selling price per unit given production and sales are 80% of capacity?\n\nCapacity = 200,000 units. 80% = 160,000 units. Desired ROI before taxes = 20% of investment = 0.20 * 1,400,000 = 280,000. This is required pre-tax operating income? Return on investment before taxes likely (operating income)/investment = 20%. At sales volume 160k, contribution margin per unit = price - variable cost. Total contribution = (P - 9)*160,000. Fixed costs = 200,000. Operating income = contribution - fixed = 280,000. So (P-9)*160,000 = 480,000. P-9 = 3. So P = 12. Option G.\n\nCheck: 160,000*3=480,000; minus 200,000 = 280,000; /1.4m=20%. Yes.\n\nNeed final single letter form Answer: G. Ensure no extra.Answer: G",
+  "finish_reason": "stop",
+  "expected": "G",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 9.01017674524337
+  },
+  "response": {
+    "id": "cmpl-8b16425f8161b88c",
+    "object": "text_completion",
+    "created": 1795415248,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer accounting/economics. Need compute. Let's reason carefully.\n\nProblem: company wants 20% return on investment before taxes at sales volume equal to 80% of capacity. Fixed annual costs $200,000 and annual capacity 200,00 units (probably 200,000 units). Variable cost per unit $9 and investment $1,400,000. What should be selling price per unit given production and sales are 80% of capacity?\n\nCapacity = 200,000 units. 80% = 160,000 units. Desired ROI before taxes = 20% of investment = 0.20 * 1,400,000 = 280,000. This is required pre-tax operating income? Return on investment before taxes likely (operating income)/investment = 20%. At sales volume 160k, contribution margin per unit = price - variable cost. Total contribution = (P - 9)*160,000. Fixed costs = 200,000. Operating income = contribution - fixed = 280,000. So (P-9)*160,000 = 480,000. P-9 = 3. So P = 12. Option G.\n\nCheck: 160,000*3=480,000; minus 200,000 = 280,000; /1.4m=20%. Yes.\n\nNeed final single letter form Answer: G. Ensure no extra.Answer: G",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 168,
+      "total_tokens": 485,
+      "completion_tokens": 317,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

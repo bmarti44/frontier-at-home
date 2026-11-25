@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:6006:O:0",
+ "suite": "mmlu-pro",
+ "row": 6006,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "0fff1bf53ddff32084cb1527fc86b557ee7d02eff078bfca6cfff1f267e5dc12",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:12:15.142178+00:00",
+ "completion": "We need answer medical anatomy. Need reason. Third cranial nerve = oculomotor. Damage causes ptosis, eye deviated down and out (downward strabismus? lateral strabismus due to unopposed lateral rectus and superior oblique), pupil dilated (mydriasis) due to parasympathetic fibers. So pupillary dilatation and downward strabismus? Option A says pupillary dilatation and a downward strabismus. G says dilatation and lateral strabismus. Classic CN III palsy: eye is \"down and out\", ptosis, mydriasis. The options separate downward and lateral strabismus. Which sign will be present? Both downward and lateral? But single best. Option A: dilatation and downward strabismus. Option G: dilatation and lateral strabismus. In many exam questions, oculomotor nerve palsy: pupil dilated, eye deviated downward and outward. If forced one, \"downward strabismus\" maybe because lateral rectus unopposed causes lateral deviation; superior oblique causes downward. They may phrase \"down and out\". Option A only downward, G only lateral. Need infer from list. They include A pupillary dilatation and downward strabismus; F dilatation and medial; G dilatation and lateral; J dilatation and upward. Since CN III innervates medial rectus, superior rectus, inferior rectus, inferior oblique, levator. Paralysis: lateral rectus (CN VI) unopposed -> eye deviates laterally; superior oblique (CN IV) unopposed -> eye deviates downward. So both lateral and downward. But no option with both. Maybe \"downward strabismus\" is the classic sign in some contexts? Let's inspect options: A dilatation + downward strabismus; G dilatation + lateral strabismus. Which is more specific? In CN III palsy, the affected eye is deviated \"down and out\". If asked \"which signs will be present\" singular, maybe they expect \"pupillary dilatation and lateral strabismus\"? Let's recall clinical signs: Oculomotor nerve palsy: ptosis, mydriasis, eye deviated down and out. Trochlear nerve palsy: vertical diplopia, head tilt, eye deviated up (hypertropia). Abducens nerve palsy: medial strabismus (esotropia). So CN III = lateral strabismus (exotropia) due to lateral rectus unopposed, plus downward. Option G has dilatation and lateral strabismus. Option A has dilatation and downward strabismus. Both are present. But maybe \"downward strabismus\" is not a standard term; strabismus is horizontal (medial/lateral), while vertical deviation is hypertropia/hypotropia. They use \"downward strabismus\" maybe means hypotropia. Hmm.\n\nNeed answer single letter. Let's search memory: In oculomotor nerve palsy, \"the eye is deviated downward and outward\". If options split, the most characteristic is \"down and out\". Since no combined option, maybe A is intended because \"downward strabismus\" plus dilatation. But lateral strabismus is also classic. Let's evaluate exact wording: \"Which of the following signs will be present?\" Singular sign pair. Option A: Pupillary dilatation and a downward strabismus. Option G: Pupillary dilatation and a lateral strabismus. In CN III damage, medial rectus paralyzed -> eye deviates laterally (lateral strabismus). Inferior rectus/oblique paralyzed -> eye deviates upward? Wait let's carefully determine direction of unopposed muscles.\n\nEye movements:\n- Medial rectus (CN III) adducts eye. Paralysis -> lateral rectus (CN VI) unopposed -> eye deviates laterally (exotropia). Yes lateral strabismus.\n- Superior rectus (CN III) elevates and intorts. Inferior rectus (CN III) depresses and extorts. Inferior oblique (CN III) elevates and extorts. Superior oblique (CN IV) depresses and intorts.\nParalysis of CN III: superior rectus, inferior rectus, inferior oblique, levator. Unopposed superior oblique (CN IV) depresses and intorts; lateral rectus (CN VI) abducts. So eye deviates down and out. Thus both downward and lateral. If one option must be chosen, maybe A because \"downward strabismus\" is less common term but includes vertical; G includes lateral. Which one is more likely in answer key? Many MCQ ask \"damage to third cranial nerve\" answer: \"ptosis, dilated pupil, eye deviated down and out\". If forced to choose among listed, A and G both partially correct. But maybe \"downward strabismus\" is wrong because strabismus refers to horizontal misalignment; vertical deviation is not strabismus? However they use \"upward strabismus\" in options too. They likely use strabismus loosely for deviation.\n\nLet's consider pupillary constriction options: CN III parasympathetics cause constriction; damage -> dilatation. So A/F/G/J. Medial strabismus would be CN VI palsy (lateral rectus) with no pupil change. Lateral strabismus is CN III palsy. Downward strabismus also CN III. Upward strabismus would be CN IV palsy? Actually CN IV palsy causes hypertropia (upward deviation of affected eye) with no pupil change. So J (dilatation + upward) wrong. F (dilatation + medial) wrong. A vs G. In CN III palsy, the eye is \"down and out\"; if only one deviation listed, \"lateral\" is the strabismus (horizontal), while downward is hypotropia. The term \"lateral strabismus\" is standard for exotropia. So G likely. But option A says downward strabismus, not \"down and out\". Hmm.\n\nNeed final only. Choose G? Let's see common exam phrasing: \"A patient suffers damage to the orbit in a road traffic incident resulting in damage to the third cranial nerve. Which of the following signs will be present?\" This sounds from anatomy/clinical. Third nerve damage: \"pupillary dilatation and lateral strabismus\" maybe because lateral rectus unopposed. Yes answer G.\n\nNeed final exact format.Answer: G",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 55.05975511399811
+ },
+ "usage": {
+  "prompt_tokens": 225,
+  "total_tokens": 1672,
+  "completion_tokens": 1447,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "G",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:13:10.202360+00:00"
+}

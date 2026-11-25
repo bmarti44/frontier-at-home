@@ -1,0 +1,60 @@
+{
+  "index": 910,
+  "task_id": 910,
+  "rendered_prompt_sha256": "9494b9b5602e5aeb1d370fb8220c3beab38ea53936d4bd38386885f332fe46f1",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a math answer. Need compute: Farmer Brown's farm = 200 acres. Farmer Smith's farm = 100 acres more than twice that = 2*200 + 100 = 400+100=500. Together = 700. Need final numeric answer on its own line form Answer: <number>. They said think briefly if needed, then end with final numeric answer. We can provide brief calculation and final line. Ensure final line exactly Answer: 700 maybe with acres? They said numeric answer; form Answer: <number>. Use 700.Farmer Smith’s farm: 2 × 200 + 100 = 500 acres.  \nTogether: 200 + 500 = 700 acres.\n\nAnswer: 700",
+  "finish_reason": "stop",
+  "expected": "700",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8817857676185668
+  },
+  "response": {
+    "id": "cmpl-b0f8b7a128ca4b5d",
+    "object": "text_completion",
+    "created": 1795428964,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a math answer. Need compute: Farmer Brown's farm = 200 acres. Farmer Smith's farm = 100 acres more than twice that = 2*200 + 100 = 400+100=500. Together = 700. Need final numeric answer on its own line form Answer: <number>. They said think briefly if needed, then end with final numeric answer. We can provide brief calculation and final line. Ensure final line exactly Answer: 700 maybe with acres? They said numeric answer; form Answer: <number>. Use 700.Farmer Smith’s farm: 2 × 200 + 100 = 500 acres.  \nTogether: 200 + 500 = 700 acres.\n\nAnswer: 700",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 80,
+      "total_tokens": 248,
+      "completion_tokens": 168,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

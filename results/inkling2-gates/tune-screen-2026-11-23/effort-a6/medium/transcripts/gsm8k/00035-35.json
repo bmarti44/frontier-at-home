@@ -1,0 +1,60 @@
+{
+  "index": 35,
+  "task_id": 35,
+  "rendered_prompt_sha256": "81444fdc0071ed95957b88e13483a2c80919f7c0b17f333cc3f67958e7dc59bb",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "The user wants me to solve a math problem. Let me think through it.\n\nMike plays ping pong for 40 minutes.\nFirst 20 minutes: scores 4 points.\nSecond 20 minutes: scores 25% more points.\n25% more than 4 = 4 + 0.25*4 = 4 + 1 = 5 points.\nTotal = 4 + 5 = 9 points.\n\nFinal answer: 9.First 20 minutes: 4 points.\nSecond 20 minutes: 25% more than 4 = 4 × 1.25 = 5 points.\nTotal = 4 + 5 = 9.\n\nAnswer: 9",
+  "finish_reason": "stop",
+  "expected": "9",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.9962024870328605
+  },
+  "response": {
+    "id": "cmpl-9614256ca20fa690",
+    "object": "text_completion",
+    "created": 1795415915,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants me to solve a math problem. Let me think through it.\n\nMike plays ping pong for 40 minutes.\nFirst 20 minutes: scores 4 points.\nSecond 20 minutes: scores 25% more points.\n25% more than 4 = 4 + 0.25*4 = 4 + 1 = 5 points.\nTotal = 4 + 5 = 9 points.\n\nFinal answer: 9.First 20 minutes: 4 points.\nSecond 20 minutes: 25% more than 4 = 4 × 1.25 = 5 points.\nTotal = 4 + 5 = 9.\n\nAnswer: 9",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 90,
+      "total_tokens": 248,
+      "completion_tokens": 158,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

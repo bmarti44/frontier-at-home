@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:863:P:1",
+ "suite": "gsm8k",
+ "row": 863,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "d8516fe96ae11ece6655ce3ae3fff940fea0374c7e04f4bc76df6b8bc3f2cb13",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:13:58.171624+00:00",
+ "completion": "We need answer math. Need think briefly. Problem: Amara has some coins. There are 20 more gold coins than silver coins. If she had 80 gold coins, how many coins total? Interpret: gold = silver +20. If gold=80, silver=60. total=140. Need final line exactly Answer: 140. Ensure no extra after final. Could include brief explanation then final line. User says think briefly if needed, then end with final numeric answer on own line. We can provide concise explanation and final line.If gold coins = 80, then silver coins = 80 − 20 = 60. Total = 80 + 60 = 140.\nAnswer: 140",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.377662020997377
+ },
+ "usage": {
+  "prompt_tokens": 76,
+  "total_tokens": 231,
+  "completion_tokens": 155,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "140",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:14:03.549623+00:00"
+}

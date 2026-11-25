@@ -1,0 +1,60 @@
+{
+  "index": 400,
+  "task_id": 400,
+  "rendered_prompt_sha256": "1c41159d1bcaf8641cdd417e52472667829801718fc10a7ab7e66ce6c3e27154",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. 8 ounces per glass, 2 glasses = 16 ounces. 3 calories per ounce = 48 calories. Need final line exactly \"Answer: <number>\". We can include brief reasoning then final line. Ensure final numeric answer on its own line. No need for more tools.John drinks 2 × 8 = 16 ounces. At 3 calories per ounce, that is 16 × 3 = 48 calories.\n\nAnswer: 48",
+  "finish_reason": "stop",
+  "expected": "48",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.812332207802683
+  },
+  "response": {
+    "id": "cmpl-afdc59af558c7963",
+    "object": "text_completion",
+    "created": 1795414961,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. 8 ounces per glass, 2 glasses = 16 ounces. 3 calories per ounce = 48 calories. Need final line exactly \"Answer: <number>\". We can include brief reasoning then final line. Ensure final numeric answer on its own line. No need for more tools.John drinks 2 × 8 = 16 ounces. At 3 calories per ounce, that is 16 × 3 = 48 calories.\n\nAnswer: 48",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 81,
+      "total_tokens": 197,
+      "completion_tokens": 116,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

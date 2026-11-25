@@ -1,0 +1,60 @@
+{
+  "index": 90,
+  "task_id": 90,
+  "rendered_prompt_sha256": "c0a48fd9420355c3debebf792d064019d49e6bdfa5e3829ed4ac3d055d896b48",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute: adult 10 lbs, child half =5 lbs. 20 adults*10=200. 5 children*5=25. total 225 lbs. Need final with brief maybe one sentence and final line exactly Answer: 225. Ensure final numeric answer on own line. No extra after.Adults eat 20 × 10 = 200 lbs; children eat 5 × 5 = 25 lbs; total = 225 lbs.\nAnswer: 225",
+  "finish_reason": "stop",
+  "expected": "225",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.7023797519505024
+  },
+  "response": {
+    "id": "cmpl-8b597f49a13c3a16",
+    "object": "text_completion",
+    "created": 1795415575,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute: adult 10 lbs, child half =5 lbs. 20 adults*10=200. 5 children*5=25. total 225 lbs. Need final with brief maybe one sentence and final line exactly Answer: 225. Ensure final numeric answer on own line. No extra after.Adults eat 20 × 10 = 200 lbs; children eat 5 × 5 = 25 lbs; total = 225 lbs.\nAnswer: 225",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 134,
+      "total_tokens": 245,
+      "completion_tokens": 111,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

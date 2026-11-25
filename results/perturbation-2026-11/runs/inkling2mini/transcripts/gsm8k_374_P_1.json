@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:374:P:1",
+ "suite": "gsm8k",
+ "row": 374,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "2124967134601e559b588e91af39d40e9cfd3150c1ccd27914115e571cfd3f28",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:53:55.178626+00:00",
+ "completion": "Chloe has 22 sheep. Half = 11 sheep. She gets 2 kg of milk from half of them — ambiguous: \"2 kg of milk from half of them\" could mean 2 kg total from half, or 2 kg from each? Let's parse: \"She gets 2 kg of milk from half of them and 6 kg of milk from the other half every day.\" Typically these word problems: half of them (11 sheep) gives 2 kg total? Or each sheep? The phrasing \"2 kg of milk from half of them\" suggests from the group of half, she gets 2 kg. Then other half gives 6 kg. Total = 8 kg.\n\nBut alternative: each sheep in half gives 2 kg? Then 11*2 + 11*6 = 22+66=88. Hmm.\n\nCommon style: \"She gets 2 kg of milk from half of them\" — likely total from half. These simple math problems often intend: half of sheep = 11, milk from half = 2 kg (total), other half = 6 kg, total 8 kg. Answer 8 kg.\n\nNeed final numeric answer on own line.Half of 22 sheep is 11 sheep. The milk collected is 2 kg from one half and 6 kg from the other half.\n\nTotal: 2 + 6 = 8 kg.\n\nAnswer: 8 kg",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.983677898999304
+ },
+ "usage": {
+  "prompt_tokens": 80,
+  "total_tokens": 390,
+  "completion_tokens": 310,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": false,
+ "expected": "88",
+ "reason": "incorrect: parsed='8' expected='88'",
+ "finished_at": "2026-11-24T20:54:04.162552+00:00"
+}

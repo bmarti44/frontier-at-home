@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1299:P:0",
+ "suite": "gsm8k",
+ "row": 1299,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "e96d0d860b33a0f452e28e3e2fdb39de5aca5bc2cc6a1252ca7e8a73d2213971",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:06:30.680028+00:00",
+ "completion": "Let me calculate Priya's total spending:\n- Ice cream: $4.50\n- Movie tickets: $10.50 each for herself and her younger sister = 2 × $10.50 = $21.00\n- Bracelet: $12.50\n\nTotal spending: $4.50 + $21.00 + $12.50 = $38.00\n\nMoney left: $50.00 - $38.00 = $12.00\n</think>\n\nLet me calculate Priya's total spending:\n\n- Ice cream: $4.50\n- Movie tickets (2 tickets at $10.50 each): $21.00\n- Bracelet: $12.50\n\nTotal spent: $4.50 + $21.00 + $12.50 = $38.00\n\nMoney left: $50.00 - $38.00 = $12.00\n\nAnswer: 12",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.616736103998846
+ },
+ "usage": {
+  "prompt_tokens": 128,
+  "total_tokens": 363,
+  "completion_tokens": 235,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "12",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:06:39.297029+00:00"
+}

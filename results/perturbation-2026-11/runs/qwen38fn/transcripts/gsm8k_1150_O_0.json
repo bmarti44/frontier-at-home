@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1150:O:0",
+ "suite": "gsm8k",
+ "row": 1150,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "3315b579a0344e46e5c708fb1309f6a1c3370a772cefa01b7e07a92bf9143821",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T04:09:05.479480+00:00",
+ "completion": "Let me solve this step by step.\n\nPatricia starts with 30 roses.\nShe gave 24 roses to her mother: 30 - 24 = 6 roses remaining.\nShe bought 15 more roses: 6 + 15 = 21 roses.\n\nSo she now has 21 roses.\n</think>\n\nPatricia starts with 30 roses.\nShe gives away 24: 30 - 24 = 6\nShe buys 15 more: 6 + 15 = 21\n\nAnswer: 21",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.767345478001516
+ },
+ "usage": {
+  "prompt_tokens": 101,
+  "total_tokens": 229,
+  "completion_tokens": 128,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "21",
+ "reason": "correct",
+ "finished_at": "2026-11-25T04:09:10.247025+00:00"
+}

@@ -1,0 +1,60 @@
+{
+  "index": 464,
+  "task_id": 464,
+  "rendered_prompt_sha256": "56cf37252317b0a23d05d91eaa7417a4c4041ac8856b8cee52ba44c0c0b46cc4",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer arithmetic. Need think carefully. Finley started off in first. Then fell back 5 spots: from 1st to 6th? In a race, \"fell back 5 spots\" means loses 5 positions, so place increases by 5: 1 -> 6. Then moved ahead 2 spots: 6 -> 4. Then fell behind 3: 4 -> 7. Lastly jumped ahead 1: 7 -> 6. Finish 6th. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.Start: 1st → fall back 5 = 6th → ahead 2 = 4th → behind 3 = 7th → ahead 1 = 6th.\n\nAnswer: 6",
+  "finish_reason": "stop",
+  "expected": "6",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.374383058398962
+  },
+  "response": {
+    "id": "cmpl-b8f8d8703fe9d447",
+    "object": "text_completion",
+    "created": 1795415536,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer arithmetic. Need think carefully. Finley started off in first. Then fell back 5 spots: from 1st to 6th? In a race, \"fell back 5 spots\" means loses 5 positions, so place increases by 5: 1 -> 6. Then moved ahead 2 spots: 6 -> 4. Then fell behind 3: 4 -> 7. Lastly jumped ahead 1: 7 -> 6. Finish 6th. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.Start: 1st → fall back 5 = 6th → ahead 2 = 4th → behind 3 = 7th → ahead 1 = 6th.\n\nAnswer: 6",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 106,
+      "total_tokens": 289,
+      "completion_tokens": 183,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

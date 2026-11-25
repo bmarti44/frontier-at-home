@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:49:P:0",
+ "suite": "gsm8k",
+ "row": 49,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "1e60528e482d4147d7a18d957dde50e3628d350b75bc1662aeca976fb76310cf",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:17:39.016374+00:00",
+ "completion": "Let me work through this step by step.\n\n- The building has 18 floors\n- Each floor has 4 units\n- Total units = 18 × 4 = 72 units\n- 3/4 of the building is occupied\n- So 1/4 of the building is unoccupied\n- Unoccupied units = 72 × 1/4 = 18\n</think>\n\nThe building has 18 floors × 4 units per floor = 72 total units.\n\nSince 3/4 of the building is occupied, 1/4 is unoccupied.\n\n72 × 1/4 = 18 unoccupied units.\n\nAnswer: 18",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.0957643349975115
+ },
+ "usage": {
+  "prompt_tokens": 110,
+  "total_tokens": 260,
+  "completion_tokens": 150,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "18",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:17:44.112456+00:00"
+}

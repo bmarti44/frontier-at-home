@@ -1,0 +1,60 @@
+{
+  "index": 851,
+  "task_id": 851,
+  "rendered_prompt_sha256": "d5c8e90525ec7d6576dffb949cd8b1d96e7d666c64281b51a7f32f3175064ccc",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "James buys 2 pairs of shoes a month. Over a year, that's 2 * 12 = 24 pairs. He spends $2640 per year. Average per pair = 2640 / 24 = 110. Check: 24*110 = 2640. Yes.\n\nNeed final numeric answer on its own line in form Answer: <number>. Brief reasoning okay.He buys 2 pairs/month × 12 months = 24 pairs/year.  \n$2640 ÷ 24 = $110 per pair.\n\nAnswer: 110",
+  "finish_reason": "stop",
+  "expected": "110",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.544536344241351
+  },
+  "response": {
+    "id": "cmpl-87467eb6e52e7049",
+    "object": "text_completion",
+    "created": 1795415695,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "James buys 2 pairs of shoes a month. Over a year, that's 2 * 12 = 24 pairs. He spends $2640 per year. Average per pair = 2640 / 24 = 110. Check: 24*110 = 2640. Yes.\n\nNeed final numeric answer on its own line in form Answer: <number>. Brief reasoning okay.He buys 2 pairs/month × 12 months = 24 pairs/year.  \n$2640 ÷ 24 = $110 per pair.\n\nAnswer: 110",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 78,
+      "total_tokens": 207,
+      "completion_tokens": 129,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

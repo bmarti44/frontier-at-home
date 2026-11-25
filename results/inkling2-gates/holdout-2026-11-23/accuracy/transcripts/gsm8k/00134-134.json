@@ -1,0 +1,60 @@
+{
+  "index": 134,
+  "task_id": 134,
+  "rendered_prompt_sha256": "b8475b7e6932394346f259dd9c7586d7773daadee839d783fbd34d1d59847c80",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Tom gets 4 car washes a month. Each costs $15. Per month: 4*15 = 60. Per year: 60*12 = 720. Need final numeric answer on its own line in form Answer: <number>. Could include brief reasoning then final line. Ensure final line exactly.4 washes/month × $15 = $60/month; $60 × 12 = $720/year.\nAnswer: 720",
+  "finish_reason": "stop",
+  "expected": "720",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.96246855892241
+  },
+  "response": {
+    "id": "cmpl-b1cb7a5710fa42e0",
+    "object": "text_completion",
+    "created": 1795429062,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Tom gets 4 car washes a month. Each costs $15. Per month: 4*15 = 60. Per year: 60*12 = 720. Need final numeric answer on its own line in form Answer: <number>. Could include brief reasoning then final line. Ensure final line exactly.4 washes/month × $15 = $60/month; $60 × 12 = $720/year.\nAnswer: 720",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 68,
+      "total_tokens": 178,
+      "completion_tokens": 110,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

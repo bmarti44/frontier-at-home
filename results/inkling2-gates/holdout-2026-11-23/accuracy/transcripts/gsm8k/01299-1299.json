@@ -1,0 +1,60 @@
+{
+  "index": 1299,
+  "task_id": 1299,
+  "rendered_prompt_sha256": "469e88b4c21da8ad625d76e91f2724992a77c370e2e209660dd9bf03366e8ab4",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer arithmetic. Need compute: ice cream 3.50. Movie tickets: $7.50 each for herself and younger sister = 2 tickets * 7.50 = 15.00. Bracelet 8.50. Total = 3.50+15.00+8.50 = 27.00? 3.5+15=18.5; +8.5=27.0. Left = 40-27=13. Need final with brief maybe one sentence and final line exactly Answer: 13. Ensure numeric answer maybe $13? Form says <number>, likely 13. Do concise.Total spent: 3.50 + 2×7.50 + 8.50 = 27.00. Left: 40 − 27 = 13.\nAnswer: 13",
+  "finish_reason": "stop",
+  "expected": "13",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 3.076294620987028
+  },
+  "response": {
+    "id": "cmpl-8fe073f4925db402",
+    "object": "text_completion",
+    "created": 1795428743,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer arithmetic. Need compute: ice cream 3.50. Movie tickets: $7.50 each for herself and younger sister = 2 tickets * 7.50 = 15.00. Bracelet 8.50. Total = 3.50+15.00+8.50 = 27.00? 3.5+15=18.5; +8.5=27.0. Left = 40-27=13. Need final with brief maybe one sentence and final line exactly Answer: 13. Ensure numeric answer maybe $13? Form says <number>, likely 13. Do concise.Total spent: 3.50 + 2×7.50 + 8.50 = 27.00. Left: 40 − 27 = 13.\nAnswer: 13",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 98,
+      "total_tokens": 283,
+      "completion_tokens": 185,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

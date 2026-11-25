@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:73:P:0",
+ "suite": "gsm8k",
+ "row": 73,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "4d1e39bd4ef9609ea94a4972bd3cb6a1fb700b872ba5c1ac2688ff6a7c4d8e93",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:25:11.964706+00:00",
+ "completion": "We need answer math. Need compute. Problem: Emily bought five cell phones for $280 each for a 6-month installment. A 2% interest will be charged for each unit. How much will Emily pay each month for 6 months?\n\nInterpretation: Each phone price $280. Five phones total = 1400. Interest 2% charged for each unit. Could mean 2% interest per unit? \"A 2% interest will be charged for each unit\" likely each cell phone has 2% interest. Total interest = 2% of each unit? For each unit, price 280, interest 2% = 5.60, total per unit = 285.60. Five units = 1428.00. Over 6 months = 238.00 per month. Alternatively total interest 2% on total = 28, total 1428, monthly 238. Same result because 2% of total = 28. Yes same.\n\nCheck: 280*5=1400; 2% interest = 28; total 1428; /6 = 238. Final numeric answer on own line. Need maybe include brief. Ensure final line exactly Answer: $238? They said numeric answer. Use Answer: 238. Could include dollar sign? form <number>. Use 238.Total cost: 5 × 280 = 1400  \nInterest: 2% × 1400 = 28  \nTotal: 1428  \nMonthly: 1428 ÷ 6 = 238  \n\nAnswer: 238",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.36999534500137
+ },
+ "usage": {
+  "prompt_tokens": 85,
+  "total_tokens": 427,
+  "completion_tokens": 342,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "238",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:25:22.335023+00:00"
+}

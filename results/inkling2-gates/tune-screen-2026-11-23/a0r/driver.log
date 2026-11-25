@@ -1,0 +1,44 @@
+2026-11-23T05:54:18Z arm a0r profile inkling-2-mini/cuda-spark-128g-1m stack inkling-2-mini-cuda-spark-128g-1m tokens_per_event 8
+2026-11-23T05:54:18Z head 9c81b32541016abe4a9b2e22c6a89c33532058de dirty=0
+2026-11-23T05:54:18Z inference lock /run/lock/frontier-at-home/inference.lock held by the driver
+2026-11-23T05:54:18Z vllm_tree 5bcb020bc1e801e364925e45e5d89b3ea7b095dc26238f98fc96a33dfe4f1425 files=6525
+2026-11-23T05:54:18Z triton cache: 181 entries moved aside to /home/bmarti44/.cache/inkling-2-mini/home/.triton/cache.pre-a0r-20261123T055418Z; this start compiles from empty
+2026-11-23T05:54:18Z page cache released under /home/bmarti44/.cache/inkling-2-mini: 95586 files
+2026-11-23T05:54:18Z page cache released under /home/bmarti44/models/inkling-2-mini: 30 files
+2026-11-23T05:54:18Z page cache released under /home/bmarti44/.cache/qwen38-flash-next: 136225 files
+2026-11-23T05:54:18Z page cache released under /home/bmarti44/models/qwen3.8-flash-next-nvfp4: 52 files
+{"pass":true,"required_gib":110.0,"mem_available_gib":115.442,"stable_samples_observed":3}
+2026-11-23T05:54:18Z preload MemFree:=118390564 MemAvailable:=121046496 SwapFree:=16595424 
+2026-11-23T05:54:20Z a0r: launching in scope inkling2-tune-a0r-3654938
+{"pass":true,"required_gib":29.0,"mem_available_gib":115.574,"stable_samples_observed":3}
+{"ok":true,"profile":"inkling-2-mini/cuda-spark-128g-1m","pid":3655375,"port":8018}
+2026-11-23T05:57:57Z a0r: ready after 217 s
+2026-11-23T05:57:57Z idle_mem_available_kib=29794804
+2026-11-23T05:57:57Z a0r: KV concurrency 5.36x at 262,144 per request
+serverlog (APIServer pid=3655375) INFO 11-23 00:55:01 [startup.py:96] non-default args: {'default_chat_template_kwargs': {'reasoning_effort': 'low'}, 'enable_auto_tool_choice': True, 'tool_call_parser': 'inkling', 'enable_prompt_tokens_details': True, 'host': '127.0.0.1', 'port': 8018, 'middleware': ['vllm_reasoning_compat.ReasoningContentMiddleware', 'glm53_runtime_policy.SplitTerminalSseMiddleware'], 'model': '/home/bmarti44/models/inkling-2-mini', 'max_model_len': 262144, 'served_model_name': ['inkling-2-mini', 'default'], 'reasoning_parser': 'inkling', 'worker_cls': 'qwen38fn_worker.HostCacheRelease
+serverlog (APIServer pid=3655375) INFO 11-23 00:55:01 [processing.py:69] INKLING2_MAX_IMAGE_SIDE=4096: encoder budget sized for 4096 x 4096 px images
+serverlog (APIServer pid=3655375) INFO 11-23 00:55:01 [vision.py:43] INKLING2_VISION_ATTN=triton: vision encoder attention via Triton prefill
+serverlog (APIServer pid=3655375) WARNING 11-23 00:55:05 [encoder_cache_manager.py:378] Raising encoder_cache_size from 2048 to 10609 tokens so one image item fits.
+serverlog (EngineCore pid=3655901) INFO 11-23 00:55:12 [core.py:154] Initializing a V1 LLM engine (v0.34.0rc1.dev1133+g647a76866) with config: model='/home/bmarti44/models/inkling-2-mini', speculative_config=None, tokenizer='/home/bmarti44/models/inkling-2-mini', skip_tokenizer_init=False, tokenizer_mode=inkling, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=262144, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_redu
+serverlog (EngineCore pid=3655901) INFO 11-23 00:55:15 [processing.py:69] INKLING2_MAX_IMAGE_SIDE=4096: encoder budget sized for 4096 x 4096 px images
+serverlog (EngineCore pid=3655901) INFO 11-23 00:55:16 [vision.py:43] INKLING2_VISION_ATTN=triton: vision encoder attention via Triton prefill
+serverlog (EngineCore pid=3655901) INFO 11-23 00:56:54 [model_runner.py:461] Model loading took 18.19 GiB memory and 98.646763 seconds
+serverlog (EngineCore pid=3655901) WARNING 11-23 00:56:55 [encoder_cache_manager.py:378] Raising encoder_cache_size from 2048 to 10609 tokens so one image item fits.
+serverlog (EngineCore pid=3655901) INFO 11-23 00:57:02 [encoder_runner.py:155] Encoder cache can hold 10609 tokens of image embeddings across requests (0.05 GiB, taken from the KV cache).
+serverlog (EngineCore pid=3655901) INFO 11-23 00:57:12 [kv_cache_utils.py:1123] GPU KV cache size: 1,405,150 tokens, Maximum concurrency for 262,144 tokens per request: 5.36x
+serverlog (EngineCore pid=3655901) INFO 11-23 00:57:12 [kv_cache_utils.py:838] kv cache group sizes (16, 16, 16, 16, 16, 16, 64, 64, 64, 64, 64, 64)
+serverlog (EngineCore pid=3655901) INFO 11-23 00:57:13 [qwen38fn_worker.py:83] host page cache released under /home/bmarti44/.cache/inkling-2-mini (96067 files) before the KV arena
+serverlog (EngineCore pid=3655901) INFO 11-23 00:57:14 [qwen38fn_worker.py:83] host page cache released under /home/bmarti44/.cache/qwen38-flash-next (136225 files) before the KV arena
+serverlog (EngineCore pid=3655901) INFO 11-23 00:57:14 [qwen38fn_worker.py:97] host page cache released under /home/bmarti44/models (919 files); MemFree 90.15 GiB, KV arena 63.33 GiB + margin 2.00 GiB
+serverlog (EngineCore pid=3655901) WARNING 11-23 00:57:54 [encoder_cache_manager.py:378] Raising encoder_cache_size from 2048 to 10609 tokens so one image item fits.
+{"greedy": ["170c63d11040", "c7fe1a930bcb", "217aaabaf808"], "tokens_per_chunk": [1.1531531531531531, 1.052910052910053, 1.0526315789473684]}
+{"sum_prompt_tokens": 122633, "sum_ttft_s": 57.83890042360872, "aggregate_prefill_tok_per_s": 2120.251234062942}
+{"method": "(completion_tokens - K) / (t_last_event - t_first_event), K = max tokens per event", "max_tokens_per_event": 8, "valid": true, "median_decode_tok_s": 36.697082193968996}
+[19/20] id=choose-email-among-distractors passed=True
+[20/20] id=typed-composite passed=True
+{"ok": true, "out": "/home/bmarti44/inkling2/results/inkling2-gates/tune-screen-2026-11-23/a0r/toolcall.json", "score": 1.0}
+{"ok":true,"profile":"inkling-2-mini/cuda-spark-128g-1m","stopped":true}
+2026-11-23T06:05:07Z a0r: scope empty after stop
+2026-11-23T06:05:07Z postrun MemAvailable:=121277188 SwapFree:=16595424 
+ERROR: inkling-2-mini/cuda-spark-128g-1m is not running (state file absent)
+2026-11-23T06:05:13Z driver exit

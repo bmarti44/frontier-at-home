@@ -1,0 +1,92 @@
+{
+ "schema_version": 1,
+ "model": "inkling-2-mini",
+ "identity_manifest": "weights/inkling-2-mini/manifest.json",
+ "artifacts": {
+  "official-b85c3cfa": {
+   "kind": "safetensors-dir",
+   "path": "{model_root}/inkling-2-mini",
+   "weights_gib": 19.0,
+   "note": "thinkingmachines/Inkling-2-Mini @ b85c3cfa615fc413cc9af3379f491b963f3b586a (Apache-2.0): one 18.2 GiB mixed NVFP4/MXFP8 checkpoint (routed experts NVFP4 in layers 0-19 and MXFP8 in layers 20-23; attention, embeddings and unembed BF16) plus the 0.59 GiB DSpark draft head in mtp.safetensors. weights_gib is the on-disk size before any load; replace it with the measured resident value.",
+   "shards": [
+    {
+     "path": "{model}/model.safetensors.index.json",
+     "sha256": "c1631065b7b00787993522dddc66a68b3abee869192977fb3dcb796e63bc5838"
+    },
+    {
+     "path": "{model}/model-00001-of-00001.safetensors",
+     "sha256": "65e60f51aa1284d4fb022584908c315270334d991828bb774af60584523539d1"
+    },
+    {
+     "path": "{model}/mtp.safetensors",
+     "sha256": "7c3b651317f01f73bcf4e1dceba66ef8b7e1a1eac6bc171e882e690a4b10a1d2"
+    },
+    {
+     "path": "{model}/config.json",
+     "sha256": "a7a349601f0984c4abf999c480ef775d8567d21f5f84b4e8a3e035b44f288dc2"
+    },
+    {
+     "path": "{model}/hf_quant_config.json",
+     "sha256": "7c656207d3ce37879c7be209a036b0dde43bf01f78159bff06880b868ed57143"
+    },
+    {
+     "path": "{model}/tokenizer.json",
+     "sha256": "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6"
+    },
+    {
+     "path": "{model}/chat_template.jinja",
+     "sha256": "53a9035f3255945704b5857657cfb00c1165090c0641c4f782a0cbf268cc16dc"
+    },
+    {
+     "path": "{model}/processor_config.json",
+     "sha256": "d7350adce18c8be4b607f261c8f0f7eabbf720bb7aaf648a43d4f8372bbacc2d"
+    }
+   ]
+  }
+ },
+ "engines": {
+  "vllm-inkling2-r001": {
+   "binary_path": "{cache_root}/inkling-2-mini/native-runtime-001/runtime/bin/python3.12",
+   "binary_sha256": "476b92e8657f3c9d6b4b2a1a10bada9b4cbbc29dd2dcd25b6f8ff1787672ef72",
+   "build_manifest": "configs/build-manifests/inkling-2-mini-runtime.json",
+   "note": "Relocatable uv CPython 3.12.13 (same interpreter bytes as the qwen3.8-flash-next runtime) with the vLLM nightly 0.34.0rc1.dev1133+g647a76866 (prebuilt aarch64 cu130 wheel, ships vllm/models/inkling2) plus patches/inkling2 (PR #69288 behind the default-off INKLING2_MAX_CTAS_POW2). Package versions and the patched tree digest go in the build manifest once the install is frozen."
+  }
+ },
+ "backend_support": {
+  "cuda": {
+   "supported": true,
+   "hardware_class": [
+    "spark"
+   ],
+   "note": "Upstream vLLM nightly 647a76866 Inkling 2 model code (NVFP4/MXFP8 experts, Triton MoE path on SM12x); not yet loaded on GB10."
+  },
+  "apple-silicon": {
+   "supported": false,
+   "reason": "the Inkling 2 vLLM model code ships NVFP4/MXFP8 MoE kernels for CUDA only and is validated only on GB10"
+  },
+  "rocm": {
+   "supported": false,
+   "reason": "the Inkling 2 vLLM model code ships NVFP4/MXFP8 MoE kernels for CUDA only and is validated only on GB10"
+  },
+  "cpu": {
+   "supported": false,
+   "reason": "the Inkling 2 vLLM model code ships NVFP4/MXFP8 MoE kernels for CUDA only and is validated only on GB10"
+  },
+  "vulkan": {
+   "supported": false,
+   "reason": "the Inkling 2 vLLM model code ships NVFP4/MXFP8 MoE kernels for CUDA only and is validated only on GB10"
+  },
+  "intel-xe": {
+   "supported": false,
+   "reason": "the Inkling 2 vLLM model code ships NVFP4/MXFP8 MoE kernels for CUDA only and is validated only on GB10"
+  },
+  "qualcomm": {
+   "supported": false,
+   "reason": "the Inkling 2 vLLM model code ships NVFP4/MXFP8 MoE kernels for CUDA only and is validated only on GB10"
+  },
+  "tenstorrent": {
+   "supported": false,
+   "reason": "the Inkling 2 vLLM model code ships NVFP4/MXFP8 MoE kernels for CUDA only and is validated only on GB10"
+  }
+ }
+}

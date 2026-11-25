@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:413:O:0",
+ "suite": "gsm8k",
+ "row": 413,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "19f7c056c2b0e752403d10f0c2dbc924b8cced27dc303539c491949e61cb9f31",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T23:38:21.486185+00:00",
+ "completion": "We need answer math. Need parse carefully.\n\nProblem: Marcy makes homemade candles marketed as 99% guaranteed not to explode. 5% of the more dangerous candles also have a defect that makes them smell like wet dog. If she makes 50000 candles, how many will both smell like wet dog and explode?\n\nInterpretation: 99% guaranteed not to explode => 1% explode. \"more dangerous candles\" likely the ones that explode? 5% of the more dangerous candles also have defect smell like wet dog. So among exploding candles (1% of 50000 = 500), 5% smell like wet dog = 25. Need ensure not confuse with 5% of all candles. Phrase: \"5% of the more dangerous candles also have a defect\" more dangerous = explode? Yes.\n\nCompute: 50000*0.01=500; *0.05=25.\n\nNeed final with brief explanation and final line exactly Answer: 25. Ensure final numeric answer on own line.1% of 50,000 candles explode: 500.  \n5% of those explode and smell like wet dog: 500 × 0.05 = 25.\n\nAnswer: 25",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.509695874003228
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 380,
+  "completion_tokens": 277,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "25",
+ "reason": "correct",
+ "finished_at": "2026-11-24T23:38:27.996252+00:00"
+}

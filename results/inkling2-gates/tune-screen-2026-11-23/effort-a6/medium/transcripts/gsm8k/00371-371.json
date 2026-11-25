@@ -1,0 +1,60 @@
+{
+  "index": 371,
+  "task_id": 371,
+  "rendered_prompt_sha256": "7b889ce82621343360076d1ccc90eece3b853414f6abf4f723858afe9a2fdbe5",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need be careful with wording: \"sold 14 pairs\" Friday. Next day sold double that number of shoes. Ambiguity: double that number of shoes = double 14 pairs? It says \"that number of shoes\" maybe Friday sold 14 pairs = 28 shoes. Next day sold double that number of shoes = 56 shoes = 28 pairs. Last day sold one-half the amount that they did the day before, but six people returned their pairs. Need compute total tennis shoes sold by end of sale. Interpret \"sold\" maybe gross sales or net after returns? Let's parse.\n\nFriday: sold 14 pairs of tennis shoes. That's 14 pairs = 28 individual shoes.\nSaturday: sold double that number of shoes. \"that number\" could refer to 14 pairs? They sold double that number of shoes = 28 pairs? Hmm phrase: \"On Friday the store sold 14 pairs of tennis shoes. The next day they sold double that number of shoes.\" Since Friday number is pairs, \"double that number of shoes\" maybe double 14 = 28 shoes? But they say shoes not pairs. Let's examine typical word problem style. It may be designed to test unit conversion and returns.\n\nOriginal: \"A shoe store was having a weekend sale on a brand of popular tennis shoes. On Friday the store sold 14 pairs of tennis shoes. The next day they sold double that number of shoes. On the last day of the sale they sold one-half the amount that they did the day before, but six people returned their pairs because they didn't fit. How many tennis shoes were sold by the end of the sale?\"\n\nNeed determine intended arithmetic. Friday sold 14 pairs. Next day sold double that number of shoes. If \"that number\" = 14 (pairs), double = 28 shoes? But \"shoes\" vs \"pairs\" inconsistent. Could mean double the number of shoes sold Friday: Friday 14 pairs = 28 shoes; double = 56 shoes. Last day sold one-half the amount day before = 28 shoes; six people returned their pairs = 6 pairs = 12 shoes returned. How many tennis shoes were sold by end of sale? Could be total sold (gross) = 28 + 56 + 28 = 112 shoes. Returns don't affect number sold? But they mention returns, so likely subtract returned shoes: net sold = 28 + 56 + (28 - 12) = 100? Let's compute: Friday 28 shoes; Saturday 56 shoes; Sunday sold one-half of Saturday amount = 28 shoes; six people returned pairs = 12 shoes returned, so net Sunday = 16 shoes; total net = 28+56+16=100. Alternatively if Saturday = 28 pairs (56 shoes), Sunday = half = 14 pairs (28 shoes), returns 6 pairs = 12 shoes, net Sunday = 8 pairs (16 shoes), total pairs = 14+28+8=50 pairs = 100 shoes. Same result! Nice. If Saturday = 28 shoes (14 pairs), Sunday = 14 shoes, returns 12 shoes, net Sunday = 2 shoes, total = 28+28+2=58 shoes. Less likely.\n\nLet's see: Friday 14 pairs. Next day sold double that number of shoes. If they sold double that number of shoes (not pairs), Friday number of shoes = 28, double = 56 shoes. Last day sold one-half amount day before = 28 shoes. Six people returned their pairs = 12 shoes. Total sold by end of sale? If counting sales (not net), returns irrelevant; but they included returns, so net = 28+56+28-12 = 100. Yes.\n\nNeed answer with brief explanation and final line exactly Answer: <number>. Ensure final numeric answer on own line. Could mention pairs/shoes. Keep concise.\n\nNeed no extra after final line. Use final only.Friday: 14 pairs = 28 shoes  \nSaturday: double = 56 shoes  \nSunday: half of 56 = 28 shoes, minus 6 returned pairs (12 shoes) = 16 shoes  \n\nTotal: 28 + 56 + 16 = 100 shoes\n\nAnswer: 100",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": false,
+  "reason": "incorrect: parsed='100' expected='50'",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 29.718353563919663
+  },
+  "response": {
+    "id": "cmpl-ae442524f19cfc6d",
+    "object": "text_completion",
+    "created": 1795415771,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need be careful with wording: \"sold 14 pairs\" Friday. Next day sold double that number of shoes. Ambiguity: double that number of shoes = double 14 pairs? It says \"that number of shoes\" maybe Friday sold 14 pairs = 28 shoes. Next day sold double that number of shoes = 56 shoes = 28 pairs. Last day sold one-half the amount that they did the day before, but six people returned their pairs. Need compute total tennis shoes sold by end of sale. Interpret \"sold\" maybe gross sales or net after returns? Let's parse.\n\nFriday: sold 14 pairs of tennis shoes. That's 14 pairs = 28 individual shoes.\nSaturday: sold double that number of shoes. \"that number\" could refer to 14 pairs? They sold double that number of shoes = 28 pairs? Hmm phrase: \"On Friday the store sold 14 pairs of tennis shoes. The next day they sold double that number of shoes.\" Since Friday number is pairs, \"double that number of shoes\" maybe double 14 = 28 shoes? But they say shoes not pairs. Let's examine typical word problem style. It may be designed to test unit conversion and returns.\n\nOriginal: \"A shoe store was having a weekend sale on a brand of popular tennis shoes. On Friday the store sold 14 pairs of tennis shoes. The next day they sold double that number of shoes. On the last day of the sale they sold one-half the amount that they did the day before, but six people returned their pairs because they didn't fit. How many tennis shoes were sold by the end of the sale?\"\n\nNeed determine intended arithmetic. Friday sold 14 pairs. Next day sold double that number of shoes. If \"that number\" = 14 (pairs), double = 28 shoes? But \"shoes\" vs \"pairs\" inconsistent. Could mean double the number of shoes sold Friday: Friday 14 pairs = 28 shoes; double = 56 shoes. Last day sold one-half the amount day before = 28 shoes; six people returned their pairs = 6 pairs = 12 shoes returned. How many tennis shoes were sold by end of sale? Could be total sold (gross) = 28 + 56 + 28 = 112 shoes. Returns don't affect number sold? But they mention returns, so likely subtract returned shoes: net sold = 28 + 56 + (28 - 12) = 100? Let's compute: Friday 28 shoes; Saturday 56 shoes; Sunday sold one-half of Saturday amount = 28 shoes; six people returned pairs = 12 shoes returned, so net Sunday = 16 shoes; total net = 28+56+16=100. Alternatively if Saturday = 28 pairs (56 shoes), Sunday = half = 14 pairs (28 shoes), returns 6 pairs = 12 shoes, net Sunday = 8 pairs (16 shoes), total pairs = 14+28+8=50 pairs = 100 shoes. Same result! Nice. If Saturday = 28 shoes (14 pairs), Sunday = 14 shoes, returns 12 shoes, net Sunday = 2 shoes, total = 28+28+2=58 shoes. Less likely.\n\nLet's see: Friday 14 pairs. Next day sold double that number of shoes. If they sold double that number of shoes (not pairs), Friday number of shoes = 28, double = 56 shoes. Last day sold one-half amount day before = 28 shoes. Six people returned their pairs = 12 shoes. Total sold by end of sale? If counting sales (not net), returns irrelevant; but they included returns, so net = 28+56+28-12 = 100. Yes.\n\nNeed answer with brief explanation and final line exactly Answer: <number>. Ensure final numeric answer on own line. Could mention pairs/shoes. Keep concise.\n\nNeed no extra after final line. Use final only.Friday: 14 pairs = 28 shoes  \nSaturday: double = 56 shoes  \nSunday: half of 56 = 28 shoes, minus 6 returned pairs (12 shoes) = 16 shoes  \n\nTotal: 28 + 56 + 16 = 100 shoes\n\nAnswer: 100",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 130,
+      "total_tokens": 1065,
+      "completion_tokens": 935,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:93:O:0",
+ "suite": "humaneval",
+ "row": 93,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "856a164439599802d5210e2969c1c5673c84b83b4bdca5db34384d7b10d3d741",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:32:13.006555+00:00",
+ "completion": "    vowels = \"aeiouAEIOU\"\n    encoded_message = \"\"\n    for char in message:\n        if char in vowels:\n            # Find the index of the vowel in the vowels string\n            index = vowels.index(char)\n            # Replace the vowel with the letter 2 places ahead\n            encoded_message += vowels[(index + 2) % len(vowels)]\n        elif char.islower():\n            encoded_message += char.upper()\n        elif char.isupper():\n            encoded_message += char.lower()\n        else:\n            encoded_message += char\n    return encoded_message\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.417183971003396
+ },
+ "usage": {
+  "prompt_tokens": 112,
+  "total_tokens": 241,
+  "completion_tokens": 129,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    vowels = \"aeiouAEIOU\"\n    vowels_replace = dict([(i, chr(ord(i) + 2)) for i in vowels])\n    message = message.swapcase()\n    return ''.join([vowels_replace[i] if i in vowels else i for i in message])\n",
+ "reason": "sandbox failed with exit 1",
+ "finished_at": "2026-11-25T05:32:19.424009+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00312:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/case/main.py\", line 46, in <module>\n    check(encode)\n  File \"/case/main.py\", line 36, in check\n    assert candidate('TEST') == 'tgst', \"This prints if this assert fails 1 (good for debugging!)\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: This prints if this assert fails 1 (good for debugging!)\n"
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:53.118961+00:00"
+}

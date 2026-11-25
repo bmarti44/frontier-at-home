@@ -1,0 +1,60 @@
+{
+  "index": 405,
+  "task_id": 405,
+  "rendered_prompt_sha256": "da1425b447590d77611bd6ebc00e4574bee8cd1b911e8f32883f87d1963d9106",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Each sandwich serves 4 people. 20 people => 5 sandwiches. Each sandwich requires 1 lb meat and 1 lb cheese. Total meat 5 lb, cheese 5 lb. Cost meat 5*7=35. Cheese 5*3=15. Total 50. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.20 people ÷ 4 people per sandwich = 5 sandwiches.  \nMeat: 5 lb × $7.00 = $35.00  \nCheese: 5 lb × $3.00 = $15.00  \nTotal: $35.00 + $15.00 = $50.00\n\nAnswer: $50.00",
+  "finish_reason": "stop",
+  "expected": "50",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.7168237450532615
+  },
+  "response": {
+    "id": "cmpl-839b455f6ca67614",
+    "object": "text_completion",
+    "created": 1795428709,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Each sandwich serves 4 people. 20 people => 5 sandwiches. Each sandwich requires 1 lb meat and 1 lb cheese. Total meat 5 lb, cheese 5 lb. Cost meat 5*7=35. Cheese 5*3=15. Total 50. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.20 people ÷ 4 people per sandwich = 5 sandwiches.  \nMeat: 5 lb × $7.00 = $35.00  \nCheese: 5 lb × $3.00 = $15.00  \nTotal: $35.00 + $15.00 = $50.00\n\nAnswer: $50.00",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 135,
+      "total_tokens": 311,
+      "completion_tokens": 176,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": true
+}

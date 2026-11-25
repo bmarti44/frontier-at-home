@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:73:P:1",
+ "suite": "gsm8k",
+ "row": 73,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "3b6307bfa610ccc9619570b884e8481e10e0015cdbe2879a940017a22f17ae12",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:10:47.221622+00:00",
+ "completion": "We need answer math. Need parse problem carefully. Maria bought five cell phones for $220 each for a 3-month installment. A 2% interest will be charged for each unit. How much will Maria pay each month for 3 months?\n\nInterpretation: five phones * $220 = $1100. Interest 2% for each unit? \"A 2% interest will be charged for each unit\" Could mean 2% interest on each unit (each phone) total = 2% of $220 per phone = $4.40 per phone, total interest $22. Total amount = $1122. Over 3 months = $374 each month. Alternatively 2% interest per month? Wording: \"for a 3-month installment. A 2% interest will be charged for each unit.\" Hmm.\n\nLet's examine: bought five cell phones for $220 each for a 3-month installment. A 2% interest will be charged for each unit. How much will Maria pay each month for 3 months?\n\nCould be from arithmetic word problem: total cost = 5*220 = 1100. Interest = 2% for each unit? Maybe each unit has 2% interest, so per phone total = 220*1.02 = 224.40; five = 1122; monthly = 374. Yes.\n\nNeed final numeric answer only line. Include brief maybe. Ensure final line exact. Could say total = 5×220×1.02 = 1122; monthly = 1122/3 = 374. Answer: $374. Need final numeric answer on own line form Answer: <number>. Use $374 maybe.Total cost: 5 × $220 × 1.02 = $1,122. Monthly payment: $1,122 ÷ 3 = $374.\n\nAnswer: $374",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.2881070930016
+ },
+ "usage": {
+  "prompt_tokens": 84,
+  "total_tokens": 495,
+  "completion_tokens": 411,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "374",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:10:57.510123+00:00"
+}

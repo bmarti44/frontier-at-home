@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:109:O:0",
+ "suite": "humaneval",
+ "row": 109,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "e68cbac960bfb695527850d504ec27806e0f41a7711920d0a9e3152369179146",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:42:42.908532+00:00",
+ "completion": "    if not arr:\n        return True\n    \n    n = len(arr)\n    # Find the number of times the array is \"broken\" (i.e., arr[i] > arr[i+1])\n    breaks = 0\n    for i in range(n - 1):\n        if arr[i] > arr[i + 1]:\n            breaks += 1\n    \n    # Also check the wrap-around: last element vs first element\n    if arr[-1] > arr[0]:\n        breaks += 1\n    \n    # For a rotated sorted array, there should be at most one break point\n    return breaks <= 1\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.751853196998127
+ },
+ "usage": {
+  "prompt_tokens": 304,
+  "total_tokens": 441,
+  "completion_tokens": 137,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    if len(arr)==0:\n      return True\n    sorted_array=sorted(arr)\n    my_arr=[]\n    \n    min_value=min(arr)\n    min_index=arr.index(min_value)\n    my_arr=arr[min_index:]+arr[0:min_index]\n    for i in range(len(arr)):\n      if my_arr[i]!=sorted_array[i]:\n        return False\n    return True\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:42:48.660572+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00020:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:37.491803+00:00"
+}

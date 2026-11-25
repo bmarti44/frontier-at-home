@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:2:O:0",
+ "suite": "gsm8k",
+ "row": 2,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "cd24daa5429556c17852044cfce2456a7921e2918c68efc8857a81ebd70d19e4",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:05:27.469357+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Josh buys house for $80,000 and puts in $50,000 repairs. This increased the value of the house by 150%. How much profit did he make?\n\nInterpretation: Initial value = 80,000. After repairs, value increased by 150%. Increase by 150% means new value = old + 150% of old = 2.5 * 80,000 = 200,000. Total cost = 80,000 + 50,000 = 130,000. Profit = 200,000 - 130,000 = 70,000.\n\nNeed final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly.The house value increased by 150%: \\(80{,}000 \\times 2.5 = 200{,}000\\).  \nTotal cost: \\(80{,}000 + 50{,}000 = 130{,}000\\).  \nProfit: \\(200{,}000 - 130{,}000 = 70{,}000\\).\n\nAnswer: $70,000",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.094331284999498
+ },
+ "usage": {
+  "prompt_tokens": 96,
+  "total_tokens": 363,
+  "completion_tokens": 267,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "70000",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:05:34.563919+00:00"
+}

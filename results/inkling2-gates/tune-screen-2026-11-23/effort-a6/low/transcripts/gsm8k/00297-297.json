@@ -1,0 +1,60 @@
+{
+  "index": 297,
+  "task_id": 297,
+  "rendered_prompt_sha256": "63a6489eb64b5d13c5fe78399bd552df555537785f121956857ce2f03bd13740",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Let's reason: Target 120 crates/week. Closed Monday and Friday. Over weekend sold 20 crates. Ambiguity: weekend includes Saturday and Sunday? He sold 20 crates over the weekend. Tuesday 15, Wednesday 12, Thursday 18. Total = 20+15+12+18 = 65. Off by 120-65=55. Need ensure if weekend sold 20 crates maybe Saturday/Sunday only. Yes. Final numeric answer on own line. Need maybe brief explanation then final line. Ensure final line exactly Answer: 55.Total sold: 20 + 15 + 12 + 18 = 65 crates.  \nOff from target: 120 − 65 = 55 crates.\n\nAnswer: 55",
+  "finish_reason": "stop",
+  "expected": "55",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.656126976944506
+  },
+  "response": {
+    "id": "cmpl-93d35e6c03fe5638",
+    "object": "text_completion",
+    "created": 1795415817,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Let's reason: Target 120 crates/week. Closed Monday and Friday. Over weekend sold 20 crates. Ambiguity: weekend includes Saturday and Sunday? He sold 20 crates over the weekend. Tuesday 15, Wednesday 12, Thursday 18. Total = 20+15+12+18 = 65. Off by 120-65=55. Need ensure if weekend sold 20 crates maybe Saturday/Sunday only. Yes. Final numeric answer on own line. Need maybe brief explanation then final line. Ensure final line exactly Answer: 55.Total sold: 20 + 15 + 12 + 18 = 65 crates.  \nOff from target: 120 − 65 = 55 crates.\n\nAnswer: 55",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 120,
+      "total_tokens": 299,
+      "completion_tokens": 179,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

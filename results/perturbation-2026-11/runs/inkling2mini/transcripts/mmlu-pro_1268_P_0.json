@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:1268:P:0",
+ "suite": "mmlu-pro",
+ "row": 1268,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "c29713decfa59f2092b3403fb9603effd9020d6f791334ee50e0d79c6309d335",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:23:27.580715+00:00",
+ "completion": "We need answer legal multiple choice. Need reason. Facts: wedding planner owned cottage on knoll above lake. Agreement with neighbor, adjoining landowner, whereby neighbor, in writing, granted wedding planner a right-of-way over strip of land 30 ft width and quarter mile length along eastern margin of neighbor's property. Without notifying neighbor, planner improved roadbed by asphalting. Years later neighbor started sand business requiring heavy hauling destroying asphalted surface. Ten years later planner sold lakefront property to artist. Shortly after artist took possession, neighbor erected wooden barriers across roadway obstructing access to artist's property. Interest wedding planner acquired in access road best described as?\n\nNeed classify. Written grant of right-of-way over strip of land. That's express easement. But is it easement in gross? The right-of-way is for access to cottage (dominant estate), not personal to planner? It benefits cottage property. Written grant to wedding planner of right-of-way over neighbor's land. Since planner owned cottage and granted access to cottage, it's an easement appurtenant (express easement). Options include express easement and easement in gross. Need determine if easement in gross because granted to planner personally? Let's parse.\n\n\"A wedding planner owned a summer cottage on the lake. In order to facilitate the access to the cottage, which is located on a knoll above the lake, the wedding planner entered into an agreement with a neighbor, an adjoining land owner, whereby the neighbor, in writing, granted the wedding planner a right-of-way over a strip of land ... along the eastern margin of the neighbor's property.\" This is a written grant of right-of-way for access to cottage. It is an express easement. It may be appurtenant to the cottage, runs with land, so artist can use. Neighbor barriers obstruct access; artist can sue. The question asks \"The interest that the wedding planner acquired in the access road may best be described as\". Since written grant, express easement. Not profit a prendre (right to take resources), not prescriptive (no adverse use), not estoppel (no reliance? maybe improved roadbed without notifying neighbor; but written agreement already), not support/light/air, not necessity (not landlocked? maybe access to knoll but agreement), not implied prior use (no prior use), not license (written grant and benefits land). Easement in gross? An easement in gross benefits a person/entity, not land, and is not transferable except commercial. Here right-of-way facilitates access to cottage; it is appurtenant. So A.\n\nNeed final only single letter form. Ensure no extra.Answer: A",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 19.35787928600257
+ },
+ "usage": {
+  "prompt_tokens": 377,
+  "total_tokens": 1008,
+  "completion_tokens": 631,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "A",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:23:46.938865+00:00"
+}

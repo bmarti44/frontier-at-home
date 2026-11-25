@@ -1,0 +1,178 @@
+{
+ "formula": "PREREG.md",
+ "checks": {
+  "freeze": "4bb1f7e058a1d1e676a9c310a633ad79b7f4f53e",
+  "scorer": {
+   "sha256_16": "f55fd5315cdbe888",
+   "scoring_head": "4bb1f7e058a1d1e676a9c310a633ad79b7f4f53e",
+   "overrides": {},
+   "mutation": false,
+   "frozen_worktree_diff_rc": 0,
+   "untracked_frozen": []
+  },
+  "failed_attempt_lines": [],
+  "heads": [
+   [
+    "4bb1f7e058a1d1e676a9c310a633ad79b7f4f53e",
+    "0"
+   ]
+  ],
+  "frozen_diff_rc": 0,
+  "artifact_identity": {
+   "interpreter": [
+    "True"
+   ],
+   "vllm_tree": [
+    [
+     "5bcb020bc1e801e3",
+     "6525",
+     "True"
+    ]
+   ],
+   "patches": [
+    [
+     "4",
+     ""
+    ]
+   ],
+   "weights": [
+    [
+     "14",
+     "20191643333",
+     "0"
+    ]
+   ],
+   "packages_freeze": [
+    [
+     "85a4f99d5e707f57",
+     "True"
+    ]
+   ]
+  },
+  "agent_fixture": {
+   "logged": [
+    "2d31aeb3156ae01a"
+   ],
+   "frozen": "2d31aeb3156ae01a"
+  },
+  "kill_lines": [],
+  "configuration_lines": {
+   "levers": {
+    "'method': 'dspark'": true,
+    "'moe_backend': 'humming'": true,
+    "INKLING2_MAX_CTAS_POW2=1": true,
+    "'max_num_batched_tokens': 2048": true
+   },
+   "effort_line": true
+  },
+  "kv_capacity_tokens": 1238000,
+  "runtime_cache_release": [
+   {
+    "root": "/home/bmarti44/.cache/inkling-2-mini",
+    "files": 105325
+   },
+   {
+    "root": "/home/bmarti44/.cache/qwen38-flash-next",
+    "files": 136225
+   }
+  ],
+  "host_cache_release": [
+   {
+    "root": "/home/bmarti44/models",
+    "files": 919,
+    "mem_free_gib": 88.39,
+    "arena_gib": 63.33,
+    "margin_gib": 2.0
+   }
+  ],
+  "stamps": {
+   "memfree_gate": [
+    "2026-11-23T08:30:16Z"
+   ],
+   "launch": [
+    "2026-11-23T08:30:16Z"
+   ],
+   "scope_empty": [
+    "2026-11-23T09:35:34Z"
+   ]
+  },
+  "start_gate_gib": [
+   [
+    113.38820266723633,
+    115.57916641235352
+   ]
+  ],
+  "swap_growth_gib": 0.0,
+  "mem_available_low_gib": 24.354427337646484,
+  "launch_mem_available_gib": 115.57916641235352,
+  "peak_used_gib": 91.22473907470703,
+  "admission_gib": 102,
+  "samples": 4615,
+  "kit_head": "4bb1f7e058a1d1e676a9c310a633ad79b7f4f53e",
+  "vision_protocol": {
+   "mode": "chat",
+   "max_tokens": "4096"
+  },
+  "context": {
+   "verdict": "PASS",
+   "total_tokens": 1000572,
+   "context_cap": 1048576,
+   "max_ttft_s": 551.084755173,
+   "min_mem_available_gib": 24.35418701171875
+  },
+  "text_identity_vs_screen_carrier": [
+   true,
+   true,
+   true
+  ],
+  "toolcall": {
+   "passed": 20,
+   "total": 20
+  },
+  "agent_gate": {
+   "results": {
+    "prefix-cache": true,
+    "turn-continuation": true,
+    "slot-thrash": true,
+    "prefill-throughput": true
+   },
+   "semantics": {
+    "engine": "vllm",
+    "model": "inkling-2-mini",
+    "prefix_block_tokens": 64,
+    "spec_block_drop": true
+   }
+  },
+  "soak": {
+   "pass": true,
+   "mem_floor_gib": 5.0,
+   "mem_floor_source": "default",
+   "mem_available_min_gib": 24.65149688720703,
+   "failed_gates": []
+  },
+  "vision": {
+   "n": 100,
+   "correct": 77,
+   "invalid_count": 4,
+   "error_count": 0,
+   "default_correct": 64,
+   "z_vs_default": 2.0156855756651892
+  },
+  "speed": {
+   "0": {
+    "median_decode": 36.14370862133438,
+    "median_ttft": 0.1704337145,
+    "valid": true
+   },
+   "28672": {
+    "median_decode": 44.16184104226987,
+    "median_ttft": 9.720130508,
+    "valid": true
+   }
+  },
+  "speed_k": 8
+ },
+ "fail": [],
+ "missing": [],
+ "verdict": "PASS"
+}

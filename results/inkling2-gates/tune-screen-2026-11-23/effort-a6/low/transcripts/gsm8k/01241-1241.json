@@ -1,0 +1,60 @@
+{
+  "index": 1241,
+  "task_id": 1241,
+  "rendered_prompt_sha256": "34d875b4096a60e706042a03ce4875359e4d0cdcf1f7ab97766e3d9afd889ab7",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "Rose bought five dozens of eggs. Five dozens = 5*12 = 60 eggs. Cost = 5 dozens * $2.40/dozen = $12.00.\n\nShe sells for $1 for 3 eggs. 60 eggs / 3 = 20 groups. Revenue = 20 * $1 = $20.\n\nProfit = revenue - cost = $20 - $12 = $8.\n\nNeed final numeric answer on own line. Could include brief calculation. Ensure final line exactly Answer: $8 maybe numeric answer. They said form Answer: <number>. Use Answer: $8.00? Numeric maybe 8. Let's do Answer: $8.5 dozens = 60 eggs. Cost = 5 × $2.40 = $12. Selling 60 eggs at $1 per 3 eggs gives 20 × $1 = $20. Profit = $20 − $12 = $8.\n\nAnswer: $8",
+  "finish_reason": "stop",
+  "expected": "8",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 6.245399360079318
+  },
+  "response": {
+    "id": "cmpl-80b874fe25bacb62",
+    "object": "text_completion",
+    "created": 1795415656,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Rose bought five dozens of eggs. Five dozens = 5*12 = 60 eggs. Cost = 5 dozens * $2.40/dozen = $12.00.\n\nShe sells for $1 for 3 eggs. 60 eggs / 3 = 20 groups. Revenue = 20 * $1 = $20.\n\nProfit = revenue - cost = $20 - $12 = $8.\n\nNeed final numeric answer on own line. Could include brief calculation. Ensure final line exactly Answer: $8 maybe numeric answer. They said form Answer: <number>. Use Answer: $8.00? Numeric maybe 8. Let's do Answer: $8.5 dozens = 60 eggs. Cost = 5 × $2.40 = $12. Selling 60 eggs at $1 per 3 eggs gives 20 × $1 = $20. Profit = $20 − $12 = $8.\n\nAnswer: $8",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 78,
+      "total_tokens": 292,
+      "completion_tokens": 214,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": true
+}

@@ -1,0 +1,60 @@
+{
+  "index": 113,
+  "task_id": 113,
+  "rendered_prompt_sha256": "481dcd152d9d0ec9548dcfa21d75d6d060b6134f4943aa6b2b99ddd8dcf8acff",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "Ryan plants 2 flowers a day for 15 days: 2*15 = 30 flowers planted. 5 did not grow, so he has 30-5 = 25 flowers. Need final numeric answer on own line. Brief reasoning okay. Ensure final line exactly Answer: 25.He plants 2 × 15 = 30 flowers. Subtracting 5 that did not grow gives 25.\n\nAnswer: 25",
+  "finish_reason": "stop",
+  "expected": "25",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.7106264741159976
+  },
+  "response": {
+    "id": "cmpl-8f02a358b9ad448f",
+    "object": "text_completion",
+    "created": 1795428935,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "Ryan plants 2 flowers a day for 15 days: 2*15 = 30 flowers planted. 5 did not grow, so he has 30-5 = 25 flowers. Need final numeric answer on own line. Brief reasoning okay. Ensure final line exactly Answer: 25.He plants 2 × 15 = 30 flowers. Subtracting 5 that did not grow gives 25.\n\nAnswer: 25",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 70,
+      "total_tokens": 169,
+      "completion_tokens": 99,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

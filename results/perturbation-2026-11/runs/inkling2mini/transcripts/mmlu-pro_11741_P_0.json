@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:11741:P:0",
+ "suite": "mmlu-pro",
+ "row": 11741,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "417d645db7cc30cca168741855d993ec9829e6ede43ae1a6675e98f8e2972e6d",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:05:10.232564+00:00",
+ "completion": "We need answer single letter. Need determine: combinational PLD with fixed AND array and programmable OR array = PAL (Programmable Array Logic). Fixed AND, programmable OR. PLA has programmable AND and OR. PROM fixed? ROM fixed both. So H. Need final exactly Answer: H. Ensure no extra.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.4010052550002
+ },
+ "usage": {
+  "prompt_tokens": 100,
+  "total_tokens": 180,
+  "completion_tokens": 80,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "E",
+ "reason": "incorrect: parsed='H' expected='E'",
+ "finished_at": "2026-11-24T22:05:13.633824+00:00"
+}

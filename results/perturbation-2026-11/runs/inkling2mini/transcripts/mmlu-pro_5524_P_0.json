@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:5524:P:0",
+ "suite": "mmlu-pro",
+ "row": 5524,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "2a9dd2c4a622198add7af66f4cb12bc05dcba933c289cddfa55b132398753ba4",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:46:59.867222+00:00",
+ "completion": "We need answer Kinsey scale. Need recall scale 0-6: 0 exclusively heterosexual; 1 predominantly heterosexual with incidental homosexual; 2 predominantly heterosexual with more than incidental homosexual; 3 equally heterosexual and homosexual; 4 predominantly homosexual with more than incidental heterosexual; 5 predominantly homosexual with incidental heterosexual; 6 exclusively homosexual. But options include 4 as \"bisexual with substantial homosexual experience\"? Need map carefully.\n\nKinsey scale original: 0 = exclusively heterosexual; 1 = predominantly heterosexual, incidental homosexual; 2 = predominantly heterosexual, more than incidental homosexual; 3 = equally heterosexual and homosexual; 4 = predominantly homosexual, more than incidental heterosexual; 5 = predominantly homosexual, incidental heterosexual; 6 = exclusively homosexual.\n\nOptions:\nA mostly asexual with incidental heterosexual experience (not Kinsey)\nB bisexual with substantial homosexual experience\nC asexual with incidental homosexual experience\nD mostly homosexual with incidental heterosexual experience = 5\nE heterosexual with substantial homosexual experience = 2? (predominantly heterosexual with more than incidental homosexual)\nF heterosexual with incidental homosexual experience = 1\nG exclusively homosexual = 6\nH homosexual with substantial heterosexual experience = 4? predominantly homosexual with more than incidental heterosexual. Option H says homosexual with substantial heterosexual experience. Option B says bisexual with substantial homosexual experience. Need distinguish 4 vs 2.\n\nKinsey 4 = predominantly homosexual with more than incidental heterosexual experience. That is \"homosexual with substantial heterosexual experience\" (H). Option B \"bisexual with substantial homosexual experience\" sounds maybe 2? Let's parse: bisexual with substantial homosexual experience could mean mostly heterosexual? Not clear. Option E \"heterosexual with substantial homosexual experience\" = 2. Option H \"homosexual with substantial heterosexual experience\" = 4. So answer H.\n\nNeed final only single letter form.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 12.627278696996655
+ },
+ "usage": {
+  "prompt_tokens": 168,
+  "total_tokens": 651,
+  "completion_tokens": 483,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "H",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:47:12.494758+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:259:P:1",
+ "suite": "gsm8k",
+ "row": 259,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "1ab84ca2d7f3d37efccb4617c5546a74525001a2d26d6aee7657c37170ee5c56",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:09:02.418393+00:00",
+ "completion": "Let me work through this step by step.\n\nGiven information:\n- Chloe has 5 more apples than Ben\n- Chloe has half as many bananas as Ben\n- Ben has 2 more bananas than apples\n- Chloe has 65 apples\n\nFrom Chloe's apples:\n- Chloe has 65 apples\n- Chloe has 5 more apples than Ben, so Ben has 65 - 5 = 60 apples\n\nFrom Ben's bananas:\n- Ben has 2 more bananas than apples, so Ben has 60 + 2 = 62 bananas\n\nFrom Chloe's bananas:\n- Chloe has half as many bananas as Ben, so Chloe has 62 / 2 = 31 bananas\n\nTotal fruits:\n- Chloe's apples: 65\n- Chloe's bananas: 31\n- Ben's apples: 60\n- Ben's bananas: 62\n\nTotal = 65 + 31 + 60 + 62 = 218\n</think>\n\nLet me solve this step by step.\n\n**Given:**\n- Chloe has 65 apples\n- Chloe has 5 more apples than Ben\n- Chloe has half as many bananas as Ben\n- Ben has 2 more bananas than apples\n\n**Finding Ben's apples:**\nChloe has 5 more apples than Ben → Ben has 65 - 5 = **60 apples**\n\n**Finding Ben's bananas:**\nBen has 2 more bananas than apples → Ben has 60 + 2 = **62 bananas**\n\n**Finding Chloe's bananas:**\nChloe has half as many bananas as Ben → Chloe has 62 / 2 = **31 bananas**\n\n**Total fruits:**\n65 + 31 + 60 + 62 = 218\n\nAnswer: 218",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 14.201659785998345
+ },
+ "usage": {
+  "prompt_tokens": 105,
+  "total_tokens": 501,
+  "completion_tokens": 396,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "218",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:09:16.620316+00:00"
+}

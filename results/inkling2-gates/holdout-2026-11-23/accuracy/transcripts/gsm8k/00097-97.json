@@ -1,0 +1,60 @@
+{
+  "index": 97,
+  "task_id": 97,
+  "rendered_prompt_sha256": "91ce6300d36cfa7cb986664cc4a093187f59642837b862d8da0b8786e3d45531",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Canned tomatoes lose half volume when cooked into sauce. So sauce volume = half of canned volume. Last batch made 32 oz sauce, so canned volume used = 64 oz. Each 16 oz can contains 3 tomatoes. Number cans = 64/16 = 4. Tomatoes = 4*3 = 12. Need final with brief explanation and final line exactly Answer: 12. Ensure no extra after final line.The sauce is half the volume of the canned tomatoes, so Freda used 32 × 2 = 64 ounces of canned tomatoes.  \n64 ÷ 16 = 4 cans, and 4 × 3 = 12 tomatoes.\n\nAnswer: 12",
+  "finish_reason": "stop",
+  "expected": "12",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.8026110669597983
+  },
+  "response": {
+    "id": "cmpl-b7771798e78f528f",
+    "object": "text_completion",
+    "created": 1795429129,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Canned tomatoes lose half volume when cooked into sauce. So sauce volume = half of canned volume. Last batch made 32 oz sauce, so canned volume used = 64 oz. Each 16 oz can contains 3 tomatoes. Number cans = 64/16 = 4. Tomatoes = 4*3 = 12. Need final with brief explanation and final line exactly Answer: 12. Ensure no extra after final line.The sauce is half the volume of the canned tomatoes, so Freda used 32 × 2 = 64 ounces of canned tomatoes.  \n64 ÷ 16 = 4 cans, and 4 × 3 = 12 tomatoes.\n\nAnswer: 12",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 100,
+      "total_tokens": 273,
+      "completion_tokens": 173,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

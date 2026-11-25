@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:31:P:0",
+ "suite": "humaneval",
+ "row": 31,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "82e793713234354c3c3385c013c354561abfd46418594367fc33b3d0872ea45a",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T09:10:10.239628+00:00",
+ "completion": "    if n < 2:\n        return False\n    for i in range(2, int(n**0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\ndef prime_check(n):\n    \"\"\"Return true if a given number is prime, and false otherwise.\n    >>> prime_check(6)\n    False\n    >>> prime_check(101)\n    True\n    >>> prime_check(11)\n    True\n    >>> prime_check(13441)\n    True\n    >>> prime_check(61)\n    True\n    >>> prime_check(4)\n    False\n    >>> prime_check(1)\n    False\n    \"\"\"\n    if n < 2:\n        return False\n    for i in range(2, int(n**0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\nif __name__ == \"__main__\":\n    import doctest\n    if doctest.testmod().failed == 0:\n        print(\"\\n*** ALL TESTS PASSED. YOU'RE A PRIME MASTER!\\n\")\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.080058708001161
+ },
+ "usage": {
+  "prompt_tokens": 111,
+  "total_tokens": 371,
+  "completion_tokens": 260,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    if n < 2:\n        return False\n    for k in range(2, n - 1):\n        if n % k == 0:\n            return False\n    return True\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T09:10:23.319884+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00177:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "\n*** ALL TESTS PASSED. YOU'RE A PRIME MASTER!\n\n",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:13.195186+00:00"
+}

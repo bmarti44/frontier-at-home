@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:29:P:0",
+ "suite": "humaneval",
+ "row": 29,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "f7201de67f99c8b1ffa4640d088ad99ea33e6bd5e81f17f50e0a73c3f3449f3f",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:00:49.741789+00:00",
+ "completion": "    return [s for s in strings if s.startswith(prefix)]\n\nMETADATA = {\n    'author': 'jt',\n    'dataset': 'test'\n}\n\n\ndef check(candidate):\n    assert candidate([], 'a') == []\n    assert candidate(['abc', 'bcd', 'cde', 'array'], 'a') == ['abc', 'array']\n    assert candidate(['some', 'new', 'name'], 'n') == ['new', 'name']\n    assert candidate(['123', '456'], '') == ['123', '456']\n\ncheck(select_by_prefix)",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.510209613996267
+ },
+ "usage": {
+  "prompt_tokens": 88,
+  "total_tokens": 222,
+  "completion_tokens": 134,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return [x for x in strings if x.startswith(prefix)]\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:00:56.252187+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00171:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:11.768802+00:00"
+}

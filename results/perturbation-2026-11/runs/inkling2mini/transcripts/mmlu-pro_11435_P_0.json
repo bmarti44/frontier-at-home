@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:11435:P:0",
+ "suite": "mmlu-pro",
+ "row": 11435,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "443d84a04b520a1ea08246331a713ba6407d063363e36fde3698a89aa705496f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:24:16.102593+00:00",
+ "completion": "We need answer based on typical CRI values. Need determine best among options. Xenon has very high CRI ~95-98, incandescent ~95-100, halogen ~95-100, LED can be high but generic LED maybe 80-90, xenon ~95-99. Incandescent often CRI 100 (reference). Halogen ~100 too. Need choose single best. Let's reason: CRI: incandescent 95-100; halogen 95-100; xenon 95-99; fluorescent 50-90; CFL 50-80; LED 70-90 (some >90); metal halide 65-95; HPS 20-60; LPS ~0-20; mercury vapour 40-60. Among listed, incandescent and halogen both near 100. Which has best? Standard values: Incandescent CRI = 100 (by definition reference). Halogen also ~100 but often 95-98. Xenon ~95-98. So B likely. Need answer only.Answer: B",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 9.175691450996965
+ },
+ "usage": {
+  "prompt_tokens": 111,
+  "total_tokens": 356,
+  "completion_tokens": 245,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "B",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:24:25.278539+00:00"
+}

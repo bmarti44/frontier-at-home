@@ -1,0 +1,59 @@
+{
+  "index": 78,
+  "task_id": 149,
+  "rendered_prompt_sha256": "ec3eefaa4e0a811c7c9f16681c25a261155f6fe6fe0e0255c65753889acfd8b3",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute compound interest: principal 500, annual rate 8%, compounded quarterly, time 5 years. Quarterly rate = 0.08/4 = 0.02. Number periods = 20. Amount = 500*(1.02)^20. Compute (1.02)^20. Known approx 1.485947... Let's calculate: 1.02^10 = 1.218994419994757? Then squared = 1.485947... 500* = 742.9735. Option I $742.97. Need final only single letter form. Ensure no extra.Answer: I",
+  "finish_reason": "stop",
+  "expected": "I",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.805630948860198
+  },
+  "response": {
+    "id": "cmpl-8c0b1f898ea38882",
+    "object": "text_completion",
+    "created": 1795415022,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute compound interest: principal 500, annual rate 8%, compounded quarterly, time 5 years. Quarterly rate = 0.08/4 = 0.02. Number periods = 20. Amount = 500*(1.02)^20. Compute (1.02)^20. Known approx 1.485947... Let's calculate: 1.02^10 = 1.218994419994757? Then squared = 1.485947... 500* = 742.9735. Option I $742.97. Need final only single letter form. Ensure no extra.Answer: I",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 144,
+      "total_tokens": 295,
+      "completion_tokens": 151,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

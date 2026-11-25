@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:8527:P:0",
+ "suite": "mmlu-pro",
+ "row": 8527,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "dcd2191dbdddef594968d57b6e382619d3e6350ec9e1ab59b15905e5a43bcb5a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:52:42.970566+00:00",
+ "completion": "We need answer math. Need compute remainder 25^1059 mod 23. 25 ≡ 2 mod 23. Need 2^1059 mod 23. By Fermat, 2^22 ≡1 mod23 (23 prime, gcd 2,23=1). 1059 mod 22: 22*48=1056, remainder 3. So 2^1059 ≡2^3=8 mod23. Option A. Need final only single letter form. Ensure no extra.Answer: A",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.0657160119990294
+ },
+ "usage": {
+  "prompt_tokens": 99,
+  "total_tokens": 219,
+  "completion_tokens": 120,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "A",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:52:46.036583+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:845:P:1",
+ "suite": "gsm8k",
+ "row": 845,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "d326eceb6e8b20f8554baf402c858b54529f3707d57401466b29d966e78a3880",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T04:34:00.946326+00:00",
+ "completion": "Let me work through this problem step by step.\n\nTotal students: 18\n- Good at math only: 3\n- Good at English only: 2\n- Good at both math and English: the rest\n\nThe rest = 18 - 3 - 2 = 13\n\nStudents good at math = (good at math only) + (good at both) = 3 + 13 = 16\n</think>\n\nLooking at this problem:\n\n- Total students: 18\n- Good at math only: 3\n- Good at English only: 2\n- Good at both: 18 - 3 - 2 = 13\n\nStudents good at math = (math only) + (both) = 3 + 13 = 16\n\nAnswer: 16",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.554427850001957
+ },
+ "usage": {
+  "prompt_tokens": 116,
+  "total_tokens": 293,
+  "completion_tokens": 177,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "16",
+ "reason": "correct",
+ "finished_at": "2026-11-25T04:34:07.500989+00:00"
+}

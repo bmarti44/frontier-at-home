@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:1029:O:0",
+ "suite": "mmlu-pro",
+ "row": 1029,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "07330380b5d3b1f02e090409948ebbd6b5fe06f04338372dbf6db815f889b7b5",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:29:36.082429+00:00",
+ "completion": "We need answer single letter. Need reason. This is legal evidence question. Need determine likely appellate court affirm trial court order excluding character evidence under FRE 404(a). Facts: insured business owner stored valuable property in insured warehouse owned by business. Night no employees. Building/contents burned. Fire dept ruled incendiary origin, no perpetrator. Insurer rejected coverage accusing owner of starting fire. Owner sued insurer in federal court for policy proceeds. At trial on owner's civil claim for insurance coverage, owner attempted to put several persons on stand to testify to owner's good character, submitted as proof owner did not commit arson. Trial court ruled character evidence excluded because inadmissible character testimony under Rule 404(a). On appeal, will appellate court likely affirm?\n\nNeed analyze FRE 404(a): character evidence generally inadmissible to prove conduct in conformity. Exceptions: (a)(2)(A) in criminal cases, defendant may offer evidence of pertinent trait; (a)(2)(B) in criminal cases, prosecutor may rebut; (a)(2)(C) in civil cases, pertinent trait of a victim may be offered by accused or by prosecutor? Let's recall exact text:\n404(a) Character Evidence Not Admissible to Prove Conduct.\n(a) Prohibited Uses. Evidence of a person's character or a trait of character is not admissible to prove that on a particular occasion the person acted in accordance with the character or trait.\n(b) Other Purposes. This evidence may be admissible for another purpose, such as proving motive, opportunity, intent, preparation, plan, knowledge, identity, or absence of mistake or accident.\n404(a)(2) Exceptions? Actually Rule 404(a)(2): Exceptions. (A) Defendant in a Criminal Case. In a criminal case, the defendant may offer evidence of the defendant's pertinent trait of character. If the evidence is admitted, the prosecutor may rebut it with evidence of the same trait. (B) Victim in a Criminal Case. In a criminal case, when a defendant has offered evidence of the victim's pertinent trait, the prosecutor may offer evidence to rebut it. The prosecutor may also offer evidence of the victim's pertinent trait when the trait is an assertion of victim's violent character and the defendant has claimed self-defense? Hmm.\n(C) Victim in a Civil Case. In a civil case, the character of a victim of an alleged crime or other misconduct is admissible if: (i) the character is an essential element of a claim or defense; or (ii) the character is offered by the accused to prove the victim's conduct in conformity with the character. Need exact.\nLet's recall current FRE 404(a)(2):\n(2) Exceptions.\n(A) Defendant in a Criminal Case. In a criminal case, the defendant may offer evidence of the defendant's pertinent trait of character. If the evidence is admitted, the prosecutor may rebut it with evidence of the same trait.\n(B) Victim in a Criminal Case. In a criminal case, when a defendant has offered evidence of the victim's pertinent trait, the prosecutor may offer evidence to rebut it. The prosecutor may also offer evidence of the victim's pertinent trait when the trait is an assertion of the victim's violent character and the defendant has claimed self-defense? No.\n(C) Victim in a Civil Case. In a civil case, the character of a victim of an alleged crime or other misconduct is admissible if:\n(i) the character is an essential element of a claim or defense; or\n(ii) the character is offered by the accused to prove the victim's conduct in conformity with the character.\nMaybe.\nHere civil case, owner is plaintiff suing insurer for insurance proceeds. Owner wants to prove he did not commit arson. This is character evidence offered to prove conduct on particular occasion (not arson). Not criminal defendant. Not victim. Not essential element? The claim is insurance coverage; the insurer's denial is based on arson. Is owner's character an essential element? No. Could be relevant to intent? But testimony to good character is not specific acts; Rule 404(b) prior bad acts not relevant. So excluded. Appellate likely affirms. Option C: Yes, because facts do not apply to any of several exceptions available in a civil case. Option I: Yes, because Rule 404(a) is firm in not allowing for character evidence in a civil trial. Which is more precise? Need choose best.\n\nLet's inspect options:\nA constitutional right - no.\nB right to defend his character in court - no.\nC Yes, because facts do not apply to any of the several exceptions available in a civil case.\nD Yes, because trial court has discretion to exclude character evidence. - discretion? Appellate reviews abuse of discretion; but reason is not discretion.\nE Yes, because character evidence is not relevant to facts. - character evidence is relevant to conduct but inadmissible; not \"not relevant\" exactly.\nF No always admissible - false.\nG Yes, because insurer has right to accuse without proof - no.\nH No, because Rule 404(b) permits use of such evidence to show relevant prior bad acts. - no, 404(b) prior bad acts not character testimony.\nI Yes, because Rule 404(a) is firm in not allowing for character evidence in a civil trial. - similar to C but overbroad? Rule 404(a) allows exceptions in civil cases (victim character). So \"firm in not allowing\" is too absolute. C says facts do not apply to exceptions available in civil case. That's accurate.\nJ No, because Rule 404(a) allows character evidence in cases of arson. - false.\n\nAnswer C. Need final only single letter form. Ensure no extra.Answer: C",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 44.11000223600058
+ },
+ "usage": {
+  "prompt_tokens": 464,
+  "total_tokens": 1783,
+  "completion_tokens": 1319,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "I",
+ "reason": "incorrect: parsed='C' expected='I'",
+ "finished_at": "2026-11-24T22:30:20.192746+00:00"
+}

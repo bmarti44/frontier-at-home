@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:303:P:0",
+ "suite": "gsm8k",
+ "row": 303,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "f89cf53aff98a9e738dab0968b07db12801832ea2d01b9bb4c24a560a70474c4",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:30:08.943843+00:00",
+ "completion": "Let me work through this problem step by step.\n\nTotal books: 220\nPrice per book: $10\nCurrently unsold books: 40\nBooks sold this year (current year): 20\nShe sold twice as many books in the first year as in the current year.\n\nSo first year sales = 2 × 20 = 40 books\n\nTotal books sold over three years = 220 - 40 = 180 books\n\nFirst year: 40 books\nCurrent year (third year): 20 books\nSecond year: 180 - 40 - 20 = 120 books\n\nMoney earned in second year = 120 × $10 = $1200\n</think>\n\nLet me solve this step by step.\n\n**Given information:**\n- Total books: 220\n- Price per book: $10\n- Unsold books: 40\n- Current year (Year 3) sales: 20 books\n- First year sales = 2 × current year sales\n\n**Step 1:** First year sales = 2 × 20 = 40 books\n\n**Step 2:** Total books sold over 3 years = 220 - 40 = 180 books\n\n**Step 3:** Second year sales = 180 - 40 - 20 = 120 books\n\n**Step 4:** Money earned in second year = 120 × $10 = $1,200\n\nAnswer: 1200",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.722882829009905
+ },
+ "usage": {
+  "prompt_tokens": 148,
+  "total_tokens": 496,
+  "completion_tokens": 348,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "1200",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:30:22.666961+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:706:P:0",
+ "suite": "gsm8k",
+ "row": 706,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "e5b522ed0ead672034227147bba8dcf5099063786f9d9b7bcc1f51537d36ba86",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:32:06.593058+00:00",
+ "completion": "We need answer math. Need compute. Goal 7200, after 4h raised 4800. Rate = 4800/4 = 1200 per hour. Remaining = 2400. Hours remaining = 2400/1200 = 2. Total hours = 4+2=6. Need final numeric answer on own line form Answer: <number>. Brief explanation okay. Ensure final line exactly.They raise $4800 in 4 hours, so $1200 per hour. They need $2400 more, which takes 2 more hours. Total: 4 + 2 = 6 hours.\n\nAnswer: 6",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.6052056299995456
+ },
+ "usage": {
+  "prompt_tokens": 109,
+  "total_tokens": 253,
+  "completion_tokens": 144,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "6",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:32:10.198560+00:00"
+}

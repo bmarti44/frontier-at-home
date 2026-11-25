@@ -1,0 +1,59 @@
+{
+  "index": 8076,
+  "task_id": 8261,
+  "rendered_prompt_sha256": "b53b63c1baadb0b99936e0bacc01558e5cf80b2ed179e73da6539a9f9b2ae5dd",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "The user wants me to calculate Molly's final cost.\n\nHaircut: $25\nTip: 15% of $25 = 0.15 × 25 = $3.75\nFinal cost: $25 + $3.75 = $28.75\n\nThat's option E.\n\nLet me verify: 0.15 × 25 = 3.75. 25 + 3.75 = 28.75. Yes, E.Answer: E",
+  "finish_reason": "stop",
+  "expected": "E",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.6352982623502612
+  },
+  "response": {
+    "id": "cmpl-827a48eea5476f58",
+    "object": "text_completion",
+    "created": 1795419896,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants me to calculate Molly's final cost.\n\nHaircut: $25\nTip: 15% of $25 = 0.15 × 25 = $3.75\nFinal cost: $25 + $3.75 = $28.75\n\nThat's option E.\n\nLet me verify: 0.15 × 25 = 3.75. 25 + 3.75 = 28.75. Yes, E.Answer: E",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 130,
+      "total_tokens": 239,
+      "completion_tokens": 109,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  }
+}

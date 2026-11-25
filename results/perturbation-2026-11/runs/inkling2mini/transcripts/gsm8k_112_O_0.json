@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:112:O:0",
+ "suite": "gsm8k",
+ "row": 112,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "b22fe2dbc5d4dc1ac620537d48fcfc31eeb0bdb67e9cb4058e346266762215c9",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:30:32.344512+00:00",
+ "completion": "We need answer arithmetic. Need think briefly. Problem: 4 teachers, each 2 lessons/day, uses whiteboard in each lesson. Cleaned 3 times per lesson. Total lessons = 4*2=8. Cleanings = 8*3=24. Need final with Answer: 24. Ensure final numeric answer on own line. Could include brief explanation then final line. User says think briefly if needed, then end with final numeric answer on its own line. We can provide concise calculation and final line.4 teachers × 2 lessons = 8 lessons; 8 lessons × 3 cleanings = 24.\nAnswer: 24",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.6915117600001395
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 247,
+  "completion_tokens": 144,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "24",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:30:36.036319+00:00"
+}

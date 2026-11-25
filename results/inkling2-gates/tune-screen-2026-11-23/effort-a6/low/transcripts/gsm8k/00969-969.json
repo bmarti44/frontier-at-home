@@ -1,0 +1,60 @@
+{
+  "index": 969,
+  "task_id": 969,
+  "rendered_prompt_sha256": "1e2d37cbffcc8acc4125631fc47fc86a128d4c9f1a586657a28077fb1bc54375",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need parse carefully. John buys new phones for him, his 2 kids, and his wife. That's 1 + 2 + 1 = 4 phones. Each phone after the first 2 is half price. Phone price $600. First two phones at full price? \"Each phone after the first 2 is half price\" means phones 3 and 4 are half price ($300 each). Total = 600+600+300+300 = 1800. Need final numeric answer on own line form Answer: <number>. Brief if needed. Ensure no extra after final line. Could include short calculation then final line. Need final answer only maybe. Do that.4 phones total: 2 at $600 and 2 at $300.\nAnswer: 1800",
+  "finish_reason": "stop",
+  "expected": "1800",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.490436269901693
+  },
+  "response": {
+    "id": "cmpl-a55d111416fa6af4",
+    "object": "text_completion",
+    "created": 1795415516,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need parse carefully. John buys new phones for him, his 2 kids, and his wife. That's 1 + 2 + 1 = 4 phones. Each phone after the first 2 is half price. Phone price $600. First two phones at full price? \"Each phone after the first 2 is half price\" means phones 3 and 4 are half price ($300 each). Total = 600+600+300+300 = 1800. Need final numeric answer on own line form Answer: <number>. Brief if needed. Ensure no extra after final line. Could include short calculation then final line. Need final answer only maybe. Do that.4 phones total: 2 at $600 and 2 at $300.\nAnswer: 1800",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 90,
+      "total_tokens": 274,
+      "completion_tokens": 184,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

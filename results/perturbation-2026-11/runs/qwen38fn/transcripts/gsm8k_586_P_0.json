@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:586:P:0",
+ "suite": "gsm8k",
+ "row": 586,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "56838115372d71b6f34987a31d4a2816ac119d216af7550cffb837aa3ea1cd9e",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:39:51.991335+00:00",
+ "completion": "Let me calculate the total calories burned and then determine how much water Chloe needs to drink.\n\nAerobics: 3 hours × 700 calories/hour = 2100 calories\nRunning: 1 hour × 350 calories/hour = 350 calories\n\nTotal calories burned = 2100 + 350 = 2450 calories\n\nWater needed: 100 ml per 350 calories\n2450 / 350 = 7\n7 × 100 = 700 ml\n</think>\n\n**Step 1: Calculate total calories burned**\n- Aerobics: 3 hours × 700 cal/hour = 2,100 calories\n- Running: 1 hour × 350 cal/hour = 350 calories\n- Total: 2,100 + 350 = 2,450 calories\n\n**Step 2: Calculate water needed**\n- 100 ml per 350 calories\n- 2,450 ÷ 350 = 7\n- 7 × 100 ml = 700 ml\n\nAnswer: 700",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 9.571887938000145
+ },
+ "usage": {
+  "prompt_tokens": 135,
+  "total_tokens": 406,
+  "completion_tokens": 271,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "700",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:40:01.563455+00:00"
+}

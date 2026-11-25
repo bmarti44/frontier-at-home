@@ -1,0 +1,1111 @@
+[
+ {
+  "row": 405,
+  "template": "{name} decided to make muffaletta sandwiches for the big game.  Each sandwich required 1 pound each of meat and cheese and would serve {serve} people.  There would be {people} people in total watching the game.  The meat cost ${meat} per pound and the cheese cost ${cheese} per pound.  How much money would he spend on the meat and cheese to make enough sandwiches to serve {people} people?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Tyson",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "serve": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "people": {
+    "kind": "int",
+    "original": 20,
+    "min": 10,
+    "max": 60,
+    "step": 2
+   },
+   "meat": {
+    "kind": "num_choice",
+    "original": "7.00",
+    "values": [
+     "5.00",
+     "6.00",
+     "8.00",
+     "9.00",
+     "10.00"
+    ]
+   },
+   "cheese": {
+    "kind": "num_choice",
+    "original": "3.00",
+    "values": [
+     "2.00",
+     "4.00",
+     "5.00"
+    ]
+   }
+  },
+  "constraints": [
+   "v['people'] % v['serve'] == 0",
+   "v['people'] > v['serve']"
+  ],
+  "solver": "def solve(v):\n    assert v['people'] % v['serve'] == 0\n    sandwiches = v['people'] // v['serve']\n    # each sandwich needs 1 pound of meat and 1 pound of cheese\n    return sandwiches * (1 * v['meat'] + 1 * v['cheese'])"
+ },
+ {
+  "row": 863,
+  "template": "{name} has some coins. There are {diff} more gold coins than silver coins. If she had {gold} gold coins, how many coins did {name} have in total?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Gretchen",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "diff": {
+    "kind": "int",
+    "original": 30,
+    "min": 10,
+    "max": 90,
+    "step": 5
+   },
+   "gold": {
+    "kind": "int",
+    "original": 70,
+    "min": 20,
+    "max": 200,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "v['gold'] - v['diff'] >= 2"
+  ],
+  "solver": "def solve(v):\n    silver = v['gold'] - v['diff']\n    assert silver >= 1\n    return v['gold'] + silver"
+ },
+ {
+  "row": 953,
+  "template": "{name} sleepwalks, to monitor her sleeping hours, she installs a camera in her room. {name} usually goes to sleep at 10 p.m. and wakes up at 6 a.m. She is a sleepwalker. One day, after reviewing the cameras, she finds that she woke up that day and was sleepwalking from 2:15 to 2:38 am.  Also, that day she woke up {early} minutes earlier than usual to go to the bathroom. How many minutes did she sleep on her bed that day?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Kim",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "early": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    usual = ((24 - 22) + 6) * 60  # 10 p.m. to 6 a.m.\n    walking = 38 - 15  # 2:15 to 2:38 am\n    return usual - walking - v['early']"
+ },
+ {
+  "row": 49,
+  "template": "{name} lives in an apartment building with {floors} floors. Each floor contains {units} units, and {num}/{den} of the building is occupied. What's the total number of unoccupied units In the building?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Richard",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "floors": {
+    "kind": "int",
+    "original": 15,
+    "min": 5,
+    "max": 40,
+    "step": 1
+   },
+   "units": {
+    "kind": "int",
+    "original": 8,
+    "min": 3,
+    "max": 20,
+    "step": 1
+   },
+   "num": {
+    "kind": "int",
+    "original": 3,
+    "min": 1,
+    "max": 6,
+    "step": 1
+   },
+   "den": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['num'] < v['den']",
+   "Fraction(v['num'], v['den']).denominator == v['den']",
+   "(v['floors'] * v['units'] * v['num']) % v['den'] == 0"
+  ],
+  "solver": "def solve(v):\n    total = v['floors'] * v['units']\n    occupied = Fraction(v['num'], v['den']) * total\n    assert occupied.denominator == 1\n    return total - occupied"
+ },
+ {
+  "row": 474,
+  "template": "At a certain grade level, three-fourths of students have a desktop computer at home. If {n} students do not have desktop computers, how many students are there at that grade level?",
+  "vars": {
+   "n": {
+    "kind": "int",
+    "original": 20,
+    "min": 10,
+    "max": 70,
+    "step": 5
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    total = Fraction(v['n']) / (1 - Fraction(3, 4))\n    assert total.denominator == 1\n    return total"
+ },
+ {
+  "row": 410,
+  "template": "{name} went to the seashore for vacation.  Her parents gave her ${budget} to buy whatever she wanted.  At the trinket shop, taffy was on sale for \"Buy 1 pound at ${taffy}, get 1 pound 1/2 off.\"  She scooped up 2 pounds.  She also bought a mixed bag of seashells for ${shells} and {mags} magnets that were ${mprice} each.  How much money does {name} have left?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Sally",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "budget": {
+    "kind": "int",
+    "original": 10,
+    "min": 10,
+    "max": 30,
+    "step": 5
+   },
+   "taffy": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "shells": {
+    "kind": "num_choice",
+    "original": "1.50",
+    "values": [
+     "0.50",
+     "1.00",
+     "2.00",
+     "2.50",
+     "3.00",
+     "1.25",
+     "1.75"
+    ]
+   },
+   "mags": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   },
+   "mprice": {
+    "kind": "num_choice",
+    "original": "0.25",
+    "values": [
+     "0.50",
+     "0.75",
+     "0.20",
+     "0.10",
+     "0.30"
+    ]
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    taffy = v['taffy'] + Fraction(v['taffy'], 2)  # 1 pound full price + 1 pound half off\n    spent = taffy + v['shells'] + v['mags'] * v['mprice']\n    left = v['budget'] - spent\n    assert left >= 0\n    return left"
+ },
+ {
+  "row": 705,
+  "template": "{name}'s cat is {ratio} times faster than her turtle. If the cat can run {cat} feet/second, how many feet can her turtle crawl in {secs} seconds?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Martha",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "ratio": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 10,
+    "step": 1
+   },
+   "cat": {
+    "kind": "int",
+    "original": 15,
+    "min": 6,
+    "max": 40,
+    "step": 1
+   },
+   "secs": {
+    "kind": "int",
+    "original": 40,
+    "min": 10,
+    "max": 120,
+    "step": 5
+   }
+  },
+  "constraints": [
+   "v['cat'] % v['ratio'] == 0"
+  ],
+  "solver": "def solve(v):\n    turtle = Fraction(v['cat'], v['ratio'])\n    assert turtle.denominator == 1\n    return turtle * v['secs']"
+ },
+ {
+  "row": 528,
+  "template": "{ophelia} and {jenna} are living in the same apartment building. They each have {fewer} fewer sofas than chairs. {jenna} has {times} times as many chairs as {ophelia}. If {ophelia} has {sofas} sofas, calculate the total number of sofas and chairs that they have.",
+  "vars": {
+   "ophelia": {
+    "kind": "name",
+    "original": "Ophelia",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "jenna": {
+    "kind": "name",
+    "original": "Jenna",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "fewer": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "times": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 6,
+    "step": 1
+   },
+   "sofas": {
+    "kind": "int",
+    "original": 20,
+    "min": 10,
+    "max": 70,
+    "step": 5
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    o_chairs = v['sofas'] + v['fewer']\n    j_chairs = v['times'] * o_chairs\n    j_sofas = j_chairs - v['fewer']\n    assert j_sofas >= 0\n    return v['sofas'] + o_chairs + j_chairs + j_sofas"
+ },
+ {
+  "row": 220,
+  "template": "It takes {name} {cm} minutes to finish a crossword puzzle and {sm} minutes to finish a sudoku puzzle.  Over the weekend she solved {cn} crossword puzzles and {sn} sudoku puzzles.  How much time did she spend playing these games?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Carmen",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "cm": {
+    "kind": "int",
+    "original": 10,
+    "min": 4,
+    "max": 30,
+    "step": 1
+   },
+   "sm": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "cn": {
+    "kind": "int",
+    "original": 3,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "sn": {
+    "kind": "int",
+    "original": 8,
+    "min": 2,
+    "max": 24,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    return v['cm'] * v['cn'] + v['sm'] * v['sn']"
+ },
+ {
+  "row": 1299,
+  "template": "{name} goes to the mall and spends ${ice} on ice cream, ${ticket} each for movie tickets for herself and her younger sister, and ${bracelet} on a bracelet. If her parents gave her ${budget}, how many dollars does she have left?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Janet",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "ice": {
+    "kind": "num_choice",
+    "original": "3.50",
+    "values": [
+     "2.50",
+     "3.00",
+     "4.00",
+     "4.50",
+     "2.75",
+     "3.25"
+    ]
+   },
+   "ticket": {
+    "kind": "num_choice",
+    "original": "7.50",
+    "values": [
+     "6.50",
+     "8.00",
+     "8.50",
+     "9.00",
+     "9.50",
+     "10.50"
+    ]
+   },
+   "bracelet": {
+    "kind": "num_choice",
+    "original": "8.50",
+    "values": [
+     "5.50",
+     "6.50",
+     "7.50",
+     "9.50",
+     "10.00",
+     "12.50"
+    ]
+   },
+   "budget": {
+    "kind": "int",
+    "original": 40,
+    "min": 30,
+    "max": 80,
+    "step": 5
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    spent = v['ice'] + 2 * v['ticket'] + v['bracelet']  # tickets for herself and her sister\n    left = v['budget'] - spent\n    assert left >= 0\n    return left"
+ },
+ {
+  "row": 1212,
+  "template": "{ali} is a dean of a private school where he teaches one class. {john} is also a dean of a public school. {john} has two classes in his school. Each class has 1/{den} the capacity of {ali}\u2019s class which has the capacity of {cap} students. What is the combined capacity of both schools?",
+  "vars": {
+   "ali": {
+    "kind": "name",
+    "original": "Ali",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "john": {
+    "kind": "name",
+    "original": "John",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "den": {
+    "kind": "int",
+    "original": 8,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "cap": {
+    "kind": "int",
+    "original": 120,
+    "min": 40,
+    "max": 300,
+    "step": 10
+   }
+  },
+  "constraints": [
+   "v['cap'] % v['den'] == 0"
+  ],
+  "solver": "def solve(v):\n    each = Fraction(v['cap'], v['den'])\n    assert each.denominator == 1\n    return v['cap'] * 1 + 2 * each"
+ },
+ {
+  "row": 368,
+  "template": "After scoring {scored} points, {erin} now has three times more points than {sara}, who scored {sara_pts}. How many points did {erin} have before?",
+  "vars": {
+   "erin": {
+    "kind": "name",
+    "original": "Erin",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "sara": {
+    "kind": "name",
+    "original": "Sara",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "scored": {
+    "kind": "int",
+    "original": 14,
+    "min": 4,
+    "max": 40,
+    "step": 1
+   },
+   "sara_pts": {
+    "kind": "int",
+    "original": 8,
+    "min": 2,
+    "max": 30,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    # reference reading: three times more = Sara's points plus three times Sara's points\n    now = v['sara_pts'] + 3 * v['sara_pts']\n    before = now - v['scored']\n    assert before > 0\n    return before"
+ },
+ {
+  "row": 926,
+  "template": "{name} loves going to the movies and every month his parents give him ${allow} to spend at the movies. Tickets for Fridays and Saturdays cost ${fri}. Tickets for any other day cost ${oth}. Popcorn costs ${pop} and boxes of candy cost ${candy}. It is the last day of the month and it's a Friday. He wants to make sure he gets a popcorn and box of candy that night. How many movies can he see if he already saw {fri_n} movies on a Friday or Saturday, {oth_n} movies on other days, had {pop_n} tubs of popcorn, and four boxes of candy that month?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Colby",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "allow": {
+    "kind": "int",
+    "original": 150,
+    "min": 120,
+    "max": 250,
+    "step": 10
+   },
+   "fri": {
+    "kind": "int",
+    "original": 10,
+    "min": 8,
+    "max": 12,
+    "step": 1
+   },
+   "oth": {
+    "kind": "int",
+    "original": 7,
+    "min": 4,
+    "max": 7,
+    "step": 1
+   },
+   "pop": {
+    "kind": "int",
+    "original": 8,
+    "min": 5,
+    "max": 10,
+    "step": 1
+   },
+   "candy": {
+    "kind": "int",
+    "original": 2,
+    "min": 1,
+    "max": 4,
+    "step": 1
+   },
+   "fri_n": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 8,
+    "step": 1
+   },
+   "oth_n": {
+    "kind": "int",
+    "original": 8,
+    "min": 3,
+    "max": 12,
+    "step": 1
+   },
+   "pop_n": {
+    "kind": "int",
+    "original": 2,
+    "min": 2,
+    "max": 4,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['oth'] < v['fri']",
+   "v['candy'] < v['pop']"
+  ],
+  "solver": "def solve(v):\n    spent = v['fri_n'] * v['fri'] + v['oth_n'] * v['oth'] + v['pop_n'] * v['pop'] + 4 * v['candy']\n    left = v['allow'] - spent - (v['pop'] + v['candy'])  # tonight's popcorn and candy\n    assert left >= 0\n    assert left % v['fri'] == 0  # exact, as in the original: no money left over\n    movies = left // v['fri']\n    assert 1 <= movies <= 4  # realistic for one evening\n    return movies",
+  "notes": "Coordinator: exact division required (as in the original), so variants leave no money over.",
+  "exclude": "Review A-M1: two readings ('a popcorn and candy that night' once, or per movie) agree only at the original values, so a variant can be scored against one reading only."
+ },
+ {
+  "row": 243,
+  "template": "{name} has a phone plan of {plan} minutes per month. Every day he has a {call}-minute call with his boss, and he's had {extra} extra minutes of call this month to other people. How many minutes does {name} have left if this month has {days} days?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Jason",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "plan": {
+    "kind": "int",
+    "original": 1000,
+    "min": 600,
+    "max": 3000,
+    "step": 100
+   },
+   "call": {
+    "kind": "int",
+    "original": 15,
+    "min": 5,
+    "max": 45,
+    "step": 5
+   },
+   "extra": {
+    "kind": "int",
+    "original": 300,
+    "min": 100,
+    "max": 900,
+    "step": 50
+   },
+   "days": {
+    "kind": "int",
+    "original": 30,
+    "min": 28,
+    "max": 31,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    left = v['plan'] - v['call'] * v['days'] - v['extra']\n    assert left >= 0\n    return left"
+ },
+ {
+  "row": 56,
+  "template": "{name} plans to go to the movies this week. He always gets a ticket for ${ticket} and popcorn for ${pop}. If he has {budget} dollars for the week, how many times can he go to the movies?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Peter",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "ticket": {
+    "kind": "int",
+    "original": 7,
+    "min": 5,
+    "max": 9,
+    "step": 1
+   },
+   "pop": {
+    "kind": "int",
+    "original": 7,
+    "min": 3,
+    "max": 7,
+    "step": 1
+   },
+   "budget": {
+    "kind": "int",
+    "original": 42,
+    "min": 20,
+    "max": 84,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['budget'] % (v['ticket'] + v['pop']) == 0"
+  ],
+  "solver": "def solve(v):\n    per_trip = v['ticket'] + v['pop']\n    assert v['budget'] % per_trip == 0\n    trips = v['budget'] // per_trip\n    assert trips <= 7  # at most once a day this week\n    return trips"
+ },
+ {
+  "row": 889,
+  "template": "{name} has {no} orchids and {nd} African daisies on her balcony.  If the orchids have {po} petals and daisies have {pd} petals, how many more petals do the daisies have compared to the orchids?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Joelle",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "no": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 15,
+    "step": 1
+   },
+   "nd": {
+    "kind": "int",
+    "original": 4,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   },
+   "po": {
+    "kind": "int",
+    "original": 5,
+    "min": 3,
+    "max": 8,
+    "step": 1
+   },
+   "pd": {
+    "kind": "int",
+    "original": 10,
+    "min": 5,
+    "max": 30,
+    "step": 1
+   }
+  },
+  "constraints": [
+   "v['nd'] * v['pd'] > v['no'] * v['po']"
+  ],
+  "solver": "def solve(v):\n    diff = v['nd'] * v['pd'] - v['no'] * v['po']\n    assert diff > 0\n    return diff"
+ },
+ {
+  "row": 1234,
+  "template": "{name} wrote {n} novels last year. If this is 3 quarters of the number of novels she has written this year, how many novels has she written this year?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Regina",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "n": {
+    "kind": "int",
+    "original": 9,
+    "min": 3,
+    "max": 36,
+    "step": 3
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    this_year = Fraction(v['n']) / Fraction(3, 4)\n    assert this_year.denominator == 1\n    return this_year"
+ },
+ {
+  "row": 69,
+  "template": "{name} starts with a certain amount of money. Then she receives a weekly allowance of ${allow} for {weeks} weeks. At the end of the {weeks} weeks, if she has a total of ${total}, how much money did {name} start with?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Bailey",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "allow": {
+    "kind": "int",
+    "original": 5,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "weeks": {
+    "kind": "int",
+    "original": 8,
+    "min": 2,
+    "max": 20,
+    "step": 1
+   },
+   "total": {
+    "kind": "int",
+    "original": 100,
+    "min": 50,
+    "max": 300,
+    "step": 10
+   }
+  },
+  "constraints": [
+   "v['total'] > v['allow'] * v['weeks']"
+  ],
+  "solver": "def solve(v):\n    start = v['total'] - v['allow'] * v['weeks']\n    assert start > 0\n    return start"
+ },
+ {
+  "row": 1157,
+  "template": "{carl} has a cane that is half as long as he is tall.  {carl} is one foot taller than his brother, {ned}.  And {ned} is two feet shorter than his cousin, {isabel}.  If {isabel} is {h} feet tall, how long is {carl}'s cane, in feet?",
+  "vars": {
+   "carl": {
+    "kind": "name",
+    "original": "Carl",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "ned": {
+    "kind": "name",
+    "original": "Ned",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "isabel": {
+    "kind": "name",
+    "original": "Isabel",
+    "pool": [
+     "Maria",
+     "Priya",
+     "Hannah",
+     "Olivia",
+     "Sofia",
+     "Chloe",
+     "Grace",
+     "Leah",
+     "Nina",
+     "Rosa",
+     "Amara",
+     "Elena"
+    ]
+   },
+   "h": {
+    "kind": "int",
+    "original": 7,
+    "min": 5,
+    "max": 7,
+    "step": 2
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    ned = v['h'] - 2\n    carl = ned + 1\n    assert ned > 0\n    return Fraction(carl, 2)"
+ },
+ {
+  "row": 1193,
+  "template": "{name} was told he could earn ${laundry} for doing his laundry,  ${room} for cleaning his room, ${trash} for taking the trash to the curb each week and ${dish} for emptying the dishwasher.  In a two week period, {name} emptied the dishwasher {dn} times, did his laundry once, took the trash out twice and cleaned his room once.  How much money did {name} earn?",
+  "vars": {
+   "name": {
+    "kind": "name",
+    "original": "Jason",
+    "pool": [
+     "Marcus",
+     "Derek",
+     "Owen",
+     "Liam",
+     "Caleb",
+     "Ethan",
+     "Mateo",
+     "Ravi",
+     "Tomas",
+     "Samuel",
+     "Andre",
+     "Felix"
+    ]
+   },
+   "laundry": {
+    "kind": "num_choice",
+    "original": "3.00",
+    "values": [
+     "2.00",
+     "2.50",
+     "3.50",
+     "4.00",
+     "5.00"
+    ]
+   },
+   "room": {
+    "kind": "num_choice",
+    "original": "1.50",
+    "values": [
+     "1.00",
+     "2.00",
+     "2.50",
+     "1.25",
+     "1.75"
+    ]
+   },
+   "trash": {
+    "kind": "num_choice",
+    "original": "0.75",
+    "values": [
+     "0.50",
+     "1.00",
+     "0.25",
+     "1.25",
+     "1.50"
+    ]
+   },
+   "dish": {
+    "kind": "num_choice",
+    "original": "0.50",
+    "values": [
+     "0.25",
+     "0.75",
+     "1.00"
+    ]
+   },
+   "dn": {
+    "kind": "int",
+    "original": 6,
+    "min": 2,
+    "max": 12,
+    "step": 1
+   }
+  },
+  "constraints": [],
+  "solver": "def solve(v):\n    return v['dn'] * v['dish'] + 1 * v['laundry'] + 2 * v['trash'] + 1 * v['room']"
+ }
+]

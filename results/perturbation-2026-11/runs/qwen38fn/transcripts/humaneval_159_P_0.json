@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:159:P:0",
+ "suite": "humaneval",
+ "row": 159,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "350354fe7655c5967553f9602f1fdb2e2b6a9b34c36dcf4326e319a83e85e589",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:26:04.745601+00:00",
+ "completion": "    if need <= remaining:\n        return [number + need, remaining - need]\n    else:\n        return [number + remaining, 0]\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.0486044619901804
+ },
+ "usage": {
+  "prompt_tokens": 303,
+  "total_tokens": 338,
+  "completion_tokens": 35,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    if(need <= remaining):\n        return [ number + need , remaining-need ]\n    else:\n        return [ number + remaining , 0]\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:26:06.794471+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00131:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:02.118590+00:00"
+}

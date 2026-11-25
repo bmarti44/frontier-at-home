@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1184:P:1",
+ "suite": "gsm8k",
+ "row": 1184,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "4abbe627db745433f4de2d3423a3578a82e11d18aa9dc96b2251196e7e7e79e5",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:53:15.184706+00:00",
+ "completion": "The user wants a brief calculation. 500 kg / 50 kg per bag = 10 bags. Each bag costs $40. Total = 10 * 40 = $400. Need final numeric answer on its own line in form Answer: <number>. They said think briefly if needed, then end with final numeric answer. We can provide brief reasoning and final line. Ensure final answer numeric maybe $400 or 400. Form says <number>, so Answer: 400. Could include dollar sign? It says numeric answer; use 400.500 kg ÷ 50 kg/bag = 10 bags; 10 × $40 = $400.\n\nAnswer: 400",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.743897018001007
+ },
+ "usage": {
+  "prompt_tokens": 80,
+  "total_tokens": 228,
+  "completion_tokens": 148,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "400",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:53:19.928838+00:00"
+}

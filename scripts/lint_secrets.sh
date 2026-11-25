@@ -26,6 +26,8 @@ readonly GLM53_PUBLIC_DIGEST_ALLOWLIST='^results/glm53-flash-gates/build-[a-z0-9
 # and in SUMMARY.md; the tokenizer digest there is public (any interpreter, any
 # gates bundle, whether the kit wrote the bundle root or a smoke run's kit/).
 readonly KIT_LOG_PUBLIC_DIGEST_ALLOWLIST='^results/[a-z0-9.-]+-gates/[0-9a-z.-]+(/kit)?/((speed|context)/log\.txt:1|SUMMARY\.md:[0-9]+):\$ [^ ]+/python[0-9.]* [^ ]+/scripts/(30_bench_speed(_blocks)?|50_probe_context)\.py .*--(output-)?tokenizer-sha256 [0-9a-f]{64}( .*)?$'
+# Inkling 2 Mini screen and gate drivers log the public vLLM tree digest (build manifest vllm_tree).
+readonly INKLING2_TREE_DIGEST_ALLOWLIST='^results/inkling2-gates/[0-9a-z.-]+/[0-9a-z.-]+/driver\.log:[0-9]+:[0-9TZ:-]+ vllm_tree [0-9a-f]{64} files=[0-9]+$|^results/inkling2-gates/holdout-[0-9a-z-]+/observe/driver-console\.log:[0-9]+:humaneval runtime \{.image.: .python:3\.12-slim., .repo_digest.: .python@sha256:[0-9a-f]{64}., .pin_path.: .configs/pins/humaneval-runtime\.json., .pin_sha256.: .[0-9a-f]{64}.\}$'
 readonly LINT_ALLOWLIST_FILE="$(
   cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
   pwd
@@ -118,7 +120,7 @@ redact_matches() {
 
 scan_stream() {
   local matches
-  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_PUBLIC_DIGEST_ALLOWLIST|$KIT_LOG_PUBLIC_DIGEST_ALLOWLIST" || true)"
+  matches="$(grep -E "$SECRET_PATTERN" | grep -Ev "$PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RANDOMNESS_PUBLIC_DIGEST_ALLOWLIST|$W3_PUBLIC_DIGEST_ALLOWLIST|$W4_PUBLIC_DIGEST_ALLOWLIST|$W4_SERVING_PUBLIC_DIGEST_ALLOWLIST|$W7_PUBLIC_DIGEST_ALLOWLIST|$W7_CACHE_PUBLIC_DIGEST_ALLOWLIST|$W7_LAUNCHER_DIGEST_ALLOWLIST|$W7_ATTEMPT_DIGEST_ALLOWLIST|$W8_PUBLIC_DIGEST_ALLOWLIST|$W9_PUBLIC_DIGEST_ALLOWLIST|$MATCHED_RUNTIME_PUBLIC_DIGEST_ALLOWLIST|$GLM53_PUBLIC_DIGEST_ALLOWLIST|$KIT_LOG_PUBLIC_DIGEST_ALLOWLIST|$INKLING2_TREE_DIGEST_ALLOWLIST" || true)"
   if [[ -n "$matches" ]]; then
     printf '%s\n' "$matches" | redact_matches >&2
     return 1

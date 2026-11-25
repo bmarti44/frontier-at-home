@@ -1,0 +1,61 @@
+{
+  "index": 238,
+  "task_id": 238,
+  "rendered_prompt_sha256": "049b6153f4f142964f65febc90926801a303f067415322cf3eb83f0377256eac",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Jessa 20. Joan is five years older than Jessa => Joan 25. Mary is two years younger than Joan => Mary 23. Sum 20+25+23=68. Need final with brief maybe one sentence and final line exactly Answer: 68. Ensure final numeric answer on own line.Jessa is 20, Joan is 25, and Mary is 23. Sum = 20 + 25 + 23 = 68.\nAnswer: 68",
+  "finish_reason": "stop",
+  "expected": "68",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.043441351968795
+  },
+  "response": {
+    "id": "cmpl-9a5461d2dc6c02d0",
+    "object": "text_completion",
+    "created": 1795415264,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Jessa 20. Joan is five years older than Jessa => Joan 25. Mary is two years younger than Joan => Mary 23. Sum 20+25+23=68. Need final with brief maybe one sentence and final line exactly Answer: 68. Ensure final numeric answer on own line.Jessa is 20, Joan is 25, and Mary is 23. Sum = 20 + 25 + 23 = 68.\nAnswer: 68",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 81,
+      "total_tokens": 198,
+      "completion_tokens": 117,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|message_system|><|content_text|>Thinking effort level: 0.2<|end_message|><|message_user|><|content_text|>Mary is two years younger than Joan, who is five years older than Jessa. If Jessa is 20 years old, what is the sum of the ages of the three girls?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|end_message|>"
+}

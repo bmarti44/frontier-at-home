@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:69:P:1",
+ "suite": "gsm8k",
+ "row": 69,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "48af7196df0dc8447fbc97a522599b1bd8627166eefc6c7770e7fc86fd85c75a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:34:01.270994+00:00",
+ "completion": "The user wants a math answer. Need compute: weekly allowance $4 for 7 weeks = 28. End total 120. Start = 120 - 28 = 92. Need final numeric answer on its own line form Answer: <number>. They said think briefly if needed, then end with final numeric answer. We can provide brief explanation and final line. Ensure final line exactly Answer: 92 maybe with dollar sign? Form says <number>, so Answer: 92. Could include $? They said numeric answer; use 92.She receives 4 × 7 = $28 in allowance. Starting amount = 120 − 28 = 92.\n\nAnswer: 92",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.828232328000013
+ },
+ "usage": {
+  "prompt_tokens": 93,
+  "total_tokens": 246,
+  "completion_tokens": 153,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "92",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:34:06.099487+00:00"
+}

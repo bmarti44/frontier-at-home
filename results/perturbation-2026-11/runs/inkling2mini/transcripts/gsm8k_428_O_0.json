@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:428:O:0",
+ "suite": "gsm8k",
+ "row": 428,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "b933235bb6430cf3504395b3fbd05921241535314605bd0c1ed3818131f6cc1b",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:57:25.030375+00:00",
+ "completion": "We need answer math. Need parse carefully.\n\nProblem: caterer told to prepare gourmet hot dogs for 36 guests. While most people would only eat one hotdog, he prepared enough for half of the guests to be able to have two hotdogs. However, 40 guests showed up, and everyone wanted a second hotdog. How many guests did not get a second hotdog?\n\nCompute prepared hotdogs: For 36 guests, most eat one, he prepared enough for half of guests to have two hotdogs. Half of 36 = 18 guests have two, remaining 18 have one. Total = 18*2 + 18*1 = 36+18=54. Alternatively \"enough for half of the guests to be able to have two hotdogs\" could mean enough for 18 guests to have two (36) plus all 36 to have one? Yes 54.\n\n40 guests showed up, everyone wanted a second hotdog. Each guest wants at least one? Everyone wanted a second hotdog means each of 40 wants 2 total = 80. Available 54. First hotdog for all 40 = 40, remaining 14 for second hotdogs. So 14 guests get second, 26 do not. Need ensure interpretation: He prepared enough for half of the guests (36) to be able to have two hotdogs. Could mean he prepared 36 + 18 = 54. Yes.\n\nFinal with brief explanation and final line exact.He prepared: 36 first hotdogs + 18 extra hotdogs = 54 hotdogs.\n\n40 guests each want a first hotdog, leaving 54 − 40 = 14 hotdogs for seconds. So 14 guests get a second hotdog, and 40 − 14 = 26 do not.\n\nAnswer: 26",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.686089078000805
+ },
+ "usage": {
+  "prompt_tokens": 114,
+  "total_tokens": 514,
+  "completion_tokens": 400,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "26",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:57:36.716865+00:00"
+}

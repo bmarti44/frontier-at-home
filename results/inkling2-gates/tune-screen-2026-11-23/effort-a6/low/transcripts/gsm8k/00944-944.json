@@ -1,0 +1,60 @@
+{
+  "index": 944,
+  "task_id": 944,
+  "rendered_prompt_sha256": "7ba74c4a3a9db417bca4830a9b1ccbbc7268c2a02ba3cdbd3898133414a84b6e",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a calculation. Need think briefly. Compute: yams 6*1.5=9. Sweet potatoes 10*2=20. Carrots 4*1.25=5. Total 9+20+5=34. Need final numeric answer on own line form Answer: <number>. Could include brief calculation then final line. Ensure final line exactly.6 × $1.50 = $9.00  \n10 × $2.00 = $20.00  \n4 × $1.25 = $5.00  \nTotal = $34.00\n\nAnswer: $34",
+  "finish_reason": "stop",
+  "expected": "34",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.03912959061563
+  },
+  "response": {
+    "id": "cmpl-955ee200f5904f28",
+    "object": "text_completion",
+    "created": 1795415781,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a calculation. Need think briefly. Compute: yams 6*1.5=9. Sweet potatoes 10*2=20. Carrots 4*1.25=5. Total 9+20+5=34. Need final numeric answer on own line form Answer: <number>. Could include brief calculation then final line. Ensure final line exactly.6 × $1.50 = $9.00  \n10 × $2.00 = $20.00  \n4 × $1.25 = $5.00  \nTotal = $34.00\n\nAnswer: $34",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 105,
+      "total_tokens": 243,
+      "completion_tokens": 138,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": true
+}

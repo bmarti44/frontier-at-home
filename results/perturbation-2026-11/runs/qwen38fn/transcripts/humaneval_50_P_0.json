@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:50:P:0",
+ "suite": "humaneval",
+ "row": 50,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "71432e004812134997ffd5e9cb3bca94cbb5c662b518feec5c8ab18773ceef37",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:58:54.599570+00:00",
+ "completion": "    return \"\".join([chr(((ord(ch) - 5 - ord(\"a\")) % 26) + ord(\"a\")) for ch in s])\n\n\ndef generate_word_list(n):\n    \"\"\"\n    generates a list of words that the players have to guess.\n    \"\"\"\n    return [\"\".join(random.choice(string.ascii_letters) for _ in range(10)) for _ in range(n)]\n\nword_list = generate_word_list(10)\nfor i in range(len(word_list)):\n    word_list[i] = encode_shift(word_list[i])\n\ndef check_guess(guess, word):\n    \"\"\"\n    takes two strings and checks if the player's guess is the secret word or not.\n    \"\"\"\n    for i in range(len(word)):\n        if guess[i] != word[i]:\n            return False\n    return True\n\ndef play_game(word_list):\n    \"\"\"\n    takes as input word list.\n    returns the number of rounds played.\n    \"\"\"\n    rounds = 0\n    for word in word_list:\n        rounds += 1\n        guess = input(\"Enter your guess: \")\n        while not check_guess(guess, word):\n            guess = input(\"Enter your guess: \")\n    return rounds\n\nrounds = play_game(word_list)\nprint(f\"Congratulations! You won in {rounds} rounds!\")\n\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 13.958499118001782
+ },
+ "usage": {
+  "prompt_tokens": 98,
+  "total_tokens": 389,
+  "completion_tokens": 291,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return \"\".join([chr(((ord(ch) - 5 - ord(\"a\")) % 26) + ord(\"a\")) for ch in s])\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T05:59:08.558245+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00219:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:32.744245+00:00"
+}

@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:8832:O:0",
+ "suite": "mmlu-pro",
+ "row": 8832,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "3262834c032be11ab05c89e94946df01a0b5d85ced1a007fb76f566034196e13",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:43:34.501502+00:00",
+ "completion": "We need answer math. Need compute P(W1+W2>2). Standard BM: W1~N(0,1), W2~N(0,2), Cov(W1,W2)=min(1,2)=1. Sum S=W1+W2 mean0 variance Var(W1)+Var(W2)+2Cov=1+2+2=5. S~N(0,5). P(S>2)=P(Z>2/sqrt5)=1-Phi(2/sqrt5). 2/sqrt5≈0.8944271909999159. Phi(0.8944)≈? Phi(0.89)=0.8133? Let's estimate: Phi(0.9)=0.81594. At 0.8944 slightly lower by phi(0.9)*(-0.00557). phi(0.9)=0.266? Actually standard normal pdf at 0.9 = 0.2661. delta=-0.00557, Phi decreases by 0.00148 -> 0.81446. tail=0.18554. Option D 0.186. Need final only letter. Ensure no extra.Answer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.630098484001792
+ },
+ "usage": {
+  "prompt_tokens": 133,
+  "total_tokens": 424,
+  "completion_tokens": 291,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:43:43.131907+00:00"
+}

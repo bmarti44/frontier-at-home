@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:615:P:1",
+ "suite": "gsm8k",
+ "row": 615,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "72a0269cae919b9fe63019a41d1ff3cb10ba0ed1a7a94a5fca868297d69c3931",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:28:45.828720+00:00",
+ "completion": "We need answer arithmetic. Need compute carefully.\nAquarium $12.00.\nRocks: 4 bags * $2.00 = $8.00.\nCoral: 5 pieces * $2.50 = $12.50.\nFish: 58 * $0.25 = $14.50 (50*0.25=12.5, 8*0.25=2, total 14.5).\nFood: $5.00.\nTotal = 12 + 8 + 12.50 + 14.50 + 5 = 12+8=20; +12.5=32.5; +14.5=47; +5=52. Answer $52.00.\nNeed final numeric answer on own line form Answer: <number>. Could include brief calculation then final line. Ensure final line exactly.12.00 + 8.00 + 12.50 + 14.50 + 5.00 = 52.00\n\nAnswer: $52.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.652817078000226
+ },
+ "usage": {
+  "prompt_tokens": 121,
+  "total_tokens": 349,
+  "completion_tokens": 228,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "52",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:28:50.481878+00:00"
+}

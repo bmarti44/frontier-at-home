@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:112:P:1",
+ "suite": "gsm8k",
+ "row": 112,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "7ec04119aca8c28682fa364a93eaeb8ce8035c4d54f2b66bdb7c0d9b15d76ac5",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:54:34.034409+00:00",
+ "completion": "Let me work through this step by step.\n\n- There are 5 teachers who share the classroom\n- Each teacher has 2 lessons per day\n- The whiteboard is cleaned 3 times per lesson\n\nSo I need to find the total number of lessons per day, then multiply by the number of times the whiteboard is cleaned per lesson.\n\nTotal lessons per day = 5 teachers × 2 lessons per teacher = 10 lessons per day\n\nTotal times cleaned per day = 10 lessons × 3 times per lesson = 30 times\n</think>\n\nLet me break this down:\n\n- **5 teachers** share the classroom\n- Each teacher has **2 lessons per day**\n- The whiteboard is cleaned **3 times per lesson**\n\n**Step 1:** Find total lessons per day:\n5 teachers × 2 lessons = 10 lessons per day\n\n**Step 2:** Find total cleanings per day:\n10 lessons × 3 cleanings = 30 cleanings\n\nAnswer: 30",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.891954088998318
+ },
+ "usage": {
+  "prompt_tokens": 128,
+  "total_tokens": 346,
+  "completion_tokens": 218,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "30",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:54:42.926589+00:00"
+}

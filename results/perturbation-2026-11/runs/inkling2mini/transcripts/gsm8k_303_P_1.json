@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:303:P:1",
+ "suite": "gsm8k",
+ "row": 303,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "af675175fadd85f506c64babb524c84d115528db8719ce70231a0b6673b953e1",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T22:18:04.860104+00:00",
+ "completion": "We need answer math. Need parse carefully.\n\nProblem: Priya has been selling Dad's collection of 330 books for three years. Each book sells at $20, and she sold twice as many books in the first year as she has sold in the current year. There are currently 35 unsold books, and her sales number this year is 55. What's total amount of money she earned in the second year?\n\nInterpretation: Collection 330 books. After three years? \"for three years\" and \"current year\" likely third year. Currently 35 unsold books, sales number this year = 55. Total sold = 330 - 35 = 295. This year (third year) sold 55. First year sold twice as many as current year = 2*55 = 110. Second year sold = total sold - first - third = 295 - 110 - 55 = 130. Money second year = 130*20 = 2600.\n\nCheck: 110+130+55=295, unsold 35, total 330. Yes.\n\nNeed final with brief reasoning and final numeric answer line exactly. Ensure dollar amount maybe $2600. They ask total amount of money. Final numeric answer on own line form Answer: <number>. Could include $ in number? Form says <number>, likely Answer: 2600. Maybe include $? They said numeric answer; use 2600. Need brief if needed. Final line only.Total sold = 330 − 35 = 295.  \nFirst year = 2 × 55 = 110.  \nSecond year = 295 − 110 − 55 = 130 books.  \nEarnings = 130 × 20 = 2600.\n\nAnswer: 2600",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.99589449999985
+ },
+ "usage": {
+  "prompt_tokens": 121,
+  "total_tokens": 504,
+  "completion_tokens": 383,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "2600",
+ "reason": "correct",
+ "finished_at": "2026-11-24T22:18:15.856255+00:00"
+}

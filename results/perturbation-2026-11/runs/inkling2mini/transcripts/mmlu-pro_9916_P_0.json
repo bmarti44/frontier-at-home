@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:9916:P:0",
+ "suite": "mmlu-pro",
+ "row": 9916,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "a9fcbff62cc1d18fe40c09cdbff374ab8d8e64939afb3e91262a4420b219bb1f",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:07:10.332195+00:00",
+ "completion": "We need answer physics. Need compute. Let's reason carefully.\n\nNonrelativistic 1D collision: particle mass 2m with initial velocity v, particle mass m at rest. Stick together (perfectly inelastic). Initial momentum p = 2m v. Final mass = 3m, velocity V = p/(3m) = (2/3) v. Initial KE = 1/2 (2m) v^2 = m v^2. Final KE = 1/2 (3m) (4/9 v^2) = (3/2)m*(4/9)v^2 = (12/18) m v^2 = (2/3) m v^2. Lost = initial - final = m v^2 - 2/3 m v^2 = 1/3 m v^2. Fraction lost = (1/3)/(1) = 1/3. Option B.\n\nNeed final only single letter form. Ensure no extra.Answer: B",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.643218944002001
+ },
+ "usage": {
+  "prompt_tokens": 153,
+  "total_tokens": 384,
+  "completion_tokens": 231,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "B",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:07:15.975652+00:00"
+}

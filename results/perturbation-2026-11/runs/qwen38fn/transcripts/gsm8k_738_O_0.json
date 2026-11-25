@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:738:O:0",
+ "suite": "gsm8k",
+ "row": 738,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "ee12d13ca4127dc078a120d1c9cfb1bb8c42437694cfc3b893b4d7862e5b6f33",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:15:21.632058+00:00",
+ "completion": "Let me work through this step by step.\n\n- Clara has 20 books.\n- Clara has two times as many books as Steven, so Steven has 20/2 = 10 books.\n- Alice has 6 more books than Steven, so Alice has 10 + 6 = 16 books.\n- Clara has 20 - 16 = 4 more books than Alice.\n</think>\n\nClara has 20 books.\nSteven has 20 ÷ 2 = 10 books.\nAlice has 10 + 6 = 16 books.\nClara has 20 - 16 = 4 more books than Alice.\n\nAnswer: 4",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.17025443300372
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 259,
+  "completion_tokens": 156,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "4",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:15:27.802516+00:00"
+}

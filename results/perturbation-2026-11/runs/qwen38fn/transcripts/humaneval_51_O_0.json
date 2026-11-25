@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:51:O:0",
+ "suite": "humaneval",
+ "row": 51,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "94f4ed2b675b10bfe15e0adb2ea620b19790cfb4df26b9362df57d6daa6c9b8b",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T04:28:04.816977+00:00",
+ "completion": "    vowels = \"aeiouAEIOU\"\n    return \"\".join([char for char in text if char not in vowels])\n\ndef check(candidate):\n    assert candidate('') == ''\n    assert candidate(\"abcdef\\nghijklm\") == 'bcdf\\nghjklm'\n    assert candidate('abcdef') == 'bcdf'\n    assert candidate('aaaaa') == ''\n    assert candidate('aaBAA') == 'B'\n    assert candidate('zbcd') == 'zbcd'\n\ndef test_check():\n    check(remove_vowels)\n\ntest_check()\n\n</parameter>\n</function>\n</tool_call>",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.687051212997176
+ },
+ "usage": {
+  "prompt_tokens": 134,
+  "total_tokens": 271,
+  "completion_tokens": 137,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    return \"\".join([s for s in text if s.lower() not in [\"a\", \"e\", \"i\", \"o\", \"u\"]])\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T04:28:10.504211+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00220:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:32.961477+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:428:P:1",
+ "suite": "gsm8k",
+ "row": 428,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "83cb9081a362898af42c7823f22be45ec0b4fd1ff3ccd9ed9e19e2c49b8b3686",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:44:58.192078+00:00",
+ "completion": "We need answer arithmetic. Need be careful. Problem: caterer told prepare gourmet hot dogs for 40 guests. Most people would only eat one hotdog, he prepared enough for half of the guests to be able to have two hotdogs. Interpret: For 40 guests, half =20 guests to be able to have two hotdogs. Prepared enough for half guests to have two hotdogs: likely 20 guests *2 + remaining 20 guests *1 = 40+20=60 hotdogs. Alternatively \"prepared enough for half of the guests to be able to have two hotdogs\" could mean he prepared enough hotdogs such that half of the 40 guests could have two (and presumably all guests one). Yes 60.\n45 guests showed up, everyone wanted a second hotdog. Total wanted: 45*2=90. Have 60. First hotdogs for all 45 =45, remaining 15 hotdogs for second hotdogs. So 15 guests get second, 30 do not. Need final numeric answer only line. Brief explanation okay. Ensure final line Answer: 30.He prepared for 40 guests: 20 guests with 2 hotdogs and 20 with 1 = 60 hotdogs.  \n45 guests each want 2 = 90 hotdogs, so 30 guests miss a second hotdog.\n\nAnswer: 30",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.380399634999776
+ },
+ "usage": {
+  "prompt_tokens": 114,
+  "total_tokens": 421,
+  "completion_tokens": 307,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "30",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:45:08.572714+00:00"
+}

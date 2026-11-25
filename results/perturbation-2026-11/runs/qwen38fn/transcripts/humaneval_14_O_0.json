@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:14:O:0",
+ "suite": "humaneval",
+ "row": 14,
+ "split": "all",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "f4eca2c1c9ceb5ca5b0b0885dfd75fb4f768967fd2e53640176e413a499cc165",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:17:06.366634+00:00",
+ "completion": "    return [string[:i] for i in range(1, len(string) + 1)]\n\ndef check(candidate):\n    assert candidate('') == []\n    assert candidate('a') == ['a']\n    assert candidate('ab') == ['a', 'ab']\n    assert candidate('asdf') == ['a', 'as', 'asd', 'asdf']\n    assert candidate('') == []\n\ndef test_check():\n    check(all_prefixes)\n\ntest_check()\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.445445302000735
+ },
+ "usage": {
+  "prompt_tokens": 57,
+  "total_tokens": 162,
+  "completion_tokens": 105,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    result = []\n\n    for i in range(len(string)):\n        result.append(string[:i+1])\n    return result\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:17:11.812294+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00110:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:57.556802+00:00"
+}

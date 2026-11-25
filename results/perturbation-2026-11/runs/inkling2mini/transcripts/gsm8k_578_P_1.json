@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:578:P:1",
+ "suite": "gsm8k",
+ "row": 578,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "326dd0753b5eb42284f5518a0d69343dcf3f5d32e17da018b5362984cfe6503b",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:34:47.125947+00:00",
+ "completion": "We need answer math. Need parse carefully.\n\nChloe gave a number train a starting value of 36. This starting value plus half the number was divided by 6 and the resulting value was multiplied by the starting value minus 29. What was the final value of the number train?\n\nInterpretation: starting value = 36. \"This starting value plus half the number\" = 36 + (36/2) = 36+18=54. Divided by 6 = 9. Resulting value multiplied by (starting value minus 29) = 9 * (36-29)=9*7=63. Final value 63.\n\nNeed ensure phrase \"half the number\" maybe half the starting value? yes.\n\nNeed final with brief explanation and final numeric answer on own line exactly Answer: <number>. Keep concise.Starting value: 36  \n(36 + 36/2) / 6 = 54/6 = 9  \n9 × (36 − 29) = 9 × 7 = 63\n\nAnswer: 63",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.427946407995478
+ },
+ "usage": {
+  "prompt_tokens": 89,
+  "total_tokens": 321,
+  "completion_tokens": 232,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "63",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:34:52.554134+00:00"
+}

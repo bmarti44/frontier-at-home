@@ -1,0 +1,42 @@
+{
+ "greedy": [
+  {
+   "prompt": "Write a Python function that merges two sorted lists in O(n). Code only.",
+   "sha256": "170c63d11040b55b23b82481066107985d3127560b40ab7b16617c8d6f54f612",
+   "completion_tokens": 346,
+   "text": "The user wants code only. Need provide Python function merging two sorted lists in O(n). Need ensure code only, no explanation. We can write function with two pointers. Consider sorted ascending. Return new list. Code only likely no markdown? They said code only. Provide just code block? Code only maybe no prose. Final should contain only code. Need be careful no extra text.\n\nFunction:\ndef merge_sorted(a,b):\n    i=j=0\n    out=[]\n    while i<len(a) and j<len(b):\n        if a[i] <= b[j]:\n            out.append(a[i]); i+=1\n        else:\n            out.append(b[j]); j+=1\n    out.extend(a[i:])\n    out.extend(b[j:])\n    return out\n\nThis is O(n). Code only.\u0000def merge_sorted(a, b):\n    i = j = 0\n    out = []\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]:\n            out.append(a[i])\n            i += 1\n        else:\n            out.append(b[j])\n            j += 1\n    out.extend(a[i:])\n    out.extend(b[j:])\n    return out"
+  },
+  {
+   "prompt": "Explain in three sentences what a race condition is.",
+   "sha256": "c7fe1a930bcb04ae1d10cbb5c02b3b07a63bb8ca0e1842746a5bee24bc1e18ca",
+   "completion_tokens": 199,
+   "text": "The user asks for a three-sentence explanation of a race condition. Need answer concise. Need ensure exactly three sentences. Define: situation where outcome depends on timing/order of concurrent operations; multiple threads/processes access shared data and at least one modifies it; without proper synchronization, results can be inconsistent/unpredictable. Need three sentences only. No extra. Ensure no semicolons? Fine.\n\nDraft:\n\"A race condition occurs when multiple threads or processes access shared data at the same time. The final result depends on the unpredictable order in which those operations happen. Without proper synchronization, the program can produce inconsistent or incorrect output.\"\nExactly three sentences. Good.\u0000A race condition occurs when multiple threads or processes access shared data at the same time. The final result depends on the unpredictable order in which those operations happen. Without proper synchronization, the program can produce inconsistent or incorrect output."
+  },
+  {
+   "prompt": "Return a JSON object with keys name, version, deps for a tiny npm package.",
+   "sha256": "217aaabaf808dd28e2b849c9abd337fac1240aaedf33f3a66c10ce1c8c9b0d8d",
+   "completion_tokens": 180,
+   "text": "The user asks: \"Return a JSON object with keys name, version, deps for a tiny npm package.\" Need answer with JSON object only likely. Need ensure valid JSON. Keys name, version, deps. deps likely object of dependencies. Tiny npm package example. No need for extra text. Need final only JSON. Ensure no markdown fences? They said return a JSON object. So final should be raw JSON. Choose name \"tiny-pkg\", version \"0.1.0\", deps {} or maybe {\"lodash\":\"^4.17.21\"} but tiny package maybe no deps. Use deps: {}. Valid JSON.\u0000{\"name\":\"tiny-pkg\",\"version\":\"0.1.0\",\"deps\":{}}"
+  }
+ ],
+ "granularity": [
+  {
+   "prompt": "Write a Python function that merges two sorted lists in O(n). Code only.",
+   "text_chunks": 222,
+   "completion_tokens": 256,
+   "tokens_per_chunk": 1.1531531531531531
+  },
+  {
+   "prompt": "Explain in three sentences what a race condition is.",
+   "text_chunks": 189,
+   "completion_tokens": 199,
+   "tokens_per_chunk": 1.052910052910053
+  },
+  {
+   "prompt": "Return a JSON object with keys name, version, deps for a tiny npm package.",
+   "text_chunks": 171,
+   "completion_tokens": 180,
+   "tokens_per_chunk": 1.0526315789473684
+  }
+ ]
+}

@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:6973:P:0",
+ "suite": "mmlu-pro",
+ "row": 6973,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "a41d27f65547a5c4cb31da67b666f6fe699e2ada44f0eee50c0a3272721ac925",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T19:51:05.858991+00:00",
+ "completion": "We need answer finance. Need compute price of security with maturity value 100,000, coupon rate 5%, due next year, yield 9%. Need infer coupon payment? Likely annual coupon = 5% of 100,000 = 5,000. Due next year (one year). Price = coupon/(1+y) + maturity/(1+y)^1 = 5,000/1.09 + 100,000/1.09 = 105,000/1.09 = 96,330.275... Yes D. Need final only letter form. Ensure no extra.Answer: D",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.2295139390007535
+ },
+ "usage": {
+  "prompt_tokens": 163,
+  "total_tokens": 309,
+  "completion_tokens": 146,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "D",
+ "reason": "correct",
+ "finished_at": "2026-11-24T19:51:10.088660+00:00"
+}

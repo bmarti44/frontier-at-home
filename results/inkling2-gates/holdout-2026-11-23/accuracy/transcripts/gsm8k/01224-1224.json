@@ -1,0 +1,60 @@
+{
+  "index": 1224,
+  "task_id": 1224,
+  "rendered_prompt_sha256": "a84391e8621b5c7657723b7dbd86e9f4b39ac68453bbba23084bdaf3c0de6162",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a math answer. Need compute: Monday 2 inches. Tuesday expected to rain 1 more inch than twice Monday's total. Twice Monday = 4. 1 more = 5 inches. Need final line exactly Answer: <number>. Could include brief calculation. Ensure final numeric answer on its own line. No need for more.Twice Monday’s total is 2 × 2 = 4 inches. One more inch is 4 + 1 = 5 inches.\n\nAnswer: 5 inches",
+  "finish_reason": "stop",
+  "expected": "5",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.1918877731077373
+  },
+  "response": {
+    "id": "cmpl-bd7f9b827a604ea0",
+    "object": "text_completion",
+    "created": 1795428906,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a math answer. Need compute: Monday 2 inches. Tuesday expected to rain 1 more inch than twice Monday's total. Twice Monday = 4. 1 more = 5 inches. Need final line exactly Answer: <number>. Could include brief calculation. Ensure final numeric answer on its own line. No need for more.Twice Monday’s total is 2 × 2 = 4 inches. One more inch is 4 + 1 = 5 inches.\n\nAnswer: 5 inches",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 79,
+      "total_tokens": 196,
+      "completion_tokens": 117,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

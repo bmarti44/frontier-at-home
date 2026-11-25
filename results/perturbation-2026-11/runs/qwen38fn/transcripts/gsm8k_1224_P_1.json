@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1224:P:1",
+ "suite": "gsm8k",
+ "row": 1224,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "3b47edc267d45ae3de7b25cb2a8d41930b0fa32a18acf3ab29fe02bc66d7f857",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:49:43.554959+00:00",
+ "completion": "Monday's rain = 4 inches\nTuesday's rain = 1 more inch than twice Monday's total\nTwice Monday's total = 2 × 4 = 8\n1 more inch than that = 8 + 1 = 9\n</think>\n\nMonday's rain = 4 inches\n\nTuesday's rain = twice Monday's total + 1 more inch = (2 × 4) + 1 = 8 + 1 = 9 inches\n\nAnswer: 9",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.151952209002047
+ },
+ "usage": {
+  "prompt_tokens": 103,
+  "total_tokens": 204,
+  "completion_tokens": 101,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "9",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:49:47.707119+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:745:P:0",
+ "suite": "gsm8k",
+ "row": 745,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "407b7a7d5994987a40bc1c251b0053cd5b05b6be9e9f62db5b2f2e10f098e9b0",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T18:39:00.819226+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: David buys packs of old magic cards and open them to sell. He buys 3 packs for $1400 each. He gets 1 card worth $3000 and another card worth $1400. There are 50 more cards worth average $15 each. How much money profit did he make?\n\nCost = 3*1400 = 4200.\nRevenue = 3000 + 1400 + 50*15 = 3000+1400+750 = 5150? 3000+1400=4400; +750=5150.\nProfit = 5150 - 4200 = 950.\nNeed final numeric answer on own line form Answer: <number>. Brief if needed. Ensure no extra after final line. Could include short calculation then final line. Need final answer only maybe. Do concise.Cost: 3 × $1400 = $4200  \nRevenue: $3000 + $1400 + 50 × $15 = $5150  \nProfit: $5150 − $4200 = $950  \n\nAnswer: $950",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.736195649000365
+ },
+ "usage": {
+  "prompt_tokens": 116,
+  "total_tokens": 366,
+  "completion_tokens": 250,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "950",
+ "reason": "correct",
+ "finished_at": "2026-11-24T18:39:06.555836+00:00"
+}

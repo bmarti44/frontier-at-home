@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1293:P:1",
+ "suite": "gsm8k",
+ "row": 1293,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "354dfea8a8439196f3e8cab2703ef4ddf19a4e420dbb61c52e1df78c8d16f8c0",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:07:07.689041+00:00",
+ "completion": "The user wants a brief calculation. Need determine two weeks = 14 days. Daily production 7000 bars. Daily revenue = 7000*2 = 14000. Two weeks revenue = 14000*14 = 196000. Need final numeric answer on own line form Answer: <number>. Could include brief explanation. Ensure final line exactly. No need for more tools.Two weeks = 14 days.  \nDaily revenue = 7000 × $2 = $14,000.  \nTwo-week revenue = $14,000 × 14 = $196,000.\n\nAnswer: $196,000",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.9296159379991877
+ },
+ "usage": {
+  "prompt_tokens": 90,
+  "total_tokens": 226,
+  "completion_tokens": 136,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "196000",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:07:11.618887+00:00"
+}

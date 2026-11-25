@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:846:P:1",
+ "suite": "gsm8k",
+ "row": 846,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "e1c22fdbd0663bffd5f6943e5a2217ea960fba2b0ad5752ddd1a91e607184a15",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:38:42.616108+00:00",
+ "completion": "Let me work through this step by step.\n\nEach group needs:\n- 5 minutes to get on stage\n- 6 minutes to perform\n- 4 minutes to exit the stage\nTotal per group: 5 + 6 + 4 = 15 minutes\n\nThe concert is 5 hours = 300 minutes.\n\nThere's a 15-minute intermission.\n\nSo the time available for groups is: 300 - 15 = 285 minutes.\n\nNumber of groups: 285 / 15 = 19 groups.\n\nLet me verify: 19 groups × 15 minutes = 285 minutes, plus 15 minutes intermission = 300 minutes = 5 hours. ✓\n</think>\n\nEach group takes 5 + 6 + 4 = 15 minutes total.\n\nThe concert is 5 hours = 300 minutes.\n\nSubtracting the 15-minute intermission: 300 - 15 = 285 minutes available for groups.\n\nNumber of groups: 285 ÷ 15 = 19\n\nAnswer: 19",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.340687432006234
+ },
+ "usage": {
+  "prompt_tokens": 134,
+  "total_tokens": 389,
+  "completion_tokens": 255,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "19",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:38:52.956960+00:00"
+}

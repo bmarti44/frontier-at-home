@@ -1,0 +1,60 @@
+{
+  "index": 220,
+  "task_id": 220,
+  "rendered_prompt_sha256": "a72adea723b1885d2e995bd53afe311f59a04ee5a16cadf76b725403fa470984",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Crossword: 3 puzzles * 10 min = 30 min. Sudoku: 8 puzzles * 5 min = 40 min. Total = 70 min. Need final line exactly \"Answer: <number>\". Could include brief explanation then final line. Ensure final numeric answer on its own line.Crosswords: 3 × 10 = 30 minutes. Sudoku: 8 × 5 = 40 minutes. Total: 30 + 40 = 70 minutes.\nAnswer: 70 minutes",
+  "finish_reason": "stop",
+  "expected": "70",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 1.9725208631716669
+  },
+  "response": {
+    "id": "cmpl-9bcc72b8db2819a8",
+    "object": "text_completion",
+    "created": 1795428741,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Crossword: 3 puzzles * 10 min = 30 min. Sudoku: 8 puzzles * 5 min = 40 min. Total = 70 min. Need final line exactly \"Answer: <number>\". Could include brief explanation then final line. Ensure final numeric answer on its own line.Crosswords: 3 × 10 = 30 minutes. Sudoku: 8 × 5 = 40 minutes. Total: 30 + 40 = 70 minutes.\nAnswer: 70 minutes",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 95,
+      "total_tokens": 220,
+      "completion_tokens": 125,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

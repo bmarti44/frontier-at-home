@@ -1,0 +1,78 @@
+[
+ {
+  "row": 1154,
+  "solver": "def solve(v):\n    return 5 * v['wd'] + 2 * v['we']\n"
+ },
+ {
+  "row": 1308,
+  "solver": "def solve(v):\n    return v['n'] + 2 * v['n']\n"
+ },
+ {
+  "row": 280,
+  "solver": "def solve(v):\n    return v['n1'] * v['p1'] + v['n2'] * v['p2']\n"
+ },
+ {
+  "row": 177,
+  "solver": "def solve(v):\n    sal = Fraction(v['sal'])\n    rest = sal - sal / v['d1'] - sal / v['d2']\n    assert rest > 0\n    rest = rest / 2\n    left = rest - v['kid'] - v['wife']\n    assert left >= 0\n    return left\n"
+ },
+ {
+  "row": 923,
+  "solver": "def solve(v):\n    t, r, c = v['t'], v['r'], v['c']\n    assert t > c\n    # cups that are chamomile or mint, split equally across rows and equally between the two teas\n    return Fraction(t - c, 2 * r)\n"
+ },
+ {
+  "row": 677,
+  "solver": "def solve(v):\n    need = v['goal'] - v['c'] - v['j']\n    assert need > 0\n    return need\n"
+ },
+ {
+  "row": 1176,
+  "solver": "def solve(v):\n    # piece left after Monday; then each day he uses `daily`% of the chalk he has;\n    # he can write with it on a day as long as it is not yet smaller than thr inches\n    piece = Fraction(v['length']) * (100 - v['mon']) / 100\n    keep = Fraction(100 - v['daily'], 100)\n    assert 0 < keep < 1\n    days = 0\n    while piece >= v['thr']:\n        piece *= keep\n        days += 1\n    return days\n"
+ },
+ {
+  "row": 21,
+  "solver": "def solve(v):\n    ray_now = v['now'] + v['gap']\n    ago = ray_now - v['age']\n    assert ago > 0\n    return ago\n"
+ },
+ {
+  "row": 970,
+  "solver": "def solve(v):\n    return v['c'] + (v['c'] + v['more'])\n"
+ },
+ {
+  "row": 356,
+  "solver": "def solve(v):\n    spent = v['cars'] * v['cp'] + v['bears'] * v['bp']\n    assert spent <= v['money']\n    return v['money'] - spent + v['extra']\n"
+ },
+ {
+  "row": 100,
+  "solver": "def solve(v):\n    f1 = Fraction(v['first'])\n    f2 = f1 + f1 / v['k']\n    f4 = v['fourth']\n    f3 = f4 + v['diff']\n    return f1 + f2 + f3 + f4\n"
+ },
+ {
+  "row": 132,
+  "solver": "def solve(v):\n    rides = v['p'] + v['f'] + 2 * v['l']\n    return rides * v['t']\n"
+ },
+ {
+  "row": 364,
+  "solver": "def solve(v):\n    boys = v['total'] - v['girls']\n    present = boys - v['ba']\n    assert boys > 0 and present >= 0\n    return present\n"
+ },
+ {
+  "row": 969,
+  "solver": "def solve(v):\n    phones = 1 + v['kids'] + 1\n    full = min(v['first'], phones)\n    return full * v['price'] + (phones - full) * Fraction(v['price'], 2)\n"
+ },
+ {
+  "row": 1273,
+  "solver": "def solve(v):\n    dallas = v['has'] + v['drop']\n    darla = v['total'] - dallas\n    assert darla > 0\n    return darla\n"
+ },
+ {
+  "row": 143,
+  "solver": "def solve(v):\n    food = v['milk'] + v['eggs']\n    nonfood = v['bulbs'] + v['cups'] + v['traps']\n    return food + nonfood * Fraction(100 + v['tax'], 100)\n"
+ },
+ {
+  "row": 442,
+  "solver": "def solve(v):\n    warm = v['start'] + v['hours'] * v['rate']\n    cool = Fraction(v['window'], v['interval']) * v['cool']\n    return warm - cool\n"
+ },
+ {
+  "row": 464,
+  "solver": "def solve(v):\n    place = 1 + v['b1']\n    place -= v['a1']\n    assert place >= 1\n    place += v['b2']\n    place -= 1\n    assert place >= 1\n    return place\n"
+ },
+ {
+  "row": 1089,
+  "solver": "def solve(v):\n    height = 3 * v['h']\n    first = height * Fraction(2, 3)\n    second = first * Fraction(2, 3)\n    return second\n"
+ }
+]

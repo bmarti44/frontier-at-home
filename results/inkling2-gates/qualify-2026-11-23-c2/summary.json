@@ -1,0 +1,396 @@
+{
+  "kind": "qualify-profile",
+  "schema_version": 1,
+  "profile_id": "inkling-2-mini/cuda-spark-128g-1m",
+  "stack_label": "inkling-2-mini-cuda-spark-128g-1m",
+  "served_model": "inkling-2-mini",
+  "out": "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2",
+  "start_unix": 1795422865.0047226,
+  "end_unix": 1795426530.194475,
+  "start_iso": "2026-11-23T08:34:25.155731+00:00",
+  "end_iso": "2026-11-23T09:35:30.194478+00:00",
+  "targets": {
+    "note": "qwen38fn (Qwen3.8-Flash-Next, candidate 10) README headline: Inkling must meet these and beat its holdout to replace the default (promotion rule, results/inkling2-gates). Misses are reported.",
+    "decode_tok_s_min": {
+      "0": 34.07,
+      "28672": 40.92
+    },
+    "prefill_tok_s_min": {
+      "28672": 2711.5
+    },
+    "context_pass": true,
+    "toolcall_min": 19,
+    "vision_min": 0.64
+  },
+  "baseline_source": null,
+  "baseline_error": null,
+  "launch_failure": null,
+  "interrupted": false,
+  "cells": {
+    "speed": {
+      "status": "OK",
+      "evidence": "speed/speed.json",
+      "start_unix": 1795422865.2054427,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/30_bench_speed_blocks.py",
+        "--base-url",
+        "http://127.0.0.1:8018",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/speed/speed.json",
+        "--stack-label",
+        "inkling-2-mini-cuda-spark-128g-1m",
+        "--reps",
+        "2",
+        "--warmup",
+        "1",
+        "--max-tokens",
+        "384",
+        "--min-completion-tokens",
+        "200",
+        "--seed",
+        "42",
+        "--context-levels",
+        "0,28672",
+        "--ignore-eos-supported",
+        "--request-timeout",
+        "900",
+        "--extra-body",
+        "{\"min_tokens\":320}",
+        "--model-id",
+        "inkling-2-mini",
+        "--max-tokens-per-event",
+        "8",
+        "--output-tokenizer-path",
+        "/home/bmarti44/models/inkling-2-mini/tokenizer.json",
+        "--output-tokenizer-sha256",
+        "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 97.29077189229429,
+      "result": {
+        "levels": {
+          "0": {
+            "median_decode_tok_s": 36.14370862133438,
+            "median_ttft_s": 0.1704337145,
+            "median_prefill_tok_s": 416.543083518769,
+            "valid": true,
+            "reps": 2
+          },
+          "28672": {
+            "median_decode_tok_s": 44.16184104226987,
+            "median_ttft_s": 9.720130508,
+            "median_prefill_tok_s": 3332.4668812474793,
+            "valid": true,
+            "reps": 2
+          }
+        },
+        "suite_valid": true,
+        "stack_label": "inkling-2-mini-cuda-spark-128g-1m"
+      },
+      "end_unix": 1795422962.4965277
+    },
+    "toolcall": {
+      "status": "OK",
+      "evidence": "toolcall/toolcall.json",
+      "start_unix": 1795422962.496882,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/39_bench_toolcall.py",
+        "--base-url",
+        "http://127.0.0.1:8018/v1",
+        "--model",
+        "inkling-2-mini",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/toolcall/toolcall.json",
+        "--temperature",
+        "0"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 29.387747562024742,
+      "result": {
+        "passed": 20,
+        "total": 20,
+        "score": 1.0,
+        "suite": "toolcall-v1"
+      },
+      "end_unix": 1795422991.8854277
+    },
+    "vision": {
+      "status": "OK",
+      "evidence": "vision/summary.json",
+      "start_unix": 1795422991.8862076,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/38_bench_vision.py",
+        "--base-url",
+        "http://127.0.0.1:8018",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/vision",
+        "--thinking-mode",
+        "chat",
+        "--max-tokens",
+        "4096",
+        "--model-id",
+        "inkling-2-mini"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 1154.109186529182,
+      "result": {
+        "accuracy": 0.77,
+        "n": 100,
+        "correct": 77,
+        "invalid_count": 4,
+        "error_count": 0,
+        "ok": true,
+        "suite": "mmmu-val-100"
+      },
+      "end_unix": 1795424145.9957638
+    },
+    "context": {
+      "status": "OK",
+      "evidence": "context/summary.json",
+      "start_unix": 1795424145.9965994,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/50_probe_context.py",
+        "--base-url",
+        "http://127.0.0.1:8018",
+        "--model",
+        "inkling-2-mini",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/context",
+        "--stack-label",
+        "inkling-2-mini-cuda-spark-128g-1m",
+        "--slots",
+        "4",
+        "--tokens-per-slot",
+        "250128",
+        "--tokenizer-path",
+        "/home/bmarti44/models/inkling-2-mini/tokenizer.json",
+        "--tokenizer-sha256",
+        "7f332727f9a3f093dd452a39cc978e6757627e5dad1b0673aa4e75174f236dd6",
+        "--phase",
+        "both",
+        "--profile-id",
+        "inkling-2-mini/cuda-spark-128g-1m",
+        "--mem-floor-gib",
+        "10"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 582.9413782898337,
+      "result": {
+        "verdict": "PASS",
+        "total_tokens": 1000572,
+        "min_mem_available_gib": 24.35418701171875,
+        "memory_floor_gib": 10.0,
+        "needles_correct": 4,
+        "needles_total": 4,
+        "max_ttft_s": 551.084755173,
+        "checks": {
+          "short_phase_ok": true,
+          "full_phase_ran": true,
+          "all_slots_ok": true,
+          "needles_all_correct": true,
+          "controls_ok": true,
+          "memory_floor_pass": true,
+          "total_tokens_ok": true
+        }
+      },
+      "end_unix": 1795424728.938168
+    },
+    "soak": {
+      "status": "OK",
+      "evidence": "soak/soak.json",
+      "start_unix": 1795424728.9385257,
+      "argv": [
+        "/usr/bin/python3",
+        "/home/bmarti44/inkling2/scripts/35_soak.py",
+        "--base-url",
+        "http://127.0.0.1:8018",
+        "--stack-label",
+        "inkling-2-mini-cuda-spark-128g-1m",
+        "--config-hash",
+        "inkling-2-mini-cuda-spark-128g-1m-7777da4ade3a",
+        "--out",
+        "/home/bmarti44/inkling2/results/inkling2-gates/qualify-2026-11-23-c2/soak/soak.json",
+        "--model",
+        "inkling-2-mini"
+      ],
+      "skip_reason": null,
+      "exit_code": 0,
+      "wall_s": 1801.2542782640085,
+      "result": {
+        "pass": true,
+        "failed_gates": [],
+        "n_requests": 257,
+        "n_errors": 0,
+        "decode_overall_median_tok_s": 37.37574763698995,
+        "mem_available_min_gib": 24.65149688720703,
+        "duration_seconds_actual": 1801.202255888842
+      },
+      "end_unix": 1795426530.1941838
+    }
+  },
+  "rows": [
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@0",
+      "measured": 36.14370862133438,
+      "target": 34.07,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@0",
+      "measured": 0.1704337145,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@0",
+      "measured": 416.543083518769,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@0",
+      "measured": true,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "decode_tok_s@28672",
+      "measured": 44.16184104226987,
+      "target": 40.92,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "ttft_s@28672",
+      "measured": 9.720130508,
+      "target": null,
+      "target_mode": "max",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "speed",
+      "metric": "prefill_tok_s@28672",
+      "measured": 3332.4668812474793,
+      "target": 2711.5,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "speed",
+      "metric": "valid@28672",
+      "measured": true,
+      "target": true,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "passed",
+      "measured": 20,
+      "target": 19,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "toolcall",
+      "metric": "total",
+      "measured": 20,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "vision",
+      "metric": "accuracy",
+      "measured": 0.77,
+      "target": 0.64,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "vision",
+      "metric": "n",
+      "measured": 100,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "verdict",
+      "measured": "PASS",
+      "target": "PASS",
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "PASS"
+    },
+    {
+      "cell": "context",
+      "metric": "total_tokens",
+      "measured": 1000572,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "context",
+      "metric": "min_mem_available_gib",
+      "measured": 24.35418701171875,
+      "target": null,
+      "target_mode": "min",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "pass",
+      "measured": true,
+      "target": null,
+      "target_mode": "eq",
+      "baseline": null,
+      "status": "measured"
+    },
+    {
+      "cell": "soak",
+      "metric": "decode_overall_median_tok_s",
+      "measured": 37.37574763698995,
+      "target": null,
+      "target_mode": null,
+      "baseline": null,
+      "status": "measured"
+    }
+  ],
+  "verdict": "PASS",
+  "verdict_rule": "PASS iff every non-skipped cell with a target passes and no cell errored; FAIL otherwise; MEASURED when no target is declared at all"
+}

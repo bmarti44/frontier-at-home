@@ -1,0 +1,60 @@
+{
+  "index": 237,
+  "task_id": 237,
+  "rendered_prompt_sha256": "81e8b45cf219d7a5425bd2f228ebfd7991a204f403edbc7e0544f34038c75a4b",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "The user wants a brief calculation. Johnny took $20 allowance and added $10 = $30. Invested this sum, which tripled in a year. Tripled means became 3 times: $30 * 3 = $90. Need final numeric answer on its own line: Answer: $90 or 90? Form says <number>. Use Answer: $90 maybe. They said numeric answer; include dollar sign? \"Answer: <number>\". Better Answer: $90. Ensure final line only.He had $20 + $10 = $30. After tripling: $30 × 3 = $90.\n\nAnswer: $90",
+  "finish_reason": "stop",
+  "expected": "90",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 5.064872844144702
+  },
+  "response": {
+    "id": "cmpl-ade7316c480ae9ff",
+    "object": "text_completion",
+    "created": 1795414943,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants a brief calculation. Johnny took $20 allowance and added $10 = $30. Invested this sum, which tripled in a year. Tripled means became 3 times: $30 * 3 = $90. Need final numeric answer on its own line: Answer: $90 or 90? Form says <number>. Use Answer: $90 maybe. They said numeric answer; include dollar sign? \"Answer: <number>\". Better Answer: $90. Ensure final line only.He had $20 + $10 = $30. After tripling: $30 × 3 = $90.\n\nAnswer: $90",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 87,
+      "total_tokens": 233,
+      "completion_tokens": 146,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": true
+}

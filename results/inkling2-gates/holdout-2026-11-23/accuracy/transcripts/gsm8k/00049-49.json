@@ -1,0 +1,61 @@
+{
+  "index": 49,
+  "task_id": 49,
+  "rendered_prompt_sha256": "b72985c7e80985850bdddb58f0fae752b1469185646e024c9315128c2339e3fe",
+  "rendering": "official-encoder-inkling2-thinking-effort-low",
+  "encoder": "inkling2",
+  "completion": "We need answer math. Need compute. Building floors 15, units per floor 8 => total units 120. 3/4 occupied => occupied 90, unoccupied 1/4 = 30. Need final with brief maybe one sentence and final line exactly Answer: 30. Ensure final numeric answer on own line. No extra after.Total units: 15 × 8 = 120. Unoccupied: 1/4 × 120 = 30.\nAnswer: 30",
+  "finish_reason": "stop",
+  "expected": "30",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 2.2751115057617426
+  },
+  "response": {
+    "id": "cmpl-bfcd8bda8bc22fac",
+    "object": "text_completion",
+    "created": 1795428724,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "We need answer math. Need compute. Building floors 15, units per floor 8 => total units 120. 3/4 occupied => occupied 90, unoccupied 1/4 = 30. Need final with brief maybe one sentence and final line exactly Answer: 30. Ensure final numeric answer on own line. No extra after.Total units: 15 × 8 = 120. Unoccupied: 1/4 × 120 = 30.\nAnswer: 30",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 86,
+      "total_tokens": 200,
+      "completion_tokens": 114,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false,
+  "rendered_prompt": "<|message_system|><|content_text|>Thinking effort level: 0.2<|end_message|><|message_user|><|content_text|>Richard lives in an apartment building with 15 floors. Each floor contains 8 units, and 3/4 of the building is occupied. What's the total number of unoccupied units In the building?\n\nThink briefly if needed, then end with the final numeric answer on its own line in the form: Answer: <number><|end_message|>"
+}

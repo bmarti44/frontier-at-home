@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:999:P:0",
+ "suite": "gsm8k",
+ "row": 999,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "80fcf58f82e4a4e8cac323b3cb0a807761a9cb63bba5524858f4b348ab356509",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:51:50.837511+00:00",
+ "completion": "We need answer math. Need compute. Let kid slice = x. Adult slice = 2x. Total = 3*2x + 4*x = 6x+4x=10x. Adult gets 2x/10x = 1/5 = 20%. Need final with brief explanation and final numeric answer on own line form Answer: <number>. Ensure number maybe 20%. They ask percentage each adult gets. Final line Answer: 20%. Need include brief. No extra after final line.Let each kid get \\(x\\). Each adult gets \\(2x\\).  \nTotal: \\(3(2x)+4x=10x\\). Each adult gets \\(2x/10x=1/5=20\\%\\).\n\nAnswer: 20%",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.606074121998972
+ },
+ "usage": {
+  "prompt_tokens": 89,
+  "total_tokens": 275,
+  "completion_tokens": 186,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "20",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:51:56.443856+00:00"
+}

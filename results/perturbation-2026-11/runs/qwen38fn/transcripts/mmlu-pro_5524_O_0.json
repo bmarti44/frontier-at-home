@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:5524:O:0",
+ "suite": "mmlu-pro",
+ "row": 5524,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "dc0e931e2867bbeab06436bfccc023c3ea54becb6b0ba6f01795a3335374c02b",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:28:11.488431+00:00",
+ "completion": "The Kinsey scale ranges from 0 to 6:\n\n- 0 = Exclusively heterosexual\n- 1 = Predominantly heterosexual, only incidentally homosexual\n- 2 = Predominantly heterosexual, but more than incidentally homosexual\n- 3 = Equally heterosexual and homosexual\n- 4 = Predominantly homosexual, but more than incidentally heterosexual\n- 5 = Predominantly homosexual, only incidentally heterosexual\n- 6 = Exclusively homosexual\n\nSo a rating of 4 would be \"mostly homosexual with incidental heterosexual experience.\"\n\nLooking at the options:\n- E. mostly homosexual with incidental heterosexual experience\n\nThis matches the Kinsey scale description for a rating of 4.\n</think>\n\nAnswer: E",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.774928921004175
+ },
+ "usage": {
+  "prompt_tokens": 162,
+  "total_tokens": 315,
+  "completion_tokens": 153,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "G",
+ "reason": "incorrect: parsed='E' expected='G'",
+ "finished_at": "2026-11-25T08:28:19.263626+00:00"
+}

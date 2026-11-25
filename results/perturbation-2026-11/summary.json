@@ -1,0 +1,334 @@
+{
+ "bootstrap_resamples": 10000,
+ "bootstrap_seed": 20261123,
+ "suites": {
+  "gsm8k": {
+   "models": {
+    "qwen38fn": {
+     "jobs": 588,
+     "missing": 0,
+     "infra_failures": 0,
+     "items_dropped_for_infra": [],
+     "items": 196,
+     "verdict": "no detectable difference",
+     "original_accuracy": 0.9948979591836735,
+     "perturbed_accuracy": 0.9923469387755102,
+     "drop_pp": 0.25510204081632654,
+     "drop_ci95_pp": [
+      0.0,
+      0.7653061224489796
+     ],
+     "median_completion_tokens": {
+      "O": 212.5,
+      "P": 211.5
+     }
+    },
+    "inkling2mini": {
+     "jobs": 588,
+     "missing": 0,
+     "infra_failures": 0,
+     "items_dropped_for_infra": [],
+     "items": 196,
+     "verdict": "no detectable difference",
+     "original_accuracy": 0.9744897959183674,
+     "perturbed_accuracy": 0.9770408163265306,
+     "drop_pp": -0.25510204081632654,
+     "drop_ci95_pp": [
+      -1.7857142857142856,
+      1.0204081632653061
+     ],
+     "median_completion_tokens": {
+      "O": 169.0,
+      "P": 168.0
+     }
+    }
+   },
+   "difference": {
+    "definition": "drop(qwen38fn) - drop(inkling2mini) on common items",
+    "items": 196,
+    "pp": 0.5102040816326531,
+    "ci95_pp": [
+     -0.7653061224489796,
+     2.0408163265306123
+    ],
+    "verdict": "no detectable difference"
+   }
+  },
+  "mmlu-pro": {
+   "models": {
+    "qwen38fn": {
+     "jobs": 982,
+     "missing": 0,
+     "infra_failures": 0,
+     "items_dropped_for_infra": [],
+     "items": 491,
+     "verdict": "no detectable difference",
+     "original_accuracy": 0.8716904276985743,
+     "perturbed_accuracy": 0.8818737270875764,
+     "drop_pp": -1.0183299389002036,
+     "drop_ci95_pp": [
+      -2.8513238289205702,
+      0.8146639511201629
+     ],
+     "median_completion_tokens": {
+      "O": 523,
+      "P": 526
+     },
+     "accuracy_by_correct_letter": {
+      "O": {
+       "A": [
+        0.8966,
+        58
+       ],
+       "B": [
+        0.8814,
+        59
+       ],
+       "C": [
+        0.8889,
+        54
+       ],
+       "D": [
+        0.9062,
+        64
+       ],
+       "E": [
+        0.7805,
+        41
+       ],
+       "F": [
+        0.85,
+        40
+       ],
+       "G": [
+        0.8704,
+        54
+       ],
+       "H": [
+        0.8261,
+        46
+       ],
+       "I": [
+        0.8913,
+        46
+       ],
+       "J": [
+        0.8966,
+        29
+       ]
+      },
+      "P": {
+       "A": [
+        0.9123,
+        57
+       ],
+       "B": [
+        0.9107,
+        56
+       ],
+       "C": [
+        0.9123,
+        57
+       ],
+       "D": [
+        0.8571,
+        42
+       ],
+       "E": [
+        0.9592,
+        49
+       ],
+       "F": [
+        0.8667,
+        45
+       ],
+       "G": [
+        0.8222,
+        45
+       ],
+       "H": [
+        0.8596,
+        57
+       ],
+       "I": [
+        0.7826,
+        46
+       ],
+       "J": [
+        0.9189,
+        37
+       ]
+      }
+     }
+    },
+    "inkling2mini": {
+     "jobs": 982,
+     "missing": 0,
+     "infra_failures": 0,
+     "items_dropped_for_infra": [],
+     "items": 491,
+     "verdict": "no detectable difference",
+     "original_accuracy": 0.8391038696537678,
+     "perturbed_accuracy": 0.8268839103869654,
+     "drop_pp": 1.2219959266802443,
+     "drop_ci95_pp": [
+      -1.2219959266802443,
+      3.6659877800407332
+     ],
+     "median_completion_tokens": {
+      "O": 246,
+      "P": 241
+     },
+     "accuracy_by_correct_letter": {
+      "O": {
+       "A": [
+        0.8793,
+        58
+       ],
+       "B": [
+        0.8475,
+        59
+       ],
+       "C": [
+        0.7963,
+        54
+       ],
+       "D": [
+        0.8125,
+        64
+       ],
+       "E": [
+        0.8049,
+        41
+       ],
+       "F": [
+        0.85,
+        40
+       ],
+       "G": [
+        0.9444,
+        54
+       ],
+       "H": [
+        0.6957,
+        46
+       ],
+       "I": [
+        0.8696,
+        46
+       ],
+       "J": [
+        0.8966,
+        29
+       ]
+      },
+      "P": {
+       "A": [
+        0.8246,
+        57
+       ],
+       "B": [
+        0.9107,
+        56
+       ],
+       "C": [
+        0.8772,
+        57
+       ],
+       "D": [
+        0.8333,
+        42
+       ],
+       "E": [
+        0.9184,
+        49
+       ],
+       "F": [
+        0.8222,
+        45
+       ],
+       "G": [
+        0.7778,
+        45
+       ],
+       "H": [
+        0.7895,
+        57
+       ],
+       "I": [
+        0.6522,
+        46
+       ],
+       "J": [
+        0.8378,
+        37
+       ]
+      }
+     }
+    }
+   },
+   "difference": {
+    "definition": "drop(qwen38fn) - drop(inkling2mini) on common items",
+    "items": 491,
+    "pp": -2.240325865580448,
+    "ci95_pp": [
+     -5.091649694501019,
+     0.6109979633401221
+    ],
+    "verdict": "no detectable difference"
+   }
+  },
+  "humaneval": {
+   "models": {
+    "qwen38fn": {
+     "jobs": 328,
+     "missing": 0,
+     "infra_failures": 0,
+     "items_dropped_for_infra": [],
+     "items": 164,
+     "verdict": "no detectable difference",
+     "original_accuracy": 0.8475609756097561,
+     "perturbed_accuracy": 0.8780487804878049,
+     "drop_pp": -3.048780487804878,
+     "drop_ci95_pp": [
+      -9.146341463414634,
+      3.048780487804878
+     ],
+     "median_completion_tokens": {
+      "O": 68.0,
+      "P": 70.0
+     }
+    },
+    "inkling2mini": {
+     "jobs": 328,
+     "missing": 0,
+     "infra_failures": 0,
+     "items_dropped_for_infra": [],
+     "items": 164,
+     "verdict": "no detectable difference",
+     "original_accuracy": 0.6890243902439024,
+     "perturbed_accuracy": 0.725609756097561,
+     "drop_pp": -3.6585365853658534,
+     "drop_ci95_pp": [
+      -10.365853658536585,
+      3.048780487804878
+     ],
+     "median_completion_tokens": {
+      "O": 16384.0,
+      "P": 16384.0
+     }
+    }
+   },
+   "difference": {
+    "definition": "drop(qwen38fn) - drop(inkling2mini) on common items",
+    "items": 164,
+    "pp": 0.6097560975609756,
+    "ci95_pp": [
+     -7.926829268292683,
+     9.146341463414634
+    ],
+    "verdict": "no detectable difference"
+   }
+  }
+ }
+}

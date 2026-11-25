@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1054:P:1",
+ "suite": "gsm8k",
+ "row": 1054,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "32c4f6931ff4ebce42bf24f4427e841a84ca0f3a846b4f55e74c077b58e7f97a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:11:44.244122+00:00",
+ "completion": "The user wants a calculation. Kitchen floor area 240 sq ft. Tiles are square, side 1 ft, so each tile area = 1 sq ft. Number of tiles = 240. Cost each $18. Total = 240*18 = 4320. Need final numeric answer on its own line form Answer: <number>. Brief reasoning okay. Ensure final line exactly. Could include dollar sign? They said numeric answer; form Answer: <number>. Use 4320 maybe with $? \"numeric answer\" likely 4320. Do Answer: $4,320? They said numeric; maybe Answer: 4320. But cost in dollars. The form says <number>, so no dollar sign. Final line only.Each 1 ft × 1 ft tile covers 1 sq ft, so 240 sq ft needs 240 tiles.  \n240 × $18 = $4,320.\n\nAnswer: 4320",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.70013143500546
+ },
+ "usage": {
+  "prompt_tokens": 93,
+  "total_tokens": 298,
+  "completion_tokens": 205,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "4320",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:11:50.944469+00:00"
+}

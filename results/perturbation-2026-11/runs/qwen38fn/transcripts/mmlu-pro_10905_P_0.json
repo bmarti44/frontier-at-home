@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:10905:P:0",
+ "suite": "mmlu-pro",
+ "row": 10905,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "586466008811b8d401183261e290cd8ba6fe8fe73feefb08caca5f47a485caf8",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:25:56.118657+00:00",
+ "completion": "Let me analyze this sentence: \"Leroy is bad only if DJ Khaled shouts his name.\"\n\nFirst, I need to identify the logical structure:\n- \"Leroy is bad\" - this is a predicate applied to Leroy. Let's say B = \"is bad\" and l = Leroy. So Bl = \"Leroy is bad\"\n- \"DJ Khaled shouts his name\" - this is a predicate applied to DJ Khaled. Let's say S = \"shouts his name\" and k = DJ Khaled. So Sk = \"DJ Khaled shouts his name\"\n\nNow, the key logical connective is \"only if\":\n- \"P only if Q\" translates to P ⊃ Q (P implies Q)\n\nSo \"Leroy is bad only if DJ Khaled shouts his name\" translates to:\nBl ⊃ Sk\n\nLooking at the options:\nG. Bl ⊃ Sk\n\nThis matches perfectly.\n</think>\n\nLooking at the sentence \"Leroy is bad only if DJ Khaled shouts his name\":\n\n- **Bl** = \"Leroy is bad\"\n- **Sk** = \"DJ Khaled shouts his name\"\n- **\"P only if Q\"** translates to **P ⊃ Q**\n\nSo the translation is: **Bl ⊃ Sk**\n\nAnswer: G",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 12.324431938002817
+ },
+ "usage": {
+  "prompt_tokens": 153,
+  "total_tokens": 430,
+  "completion_tokens": 277,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "G",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:26:08.443351+00:00"
+}

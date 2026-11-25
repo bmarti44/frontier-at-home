@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:154:P:0",
+ "suite": "humaneval",
+ "row": 154,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "4ba46cdfa7c29d5656fe9e4dc0ecbacfc023feea23f4d6305a75a193f8aa6d16",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:48:26.381813+00:00",
+ "completion": "    if not b:\n        return True\n    for i in range(len(b)):\n        if b[i:] + b[:i] in a:\n            return True\n    return False\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 2.1129540959955193
+ },
+ "usage": {
+  "prompt_tokens": 126,
+  "total_tokens": 168,
+  "completion_tokens": 42,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    l = len(b)\n    pat = b + b\n    for i in range(len(a) - l + 1):\n        for j in range(l + 1):\n            if a[i:i+l] == pat[j:j+l]:\n                return True\n    return False\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:48:28.495017+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00121:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:21:59.980961+00:00"
+}

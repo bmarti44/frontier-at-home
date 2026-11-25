@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:5078:O:0",
+ "suite": "mmlu-pro",
+ "row": 5078,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "6fb51cb1c7b9de0122885779117b53c9dc11bf81067b1a4dd174f7e494b63ee8",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:13:03.423664+00:00",
+ "completion": "The user asks a multiple-choice question about experiences when a sexual addict has completed the sexual act. This is a factual/clinical question. Need answer single letter. Need determine correct option. Sexual addiction/compulsive sexual behavior: after act, often shame, regret, guilt, followed by craving. Options: B feels ashamed and regrets behavior. D uses fantasy of behavior just completed to become aroused again? Hmm.\n\nNeed infer from likely source. The phrasing resembles quiz about \"sexual addiction\" cycle: preoccupation, ritualization, acting out, despair/shame, remorse, then preoccupation. After completing sexual act, person may feel euphoria/excitement? Let's reason.\n\nQuestion: \"What are the experiences when a sexual addict has completed the sexual act?\" Singular correct. In addiction, after act, sexual addicts often experience \"shame and regret\". Option B. H euphoria/excitement occurs during/after orgasm maybe but addiction cycle includes post-act shame. J immediately aroused again feels good is more like compulsive? D fantasy of behavior just completed to become aroused again sounds like \"after the act, they use the fantasy to masturbate again\"? Not standard.\n\nNeed answer only. Ensure no extra.Answer: B",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 11.468614983001316
+ },
+ "usage": {
+  "prompt_tokens": 217,
+  "total_tokens": 518,
+  "completion_tokens": 301,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "G",
+ "reason": "incorrect: parsed='B' expected='G'",
+ "finished_at": "2026-11-25T02:13:14.892574+00:00"
+}

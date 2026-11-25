@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1054:P:0",
+ "suite": "gsm8k",
+ "row": 1054,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "3f39030a689e9773f83cfbd751831e01b8d682b5520be7ab7d0b7bd06b20e5da",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T01:00:36.681059+00:00",
+ "completion": "We need answer math. Need compute. Kitchen area 460 sq ft. Tile side 2 ft => area per tile 4 sq ft. Number tiles needed = 460/4 = 115 exactly. Cost each $12 => 115*12 = 1380. Need final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly. No issue with waste? Problem likely expects exact. Respond concise.Each tile covers \\(2 \\times 2 = 4\\) sq ft.  \nTiles needed: \\(460 / 4 = 115\\).  \nCost: \\(115 \\times 12 = 1380\\).\n\nAnswer: $1380",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.422405687000719
+ },
+ "usage": {
+  "prompt_tokens": 93,
+  "total_tokens": 254,
+  "completion_tokens": 161,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "1380",
+ "reason": "correct",
+ "finished_at": "2026-11-25T01:00:42.103681+00:00"
+}

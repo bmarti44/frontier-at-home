@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:297:O:0",
+ "suite": "gsm8k",
+ "row": 297,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "63a6489eb64b5d13c5fe78399bd552df555537785f121956857ce2f03bd13740",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:10:38.665214+00:00",
+ "completion": "We need answer math. Need compute. Let's reason: Target 120 crates/week. Closed Monday and Friday. Over weekend sold 20 crates. Ambiguity: weekend includes Saturday and Sunday; he sold 20 crates over weekend. Tuesday 15, Wednesday 12, Thursday 18. Total sold = 20+15+12+18 = 65. Off from target = 120-65 = 55. Need ensure not include Monday/Friday (closed). Yes. Final with brief and answer line.Total sold: 20 + 15 + 12 + 18 = 65 crates.  \nOff target: 120 − 65 = 55 crates.\n\nAnswer: 55",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 4.363585619998048
+ },
+ "usage": {
+  "prompt_tokens": 120,
+  "total_tokens": 280,
+  "completion_tokens": 160,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "55",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:10:43.029075+00:00"
+}

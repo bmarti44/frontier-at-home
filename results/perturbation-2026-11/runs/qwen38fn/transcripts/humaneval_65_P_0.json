@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:65:P:0",
+ "suite": "humaneval",
+ "row": 65,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "05b535bbdae911767a7f3b183fe43a4acaf53f8d97b5fa00438d262cd42119b9",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T06:42:36.548970+00:00",
+ "completion": "    s = str(x)\n    if shift > len(s):\n        return s[::-1]\n    return s[-shift:] + s[:-shift]\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 1.9902545180011657
+ },
+ "usage": {
+  "prompt_tokens": 89,
+  "total_tokens": 124,
+  "completion_tokens": 35,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    s = str(x)\n    if shift > len(s):\n        return s[::-1]\n    else:\n        return s[len(s) - shift:] + s[:len(s) - shift]\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T06:42:38.539461+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00251:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:39.677533+00:00"
+}

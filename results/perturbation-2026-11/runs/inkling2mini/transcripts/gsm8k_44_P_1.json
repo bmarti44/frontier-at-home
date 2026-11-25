@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:44:P:1",
+ "suite": "gsm8k",
+ "row": 44,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "3efbe02132dbfd7070823bbb70888d8d2b821afb0a4e9d24521247c4ebf06f2a",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:24:42.251012+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: For every pound of beeswax, he can make 10 tapered candles. One pound of beeswax and the wicks cost $8.00 in supplies. If he sells each candle for $3.50 each, what is net profit if he makes and sells 10 candles?\n\nMakes 10 candles => needs 1 pound beeswax. Supplies cost $8.00 (one pound beeswax and wicks). Revenue 10*3.50=35.00. Profit=35-8=27.00. Need final numeric answer on own line form Answer: <number>. Could include brief. Ensure final line exactly. Maybe \"Answer: $27.00\". They said numeric answer; form Answer: <number>. Use $27.00? numeric maybe 27.00. Do brief then final line.10 candles require 1 pound of beeswax, costing $8.00. Revenue is 10 × $3.50 = $35.00. Profit = $35.00 − $8.00 = $27.00.\n\nAnswer: $27.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.681377158998657
+ },
+ "usage": {
+  "prompt_tokens": 121,
+  "total_tokens": 385,
+  "completion_tokens": 264,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "27",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:24:48.932686+00:00"
+}

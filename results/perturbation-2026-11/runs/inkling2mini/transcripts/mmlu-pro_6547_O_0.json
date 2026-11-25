@@ -1,0 +1,40 @@
+{
+ "job": "mmlu-pro:6547:O:0",
+ "suite": "mmlu-pro",
+ "row": 6547,
+ "split": "dev",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "b9d5d2af6f1928d6a481cc9896b56fadd24a3997b42ff4e6d4692abe5c636918",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:10:57.511351+00:00",
+ "completion": "We need answer MCQ. Need determine most special characteristic of adaptive immune system. Options: innate response, T cells, APCs, NK cells, clonal expansion of pre-existing antibodies and/or T cells, memory B cells, antibodies, clonal expansion of new antibodies and/or T cells, white blood cells.\n\nAdaptive immunity hallmark: specificity and memory; clonal selection/expansion of lymphocytes specific to antigen. Antibodies are not pre-existing? B cells produce antibodies after activation; T cells expand. \"Clonal expansion of new antibodies and/or T cells\" sounds odd: antibodies don't clonally expand; B cells do. Option E says clonal expansion of pre-existing antibodies and/or T cells—incorrect because antibodies are not pre-existing and don't expand. Option H says clonal expansion of new antibodies and/or T cells—also antibodies don't expand. But among options, H likely intended: adaptive immune system characterized by clonal expansion of antigen-specific lymphocytes (B/T cells), generating new antibodies/T cells. Need choose H.\n\nLet's craft final only letter.Answer: H",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.637850289000198
+ },
+ "usage": {
+  "prompt_tokens": 126,
+  "total_tokens": 375,
+  "completion_tokens": 249,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "E",
+ "reason": "incorrect: parsed='H' expected='E'",
+ "finished_at": "2026-11-25T02:11:06.149436+00:00"
+}

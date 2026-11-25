@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:528:P:0",
+ "suite": "gsm8k",
+ "row": 528,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "be4be244829e402a530adc3515bdfdb9730d7095f04ce7053b25791b8dbe6c54",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:48:47.647305+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Maria and Sofia living same building. They each have 8 fewer sofas than chairs. Sofia has 2 times as many chairs as Maria. If Maria has 20 sofas, calculate total number of sofas and chairs that they have.\n\nMaria has 20 sofas. Each has 8 fewer sofas than chairs => sofas = chairs - 8, so chairs = sofas + 8. Maria chairs = 28. Sofia has 2 times as many chairs as Maria => Sofia chairs = 56. Sofia sofas = chairs - 8 = 48. Total sofas = 20+48=68. Total chairs = 28+56=84. Total = 152.\n\nNeed final with brief maybe. Ensure final numeric answer on own line exactly Answer: 152. Could include short explanation then final line. User says think briefly if needed, then end with final numeric answer. We can provide concise calculation. No issue.Maria: 20 sofas, so 28 chairs.  \nSofia: 2 × 28 = 56 chairs, so 48 sofas.  \nTotal: (20 + 48) + (28 + 56) = 68 + 84 = 152.\n\nAnswer: 152",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.322972037
+ },
+ "usage": {
+  "prompt_tokens": 100,
+  "total_tokens": 396,
+  "completion_tokens": 296,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "152",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:48:55.970549+00:00"
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:658:P:1",
+ "suite": "gsm8k",
+ "row": 658,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "097add33c4ab56072a49470012373bbd437eb6d835737747cb3edeb1a4f02522",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T21:07:02.665712+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nProblem: Aisha bought rice, beans, pork. It took her 10 more minutes to cook pork than rice. Beans took half the combined cooking time of pork and rice. If it took her 55 minutes to cook rice, how long in minutes did it take to cook all the food?\n\nRice = 55 min. Pork = rice + 10 = 65 min. Combined pork+rice = 120. Beans = half of 120 = 60. Total = 55+65+60 = 180. Need final with brief explanation and final line Answer: 180. Ensure final numeric answer on own line. No extra after.Rice took 55 minutes. Pork took 55 + 10 = 65 minutes. Beans took half of (55 + 65) = 60 minutes. Total: 55 + 65 + 60 = 180.\n\nAnswer: 180",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 5.022094267998909
+ },
+ "usage": {
+  "prompt_tokens": 119,
+  "total_tokens": 332,
+  "completion_tokens": 213,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "180",
+ "reason": "correct",
+ "finished_at": "2026-11-24T21:07:07.688026+00:00"
+}

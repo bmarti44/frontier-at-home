@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:143:P:1",
+ "suite": "gsm8k",
+ "row": 143,
+ "split": "dev",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "088c375fbe49e0bfd6c2e6f299334101175ff93221140f82d578a8234251ff5c",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T09:13:14.651248+00:00",
+ "completion": "Let me identify which items are food and which are non-food:\n\n- Milk: food\n- Eggs: food\n- Light bulbs: non-food\n- Cups: non-food\n- Roach traps: non-food\n\nFood items: milk ($4) + eggs ($5) = $9\nNon-food items: light bulbs ($3) + cups ($5) + roach traps ($2) = $10\n\nTax on non-food items: 10% of $10 = $1\n\nTotal cost: $9 + $10 + $1 = $20\n</think>\n\nLet me identify food vs. non-food items:\n\n**Food items:**\n- Milk: $4\n- Eggs: $5\n- Subtotal: $9\n\n**Non-food items:**\n- Light bulbs: $3\n- Cups: $5\n- Roach traps: $2\n- Subtotal: $10\n\n**Tax on non-food items:** 10% × $10 = $1\n\n**Total cost:** $9 + $10 + $1 = $20\n\nAnswer: 20",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 10.927806086998316
+ },
+ "usage": {
+  "prompt_tokens": 124,
+  "total_tokens": 361,
+  "completion_tokens": 237,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "20",
+ "reason": "correct",
+ "finished_at": "2026-11-25T09:13:25.579261+00:00"
+}

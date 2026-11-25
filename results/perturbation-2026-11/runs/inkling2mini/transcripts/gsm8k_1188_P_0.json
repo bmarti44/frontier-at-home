@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1188:P:0",
+ "suite": "gsm8k",
+ "row": 1188,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "d6f63e736aedadd0112fcad7bf33c15adba6be7ab867c4341284b5baa7d82487",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T00:35:36.621625+00:00",
+ "completion": "We need answer math. Need parse carefully. \"Digimon had its 20th anniversary. When it came out Michael was twice as old as Tom. If Michael is 24 now how old is Tom?\" Need infer time elapsed since Digimon came out = 20 years (anniversary). At that time Michael was twice as old as Tom. Now Michael is 24. So 20 years ago Michael was 24-20=4. At that time Tom was half of Michael = 2. Now Tom = 2+20=22. Need ensure no trick: Digimon had its 20th anniversary. When it came out Michael was twice as old as Tom. If Michael is 24 now how old is Tom? Yes.\n\nNeed final with brief reasoning and final numeric answer on own line. Ensure final line exactly Answer: 22. Could include concise explanation. No extra after final line.20 years ago, Michael was 24 − 20 = 4. Tom was half of that, so 2. Now Tom is 2 + 20 = 22.\n\nAnswer: 22",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.056207206995168
+ },
+ "usage": {
+  "prompt_tokens": 77,
+  "total_tokens": 320,
+  "completion_tokens": 243,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "22",
+ "reason": "correct",
+ "finished_at": "2026-11-25T00:35:43.678056+00:00"
+}

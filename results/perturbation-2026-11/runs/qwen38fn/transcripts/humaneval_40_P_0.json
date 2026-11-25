@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:40:P:0",
+ "suite": "humaneval",
+ "row": 40,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "7547ba4cb90662f17b3d2d1a3844ee4fcd28aab23824772d29c05486a41f012b",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T07:25:46.168421+00:00",
+ "completion": "    n = len(l)\n    for i in range(n):\n        for j in range(i+1, n):\n            for k in range(j+1, n):\n                if l[i] + l[j] + l[k] == 0:\n                    return True\n    return False\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 3.5835860119987046
+ },
+ "usage": {
+  "prompt_tokens": 164,
+  "total_tokens": 230,
+  "completion_tokens": 66,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": true,
+ "expected": "    for i in range(len(l)):\n        for j in range(i + 1, len(l)):\n            for k in range(j + 1, len(l)):\n                if l[i] + l[j] + l[k] == 0:\n                    return True\n    return False\n",
+ "reason": "correct",
+ "finished_at": "2026-11-25T07:25:49.752175+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00197:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 0,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:27.746692+00:00"
+}

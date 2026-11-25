@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1261:P:0",
+ "suite": "gsm8k",
+ "row": 1261,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "9305cdfb30a875c63632b86702b0d2fd08405610cecfc599e8f99006f7238ca0",
+ "rendering": "official-encoder-qwen38-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T08:19:21.744711+00:00",
+ "completion": "Let me calculate Aisha's weekly dry-cleaning cost first, then multiply by 3 weeks.\n\nWeekly items:\n- 6 blouses × $5.50 = $33.00\n- 3 pants × $9.00 = $27.00\n- 1 skirt × $4.00 = $4.00\n\nWeekly total = $33.00 + $27.00 + $4.00 = $64.00\n\nFor 3 weeks: $64.00 × 3 = $192.00\n</think>\n\n**Weekly cost:**\n- 6 blouses × $5.50 = $33.00\n- 3 pants × $9.00 = $27.00\n- 1 skirt × $4.00 = $4.00\n- **Weekly total = $64.00**\n\n**3-week total:** $64.00 × 3 = $192.00\n\nAnswer: 192",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.795082235999871
+ },
+ "usage": {
+  "prompt_tokens": 144,
+  "total_tokens": 380,
+  "completion_tokens": 236,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "192",
+ "reason": "correct",
+ "finished_at": "2026-11-25T08:19:30.540076+00:00"
+}

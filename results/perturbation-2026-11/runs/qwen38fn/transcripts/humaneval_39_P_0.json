@@ -1,0 +1,78 @@
+{
+ "job": "humaneval:39:P:0",
+ "suite": "humaneval",
+ "row": 39,
+ "split": "all",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "c2185141d8f04305492b6e3bb049febcc712530aa1d3bfac4b01541d4c4bb499",
+ "rendering": "raw",
+ "attempt": 1,
+ "started_at": "2026-11-25T05:20:31.023484+00:00",
+ "completion": "    def is_prime(n):\n        if n < 2:\n            return False\n        for i in range(2, int(n ** 0.5) + 1):\n            if n % i == 0:\n                return False\n        return True\n\n    def is_fibonacci(n):\n        a, b = 0, 1\n        while b < n:\n            a, b = b, a + b\n        return b == n\n\n    count = 0\n    num = 2\n    while True:\n        if is_fibonacci(num) and is_prime(num):\n            count += 1\n            if count == n:\n                return num\n        num += 1\n\n\nif __name__ == \"__main__\":\n    print(fib_prime(1))\n    print(fib_prime(2))\n    print(fib_prime(3))\n    print(fib_prime(4))\n    print(fib_prime(5))\n",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "qwen3.8-flash-next",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 8.088622317001864
+ },
+ "usage": {
+  "prompt_tokens": 96,
+  "total_tokens": 308,
+  "completion_tokens": 212,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "scored_correct": false,
+ "expected": "    import math\n\n    def is_prime(p):\n        if p < 2:\n            return False\n        for k in range(2, min(int(math.sqrt(p)) + 1, p - 1)):\n            if p % k == 0:\n                return False\n        return True\n    f = [0, 1]\n    while True:\n        f.append(f[-1] + f[-2])\n        if is_prime(f[-1]):\n            n -= 1\n        if n == 0:\n            return f[-1]\n",
+ "reason": "sandbox timeout after 10 seconds",
+ "finished_at": "2026-11-25T05:20:39.112289+00:00",
+ "execution": {
+  "command": [
+   "docker",
+   "run",
+   "--rm",
+   "--network",
+   "none",
+   "--cap-drop",
+   "ALL",
+   "--security-opt",
+   "no-new-privileges",
+   "--memory",
+   "512m",
+   "--memory-swap",
+   "512m",
+   "--pids-limit",
+   "128",
+   "--cpus",
+   "1",
+   "--read-only",
+   "--tmpfs",
+   "/tmp",
+   "-u",
+   "65534:65534",
+   "-v",
+   "/tmp/perturb-humaneval-ulegl2x2/case-00193:/case:ro",
+   "python:3.12-slim",
+   "timeout",
+   "10",
+   "python",
+   "/case/main.py"
+  ],
+  "returncode": 124,
+  "stdout": "",
+  "stderr": ""
+ },
+ "sandbox_runs": 1,
+ "scored_at": "2026-11-25T09:22:26.782771+00:00"
+}

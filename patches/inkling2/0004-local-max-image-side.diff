@@ -1,0 +1,49 @@
+--- a/vllm/models/inkling2/processing.py
++++ b/vllm/models/inkling2/processing.py
+@@ -11,6 +11,7 @@
+ 
+ import io
+ import math
++import os
+ from collections.abc import Mapping, Sequence
+ from functools import cached_property
+ from typing import Any, TypeAlias
+@@ -22,6 +23,7 @@
+ 
+ from vllm.config.multimodal import MultiModalDummyOptions
+ from vllm.inputs import MultiModalDataDict
++from vllm.logger import init_logger
+ from vllm.multimodal.inputs import MultiModalFieldConfig, MultiModalKwargsItems
+ from vllm.multimodal.media import MediaWithBytes
+ from vllm.multimodal.parse import (
+@@ -45,9 +47,29 @@
+ # <|unused_200054|>: one per decoder image token, overwritten by embeddings.
+ IMAGE_PAD_ID = 200054
+ 
++logger = init_logger(__name__)
++
+ PATCH_SIZE = 40
+ # Dummy (profiling) images are at most this many pixels per side.
+-MAX_DUMMY_IMAGE_SIDE = 2048
++# Local gate (patches/inkling2 0004): the profiling image sets the encoder
++# budget, so an image larger than this side is refused at request time. Read
++# once at import; default 2048 is the upstream value.
++_MAX_SIDE_ENV = os.environ.get("INKLING2_MAX_IMAGE_SIDE", "2048")
++if not (
++    _MAX_SIDE_ENV.isascii()
++    and _MAX_SIDE_ENV.isdigit()
++    and 40 <= int(_MAX_SIDE_ENV) <= 8192
++):
++    raise ValueError(
++        "INKLING2_MAX_IMAGE_SIDE must be an integer in [40, 8192], "
++        f"got {_MAX_SIDE_ENV!r}"
++    )
++MAX_DUMMY_IMAGE_SIDE = int(_MAX_SIDE_ENV)
++if MAX_DUMMY_IMAGE_SIDE != 2048:
++    logger.info(
++        "INKLING2_MAX_IMAGE_SIDE=%d: encoder budget sized for %d x %d px images",
++        MAX_DUMMY_IMAGE_SIDE, MAX_DUMMY_IMAGE_SIDE, MAX_DUMMY_IMAGE_SIDE,
++    )
+ 
+ ImageInput: TypeAlias = bytes | Image.Image | MediaWithBytes | np.ndarray
+ 

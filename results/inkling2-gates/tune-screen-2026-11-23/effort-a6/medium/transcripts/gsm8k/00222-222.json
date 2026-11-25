@@ -1,0 +1,60 @@
+{
+  "index": 222,
+  "task_id": 222,
+  "rendered_prompt_sha256": "82acf44324774274a5961ca06db9c1711fc4acb97917b5988f9a848f83852547",
+  "rendering": "official-encoder-inkling2-thinking-effort-medium",
+  "encoder": "inkling2",
+  "completion": "The user wants me to solve a math problem. Let me think.\n\nAndy plants 90 geraniums. He plants 40 fewer petunias than geraniums. So petunias = 90 - 40 = 50. Total flowers = 90 + 50 = 140.\n\nNeed to end with final numeric answer on its own line in form: Answer: <number>.\n\nI should think briefly if needed. I'll provide a short explanation then the answer line.Petunias: 90 − 40 = 50. Total: 90 + 50 = 140.\n\nAnswer: 140",
+  "finish_reason": "stop",
+  "expected": "140",
+  "scored_correct": true,
+  "reason": "correct",
+  "request": {
+    "endpoint": "/v1/completions",
+    "payload_without_prompt": {
+      "model": "inkling-2-mini",
+      "max_tokens": 16384,
+      "temperature": 0,
+      "seed": 42,
+      "stream": false
+    },
+    "elapsed_s": 4.421337106265128
+  },
+  "response": {
+    "id": "cmpl-b9abc14afb058242",
+    "object": "text_completion",
+    "created": 1795415052,
+    "model": "inkling-2-mini",
+    "choices": [
+      {
+        "index": 0,
+        "text": "The user wants me to solve a math problem. Let me think.\n\nAndy plants 90 geraniums. He plants 40 fewer petunias than geraniums. So petunias = 90 - 40 = 50. Total flowers = 90 + 50 = 140.\n\nNeed to end with final numeric answer on its own line in form: Answer: <number>.\n\nI should think briefly if needed. I'll provide a short explanation then the answer line.Petunias: 90 − 40 = 50. Total: 90 + 50 = 140.\n\nAnswer: 140",
+        "logprobs": null,
+        "finish_reason": "stop",
+        "stop_reason": null,
+        "token_ids": null,
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "routed_experts": null,
+        "weight_versions": null
+      }
+    ],
+    "service_tier": null,
+    "system_fingerprint": "vllm-0.34.0rc1.dev1133+g647a76866-bc6e3e8f",
+    "usage": {
+      "prompt_tokens": 70,
+      "total_tokens": 211,
+      "completion_tokens": 141,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "created_cache_tokens": null,
+        "multimodal_tokens": null
+      },
+      "completion_tokens_details": null
+    },
+    "kv_transfer_params": null,
+    "ec_transfer_params": null,
+    "metrics": null
+  },
+  "used_fallback": false
+}

@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:100:P:0",
+ "suite": "gsm8k",
+ "row": 100,
+ "split": "dev",
+ "arm": "P",
+ "variant": 0,
+ "rendered_prompt_sha256": "41aa38fff4b9d5e06bc16253b81457bffd58334cb593185c9137b563fb2372f0",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T03:01:57.071340+00:00",
+ "completion": "We need answer math. Need parse carefully.\n\nProblem: Noah had 4 friends who came to visit him on a certain day. The first friend pressed on the doorbell 10 times before Noah opened, the second friend pressed on the doorbell 1/5 times more than Noah's first friend. The third friend pressed on the doorbell 20 times more than the fourth friend. If the fourth friend pressed on the doorbell 30 times, how many doorbell rings did the doorbell make?\n\nCompute: first =10. second = 1/5 times more than first. Ambiguity: \"1/5 times more than\" often means first + (1/5)*first = 10 + 2 =12. Could also mean 1/5 times as many? But phrase \"more than\" indicates increase by 1/5. So second=12. fourth=30. third=20 more than fourth=50. total=10+12+50+30=102.\n\nNeed final with brief explanation and final numeric answer line. Ensure final line exactly Answer: 102.First friend: 10  \nSecond friend: 10 + (1/5)×10 = 12  \nFourth friend: 30  \nThird friend: 30 + 20 = 50  \n\nTotal: 10 + 12 + 50 + 30 = 102  \n\nAnswer: 102",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.229296523000812
+ },
+ "usage": {
+  "prompt_tokens": 135,
+  "total_tokens": 438,
+  "completion_tokens": 303,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "102",
+ "reason": "correct",
+ "finished_at": "2026-11-25T03:02:04.300893+00:00"
+}

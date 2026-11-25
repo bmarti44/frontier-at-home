@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:745:P:1",
+ "suite": "gsm8k",
+ "row": 745,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "2c87df545e76f441a4b41c8c4e1115d5e0d992648d078188b7ee15de856f46b5",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-25T02:37:51.651807+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nTomas buys 6 packs for $2100 each => cost = 6*2100 = 12600.\nHe gets 1 card worth $8000 and another worth $2500. There are 45 more cards worth average $95 each. Total cards? 1+1+45=47. Value = 8000+2500+45*95. 45*95 = 45*(100-5)=4500-225=4275. Sum = 10500+4275=14775. Profit = value - cost = 14775 - 12600 = 2175. Need final numeric answer on own line form Answer: <number>. Could include brief calculation. Ensure final line exactly.Cost: 6 × $2100 = $12,600  \nValue: $8000 + $2500 + 45 × $95 = $14,775  \nProfit: $14,775 − $12,600 = $2,175  \n\nAnswer: $2175",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.115838805002568
+ },
+ "usage": {
+  "prompt_tokens": 116,
+  "total_tokens": 345,
+  "completion_tokens": 229,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "2175",
+ "reason": "correct",
+ "finished_at": "2026-11-25T02:37:57.767898+00:00"
+}

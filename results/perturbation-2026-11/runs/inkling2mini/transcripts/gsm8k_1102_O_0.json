@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:1102:O:0",
+ "suite": "gsm8k",
+ "row": 1102,
+ "split": "holdout",
+ "arm": "O",
+ "variant": 0,
+ "rendered_prompt_sha256": "27af65e38aafb2e26bdbb7ff69346fb232a52b73ea24b4d6dfb26913813b0fb8",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:31:10.894559+00:00",
+ "completion": "We need answer math. Need compute carefully.\n\nInitial charge 85.00. Returned item cost 15.00 => balance 70.00.\nFrying pan sale 20% off $20.00: discount 4.00, price 16.00.\nTowels 10% off $30.00: discount 3.00, price 27.00.\nAdd purchases: 16+27=43. New balance 70+43=113.00.\nNeed final with brief maybe one line and final numeric answer own line. Ensure format Answer: <number>. Could include brief calculation then final line. User says think briefly if needed, then end with final numeric answer on its own line. We can provide concise explanation and final line. No extra after final line.After return: $85.00 - $15.00 = $70.00.  \nFrying pan: $20.00 × 0.80 = $16.00. Towels: $30.00 × 0.90 = $27.00.  \nNew balance: $70.00 + $16.00 + $27.00 = $113.00.\n\nAnswer: $113.00",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 7.2916254900010244
+ },
+ "usage": {
+  "prompt_tokens": 139,
+  "total_tokens": 404,
+  "completion_tokens": 265,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": true,
+ "scored_correct": true,
+ "expected": "113",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:31:18.186433+00:00"
+}

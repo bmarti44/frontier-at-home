@@ -1,0 +1,41 @@
+{
+ "job": "gsm8k:382:P:1",
+ "suite": "gsm8k",
+ "row": 382,
+ "split": "holdout",
+ "arm": "P",
+ "variant": 1,
+ "rendered_prompt_sha256": "9a053f362a99a3d852ef3746d24b6b562c0c085ad2abd205fc28aa1a1c1c74e6",
+ "rendering": "official-encoder-inkling2-thinking-effort-low",
+ "attempt": 1,
+ "started_at": "2026-11-24T20:03:23.949727+00:00",
+ "completion": "We need answer math. Need compute carefully. Ravi: silver 90, gold 50. Priya has twice as many silver pesos as he has: 2*90=180 silver. Gold pesos: \"35 more gold pesos\" ambiguous: more than he has? Sentence: \"Priya who has twice as many silver pesos as he has and 35 more gold pesos.\" Likely 35 more gold pesos than he has. Ravi gold 50, Priya gold 85. Total together: Ravi 140, Priya 265, total 405. Check: silver total 270, gold total 135, sum 405. Need final with brief maybe one line and final answer exact format. Ensure final numeric answer on own line.Ravi has 90 silver + 50 gold = 140 pesos. Priya has 180 silver + 85 gold = 265 pesos. Together: 140 + 265 = 405.\n\nAnswer: 405",
+ "finish_reason": "stop",
+ "request": {
+  "endpoint": "/v1/completions",
+  "payload_without_prompt": {
+   "model": "inkling-2-mini",
+   "max_tokens": 16384,
+   "temperature": 0,
+   "seed": 42,
+   "stream": false
+  },
+  "elapsed_s": 6.067061359997751
+ },
+ "usage": {
+  "prompt_tokens": 88,
+  "total_tokens": 296,
+  "completion_tokens": 208,
+  "prompt_tokens_details": {
+   "cached_tokens": 0,
+   "created_cache_tokens": null,
+   "multimodal_tokens": null
+  },
+  "completion_tokens_details": null
+ },
+ "used_fallback": false,
+ "scored_correct": true,
+ "expected": "405",
+ "reason": "correct",
+ "finished_at": "2026-11-24T20:03:30.017077+00:00"
+}
